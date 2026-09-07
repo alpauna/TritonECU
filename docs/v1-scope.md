@@ -9,14 +9,14 @@
 | Input protection | LTC4364-2 + pass FET + ideal-diode FET, fuse, TVS | ✅ |
 | Main supply | LM5155-Q1 SEPIC → 6.0 V / 3 A, 2.2 MHz, 80 V devices | ✅ |
 | Rails | buck → 3.3 V; LDOs → 5 V digital, 5 V analog, 5.00 V VREF | ✅ |
-| MCU | ESP32-P4 (v3.x) + ESP32-C6-MINI-1 module + flash + crystal | ✅ |
+| MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
 | Analog in | AD7606, 8 channels, SPI_MODE2 | ✅ |
 | Crank/cam/OSS | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS (+1 spare) | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17 | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
-| Storage | SD card, **SDMMC 1-bit** | ✅ |
+| Storage | SD card, SDMMC | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |
 
 That is a complete engine **and transmission** controller. Nothing in it is
@@ -68,6 +68,17 @@ was always the point of the split, and it does not require two chips.
 
 Footprints for the "yes" rows cost almost nothing and save a respin. Everything
 else stays off the board entirely.
+
+## Pin budget is no longer a constraint
+
+Moving to the STM32F767ZI replaces the 40-pin ESP32-P4 budget with **~114 I/O
+against 37 needed**. The levers previously held in reserve — semi-sequential
+injection, 1-bit SDMMC, tach/VSS over SCP — are all unnecessary. Full
+sequential injection, full coil-on-plug, 4-bit SD, discrete cluster outputs,
+and room left for a newer vehicle.
+
+The section below is retained as the record of why a second CPU was never
+needed even on the tighter budget.
 
 ## Does it need a second CPU? No.
 

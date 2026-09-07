@@ -19,6 +19,34 @@
 
 #include <stdint.h>
 
+#if defined(ECU_BOARD_NUCLEO_F767ZI)
+
+// ---------------------------------------------------------------------------
+// STM32F767ZI Nucleo-144 — the truck ECU target.
+//
+// Chosen over the ESP32-P4 because rusEFI's Proteus ECU runs on this exact
+// part, the board was already on the bench, and ~114 I/O against 37 needed
+// removes the pin budget as a design constraint entirely.
+//
+// Room to grow, which was an explicit goal: 2 MB flash, 512 KB RAM, three CAN
+// controllers, Ethernet, and more timer compare channels than this engine can
+// use. Nothing here is sized to just barely fit.
+// ---------------------------------------------------------------------------
+
+namespace board {
+
+constexpr const char* kName = "STM32F767ZI Nucleo-144";
+
+// Nucleo-144 fixed hardware.
+constexpr uint8_t kLedGreen = PB0;
+constexpr uint8_t kLedBlue  = PB7;
+constexpr uint8_t kLedRed   = PB14;
+constexpr uint8_t kButton   = PC13;
+
+}  // namespace board
+
+#else
+
 namespace board {
 
 constexpr const char* kName = "Waveshare ESP32-P4-WIFI6";
@@ -56,3 +84,5 @@ constexpr int8_t kRange    = 2;
 }  // namespace adc
 
 }  // namespace board
+
+#endif  // board select
