@@ -56,6 +56,7 @@ was always the point of the split, and it does not require two chips.
 
 | Deferred | Why it can wait | Fit a footprint? |
 |---|---|---|
+| **Wi-Fi (ESP32-C6)** | **Dropped, not deferred.** An always-on radio on an engine controller is a remote attack surface with a path to code execution via OTA. Ethernet does the job and needs physical access | **no** |
 | **Alternator control** | The OEM alternator **self-regulates**. This is an addition, not a replacement — the truck charges fine without it | no |
 | **ADR4525 precision reference** | Only needed *for* alternator control. The AD7606's internal reference is fine for everything else | **yes** — REF SELECT strap + footprint |
 | **INA238-Q1 current monitor** | Diagnostics. The engine runs without knowing its own current draw | **yes** — I²C, two pads |

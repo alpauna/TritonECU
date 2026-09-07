@@ -40,12 +40,46 @@ Three things decided it:
   already. For bench tuning it beats Wi-Fi outright: no association, no channel
   hunting, deterministic latency, and the bandwidth to log every combustion
   event continuously — which is where Wi-Fi gives up. It is also the direction
-  vehicle networks are moving.
+  vehicle networks are moving, **and it has no radio attack surface** — see
+  below.
 - **Three CAN controllers**, against a truck that has none. Any later vehicle
   will.
 - **1.1 % flash and 0.3 % RAM used** by M0. Nothing here is sized to just fit.
 
-## What this costs
+## Security: no radio is a category difference, not a degree
+
+Worth stating as a design principle rather than a side effect.
+
+The original ESP-ECU exposed a **web server, MQTT and OTA firmware update** over
+Wi-Fi. On a bench that is convenient. On a vehicle it is an always-on radio
+attack surface with a path to **remote code execution inside engine control** —
+OTA is exactly that, by design.
+
+This is not hypothetical. The 2015 Jeep Cherokee work went remote network →
+in-vehicle bus → physical vehicle control, and the entry point was a
+network-reachable service on a module nobody expected to be an attack surface.
+
+**Ethernet requires someone to be in the cab with a cable.** That is not a
+stronger password or a better protocol — it is a different threat model. An
+attacker needs physical access, at which point they could equally cut a wire.
+
+Consequences adopted:
+
+- **No radio on the v1 board.** The ESP32-C6 module previously planned for
+  Wi-Fi is dropped, not deferred.
+- **Ethernet is the tuning and logging interface**, and it is better at the job
+  anyway — deterministic, no association, and enough bandwidth to log every
+  combustion event.
+- **If Wi-Fi is ever wanted**, it should be a physically removable module or
+  behind a hardware switch, not a permanently soldered always-on radio.
+- **Firmware update should require a physical action** regardless of transport —
+  a jumper, a button, or key-off — so no network path alone can rewrite engine
+  control.
+- **Never accept a firmware update or a tune write while the engine is
+  running.** Cheap to enforce, and it removes the worst-case outcome entirely.
+
+That last pair costs almost nothing to implement and closes the gap that
+matters most.
 
 The core is unaffected. `CrankDecoder`, `EnginePosition` and `SparkScheduler`
 are `<stdint.h>`-only and build for both targets unchanged, with all 28 native
