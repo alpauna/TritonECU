@@ -312,7 +312,7 @@ Not on this sheet — it is on sheet 2 as C103. See below.
 
 ## Engine compartment component locations (5.4L, sheet 2 of 2)
 
-Source: `Engine-Component-Locations-2.png`
+Source: `Engine-Component-Locations-part2.png`
 
 | Ref | Component |
 |---|---|
