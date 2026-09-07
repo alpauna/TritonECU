@@ -150,18 +150,34 @@ while (Serial.available()) {
 
 Then the host opens the port at leisure and asks. Useful on a bench anyway.
 
-### The VCP drops bytes on long bursts
+### The VCP drops bytes — use a separate UART instead
 
-At 115200, a multi-line burst loses the occasional character. Steady output is
-clean — 4/4 heartbeat lines intact over 22 s in testing — but a 15-line banner
-arrives with gaps.
+Initially this looked like a burst-length problem. It is worse than that: on
+this board the VCP **drops characters on a five-second heartbeat with no host
+traffic at all**, at 115200 and again at 57600. Flushing and pausing between
+lines did not fix it.
 
-Cosmetic for a console. **Do not build datalogging on it.** Options: drop to
-57600, insert a short delay between lines, or use a separate UART or Ethernet
-for anything that matters.
+The same firmware over **USART2 to a CH340 adapter is byte-perfect**, long
+separator lines included. So it is the ST-Link, not the application.
 
-*Also worth knowing: a host-side reconnect loop makes this look far worse than
-it is. Each reopen discards the kernel buffer. Hold the port open.*
+**Wire a USB-UART adapter to a spare UART and treat the VCP as a fallback:**
+
+| Nucleo | Adapter |
+|---|---|
+| **PD5** (USART2_TX) | RX |
+| **PD6** (USART2_RX) | TX |
+| GND | GND |
+
+USART3 (PD8/PD9) is the ST-Link's own, hence USART2. Writing to both ports and
+reading from either means nothing has to be reconfigured.
+
+*Also worth knowing: a host-side reconnect loop makes any serial problem look
+far worse than it is, because each reopen discards the kernel buffer. Hold the
+port open before concluding anything.*
+
+*ST's `STLinkUpgrade` tool sometimes fixes VCP flakiness on older ST-Link
+firmware — worth trying, but a separate UART is independent of the debugger,
+which is what you want when the debugger is the thing misbehaving.*
 
 ---
 
@@ -173,6 +189,8 @@ it is. Each reopen discards the kernel buffer. Hold the port open.*
 | Fix applied but still fails | board not replugged | unplug/replug |
 | Serial works, upload does not | VCP is unprivileged, SWD is not | step 3 |
 | Garbled serial | host reconnecting on every error | hold the port open |
+| Still garbled on a held port | ST-Link VCP is unreliable | use USART2 (PD5/PD6) + USB-UART |
+| Board dark on external power | VIN fed below 7 V, or jumper not moved | use **E5V with 5 V**; move the supply-select jumper |
 | Console silent after debugging | SWD reset dropped the VCP | reopen the port; use the `i` command |
 | `pio device monitor` crashes | needs a TTY, not a pipe | read the port directly, or run interactively |
 | Wrong `/dev/ttyACMn` | numbering shifts between boards | use the `by-id` path |

@@ -12,14 +12,10 @@
 #include <stdarg.h>
 
 #include "Board.h"
+#include "Console.h"
 #include "Config.h"
 #include "StorageStm32.h"
 #include "Version.h"
-
-// Console on USART2 (PD5/PD6) alongside the ST-Link VCP. Everything is written
-// to both, so an external USB-UART adapter can be plugged in without changing
-// anything -- and the ST-Link's flaky VCP stops being the only option.
-HardwareSerial ExtSerial(board::console::kRx, board::console::kTx);
 
 namespace {
 
@@ -45,31 +41,8 @@ const char* resetReasonName() {
 
 // The ST-Link's VCP drops bytes on a long burst at 115200. Steady output is
 // clean; a fifteen-line banner arrives with gaps. Draining the UART and
-// Write to both consoles. printf-style, because every call site uses it.
-void cprintf(const char* fmt, ...) {
-    char buf[160];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    Serial.print(buf);        // NOT cprintf -- that would recurse
-    ExtSerial.print(buf);
-}
 
-void cprintln(const char* line = "") {
-    Serial.println(line);
-    ExtSerial.println(line);
-}
 
-void settle() {
-    Serial.flush();
-    ExtSerial.flush();
-    delay(3);
-}
-
-// ST-Link VCP baud. Kept low because that port drops characters regardless --
-// see Board.h. The USART2 console is the one to trust.
-constexpr uint32_t kConsoleBaud = 57600;
 
 void reportIdentity() {
     const uint16_t flashKb = *reinterpret_cast<const uint16_t*>(kFlashSizeReg);
@@ -80,43 +53,43 @@ void reportIdentity() {
     const uint16_t devId  = idcode & 0x0FFF;
     const uint16_t revId  = idcode >> 16;
 
-    cprintln();
-    settle();
-    cprintln("=======================================================");
-    settle();
-    cprintf("  ESP-ECU %s\n", ECU_VERSION);
-    settle();
-    cprintf("  built %s\n", ECU_BUILD_DATE);
-    settle();
-    cprintf("  target %s\n", ECU_TARGET_VEHICLE);
-    settle();
-    cprintln("=======================================================");
-    settle();
-    cprintf("  board        : %s\n", board::kName);
-    settle();
-    cprintf("  device ID    : 0x%03X  rev 0x%04X\n", devId, revId);
-    settle();
-    cprintf("  CPU          : %lu MHz\n", (unsigned long)(SystemCoreClock / 1000000UL));
-    settle();
-    cprintf("  flash        : %u KB\n", flashKb);
-    settle();
-    cprintf("  unique ID    : %08lX-%08lX-%08lX\n",
+    console::println();
+    console::settle();
+    console::println("=======================================================");
+    console::settle();
+    console::printf("  ESP-ECU %s\n", ECU_VERSION);
+    console::settle();
+    console::printf("  built %s\n", ECU_BUILD_DATE);
+    console::settle();
+    console::printf("  target %s\n", ECU_TARGET_VEHICLE);
+    console::settle();
+    console::println("=======================================================");
+    console::settle();
+    console::printf("  board        : %s\n", board::kName);
+    console::settle();
+    console::printf("  device ID    : 0x%03X  rev 0x%04X\n", devId, revId);
+    console::settle();
+    console::printf("  CPU          : %lu MHz\n", (unsigned long)(SystemCoreClock / 1000000UL));
+    console::settle();
+    console::printf("  flash        : %u KB\n", flashKb);
+    console::settle();
+    console::printf("  unique ID    : %08lX-%08lX-%08lX\n",
                   (unsigned long)uid[0], (unsigned long)uid[1], (unsigned long)uid[2]);
-    cprintf("  last reset   : %s\n", resetReasonName());
-    settle();
+    console::printf("  last reset   : %s\n", resetReasonName());
+    console::settle();
     storage::report();
     config::report();
-    cprintln("=======================================================");
-    settle();
+    console::println("=======================================================");
+    console::settle();
 
     // 0x451 is the STM32F76x/F77x family. Anything else means the board file
     // and the silicon disagree, which is worth knowing before trusting a pin.
     if (devId != 0x451) {
-        cprintf("  WARNING: device ID 0x%03X is not STM32F76x/F77x (0x451)\n", devId);
-        settle();
+        console::printf("  WARNING: device ID 0x%03X is not STM32F76x/F77x (0x451)\n", devId);
+        console::settle();
     }
-    cprintln();
-    settle();
+    console::println();
+    console::settle();
 
     // Latch cleared so the next boot reports its own cause, not this one's.
     RCC->CSR |= RCC_CSR_RMVF;
@@ -125,11 +98,7 @@ void reportIdentity() {
 }  // namespace
 
 void setup() {
-    Serial.begin(kConsoleBaud);
-    ExtSerial.begin(board::console::kBaud);
-    // On an ST-Link VCP the port exists whether or not a host is listening, so
-    // there is nothing to wait for -- just settle before the first write.
-    delay(200);
+    console::begin();
 
     pinMode(board::kLedGreen, OUTPUT);
     pinMode(board::kLedBlue, OUTPUT);
@@ -139,16 +108,16 @@ void setup() {
     digitalWrite(board::kLedRed, LOW);
 
     if (!storage::begin()) {
-        cprintln("[SD] mount failed — continuing on built-in defaults");
+        console::println("[SD] mount failed — continuing on built-in defaults");
     }
     config::load();
     config::data.bootCount++;
     if (storage::mounted() && !config::save()) {
-        cprintln("[cfg] could not persist boot count");
+        console::println("[cfg] could not persist boot count");
     }
 
     reportIdentity();
-    cprintln("M0/M1: board, storage, config. Heartbeat every 5 s. Send 'i' for identity, 's' to remount the card.");
+    console::println("M0/M1: board, storage, config. Heartbeat every 5 s. Send 'i' for identity, 's' to remount the card.");
     g_lastBeatMs = millis();
 }
 
@@ -157,8 +126,7 @@ void loop() {
     // over SWD disconnects the serial port -- which makes the boot banner
     // awkward to catch. Reprinting on demand sidesteps that entirely, and is
     // worth having on a bench regardless.
-    while (Serial.available() || ExtSerial.available()) {
-        const int c = Serial.available() ? Serial.read() : ExtSerial.read();
+    for (int c = console::read(); c >= 0; c = console::read()) {
         if (c == 'i' || c == 'I') {
             reportIdentity();
         } else if (c == 's' || c == 'S') {
@@ -167,11 +135,11 @@ void loop() {
             // Remount and report only. Deliberately does NOT touch bootCount:
             // that counts boots, and an earlier version incremented it here,
             // which quietly inflated it every time the command ran.
-            cprintln("[SD] remounting...");
-            settle();
+            console::println("[SD] remounting...");
+            console::settle();
             if (storage::begin()) config::load();
             storage::report();
-            settle();
+            console::settle();
             config::report();
         }
     }
@@ -183,7 +151,7 @@ void loop() {
         digitalWrite(board::kLedGreen, g_heartbeats & 1);
 
         if (g_heartbeats % 5 == 0) {
-            cprintf("[%6lu s] alive\n", (unsigned long)g_heartbeats);
+            console::printf("[%6lu s] alive\n", (unsigned long)g_heartbeats);
         }
     }
 }

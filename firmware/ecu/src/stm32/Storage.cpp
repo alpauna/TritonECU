@@ -4,6 +4,7 @@
 #include <SdFat.h>
 
 #include "Board.h"
+#include "Console.h"
 
 namespace storage {
 namespace {
@@ -37,14 +38,14 @@ bool begin() {
     // filesystem is not readable", which is exactly the distinction that
     // wasted time on the ESP32 build.
     if (g_sd.card()->errorCode()) {
-        Serial.printf("[SD] card did not initialise (err 0x%02X, data 0x%02X)\n",
+        console::printf("[SD] card did not initialise (err 0x%02X, data 0x%02X)\n",
                       g_sd.card()->errorCode(), g_sd.card()->errorData());
-        Serial.println("     Check wiring, CS pin, and that the module is 3.3 V.");
+        console::println("     Check wiring, CS pin, and that the module is 3.3 V.");
     } else if (g_sd.card()->sectorCount() == 0) {
-        Serial.println("[SD] card initialised but reports zero sectors");
+        console::println("[SD] card initialised but reports zero sectors");
     } else {
-        Serial.println("[SD] card is present but the filesystem is unreadable.");
-        Serial.println("     FAT16/FAT32 only -- cards over 32 GB ship as exFAT.");
+        console::println("[SD] card is present but the filesystem is unreadable.");
+        console::println("     FAT16/FAT32 only -- cards over 32 GB ship as exFAT.");
     }
     g_mounted = false;
     return false;
@@ -62,7 +63,7 @@ uint64_t usedBytes() { return 0; }   // not cheap to compute on FAT; not needed 
 
 void report() {
     if (!g_mounted) {
-        Serial.println("  storage      : unavailable — see the [SD] lines above");
+        console::println("  storage      : unavailable — see the [SD] lines above");
         return;
     }
     const char* type = "unknown";
@@ -72,7 +73,7 @@ void report() {
         case SD_CARD_TYPE_SDHC: type = "SDHC"; break;
         default: break;
     }
-    Serial.printf("  storage      : %s, %s, %.2f GB, FAT%d\n",
+    console::printf("  storage      : %s, %s, %.2f GB, FAT%d\n",
                   backend(), type,
                   cardSizeBytes() / (1024.0 * 1024.0 * 1024.0),
                   (int)g_sd.vol()->fatType());

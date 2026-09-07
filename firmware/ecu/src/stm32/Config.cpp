@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 
+#include "Console.h"
 #include "StorageStm32.h"
 
 namespace config {
@@ -15,19 +16,19 @@ constexpr const char* kTmp  = "/config.tmp";
 
 bool load() {
     if (!storage::mounted()) {
-        Serial.println("[cfg] no card — running on built-in defaults");
+        console::println("[cfg] no card — running on built-in defaults");
         return false;
     }
 
     SdFat& sd = storage::fs();
     if (!sd.exists(kPath)) {
-        Serial.printf("[cfg] %s missing — writing defaults\n", kPath);
+        console::printf("[cfg] %s missing — writing defaults\n", kPath);
         return save();
     }
 
     FsFile f = sd.open(kPath, O_RDONLY);
     if (!f) {
-        Serial.printf("[cfg] cannot open %s — using defaults\n", kPath);
+        console::printf("[cfg] cannot open %s — using defaults\n", kPath);
         return save();
     }
 
@@ -38,7 +39,7 @@ bool load() {
     if (err) {
         // Keep booting. A config that will not parse is a reason to fall back,
         // not a reason to leave the engine without a controller.
-        Serial.printf("[cfg] %s is not valid JSON (%s) — rewriting defaults\n",
+        console::printf("[cfg] %s is not valid JSON (%s) — rewriting defaults\n",
                       kPath, err.c_str());
         return save();
     }
@@ -80,35 +81,35 @@ bool save() {
     sd.remove(kTmp);
     FsFile f = sd.open(kTmp, O_WRONLY | O_CREAT | O_TRUNC);
     if (!f) {
-        Serial.println("[cfg] cannot open temp file for write");
+        console::println("[cfg] cannot open temp file for write");
         return false;
     }
     const size_t written = serializeJsonPretty(doc, f);
     f.sync();
     f.close();
     if (written == 0) {
-        Serial.println("[cfg] wrote 0 bytes");
+        console::println("[cfg] wrote 0 bytes");
         sd.remove(kTmp);
         return false;
     }
     sd.remove(kPath);
     if (!sd.rename(kTmp, kPath)) {
-        Serial.println("[cfg] rename failed");
+        console::println("[cfg] rename failed");
         return false;
     }
     return true;
 }
 
 void report() {
-    Serial.printf("  vehicle      : %s\n", data.vehicle.c_str());
-    Serial.printf("  engine       : %u cyl, %u cc, %u-%u crank wheel\n",
+    console::printf("  vehicle      : %s\n", data.vehicle.c_str());
+    console::printf("  engine       : %u cyl, %u cc, %u-%u crank wheel\n",
                   data.engine.cylinders, data.engine.displacementCc,
                   data.engine.crankTeeth, data.engine.crankMissing);
-    Serial.print("  firing order : ");
+    console::printf("  firing order : ");
     for (uint8_t i = 0; i < 8; i++) {
-        Serial.printf("%u%s", data.engine.firingOrder[i], i < 7 ? "-" : "\n");
+        console::printf("%u%s", data.engine.firingOrder[i], i < 7 ? "-" : "\n");
     }
-    Serial.printf("  boot count   : %lu\n", (unsigned long)data.bootCount);
+    console::printf("  boot count   : %lu\n", (unsigned long)data.bootCount);
 }
 
 }  // namespace config

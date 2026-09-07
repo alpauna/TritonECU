@@ -41,9 +41,28 @@ Revised:
 - **The 6 V main rail is unchanged**, so the SEPIC design and its calculator
   still apply.
 
-**[CONFIRM]** the Nucleo's E5V jumper position — feeding E5V externally requires
-the supply-select jumper moved off its default (ST-Link 5 V). Getting this wrong
-either back-feeds the ST-Link or leaves the board unpowered.
+### Powering the Nucleo — confirmed on the bench
+
+**Feed E5V with 5 V. Do not use VIN.**
+
+| Pin | Accepts | Notes |
+|---|---|---|
+| **E5V** | **5 V** | what the carrier's 5 V buck provides |
+| VIN | **7–12 V** | its regulator will not start below ~7 V |
+| U5V | — | ST-Link USB, the default |
+
+Verified the hard way: **VIN fed with 5 V leaves the board dark.** The 6 V main
+rail is also below VIN's minimum, so VIN is not an option for this design at
+all — E5V is the only sensible feed, and the 5 V buck in the rail tree exists
+precisely for it.
+
+**The supply-select jumper must be moved** off its U5V default, or external
+power on either pin does nothing. **[CONFIRM]** the designation on your board
+revision from UM1974 rather than trusting a remembered reference number.
+
+Note the ST-Link USB and the carrier's supply are independent: the board can be
+powered from the carrier while the ST-Link USB is unplugged — it simply cannot
+be programmed then, since SWD arrives over that same cable.
 
 ## Pins to avoid on the morpho headers
 
