@@ -6,7 +6,7 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
-| ~~TSS~~ | 59 | **Not fitted on the 4R70W** — C192 appears only on the 4R100. The PCM pin exists for other applications. See `transmission.md` |
+| ~~TSS~~ | 59 | **Not fitted.** C192 is 4R100-only — confirmed by the owner. The PCM pin exists for other applications |
 
 **CMP (pin 85) is unresolved** — a single wire with no matching negative, which
 is equally consistent with a Hall sensor or a single-ended VR. **[CONFIRM]**

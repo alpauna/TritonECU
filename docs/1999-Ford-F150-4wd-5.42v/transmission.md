@@ -43,8 +43,8 @@ Consequences:
   estimate rather than a measurement, and it is only valid once the gear is
   known with confidence.
 
-**[CONFIRM ON TRUCK]** by looking for a sensor at the C192 location. It is
-cheap to check and it changes the transmission control strategy.
+**Confirmed by the owner:** TSS is fitted only on the 4R100. This truck has
+none.
 
 ## DTR is confirmed digital
 

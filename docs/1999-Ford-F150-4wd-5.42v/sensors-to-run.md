@@ -53,7 +53,7 @@ this line affects how *well* it runs, not whether it runs.
 
 | Sensor | Type | Notes |
 |---|---|---|
-| ~~TSS~~ — turbine shaft speed | **not fitted** | The factory sheets show TSS (C192) only on the 4R100. The 4R70W has none — see `transmission.md`. Converter slip must be inferred from rpm, OSS and gear ratio |
+| ~~TSS~~ — turbine shaft speed | **not fitted** | C192 is 4R100-only — confirmed by the owner. Converter slip must be inferred from rpm, OSS and gear ratio |
 | **Transfer case speed** | C199, 4x4 only | **[CONFIRM]** whether this or OSS feeds the speedometer |
 | **4x4 low/high switch** | C189 | Range state — shift points and line pressure differ in low range |
 | **OSS** — output shaft speed | **variable reluctance** | Road speed, cluster speedometer, and the cruise control feed (pin 68). The MegaSquirt build conditioned it with an LM1815 — it needs the same treatment as CKP |
