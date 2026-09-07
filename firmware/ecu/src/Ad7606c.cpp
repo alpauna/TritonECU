@@ -16,6 +16,15 @@ constexpr uint32_t kResetSettleUs = 400;
 // ran 1 MHz through Phase 1 and only moved to 8 MHz after bench validation.
 // The part itself will take 63.5 MHz; the wiring is the limit, not the silicon.
 uint32_t g_spiHz = 1000000;
+// SPI_MODE2, established empirically on 2026-09-06 against two known signals:
+// a +/-1.22 V scope output on V1 and a 0-2 V 1 kHz Hantek square on V8. Modes
+// 0, 1 and 3 all read exactly 2x high; MODE2 read both correctly.
+//
+// Note this differs from the Teensy build, which validated SPI_MODE0 against
+// the same part. Same ADC, different host SPI peripheral — so the mode is a
+// property of the pairing, not of the AD7606, and must be re-established on any
+// new host rather than carried over.
+uint8_t  g_spiMode = SPI_MODE2;
 
 // BUSY should fall within ~10 us even at the slowest oversampling ratio. A
 // generous ceiling here still catches a genuinely stuck part quickly.
@@ -25,7 +34,7 @@ Pins  g_pins{};
 Range g_range = Range::kBipolar10V;
 bool  g_ready = false;
 
-SPISettings g_spi(g_spiHz, MSBFIRST, SPI_MODE0);
+SPISettings g_spi(g_spiHz, MSBFIRST, SPI_MODE2);
 
 void applyRange() {
     digitalWrite(g_pins.range, g_range == Range::kBipolar10V ? HIGH : LOW);
@@ -94,7 +103,7 @@ bool begin(const Pins& pins, Range range, Oversampling os, uint32_t spiHz) {
     g_pins  = pins;
     g_range = range;
     g_spiHz = spiHz;
-    g_spi   = SPISettings(g_spiHz, MSBFIRST, SPI_MODE0);
+    g_spi   = SPISettings(g_spiHz, MSBFIRST, g_spiMode);
 
     pinMode(g_pins.cs, OUTPUT);      digitalWrite(g_pins.cs, HIGH);
     pinMode(g_pins.convst, OUTPUT);  digitalWrite(g_pins.convst, HIGH);
@@ -119,12 +128,15 @@ bool begin(const Pins& pins, Range range, Oversampling os, uint32_t spiHz) {
 
     g_ready = true;
 
-    if (!probeBusyRises()) {
-        g_ready = false;
-        Serial.println("[ADC] BUSY never went high after CONVST — the part is "
-                       "absent or CONVST/BUSY are miswired");
-        return false;
-    }
+    // Catching BUSY's rising edge is inherently racy: if the OS pins are
+    // strapped on the module rather than driven, a conversion takes ~3 us and a
+    // digitalRead poll can miss the whole pulse. Observed on the bench, where
+    // begin() reported "BUSY never went high" and a diagnostic run moments
+    // later saw it go high.
+    //
+    // So a missed edge is no longer fatal on its own. The data check below is
+    // the real evidence, and it does not depend on winning a race.
+    const bool sawBusyRise = probeBusyRises();
 
     // Restore the caller's oversampling now the probe is done.
     applyOversampling(os);
@@ -133,8 +145,13 @@ bool begin(const Pins& pins, Range range, Oversampling os, uint32_t spiHz) {
     int16_t sample[kChannels];
     if (!read(sample)) {
         g_ready = false;
-        Serial.println("[ADC] conversion did not complete — check RESET and BUSY");
+        Serial.println("[ADC] conversion did not complete — BUSY stayed high. "
+                       "Check RESET, CONVST and BUSY wiring.");
         return false;
+    }
+    if (!sawBusyRise) {
+        Serial.println("[ADC] note: BUSY rising edge not caught — normal when "
+                       "OS is strapped on the module and conversions are ~3 us");
     }
     if (looksLikeFloatingBus(sample)) {
         g_ready = false;
@@ -176,8 +193,15 @@ bool readVolts(float volts[kChannels]) {
 
 void setSpiHz(uint32_t hz) {
     g_spiHz = hz;
-    g_spi   = SPISettings(g_spiHz, MSBFIRST, SPI_MODE0);
+    g_spi   = SPISettings(g_spiHz, MSBFIRST, g_spiMode);
 }
+
+void setSpiMode(uint8_t mode) {
+    g_spiMode = mode;
+    g_spi     = SPISettings(g_spiHz, MSBFIRST, g_spiMode);
+}
+
+uint8_t spiMode() { return g_spiMode; }
 
 uint32_t spiHz() { return g_spiHz; }
 

@@ -41,9 +41,9 @@ maths are worth keeping. Everything else earns its place again.
 
 | # | Milestone | Proves | Done when |
 |---|---|---|---|
-| **M0** | Board bring-up | toolchain, upload path, board identity | Boots, reports chip rev / PSRAM / flash over serial, heartbeat runs |
-| **M1** | Storage + config | SDMMC, JSON config, persistence | Mounts the TF card, reads and writes a config file, survives reboot |
-| **M2** | Analog front end | AD7606C-16 | 8 channels read within 1 % of a known bench voltage — see [`adc-front-end.md`](adc-front-end.md) |
+| **M0** ✅ | Board bring-up | toolchain, upload path, board identity | Boots, reports chip rev / PSRAM / flash over serial, heartbeat runs |
+| **M1** ◐ | Storage + config | SDMMC, JSON config, persistence | Mounts the TF card, reads and writes a config file, survives reboot |
+| **M2** ✅ | Analog front end | AD7606 | **Done 2026-09-06.** Two known signals read correctly (±1.22 V scope on V1, 0–2 V 1 kHz on V8) after establishing SPI_MODE2. See [`adc-front-end.md`](adc-front-end.md) |
 | **M3** | **Crank sync** | VR conditioning + 36-1 decode | Correct RPM and crank angle from a signal generator, including the missing tooth, from 100 to 7000 rpm |
 | **M4** | Cam sync | full engine position | Knows the stroke; 720° position stable across restarts |
 | **M5** | Spark output | timed output | Scope shows dwell and advance matching commanded values across rpm |

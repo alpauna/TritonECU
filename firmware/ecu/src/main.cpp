@@ -151,6 +151,18 @@ void setup() {
         Serial.println("  ADC          : AD7606 not responding — see docs/adc-wiring.md");
     }
 
+#ifdef ECU_ADC_SPI_SWEEP
+    if (g_adcReady) pintest::adcSpiModeSweep(400);
+#endif
+
+#ifdef ECU_ADC_RANGE_CHECK
+    if (g_adcReady) pintest::adcRangeCheck();
+#endif
+
+#ifdef ECU_ADC_NOISE_FLOOR
+    if (g_adcReady) pintest::adcNoiseFloor(1000);
+#endif
+
     Serial.println("M0/M1 up. Heartbeat every 5 s.");
 }
 

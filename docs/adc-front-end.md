@@ -83,6 +83,48 @@ is known to be well-behaved.
 
 Battery voltage exceeds both ranges and needs a divider regardless.
 
+## SPI mode: MODE2 on the ESP32, not MODE0
+
+**The SPI mode did not carry over from the Teensy**, and this is the one thing
+in the port that could not have been assumed.
+
+The Teensy build validated **SPI_MODE0** against a known ±1.24 V reference,
+after first trying MODE1 and finding a consistent ~2× error. Ported unchanged to
+the ESP32-P4, MODE0 produced exactly the same 2× error — modes 0, 1 and 3 all
+read double.
+
+Swept against two independently known signals on 2026-09-06:
+
+| Mode | V1 (true ±1.22 V) | V8 (true 0–2 V) |
+|---|---|---|
+| MODE0 | −2.61 … +2.56 | −0.14 … +4.00 |
+| MODE1 | −2.61 … +2.57 | −0.14 … +4.00 |
+| **MODE2** | **−1.30 … +1.29** | **−0.07 … +2.00** |
+| MODE3 | −2.61 … +2.57 | −0.13 … +4.00 |
+
+**The mode is a property of the host/ADC pairing, not of the AD7606.** A wrong
+CPHA shifts every sampled bit by one clock edge, which is mathematically a
+doubling — smooth, stable, repeatable and completely wrong, which is what makes
+it dangerous. Re-establish it against a known signal on any new host rather than
+carrying it over.
+
+`pio run -e spisweep -t upload` sweeps all four and prints each channel's
+envelope.
+
+## Why a square wave reads lower than a scope shows
+
+A 1 kHz square measured at 2.23 V peak on a scope reads about 2.00 V here. That
+is the ADC being right, not wrong: the **second-order anti-aliasing filter at
+−3 dB / 22 kHz is permanently in circuit**, and a square wave's overshoot and
+ringing live in harmonics well above that. The filter rounds the corners and the
+ADC never sees the spike a wide-bandwidth scope captures.
+
+In a truck this is the point — it is what stops injector and coil transients
+aliasing down into the fuelling signal. Do not calibrate it out.
+
+**Calibrate against DC**, not a square wave: a sampled square gives no guarantee
+of catching the true peak.
+
 ## Bench verification before it goes near the truck
 
 1. Short an input to ground — expect 0 counts ±noise.

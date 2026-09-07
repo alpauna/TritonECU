@@ -2,12 +2,15 @@
 // AD7606C-16 — 8-channel, 16-bit, simultaneous-sampling SAR ADC.
 //
 // Ported from the bench-validated Teensy 4.1 driver in
-// ~/Claude/LxScanner/firmware-teensy/src/main.cpp, which was checked against a
-// known +/-1.24 V reference on 2026-08-27/28. The conversion sequence
-// (CONVST pulse, BUSY wait, 8x 16-bit SPI read) and SPI_MODE0 are carried over
-// unchanged because they were verified on hardware; only the surrounding
-// structure differs — this samples on demand for the ECU rather than streaming
-// frames over USB.
+// ~/Claude/LxScanner/firmware-teensy/src/main.cpp. The conversion sequence
+// (CONVST pulse, BUSY wait, 8x 16-bit SPI read) is carried over unchanged
+// because it was verified on hardware; only the surrounding structure differs —
+// this samples on demand for the ECU rather than streaming frames over USB.
+//
+// The SPI mode did NOT carry over. The Teensy validated SPI_MODE0; the ESP32-P4
+// needs SPI_MODE2. Modes 0, 1 and 3 all read exactly 2x high here — the
+// signature of a one-clock bit shift. Established against two known signals on
+// 2026-09-06. The mode is a property of the host/ADC pairing, not of the ADC.
 //
 // Why this part rather than the P4's own ADC:
 //   * True differential bipolar inputs. The MAF has a dedicated signal return
@@ -66,6 +69,13 @@ bool begin(const Pins& pins, Range range = Range::kBipolar10V,
 // Change the SPI clock at runtime, for stepping it up during bring-up.
 void setSpiHz(uint32_t hz);
 uint32_t spiHz();
+
+// SPI mode. The Teensy build validated MODE0, but the ESP32 SPI peripheral does
+// not necessarily sample on the same edge for the same mode number — a wrong
+// CPHA shifts every bit one clock and is mathematically a 2x error. Settable so
+// it can be swept against a known signal rather than assumed.
+void setSpiMode(uint8_t mode);
+uint8_t spiMode();
 
 // Triggers a conversion and reads all 8 channels. Returns false on BUSY
 // timeout, which is a real signal — miswiring, no RESET, or a dead part —
