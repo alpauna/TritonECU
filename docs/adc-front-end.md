@@ -94,3 +94,78 @@ Battery voltage exceeds both ranges and needs a divider regardless.
 4. Confirm BUSY actually rises and falls. `begin()` fails on a BUSY timeout
    rather than returning happily, because a stuck BUSY is a wiring fault, not
    something to retry.
+
+---
+
+## Does the ECU need 1 MSPS? No — 200 kSPS is enough
+
+The AD7606C-16 and -18 are **1 MSPS on all channels** (verified from the
+datasheets). The original **AD7606 is 200 kSPS** and cheaper. That is still
+comfortably more than this application needs, for both the routine channels and
+knock.
+
+### Routine sensor channels
+
+At 6000 rpm on an eight-cylinder four-stroke:
+
+```
+combustion events/s = (6000 / 60) x 8 / 2 = 400 /s
+```
+
+One sample set per event is 400 Hz. Sampling four times per event for decent
+transient resolution is 1.6 kHz. Call it **2 kHz per channel**, generously.
+
+Every one of these is simultaneous on this part, so 2 kHz of all eight channels
+is 2 kSPS of the ADC's 200 kSPS — about **1 % utilisation**. The temperatures
+and O2 sensors want a tenth of that. There is no argument for 1 MSPS here.
+
+### Knock
+
+Knock rings around **6–8 kHz** on a 3.55″ bore. Nyquist is 16 kSPS; a usable
+FFT wants 4–10× the frequency of interest, so **40–80 kSPS**. At 200 kSPS that
+is 25× oversampling of an 8 kHz signal — ample.
+
+The knock window is short. At 6000 rpm a 30° window is about 0.8 ms, so 100
+kSPS yields ~80 samples per window per cylinder. Workable.
+
+### The real bottleneck is SPI, not the ADC
+
+At 200 kSPS × 8 channels × 16 bits the bus would have to carry **25.6 Mbit/s**.
+The current 8 MHz SPI cannot do that, and it does not have to — the two jobs
+run at different rates:
+
+| Job | Rate | Channels read | Bus load at 8 MHz |
+|---|---|---|---|
+| Routine sensors | 2 kHz | all 8 | 256 kbit/s — 3 % |
+| Knock burst | 100 kHz | **1** | 1.6 Mbit/s — 20 % |
+
+The AD7606 family clocks its channels out sequentially on DOUTA, so a knock
+burst reads **one** 16-bit word and raises CS rather than clocking all eight.
+That is what keeps a 100 kSPS knock window affordable on a modest SPI clock.
+It does mean **knock should sit on channel 0**, so its word arrives first.
+
+## So which part?
+
+**For this build: keep the AD7606C-16 already on the bench.** There is no
+saving in buying a slower part when the faster one is in hand and its driver is
+already validated.
+
+**For a second unit or a production board, the AD7606 is defensible.** What the
+C adds, and whether it matters here:
+
+| AD7606C feature | Matters? |
+|---|---|
+| 1 MSPS vs 200 kSPS | **No** — 1 % utilised either way |
+| Software/register mode | **No** — this design uses hardware mode |
+| Per-channel input range | **No** in hardware mode; would matter if ranges were mixed |
+| Per-channel gain/offset/phase calibration | **Minor** — can be done in software against known references |
+| **On-chip diagnostics (open-circuit detection)** | **Possibly yes** — a disconnected sensor is a routine truck fault, and having the ADC flag it beats inferring it from an implausible reading |
+
+**[CONFIRM]** the plain AD7606's analog input over-voltage clamp before
+substituting. The ±16.5 V clamp is a real part of why this family suits an
+automotive harness, and it should not be assumed identical across the family
+without checking the datasheet.
+
+The honest summary: **speed is not the reason to choose the C.** Diagnostics
+might be, and that is a smaller argument than the 5× throughput headline
+suggests.
