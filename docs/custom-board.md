@@ -78,7 +78,7 @@ If more headroom is wanted, in order of least pain:
 ## The one thing that must not be got wrong
 
 **Every coil and injector gate needs a hard pulldown to ground — around 10 kΩ,
-at the gate, on the board.**
+at the gate, on the board.** Decided, and being done.
 
 At reset and during the whole bootloader sequence, every P4 GPIO is an input
 and therefore high-impedance. A driver gate left floating can drift high enough
@@ -95,6 +95,50 @@ meter on a bare board before any coil or injector is ever connected.
 
 The same argument applies more mildly to the fuel pump relay and the EVAP,
 EGR and IMCC solenoids — all should default off.
+
+### With a gate driver in the path, pull down its input too
+
+Gate drivers are the right call for real power MOSFETs — the P4 cannot supply
+the peak gate current a large FET wants, and slow switching is where the heat
+comes from. But adding a driver moves where the boot-state problem lives.
+
+A 10 kΩ pulldown at the MOSFET gate defends against **leakage and charge
+injection**. It does not defend against a **driver actively sourcing current**
+into that gate: a driver output will overpower 10 kΩ without noticing. So the
+pulldown at the gate is necessary but no longer sufficient on its own.
+
+Two additions:
+
+1. **Pull down the driver's input as well.** During reset the P4 pin driving
+   it is high-impedance, and a floating driver input may give an undefined
+   output. This is the cheap fix and it is where the real protection now sits.
+2. **Use the driver's enable/shutdown pin if it has one**, held disabled by a
+   pulldown and asserted only once firmware has taken control. That is a
+   stronger guarantee than relying on input state, because it holds the output
+   off regardless of what the input is doing.
+
+Also check the driver's **UVLO** behaviour: many hold the output low until
+their supply is valid, which covers the brown-out and cranking cases for free.
+Worth choosing a part that does.
+
+### Coils are not just another inductive load
+
+**[CONFIRM ON TRUCK]** whether the '99 5.4L COP coils are "dumb" two-wire coils
+or "smart" coils with an integrated driver and logic-level input. It decides
+the whole ignition output stage:
+
+- **Smart coils** — feed them a logic-level signal. The coil owns the current
+  limiting and clamping. Nothing more needed.
+- **Dumb coils** — the board must provide the switch, and an ignition primary
+  flies back to several hundred volts on turn-off. That wants a purpose-built
+  **ignition IGBT with integrated clamp**, not a general-purpose MOSFET. The
+  clamp is what dissipates the coil's stored energy in a controlled way; a
+  plain FET without one avalanches, and repeated avalanche at 400 sparks per
+  second is not a long life.
+
+Injectors are gentler but still inductive: a saturated high-impedance Ford
+injector needs a flyback path, either an avalanche-rated FET within its energy
+spec or an explicit clamp.
 
 Also: keep coil and injector outputs off GPIO35/36. They are strapping pins,
 sampled at reset, and a driver's pulldown would fight the boot configuration.
