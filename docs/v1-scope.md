@@ -69,6 +69,26 @@ was always the point of the split, and it does not require two chips.
 Footprints for the "yes" rows cost almost nothing and save a respin. Everything
 else stays off the board entirely.
 
+## Does it need a second CPU? No.
+
+Counted by [`../hardware/pinmap.py`](../hardware/pinmap.py) rather than by hand:
+
+```
+GPIOs on the P4                 55
+Committed (C6, SD, UART, strap) 18
+Available                       37
+Core (engine + transmission)    34
+J1850, routed for later          3
+ASSIGNED                        37
+```
+
+**One CPU, one board, engine and transmission together.** The core build needs
+**34** pins of the 37 available, and J1850 fits in the remaining three.
+
+Moving the SD card to 1-bit SDMMC frees three more, which is the recommended
+v1 configuration — it turns a zero-margin layout into one that can absorb a
+mistake.
+
 ## What actually remains open
 
 Two things, and both are measurements rather than decisions:

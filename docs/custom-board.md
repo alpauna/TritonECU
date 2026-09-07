@@ -39,16 +39,18 @@ That is 20 committed, leaving **35**, plus GPIO24/25 if USB OTG is not fitted.
 |---|---|---|
 | Coil 1–8 | **46, 47, 48, 49, 50, 51, 52, 53** | contiguous, no strapping pins |
 | Injector 1–8 | **26, 27, 28, 29, 30, 31, 32, 33** | contiguous |
-| CKP (VR ch1) | **20** | MAX9926 #1 COUT1 |
-| CMP (VR ch2) | **21** | MAX9926 #1 COUT2 |
-| OSS (VR ch3) | **22** | MAX9926 #2 COUT1 |
-| TSS (VR ch4) | **23** | MAX9926 #2 COUT2 — spare until a 4R100 appears |
+| CKP (VR ch1) | **20** | MAX9926 COUT1 |
+| CMP (VR ch2) | **21** | MAX9926 COUT2 |
+| OSS (VR ch3) | **22** | second MAX9926, or the same one if CMP is Hall |
+
+TSS is not fitted on the 4R70W, so only three VR channels are needed.
 
 ### Buses and analog
 
 | Function | GPIO |
 |---|---|
 | SPI SCK | 34 |
+| SPI MOSI | 23 |
 | SPI MISO | 2 |
 | AD7606 CS | 3 |
 | AD7606 CONVST | 4 |
@@ -68,7 +70,23 @@ That is 20 committed, leaving **35**, plus GPIO24/25 if USB OTG is not fitted.
 | VSS out (to cruise) | 0 |
 | **Ignition arm — 74HCT541 `OE1`** | **25** |
 
-**37 assigned, 0 spare.** Complete, with the ignition interlock included.
+**37 assigned, 0 spare** — verified by [`../hardware/pinmap.py`](../hardware/pinmap.py),
+which checks for duplicates and clashes rather than relying on hand-counting.
+That count found a real omission: **SPI MOSI was missing**, which the MCP23S17
+chain requires to be written to at all.
+
+Zero spare is tight but it is a genuine fit, and there is slack available if
+needed:
+
+| Lever | Frees |
+|---|---|
+| SD card in 1-bit SDMMC | **+3** |
+| Semi-sequential injection (8 → 4 drivers) | +4 |
+| Tach and VSS over SCP instead of discrete outputs | +2 |
+
+**Take the 1-bit SDMMC option on v1.** Three spare pins for a card that only
+carries config and logs is a good trade, and it turns a zero-margin layout into
+one with room to fix a mistake.
 
 `OE2` on the same buffer is driven by a hardware watchdog rather than a GPIO,
 so it costs no pin — see [`output-drivers.md`](output-drivers.md). The
