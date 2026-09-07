@@ -17,6 +17,10 @@
 **Not 3 A.** That matters, because it removes the only argument for
 interleaving.
 
+Note this table is the *5 V-equivalent* load. Once the P4, C6 and SD card are
+fed by a 3.3 V buck rather than directly, the actual draw on the SEPIC falls
+further — see the rail tree below.
+
 ## Two-phase: no
 
 The earlier SEPIC study established what a second phase actually buys — and it
@@ -125,6 +129,68 @@ under automotive transients and one that is not.
 
 Reusing the existing design at a lower current is otherwise sound — derating a
 3 A design to 1.5 A improves margin everywhere.
+
+## Rail tree
+
+VREF draws from the main rail — it has to, since it must hold up through
+cranking and that is the only rail that does. But it goes through its own
+regulator, not a tap.
+
+```
+ 12 V ─[PTC]─[P-FET]─[TVS]─[surge stopper]─► LM5155-Q1 SEPIC ──► 6.0 V main
+                                                                     │
+        ┌────────────────────────────────────────────────────────────┤
+        │                                                            │
+   Buck → 3.3 V                LDO → 5.0 V digital        LDO → 5.0 V analog
+   P4, C6, SD card             74HCT541, MCP23S17         AD7606 AVDD, MAX9926 x2
+   ~900 mA @ 3.3 V             ~30 mA                     ~50 mA
+                                                                     │
+                                                        LDO → 5.00 V VREF
+                                                        ~25 mA, limited to ~150 mA
+                                                        harness-facing
+```
+
+### Why this shape
+
+- **The big load goes through a buck, not an LDO.** The P4, C6 and SD card all
+  run at 3.3 V and together draw the great majority of the power. Taking them
+  down with a switcher keeps the dissipation out of the box.
+- **Every 5 V load is small**, so every 5 V rail can be a linear regulator.
+  With 1 V of headroom from the 6 V main:
+
+  | Rail | Current | Dissipation |
+  |---|---|---|
+  | 5.0 V digital | ~30 mA | 30 mW |
+  | 5.0 V analog | ~50 mA | 50 mW |
+  | 5.00 V VREF | ~25 mA | 25 mW |
+
+  All negligible. Linears here are not a compromise — they are free.
+- **The AD7606 and the MAX9926s get their own quiet rail**, separate from the
+  74HCT541 and the expander chain. Those are digital parts switching eight
+  ignition gates; keeping them off the ADC's supply is worth one extra
+  regulator.
+- **VREF gets its own again**, so a harness fault on VREF cannot pull down the
+  ADC's supply. An LDO's PSRR also isolates VREF from the switcher's ripple —
+  which matters because every sensor on VREF is ratiometric, so supply ripple
+  reads as sensor movement.
+
+### This reframes the 4 A question
+
+Totalling what the SEPIC actually delivers at 6 V:
+
+| | |
+|---|---|
+| 3.3 V buck input (900 mA at 3.3 V, ~90 % eff) | ~550 mA |
+| All three 5 V linears | ~105 mA |
+| **Total from the SEPIC** | **~650 mA** |
+
+So the internal ECU load is under **1 A at 6 V, about 4 W** — not 20 W.
+
+Sizing the SEPIC for 4 A is then a decision about **headroom for things not yet
+on the board**, not about feeding the ECU. **2 A gives 3× margin** on the real
+load at much smaller magnetics and less heat. If 4 A is wanted because
+something external will hang off the 5 V rail, that is a good reason — but it
+should be a stated load, not a default.
 
 ## Two rails, but only one switcher
 
