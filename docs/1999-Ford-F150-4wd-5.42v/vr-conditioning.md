@@ -6,7 +6,7 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
-| **TSS** — turbine shaft speed | 59 | **[CONFIRM]** — assumed VR by analogy with OSS |
+| ~~TSS~~ | 59 | **Not fitted on the 4R70W** — C192 appears only on the 4R100. The PCM pin exists for other applications. See `transmission.md` |
 
 **CMP (pin 85) is unresolved** — a single wire with no matching negative, which
 is equally consistent with a Hall sensor or a single-ended VR. **[CONFIRM]**
@@ -54,7 +54,10 @@ proven" than their discrete attempt — worth reading before designing one.
 
 ## Channel count
 
-Three channels needed (CKP, OSS, TSS), possibly four if CMP turns out to be VR.
-Two MAX9926 packages cover four. The knock sensor is **not** one of these — it
-is a piezo needing a charge amplifier and a sampled ADC channel, not edge
-detection.
+**Two channels needed — CKP and OSS** — plus CMP if it turns out to be VR
+rather than Hall, and possibly the transfer case speed sensor (C199) on this
+4x4. A single dual-channel MAX9926 covers CKP and OSS; a second package covers
+the other two if needed.
+
+The knock sensor is **not** one of these — it is a piezo needing a charge
+amplifier and a sampled ADC channel, not edge detection.
