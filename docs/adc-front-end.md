@@ -412,3 +412,83 @@ on this. It only needs to accommodate a few tens of millivolts of harness ground
 drop, which should be comfortably inside spec — but exceeding it would be a
 design error rather than a degradation, so it is worth reading the number rather
 than assuming.
+
+---
+
+## Resolution: 18-bit is pointless here, and 16-bit is not really 16-bit
+
+### The datasheet already concedes it
+
+From the Tokmas AD7606 figures, converting to effective number of bits with
+`ENOB = (dB − 1.76) / 6.02`:
+
+| Datasheet figure | Value | ENOB |
+|---|---|---|
+| SNR typ, no oversampling, ±10 V | 87 dB | **14.16 bits** |
+| SNR min | 83 dB | 13.50 bits |
+| **SINAD typ** (includes distortion) | 84.5 dB | **13.74 bits** |
+| SINAD min | 83 dB | 13.50 bits |
+| SNR with 64× oversampling | 90 dB | 14.66 bits |
+
+**A 16-bit part delivers about 13.7 effective bits on a lab bench**, before a
+single wire is run through an engine bay. The two bits at the bottom are noise
+in the part itself.
+
+### And that is the good case
+
+In a truck the limits are elsewhere entirely, all of them larger than
+quantisation:
+
+- **Harness pickup.** Eight coil-on-plug primaries and eight injectors switching
+  inductive loads, metres from the signal wires. This dominates everything.
+- **Sensor noise.** A TPS is a potentiometer with a wiper — contact noise alone
+  exceeds 14-bit resolution.
+- **VREF.** Every three-wire sensor is ratiometric, so sensor accuracy is capped
+  by VREF accuracy. The channel-7 correction cancels VREF *drift*, but not VREF
+  *noise*.
+- **Ground drop**, even with the Kelvin sense on the MAF.
+
+Realistically **11 to 12 genuinely trustworthy bits** is the target in a
+vehicle, and getting there is a wiring, shielding and grounding problem — not a
+converter problem.
+
+### How much resolution the sensors actually deserve
+
+| Signal | Useful resolution | Bits needed |
+|---|---|---|
+| TPS | 0.1 % throttle | ~10 |
+| MAF | better than the sensor's own repeatability | ~11 |
+| CHT / IAT | 0.5 °C | ~10 |
+| O2 narrowband | it is a switching sensor | ~8 |
+| Battery voltage | 0.1 V | ~8 |
+
+Nothing on this truck needs more than about 11 bits. At ±10 V a 16-bit LSB is
+305 µV, so 0.1 % of throttle travel already spans 16 codes — resolution is not
+close to being the limiting factor.
+
+### So why this part at all?
+
+**The front end, not the bit count.** What is actually being bought:
+
+- **±16.5 V input clamps** — survives a harness fault.
+- **8 kV ESD** on the analog inputs.
+- **1 MΩ input impedance** — does not load the sensors.
+- **Second-order anti-aliasing filter at 22 kHz**, always in circuit.
+- **True bipolar ±10 V inputs** — 0–5 V sensors connect directly, no scaling.
+- **Simultaneous sampling** — which is what makes the VREF correction exact.
+- **Paired VxGND inputs** — the only way to measure the MAF correctly.
+
+Any of those matter more in a truck than the difference between 14 and 16 ENOB.
+The 18-bit C-18 would add roughly two more bits of lab-bench SNR and nothing at
+all that survives the drive home.
+
+### What this means for the software
+
+- **Do not chase resolution.** Software averaging is for rejecting harness
+  noise, not for recovering sub-LSB detail that does not exist.
+- Averaging 16 samples buys 2 bits against *uncorrelated* noise. Ignition noise
+  is **not** uncorrelated — it is periodic with engine position — so averaging
+  blindly across a coil event does less than the √N maths promises. Sampling
+  *away from* known switching events is worth more than averaging through them.
+- Treat anything below about bit 4 of a 16-bit reading as noise, and do not
+  build control logic that depends on it.
