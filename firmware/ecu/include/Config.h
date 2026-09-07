@@ -20,7 +20,7 @@ struct Engine {
     uint16_t crankTeeth    = 36;
     uint8_t  crankMissing  = 1;
     // Displacement in cc, for the volumetric-efficiency maths later.
-    uint16_t displacementCc = 5400;
+    uint16_t displacementCc = 5408;   // true 5.4L Triton displacement
 };
 
 struct Data {
