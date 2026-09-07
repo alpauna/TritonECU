@@ -386,3 +386,70 @@ variable-reluctance; that has not changed.
 
 **C125–C132**, eight individual connectors, consistent with sequential
 injection and with the eight coil-on-plug units from sheet 1.
+
+---
+
+## Computer data lines — the bus topology
+
+Source: `Computer Data Lines.png`
+
+This resolves what is actually on which bus, and it is not what was assumed.
+
+### SCP (J1850 PWM) — only two modules
+
+| Circuit | Wire | DLC | PCM | Instrument cluster |
+|---|---|---|---|---|
+| 914 | TAN/ORG | pin 2 | **pin 16** | C237 pin 1 |
+| 915 | PNK/LT BLU | pin 10 | **pin 15** | C237 pin 2 |
+
+Spliced at S157 (914) and S156 (915). The only other device shown is the **NGV
+module**, which is a natural-gas option this truck does not have.
+
+So the SCP bus is **PCM ↔ instrument cluster**, and nothing else.
+
+This cross-confirms the MegaSquirt pinout exactly: it lists PCM pin 15 as SCP−
+(PNK/LT BLU) and pin 16 as SCP+ (TAN/ORG). Two independent sources, same
+answer.
+
+### ISO 9141 (circuit 70, LT BLU/WHT) — four modules, and the GEM is one of them
+
+From DLC pin 7, spliced at S229, running to:
+
+| Module | Connector | Pin |
+|---|---|---|
+| **Generic Electronic Module (GEM)** | C239 | 25 |
+| Restraints Control Module | C208 | 5 |
+| Remote Anti-Theft Personality (RAP) Module | C256 | 3 |
+| 4WABS Control Module | — | 5 |
+
+### CORRECTION: the GEM is not on the SCP bus
+
+Earlier documents treated the GEM as the main SCP integration risk — the
+assumption being that pulling the PCM would starve it of messages it expects.
+**The GEM is on ISO 9141, not SCP.** It shares no bus with the PCM at all.
+
+That materially reduces the risk of the swap, and it changes what Phase 0 is
+for:
+
+- **The SCP capture will only ever show PCM ↔ cluster traffic.** That is still
+  the important capture — it is where PATS authorisation lives, and very likely
+  where the tach and speedometer values come from.
+- **The GEM cannot be losing SCP messages, because it never received any.**
+  Anything it needs from the PCM must arrive either as a hardwired signal or
+  not at all.
+
+The MegaSquirt pinout supports the hardwired reading: PCM pin 68 is *"VSS+ Out
+to Cruise"*, a discrete speed output rather than a bus message.
+
+**[CONFIRM]** what the GEM actually needs from the PCM, if anything. The likely
+answer is now "nothing over a bus", which would mean the GEM largely takes care
+of itself — but it is worth establishing rather than assuming twice in a row.
+
+### Two smaller confirmations
+
+- **DLC pin 13 (VIO, circuit 107) runs straight to PCM pin 13**, with nothing
+  else on it. Consistent with FEPS — a programming-voltage input the tool
+  drives and the PCM receives. Leave it unconnected on the replacement.
+- **DLC pin 16** is fed from **Junction Box Fuse 3, 20 A, hot at all times**,
+  via C242 pin 28 and splice S289. Ample for powering a Phase 0 bus-capture rig
+  from the connector.
