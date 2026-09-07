@@ -45,16 +45,78 @@ the same tradeoff.
 If the measured energy is marginal, the EcoSPARK family has higher-energy
 members; staying within the family keeps the footprint and clamp behaviour.
 
-### Gate drive
+### Gate drive — resolved, and simpler than expected
 
-**[CONFIRM]** the gate threshold from the datasheet. IGBTs of this class
-typically want **V<sub>GE</sub> ≈ 5 V or more** for the quoted V<sub>CE(sat)</sub>,
-so a 3.3 V GPIO is unlikely to drive it properly — which is exactly the case
-for the gate drivers already planned. Under-driving an IGBT does not stop it
-working, it makes it dissipate, so this fails as heat rather than as an
-obvious fault.
+The datasheet leads with **"Logic Level Gate Drive"**, and the part has its own
+gate network built in:
 
-Plus the 10 kΩ gate pulldown, and a pulldown on the driver input.
+| Parameter | Value |
+|---|---|
+| **R1, internal series gate resistance** | **70 Ω** |
+| **R2, internal gate-to-emitter resistance** | **10 kΩ – 26 kΩ** |
+| Gate charge Q<sub>G(ON)</sub> | **17 nC** at 10 A, V<sub>GE</sub> = 5 V |
+| Gate threshold V<sub>GE(TH)</sub> | 1.3–2.2 V at 25 °C |
+| **Gate plateau V<sub>GEP</sub>** | **3.0 V** |
+| Datasheet switching conditions | V<sub>GE</sub> = 5 V, **R<sub>G</sub> = 470 Ω** |
+
+**The 10 kΩ gate pulldown is already inside the device** (R2). The boot-state
+protection discussed in `custom-board.md` is therefore built in for the
+ignition side — an external pulldown is belt-and-braces rather than essential.
+
+**But do not drive it from 3.3 V.** The gate plateau is **3.0 V**, so a 3.3 V
+GPIO leaves only 0.3 V of overdrive. Every V<sub>CE(sat)</sub> figure is
+characterised at V<sub>GE</sub> = 4.0–4.5 V. At 3.3 V the device conducts but
+does not saturate, and the failure is **heat, not a fault** — 6–10 A through an
+IGBT that is only partly on.
+
+**No dedicated gate driver IC is needed either.** Gate charge is only 17 nC and
+70 Ω of the series resistance is already internal. A plain **5 V logic buffer**
+is sufficient.
+
+#### Recommended: one 74HCT541 for all eight coils
+
+- **HCT, not HC.** HCT inputs accept 3.3 V as a valid high (V<sub>IH</sub> =
+  2.0 V at V<sub>CC</sub> = 5 V); HC would want 3.15 V minimum and be marginal.
+- Powered from **5 V**, so the gate sees a full 5 V — comfortably above the
+  3.0 V plateau and matching the datasheet's characterisation.
+- Octal, so **one package drives all eight channels**.
+- **Its output-enable is the boot interlock.** `OE` is active-low: pull it up to
+  5 V with 10 kΩ so the outputs are high-impedance at power-on, and have
+  firmware pull it low only once the engine position is known. Combined with
+  the IGBT's internal 10–26 kΩ gate-to-emitter resistor, no coil can be
+  energised before software says so.
+
+#### The gate RC
+
+**470 Ω series per gate, and no capacitor.**
+
+470 Ω is the datasheet's own switching-characterisation value, so the quoted
+turn-off numbers apply directly. With C<sub>iss</sub> ≈ Q<sub>G</sub>/V<sub>GE</sub>
+≈ 3.4 nF, that gives τ ≈ 1.6 µs against the internal 70 Ω plus the external
+470 Ω — **the RC is formed by the resistor and the device's own input
+capacitance. Adding a gate capacitor only slows it further for no benefit.**
+
+Peak gate current is 5 V / 540 Ω ≈ **9 mA**, transient and only during
+switching. Within a 74HCT541's capability.
+
+Resulting timings, from the datasheet at these exact conditions: turn-off delay
+**4.8 µs**, current fall **2.8 µs**. At 6000 rpm one crank degree is 27.8 µs, so
+the fall is **0.1°** — negligible for timing, and fast enough that the primary
+collapses sharply rather than bleeding away.
+
+**Do not add an RC snubber across the collector-emitter.** That is the flyback,
+and absorbing it costs spark energy — see `custom-board.md`.
+
+#### Ignition BOM, per eight channels
+
+| Qty | Part |
+|---|---|
+| 8 | ISL9V3040 |
+| 1 | 74HCT541 |
+| 8 | 470 Ω gate resistor |
+| 1 | 10 kΩ pull-up on `OE` |
+
+Ten line items for the whole ignition output stage.
 
 ---
 
@@ -92,23 +154,42 @@ several parts from the injector stage.
 
 Dissipation at worst-case 250 mΩ and 1 A is 0.25 W, which SOT-223 handles.
 
-### One consequence of direct drive
+### Injector gate network
 
-Driving from the GPIO means the pin faces the injector circuit rather than
-sitting behind a driver. The IntelliFET's ESD-protected input covers the normal
-case, and a series gate resistor plus the 10 kΩ pulldown is still worth fitting.
+**220–470 Ω series, 10 kΩ pulldown, and optionally 1 nF to ground.**
 
-If a uniform "driver on everything" approach is preferred for EMI reasons in a
-truck, that is defensible — but it is a choice here, not a requirement.
+Ringing is barely a concern here, because the IntelliFET's input is a **logic
+input, not a raw gate** — it draws 60–100 µA and an internal driver handles the
+actual MOSFET gate. There is no meaningful gate charge for the GPIO to move and
+no LC gate loop to ring.
+
+So the series resistor is there to limit fault current into the GPIO rather than
+to damp anything. 220–470 Ω is ample.
+
+A 1 nF cap to ground gives useful noise immunity in a harness environment. With
+470 Ω that is a 470 ns time constant — against injector pulse widths of 1–20 ms,
+utterly negligible.
+
+| Qty | Part |
+|---|---|
+| 8 | ZXMS6005DGQ |
+| 8 | 470 Ω series |
+| 8 | 10 kΩ pulldown |
+| 8 | 1 nF (optional) |
+
+No buffer, no driver, no level shift — straight off the P4.
 
 ---
 
 ## Summary
 
-| Load | Part | Clamp | Needs a gate driver? |
+| Load | Part | Clamp | Drive |
 |---|---|---|---|
-| Coil ×8 | ISL9V3040 | 400 V | **Yes** — likely 5 V+ gate |
-| Injector ×8 | ZXMS6005DGQ | 60–70 V | **No** — direct from 3.3 V |
+| Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω. No gate driver IC |
+| Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
+
+Neither needs a dedicated gate-driver IC. One octal buffer covers the entire
+ignition side, and the injectors need nothing at all.
 
 Both keep the rule from `custom-board.md`: **clamp both, dissipate neither**,
 with the clamp voltage chosen for what the load is meant to do.
