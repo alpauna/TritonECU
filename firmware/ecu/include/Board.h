@@ -43,6 +43,33 @@ constexpr uint8_t kLedBlue  = PB7;
 constexpr uint8_t kLedRed   = PB14;
 constexpr uint8_t kButton   = PC13;
 
+// --- SD card, SPI4 on Port E ------------------------------------------------
+// Port E carries no fixed function on the Nucleo-144 -- no Ethernet, no
+// ST-Link, no USB, no LEDs -- so it is the safest block to take. It also
+// leaves the Arduino-header SPI alone, which matters because PA7 is
+// RMII_CRS_DV on this board and the conventional SPI1 trio is already broken
+// by Ethernet.
+//
+// SPI rather than SDMMC: four signals instead of six, and the card carries
+// only config and logs, so bandwidth is not the constraint. If high-rate
+// logging later needs it, SDMMC1 is available on PC8-PC12 + PD2.
+namespace sd {
+constexpr uint8_t kSck  = PE2;   // SPI4_SCK
+constexpr uint8_t kMiso = PE5;   // SPI4_MISO
+constexpr uint8_t kMosi = PE6;   // SPI4_MOSI
+constexpr uint8_t kCs   = PE4;   // software-driven chip select
+}  // namespace sd
+
+// --- Pins committed by the Nucleo-144 itself --------------------------------
+// Do not assign these. [CONFIRM] against UM1974 before finalising a carrier;
+// this list is from the board family rather than the document.
+//   Ethernet RMII : PA1 PA2 PA7 PB13 PC1 PC4 PC5 PG11 PG13
+//   ST-Link VCP   : PD8 (TX) PD9 (RX)
+//   USB OTG FS    : PA8 PA9 PA10 PA11 PA12
+//   LEDs          : PB0 PB7 PB14
+//   User button   : PC13
+//   Oscillators   : PC14 PC15 (LSE), PH0 PH1 (HSE)
+
 }  // namespace board
 
 #else

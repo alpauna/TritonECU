@@ -8,6 +8,7 @@
 // docs/1999-Ford-F150-4wd-5.42v/.
 
 #include <Arduino.h>
+#include <stdint.h>
 
 namespace config {
 

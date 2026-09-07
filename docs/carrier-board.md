@@ -70,6 +70,41 @@ See [`nucleo-setup.md`](nucleo-setup.md) — the full runbook, including the one
 thing that actually blocks a first-time bring-up (the ST-Link udev rule) and
 the two quirks that waste time if you meet them unprepared.
 
+## SD card — SPI4 on Port E
+
+The Nucleo has no SD socket, so a module is wired to the morpho headers.
+
+| SD module | Nucleo | Function |
+|---|---|---|
+| CLK / SCK | **PE2** | SPI4_SCK |
+| MISO / DO | **PE5** | SPI4_MISO |
+| MOSI / DI | **PE6** | SPI4_MOSI |
+| CS | **PE4** | software chip select |
+| 3V3 | 3V3 | **3.3 V modules only** |
+| GND | GND | |
+
+**Why Port E.** It carries no fixed function on the Nucleo-144 — no Ethernet,
+no ST-Link, no USB, no LEDs — so nothing is displaced. It also leaves the
+Arduino-header SPI alone, which matters because **PA7 is RMII_CRS_DV** on this
+board and the conventional SPI1 trio is already broken by Ethernet.
+
+**Why SPI rather than SDMMC.** Four signals instead of six, and the card holds
+config and logs where bandwidth is not the constraint. SDMMC1 (PC8–PC12 + PD2)
+stays available if high-rate logging later needs it.
+
+**Bus speed starts at 4 MHz**, deliberately. Flying leads to an SD module are
+not a controlled-impedance environment, and a card that enumerates at 4 MHz but
+corrupts at 25 MHz is a miserable fault to chase. Raise it once the card is on
+a PCB — same discipline as the AD7606's 1 MHz start.
+
+The firmware distinguishes the two failure modes rather than reporting a
+generic error:
+
+| Report | Means |
+|---|---|
+| `card did not initialise (err 0x01…)` | nothing responded — wiring, CS, or 5 V module |
+| `filesystem is unreadable` | card is there; wrong filesystem (FAT16/32 only) |
+
 ## Order of work
 
 1. ~~M0 on the Nucleo~~ **Done 2026-09-07.** Device ID 0x451 rev 0x1001,

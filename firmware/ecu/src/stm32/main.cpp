@@ -11,6 +11,8 @@
 #include <Arduino.h>
 
 #include "Board.h"
+#include "Config.h"
+#include "StorageStm32.h"
 #include "Version.h"
 
 namespace {
@@ -65,6 +67,8 @@ void reportIdentity() {
     Serial.printf("  unique ID    : %08lX-%08lX-%08lX\n",
                   (unsigned long)uid[0], (unsigned long)uid[1], (unsigned long)uid[2]);
     Serial.printf("  last reset   : %s\n", resetReasonName());
+    storage::report();
+    config::report();
     Serial.println("=======================================================");
 
     // 0x451 is the STM32F76x/F77x family. Anything else means the board file
@@ -93,8 +97,17 @@ void setup() {
     digitalWrite(board::kLedBlue, LOW);
     digitalWrite(board::kLedRed, LOW);
 
+    if (!storage::begin()) {
+        Serial.println("[SD] mount failed — continuing on built-in defaults");
+    }
+    config::load();
+    config::data.bootCount++;
+    if (storage::mounted() && !config::save()) {
+        Serial.println("[cfg] could not persist boot count");
+    }
+
     reportIdentity();
-    Serial.println("M0: board bring-up. Heartbeat every 5 s. Send 'i' to repeat this.");
+    Serial.println("M0/M1: board, storage, config. Heartbeat every 5 s. Send 'i' to repeat this.");
     g_lastBeatMs = millis();
 }
 
