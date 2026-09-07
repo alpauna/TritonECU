@@ -130,6 +130,82 @@ under automotive transients and one that is not.
 Reusing the existing design at a lower current is otherwise sound — derating a
 3 A design to 1.5 A improves margin everywhere.
 
+## Decided: 3 A at 6.0 V, 2.2 MHz
+
+Reproducible in [`../hardware/calc/sepic_lm5155.py`](../hardware/calc/sepic_lm5155.py).
+
+| | |
+|---|---|
+| Output | **6.0 V at 3 A** (18 W) |
+| Input design range | **6 V** (cold crank) to **45 V** (LM5155-Q1 max) |
+| Switching frequency | **2.2 MHz** |
+| Inductors | **2 × 3.3 µH**, separate |
+
+### Why 2.2 MHz, and not 400 kHz
+
+This is an EMC decision, not an efficiency one, and it is easy to miss.
+
+**The AM broadcast band is 530–1710 kHz.** A 400 kHz converter puts its 3rd
+harmonic at 1.2 MHz and its 4th at 1.6 MHz — both squarely inside it. In a
+vehicle, on a harness running the length of the truck, next to a radio. That is
+a hard problem to filter away after the fact.
+
+The LM5155-Q1 reaches 2.2 MHz specifically so the **fundamental and every
+harmonic sit above the band**. It also shrinks the inductors from 10 µH to
+3.3 µH.
+
+The cost is switching loss, which is why the part is rated to 125 °C and why
+the thermal note below matters.
+
+### Worked numbers
+
+| Condition | Vin | Duty | Switch + diode peak | Blocking V |
+|---|---|---|---|---|
+| Cold crank | 6.0 V | 52 % | **6.96 A** | 12.5 V |
+| Running | 13.8 V | 32 % | 5.14 A | 20.3 V |
+| Surge pass-through | 30 V | 17.8 % | 4.44 A | 36.5 V |
+| LM5155 max | 45 V | 12.6 % | 4.25 A | **51.5 V** |
+
+Duty peaks at 52 % against a 93 % ceiling — comfortable, and the reason a SEPIC
+handles cranking where a buck cannot.
+
+### The ripple figures are not what they look like
+
+The table shows inductor ripple reaching "166 % of IL1" at 45 V, which reads
+like a runaway. It is not.
+
+```
+Vin · D = Vin · (Vout + Vd)/(Vin + Vout + Vd)  →  (Vout + Vd)  as Vin rises
+```
+
+Ripple is set by the **output**, not the input, and asymptotes to **0.90 A**.
+The large percentage at high line is that same fixed ripple measured against a
+much smaller average current. The input inductor simply runs discontinuous at
+high line and light input current, which is normal for a SEPIC.
+
+### Components
+
+| Part | Requirement |
+|---|---|
+| MOSFET | ≥ 52 V blocking, ≥ 7 A peak → **80–100 V** for ringing margin |
+| Diode | ≥ 52 V, 3 A average, 7 A peak → **100 V Schottky** |
+| Inductors | 2 × 3.3 µH, **saturation > 4.5 A each** |
+| **Coupling cap Cs** | ≥ 52 V, **3.1 A rms** |
+
+**Cs is the part most often under-specified.** It carries 3.1 A rms at cold
+crank — one ceramic will not do it, and its ESR is dissipating that current
+squared. Several 100 V X7R in parallel, chosen for ripple-current rating rather
+than capacitance alone.
+
+### Thermal — the case that actually sizes the design
+
+At 13.8 V nominal, 18 W out at 85 % efficiency is **3.2 W dissipated**.
+
+Not during cranking, which is brief. **Continuously, forever**, at whatever the
+enclosure's ambient turns out to be. That is the number the copper pour and the
+enclosure have to be designed around, and it is why the LM5155-Q1's Grade 1
+125 °C rating matters rather than being a nicety.
+
 ## Rail tree
 
 VREF draws from the main rail — it has to, since it must hold up through
