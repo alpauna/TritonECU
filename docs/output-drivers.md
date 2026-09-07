@@ -80,11 +80,49 @@ is sufficient.
 - Powered from **5 V**, so the gate sees a full 5 V — comfortably above the
   3.0 V plateau and matching the datasheet's characterisation.
 - Octal, so **one package drives all eight channels**.
-- **Its output-enable is the boot interlock.** `OE` is active-low: pull it up to
-  5 V with 10 kΩ so the outputs are high-impedance at power-on, and have
-  firmware pull it low only once the engine position is known. Combined with
-  the IGBT's internal 10–26 kΩ gate-to-emitter resistor, no coil can be
-  energised before software says so.
+- **Two output-enables, and they are a two-key interlock.** The '541 has
+  **`OE1` (pin 1) and `OE2` (pin 19), both active-low and ANDed internally** —
+  *either* one high forces all eight outputs to high-impedance. Pull both up to
+  5 V with 10 kΩ so the outputs are disabled at power-on. Combined with the
+  IGBT's internal 10–26 kΩ gate-to-emitter resistor, no coil can be energised
+  before something actively permits it.
+
+#### Use the two enables independently
+
+Tying them together works, but wastes the more useful arrangement:
+
+| Enable | Driven by | Meaning |
+|---|---|---|
+| **`OE1`** | firmware GPIO | "engine position is known and ignition is armed" |
+| **`OE2`** | **hardware watchdog** | "firmware is still alive" |
+
+The second one addresses a failure the first cannot. If firmware hangs *while a
+coil is charging*, that coil stays energised — 6–10 A continuously into a
+primary designed for a few milliseconds of dwell. The coil cooks, and quite
+possibly the IGBT with it. No amount of software care helps, because the
+software is what stopped.
+
+A supervisor IC with a watchdog input (TPS3823-class) driving `OE2` fixes it in
+hardware: firmware must kick it periodically, and if it stops, the buffer goes
+high-impedance and every gate is pulled down by the IGBT's own internal
+resistor. It costs one part and one GPIO, and it is the difference between a
+hung ECU being an inconvenience and a hung ECU being a destroyed coil.
+
+If the watchdog is left for later, fit the footprint and strap `OE2` low.
+
+#### Package current, and why it is fine
+
+The 74HCT541's guaranteed output drive is ±6 mA and absolute maximum is around
+25 mA per output — with a further limit on total current through the supply
+pins. Nine milliamps per channel is above the guaranteed figure but far below
+the maximum, and it is a **transient during the ~1.6 µs gate charge**, not a DC
+load.
+
+What makes it comfortable is that the channels never switch together: ignition
+events are **45° apart** (see `SparkScheduler`), so at most one or two gates are
+in transition at any instant. Eight simultaneous edges would be ~72 mA and
+outside the package's supply-pin rating — but that condition cannot arise from
+a correct firing order.
 
 #### The gate RC
 
@@ -114,9 +152,10 @@ and absorbing it costs spark energy — see `custom-board.md`.
 | 8 | ISL9V3040 |
 | 1 | 74HCT541 |
 | 8 | 470 Ω gate resistor |
-| 1 | 10 kΩ pull-up on `OE` |
+| 2 | 10 kΩ pull-up — one each on `OE1`, `OE2` |
+| 1 | watchdog supervisor driving `OE2` *(optional, recommended)* |
 
-Ten line items for the whole ignition output stage.
+Eleven line items for the whole ignition output stage, watchdog included.
 
 ---
 

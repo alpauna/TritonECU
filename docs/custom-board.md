@@ -66,8 +66,14 @@ That is 20 committed, leaving **35**, plus GPIO24/25 if USB OTG is not fitted.
 | IAC PWM | 12 |
 | Tach out | 13 |
 | VSS out (to cruise) | 0 |
+| **Ignition arm — 74HCT541 `OE1`** | **25** |
 
-**36 assigned, 1 spare (GPIO25).** Tight but complete.
+**37 assigned, 0 spare.** Complete, with the ignition interlock included.
+
+`OE2` on the same buffer is driven by a hardware watchdog rather than a GPIO,
+so it costs no pin — see [`output-drivers.md`](output-drivers.md). The
+watchdog's kick line can share the expander chain or take a freed pin if the SD
+card moves to 1-bit SDMMC.
 
 If more headroom is wanted, in order of least pain:
 1. **SD in 1-bit SDMMC** — CLK, CMD, D0 only. Frees 3.
