@@ -112,8 +112,47 @@ Against a module, the board now owns:
 - **The ESP32-C6, if Wi-Fi is wanted** — a second chip, its own flash, an
   antenna and RF layout.
 
-On that last point: a sensible middle path is a **raw P4 plus a pre-certified
-ESP32-C6-MINI-1 module** for the radio. It keeps full P4 pin access — which is
-the whole reason for going raw — while avoiding RF layout and certification
-entirely. The C6-MINI-1 is what the Waveshare board uses, and it connects over
-the same SDIO pins already reserved above.
+**Decided: raw P4, with the ESP32-C6 as a pre-certified module.** That keeps
+full P4 pin access — the whole reason for going raw — while avoiding RF layout
+and certification entirely. The C6-MINI-1 is what the Waveshare board uses, and
+it connects over the SDIO pins already reserved above (GPIO14–19 plus reset on
+54).
+
+## Chip revision: buy v3.x
+
+Chip revision matters, and the bench board is not representative of what to
+build with. The Waveshare board reports **rev v1.3** — engineering-sample era.
+Current production is **v3.x**, and the differences are worth having:
+
+| Change | Relevant here? |
+|---|---|
+| **360 MHz → 400 MHz** | modestly |
+| **MSPI power-on wake-up fault (load access fault) fixed** | **yes — see below** |
+| Secure boot verification failures fixed | if secure boot is ever used |
+| Dedicated RNG, AES DPA resistance, ECC P-384 | no |
+| ISP, PPA, I2S improvements | no — multimedia |
+| Zb bit-manipulation extensions, PIE tuning | marginally |
+
+**No GPIO or pin-function changes**, so the assignment above stands on either
+revision.
+
+### The MSPI fix is the reason to insist on v3.x
+
+MSPI is the memory interface to flash and PSRAM. A **power-on wake-up fault**
+there means a load access fault at start-up — the processor failing to read the
+memory it is executing from.
+
+An ECU is close to the worst case for that bug. It power-cycles every time the
+key turns, and it does so through cranking, where the battery sags to 8–9 V and
+the rails are at their most marginal. A fault that appears at power-on, on a
+device that power-cycles several times a day, in a vehicle, is not a defect to
+live with.
+
+### Consequence for the firmware
+
+The PlatformIO target changes from `esp32-p4` (ES variant, 360 MHz) to
+**`esp32-p4_r3`** (400 MHz). Trivial, but worth flagging: anything validated on
+the bench board runs 11 % faster on production silicon. Hardware-timer-driven
+spark and injection are unaffected — timers have their own clock source — but
+any delay loop or cycle-counting written against 360 MHz would shift, which is
+a good reason not to write any.
