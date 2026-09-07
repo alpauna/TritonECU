@@ -91,9 +91,23 @@ Battery voltage exceeds both ranges and needs a divider regardless.
    confirm the reading collapses to near zero. This is the property the MAF
    depends on, and it is the one that silently does not work if a −IN is
    accidentally grounded.
-4. Confirm BUSY actually rises and falls. `begin()` fails on a BUSY timeout
-   rather than returning happily, because a stuck BUSY is a wiring fault, not
-   something to retry.
+4. Confirm BUSY actually rises and falls.
+
+**Correction, from the bench.** An earlier version of this document claimed
+`begin()` would fail on a BUSY timeout rather than reporting zeros. It did not.
+With nothing connected, BUSY floats **low**, so the wait-for-BUSY-to-fall
+returned immediately; MISO floated high, every channel read `0xFFFF`, and the
+firmware cheerfully announced "AD7606 responding" with a plausible −0.0003 V on
+all eight channels.
+
+Two checks now guard it, and both were added because the obvious one failed:
+
+- **BUSY must be seen to RISE** after CONVST, not merely be low. The probe runs
+  at ×64 oversampling so the conversion takes ~255 µs instead of ~3 µs, making
+  the high period impossible to miss.
+- **All eight channels reading an identical `0x0000` or `0xFFFF`** is treated as
+  a floating DOUTA rather than data. Real inputs, even grounded ones, disagree
+  in the low bits from noise alone.
 
 ---
 

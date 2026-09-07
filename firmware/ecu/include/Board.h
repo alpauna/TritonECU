@@ -37,4 +37,22 @@ constexpr uint8_t kI2cScl = 8;   // header silkscreen SCL
 constexpr uint8_t kAdc1Pins[] = {20, 21, 22, 23};
 constexpr uint8_t kAdc2Pins[] = {49, 50, 51, 52};
 
+// --- AD7606 external ADC (bench wiring, M2) ---------------------------------
+// See docs/adc-wiring.md. Grouped so each side of the header is one run.
+// In the final ECU, reset/frstdata/os0/os1/os2/range move to the MCP23S17
+// expander chain — they are static, and do not deserve native pins.
+namespace adc {
+constexpr int8_t kSck      = 27;
+constexpr int8_t kMiso     = 33;   // AD7606 DOUTA
+constexpr int8_t kCs       = 46;
+constexpr int8_t kConvst   = 26;
+constexpr int8_t kBusy     = 28;
+constexpr int8_t kReset    = 29;
+constexpr int8_t kFrstdata = 30;
+constexpr int8_t kOs0      = 31;
+constexpr int8_t kOs1      = 47;
+constexpr int8_t kOs2      = 48;
+constexpr int8_t kRange    = 2;
+}  // namespace adc
+
 }  // namespace board

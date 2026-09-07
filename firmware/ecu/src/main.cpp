@@ -19,6 +19,7 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 
+#include "Ad7606c.h"
 #include "Board.h"
 #include "Config.h"
 #include "Storage.h"
@@ -27,6 +28,7 @@
 namespace {
 
 std::atomic<uint32_t> g_heartbeats{0};
+bool g_adcReady = false;
 esp_timer_handle_t g_heartbeatTimer = nullptr;
 
 // Fires from the esp_timer task, not an ISR context we own — safe to keep
@@ -121,6 +123,24 @@ void setup() {
     ESP_ERROR_CHECK(esp_timer_create(&args, &g_heartbeatTimer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(g_heartbeatTimer, 1000 * 1000));  // 1 Hz
 
+    // M2 — external ADC. Absence is not fatal: the board is useful without it
+    // and this milestone is still being wired.
+    const ad7606c::Pins adcPins{
+        .sck = board::adc::kSck,       .miso = board::adc::kMiso,
+        .cs = board::adc::kCs,         .convst = board::adc::kConvst,
+        .busy = board::adc::kBusy,     .reset = board::adc::kReset,
+        .range = board::adc::kRange,
+        .os0 = board::adc::kOs0,       .os1 = board::adc::kOs1,
+        .os2 = board::adc::kOs2,       .frstdata = board::adc::kFrstdata,
+    };
+    g_adcReady = ad7606c::begin(adcPins);
+    if (g_adcReady) {
+        Serial.printf("  ADC          : AD7606 responding, +/-10 V, OS off, "
+                      "SPI %lu kHz\n", (unsigned long)(ad7606c::spiHz() / 1000));
+    } else {
+        Serial.println("  ADC          : AD7606 not responding — see docs/adc-wiring.md");
+    }
+
     Serial.println("M0/M1 up. Heartbeat every 5 s.");
 }
 
@@ -134,6 +154,19 @@ void loop() {
                       (unsigned long)beats,
                       (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
                       (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
+
+        if (g_adcReady) {
+            float v[ad7606c::kChannels];
+            if (ad7606c::readVolts(v)) {
+                Serial.print("           ADC V1-V8:");
+                for (uint8_t i = 0; i < ad7606c::kChannels; i++) {
+                    Serial.printf(" %+7.4f", v[i]);
+                }
+                Serial.println(" V");
+            } else {
+                Serial.println("           ADC read failed (BUSY timeout)");
+            }
+        }
     }
     delay(50);
 }

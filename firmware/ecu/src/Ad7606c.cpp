@@ -11,11 +11,11 @@ namespace {
 constexpr uint32_t kResetPulseUs  = 10;
 constexpr uint32_t kResetSettleUs = 400;
 
-// 8 MHz, as raised and proven on the Teensy bench setup. Well under the
-// datasheet's 63.5 MHz ceiling; this is a cautious value for flying-wire
-// wiring, not a limit of the part. Re-validate against a known reference
-// before raising it.
-constexpr uint32_t kSpiHz = 8000000;
+// SPI clock is a runtime value, not a constant: bring-up starts slow over
+// Dupont leads and steps up once the wiring has proven itself. The Teensy build
+// ran 1 MHz through Phase 1 and only moved to 8 MHz after bench validation.
+// The part itself will take 63.5 MHz; the wiring is the limit, not the silicon.
+uint32_t g_spiHz = 1000000;
 
 // BUSY should fall within ~10 us even at the slowest oversampling ratio. A
 // generous ceiling here still catches a genuinely stuck part quickly.
@@ -25,7 +25,7 @@ Pins  g_pins{};
 Range g_range = Range::kBipolar10V;
 bool  g_ready = false;
 
-SPISettings g_spi(kSpiHz, MSBFIRST, SPI_MODE0);
+SPISettings g_spi(g_spiHz, MSBFIRST, SPI_MODE0);
 
 void applyRange() {
     digitalWrite(g_pins.range, g_range == Range::kBipolar10V ? HIGH : LOW);
@@ -52,11 +52,49 @@ bool waitBusyLow() {
     return true;
 }
 
+// Probe that the part is really there.
+//
+// Waiting for BUSY to fall is not evidence of anything: with nothing connected
+// the pin floats low and the wait returns immediately, MISO floats high, and
+// every channel reads 0xFFFF — which looks like a plausible -0.0003 V. This
+// was observed on the bench, so the check below exists because the obvious one
+// failed.
+//
+// Instead, require BUSY to actually RISE after CONVST. To make that impossible
+// to miss, probe at x64 oversampling, where conversion takes ~255 us rather
+// than the ~3 us of a normal conversion. The caller's real oversampling
+// setting is applied afterwards.
+bool probeBusyRises() {
+    applyOversampling(Oversampling::kX64);
+    delayMicroseconds(10);
+
+    pulseConvst();
+
+    const uint32_t start = micros();
+    bool sawHigh = false;
+    while (micros() - start < 1000) {          // 1 ms >> the ~255 us expected
+        if (digitalRead(g_pins.busy) == HIGH) { sawHigh = true; break; }
+    }
+    if (!sawHigh) return false;
+    return waitBusyLow();
+}
+
+// A bus with nothing driving it reads all-ones or all-zeros on every channel.
+// Real inputs, even grounded ones, disagree in the low bits from noise alone.
+bool looksLikeFloatingBus(const int16_t raw[kChannels]) {
+    for (uint8_t i = 1; i < kChannels; i++) {
+        if (raw[i] != raw[0]) return false;    // channels differ — real data
+    }
+    return raw[0] == static_cast<int16_t>(0xFFFF) || raw[0] == 0;
+}
+
 }  // namespace
 
-bool begin(const Pins& pins, Range range, Oversampling os) {
+bool begin(const Pins& pins, Range range, Oversampling os, uint32_t spiHz) {
     g_pins  = pins;
     g_range = range;
+    g_spiHz = spiHz;
+    g_spi   = SPISettings(g_spiHz, MSBFIRST, SPI_MODE0);
 
     pinMode(g_pins.cs, OUTPUT);      digitalWrite(g_pins.cs, HIGH);
     pinMode(g_pins.convst, OUTPUT);  digitalWrite(g_pins.convst, HIGH);
@@ -79,14 +117,29 @@ bool begin(const Pins& pins, Range range, Oversampling os) {
     digitalWrite(g_pins.reset, LOW);
     delayMicroseconds(kResetSettleUs);
 
-    // A conversion that completes is the only evidence the part is alive and
-    // wired: BUSY has to rise and fall on its own.
-    int16_t discard[kChannels];
     g_ready = true;
-    if (!read(discard)) {
+
+    if (!probeBusyRises()) {
         g_ready = false;
-        Serial.println("[ADC] AD7606C did not complete a conversion — check "
-                       "wiring, RESET and BUSY");
+        Serial.println("[ADC] BUSY never went high after CONVST — the part is "
+                       "absent or CONVST/BUSY are miswired");
+        return false;
+    }
+
+    // Restore the caller's oversampling now the probe is done.
+    applyOversampling(os);
+    delayMicroseconds(10);
+
+    int16_t sample[kChannels];
+    if (!read(sample)) {
+        g_ready = false;
+        Serial.println("[ADC] conversion did not complete — check RESET and BUSY");
+        return false;
+    }
+    if (looksLikeFloatingBus(sample)) {
+        g_ready = false;
+        Serial.printf("[ADC] all 8 channels read identical 0x%04X — DOUTA is "
+                      "floating, not driven\n", (uint16_t)sample[0]);
         return false;
     }
     return true;
@@ -120,6 +173,13 @@ bool readVolts(float volts[kChannels]) {
     for (uint8_t i = 0; i < kChannels; i++) volts[i] = raw[i] * scale;
     return true;
 }
+
+void setSpiHz(uint32_t hz) {
+    g_spiHz = hz;
+    g_spi   = SPISettings(g_spiHz, MSBFIRST, SPI_MODE0);
+}
+
+uint32_t spiHz() { return g_spiHz; }
 
 Range range() { return g_range; }
 

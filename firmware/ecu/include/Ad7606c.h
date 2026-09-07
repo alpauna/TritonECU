@@ -55,8 +55,17 @@ struct Pins {
     int8_t frstdata = -1;  // optional; -1 if not wired
 };
 
+// spiHz defaults to 1 MHz — deliberately slow for bring-up over flying leads.
+// The Teensy build started here too before raising to 8 MHz once the wiring had
+// proven itself. Raise it only after readings have been checked against a known
+// reference, not because it "seems to work".
 bool begin(const Pins& pins, Range range = Range::kBipolar10V,
-           Oversampling os = Oversampling::kNone);
+           Oversampling os = Oversampling::kNone,
+           uint32_t spiHz = 1000000);
+
+// Change the SPI clock at runtime, for stepping it up during bring-up.
+void setSpiHz(uint32_t hz);
+uint32_t spiHz();
 
 // Triggers a conversion and reads all 8 channels. Returns false on BUSY
 // timeout, which is a real signal — miswiring, no RESET, or a dead part —
