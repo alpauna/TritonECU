@@ -43,6 +43,21 @@ constexpr uint8_t kLedBlue  = PB7;
 constexpr uint8_t kLedRed   = PB14;
 constexpr uint8_t kButton   = PC13;
 
+// --- Console UART -----------------------------------------------------------
+// The ST-Link's own VCP proved unreliable on this board: it drops characters
+// even on a five-second heartbeat with no host traffic, at both 115200 and
+// 57600. That is an ST-Link firmware/hardware issue, not something the
+// application can fix.
+//
+// USART2 on PD5/PD6 is free (USART3 on PD8/PD9 is the ST-Link's) and takes an
+// ordinary USB-UART adapter. Output goes to BOTH ports, so whichever is
+// connected works and nothing needs reconfiguring.
+namespace console {
+constexpr uint8_t kTx = PD5;   // USART2_TX -> adapter RX
+constexpr uint8_t kRx = PD6;   // USART2_RX <- adapter TX
+constexpr uint32_t kBaud = 115200;
+}  // namespace console
+
 // --- SD card, SPI4 on Port E ------------------------------------------------
 // Port E carries no fixed function on the Nucleo-144 -- no Ethernet, no
 // ST-Link, no USB, no LEDs -- so it is the safest block to take. It also
