@@ -8,11 +8,7 @@ the wiring diagrams; wire colours are the field identifier.
 
 ## C141 — Mass Air Flow (MAF) sensor
 
-Source: `oem-map-pins.png`
-
-*(Filename says "map"; the connector is the **MAF**. Worth renaming to
-`oem-maf-pins.png` before the folder fills up — this truck also has a MAP/DPFE
-area and the two will get confused.)*
+Source: `oem-maf-pins.png`
 
 | Pin | Circuit | Colour | Function |
 |---|---|---|---|
