@@ -132,6 +132,43 @@ rusEFI use 1 nF, which with 10 kΩ puts the corner near 16 kHz. Note the series
 resistors also lower the input amplifier's gain, so they interact with
 threshold behaviour and should not be changed casually.
 
+#### Package these for voltage, not for power
+
+**0805 minimum, and preferably two in series per leg.**
+
+The binding constraint on these resistors is **maximum working voltage**, not
+dissipation. A VR sensor's output rises with tooth speed and can exceed **100 V
+peak** at engine speed — the same property that makes it useless at cranking
+makes it brutal at redline. Almost all of that appears across the series
+resistor, because the far end is clamped by the MAX9926's internal ESD diodes
+to within a diode drop of the 5 V rail.
+
+Typical thick-film chip resistor working-voltage ratings:
+
+| Size | Max working voltage |
+|---|---|
+| 0402 | 50 V |
+| 0603 | 50 V |
+| **0805** | **150 V** |
+| 1206 | 200 V |
+
+So 0603 is genuinely marginal and 0402 is out. 0805 at 150 V has real margin
+against a 100 V sensor peak.
+
+**Better: split each leg into two resistors in series** — 2 × 4.7 kΩ or 2 × 5 kΩ
+in 0805. That doubles the working-voltage headroom to 300 V, halves the voltage
+stress and the pulse energy in each part, and costs one extra footprint per leg.
+
+This is very likely what rusEFI did: their VR board BOM lists **ten 5 kΩ
+resistors**, and four input legs at two apiece accounts for eight of them. Two
+5 kΩ in series is the 10 kΩ the datasheet asks for, built to survive the
+voltage.
+
+Dissipation is not the issue — 100 V across 10 kΩ is 10 mA and 1 W, but only
+for the microseconds of a tooth peak, so average power is negligible. Chip
+resistors fail here by **voltage breakdown and repetitive pulse stress**, not by
+overheating, and both are addressed by more package and more parts in series.
+
 **[CONFIRM]** the datasheet's own pin table describes pin 15 (IN1−) as
 "Noninverting Input 1" and pin 16 (IN1+) as "Inverting Input 1" — the
 descriptions look transposed relative to the names. Trust the names. Polarity
