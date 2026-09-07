@@ -16,12 +16,14 @@
 #include "Config.h"
 #include "Logger.h"
 #include "PinExpander.h"
+#include "BoardPins.h"
 #include <esp_task_wdt.h>
 #include <esp_log.h>
 
-// Locked GPIO pin assignments — time-critical, not configurable
-static const uint8_t PIN_CRANK        = 1;
-static const uint8_t PIN_CAM          = 2;
+// Locked GPIO pin assignments — time-critical, not configurable.
+// Board-specific values live in BoardPins.h.
+static const uint8_t PIN_CRANK        = DEF_PIN_CRANK;
+static const uint8_t PIN_CAM          = DEF_PIN_CAM;
 
 static SPIClass hspi(HSPI);
 
@@ -30,14 +32,15 @@ ECU::ECU(Scheduler* ts)
       _realtimeTaskHandle(nullptr), _cj125(nullptr), _ads1115(nullptr),
       _ads1115_2(nullptr), _mcp3204(nullptr), _trans(nullptr), _customPins(nullptr),
       _cj125Enabled(false), _transType(0),
-      _pinAlternator(41), _pinI2cSda(0), _pinI2cScl(42),
-      _pinHeater1(19), _pinHeater2(20), _pinCj125Ua1(3), _pinCj125Ua2(4),
-      _pinCj125Ss1(208), _pinCj125Ss2(209),
-      _pinTcc(45), _pinEpc(46),
-      _pinHspiSck(10), _pinHspiMosi(11), _pinHspiMiso(12),
-      _pinHspiCs(13), _pinMcp3204Cs(15),
-      _pinFuelPump(200), _pinTachOut(201), _pinCel(202),
-      _pinSsA(216), _pinSsB(217), _pinSsC(218), _pinSsD(219),
+      _pinAlternator(DEF_PIN_ALTERNATOR), _pinI2cSda(DEF_PIN_I2C_SDA), _pinI2cScl(DEF_PIN_I2C_SCL),
+      _pinHeater1(DEF_PIN_HEATER1), _pinHeater2(DEF_PIN_HEATER2),
+      _pinCj125Ua1(DEF_PIN_O2_BANK1), _pinCj125Ua2(DEF_PIN_O2_BANK2),
+      _pinCj125Ss1(DEF_PIN_CJ125_SS1), _pinCj125Ss2(DEF_PIN_CJ125_SS2),
+      _pinTcc(DEF_PIN_TCC), _pinEpc(DEF_PIN_EPC),
+      _pinHspiSck(DEF_PIN_HSPI_SCK), _pinHspiMosi(DEF_PIN_HSPI_MOSI), _pinHspiMiso(DEF_PIN_HSPI_MISO),
+      _pinHspiCs(DEF_PIN_HSPI_CS), _pinMcp3204Cs(DEF_PIN_MCP3204_CS),
+      _pinFuelPump(DEF_PIN_FUEL_PUMP), _pinTachOut(DEF_PIN_TACH_OUT), _pinCel(DEF_PIN_CEL),
+      _pinSsA(DEF_PIN_SS_A), _pinSsB(DEF_PIN_SS_B), _pinSsC(DEF_PIN_SS_C), _pinSsD(DEF_PIN_SS_D),
       _pinSharedInt(0xFF) {
     memset(&_state, 0, sizeof(_state));
     memset(_firingOrder, 0, sizeof(_firingOrder));

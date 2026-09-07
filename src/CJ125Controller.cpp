@@ -57,9 +57,8 @@ void CJ125Controller::begin(uint16_t spiSS1, uint16_t spiSS2,
         analogSetPinAttenuation(_banks[i].uaPin, ADC_11db);
 
         // Configure heater PWM: 100Hz, 8-bit resolution via LEDC
-        ledcSetup(_banks[i].ledcChannel, 100, 8);
-        ledcAttachPin(_banks[i].heaterPin, _banks[i].ledcChannel);
-        ledcWrite(_banks[i].ledcChannel, 0);
+        ledcAttachChannel(_banks[i].heaterPin, 100, 8, _banks[i].ledcChannel);
+        ledcWrite(_banks[i].heaterPin, 0);
 
         // Verify CJ125 identity
         uint16_t ident = spiTransfer(i, CJ125_IDENT_REG_REQUEST);
@@ -121,7 +120,7 @@ void CJ125Controller::setHeaterPwm(uint8_t bank, float targetV, float batteryV) 
     float duty = constrain(targetV / batteryV, 0.0f, 1.0f);
     b.heaterPwm = (int)(duty * 255.0f);
     b.heaterDuty = duty * 100.0f;
-    ledcWrite(b.ledcChannel, (uint8_t)b.heaterPwm);
+    ledcWrite(b.heaterPin, (uint8_t)b.heaterPwm);
 }
 
 void CJ125Controller::update(float batteryVoltage) {
@@ -212,7 +211,7 @@ void CJ125Controller::updateBank(uint8_t bank, float batteryVoltage) {
                 b.heaterState = ERROR;
                 b.heaterPwm = 0;
                 b.heaterDuty = 0.0f;
-                ledcWrite(b.ledcChannel, 0);
+                ledcWrite(b.heaterPin, 0);
                 break;
             }
 
@@ -228,13 +227,13 @@ void CJ125Controller::updateBank(uint8_t bank, float batteryVoltage) {
             b.heaterPwm += (int)pidOutput;
             b.heaterPwm = constrain(b.heaterPwm, 0, 255);
             b.heaterDuty = b.heaterPwm * 100.0f / 255.0f;
-            ledcWrite(b.ledcChannel, (uint8_t)b.heaterPwm);
+            ledcWrite(b.heaterPin, (uint8_t)b.heaterPwm);
             break;
         }
 
         case ERROR:
             // Heater off until restart
-            ledcWrite(b.ledcChannel, 0);
+            ledcWrite(b.heaterPin, 0);
             b.heaterDuty = 0.0f;
             break;
     }

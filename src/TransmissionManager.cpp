@@ -62,17 +62,15 @@ void TransmissionManager::begin(uint16_t ssAPin, uint16_t ssBPin, uint16_t ssCPi
 
     // TCC PWM — 200Hz, 8-bit (skip if pin is 0xFF / disabled)
     if (_tccPin != 0xFF) {
-        ledcSetup(TCC_LEDC_CH, 200, 8);
-        ledcAttachPin(_tccPin, TCC_LEDC_CH);
-        ledcWrite(TCC_LEDC_CH, 0);
+        ledcAttachChannel(_tccPin, 200, 8, TCC_LEDC_CH);
+        ledcWrite(_tccPin, 0);
         _tccEnabled = true;
     }
 
     // EPC PWM — 5kHz, 8-bit (skip if pin is 0xFF / disabled)
     if (_epcPin != 0xFF) {
-        ledcSetup(EPC_LEDC_CH, 5000, 8);
-        ledcAttachPin(_epcPin, EPC_LEDC_CH);
-        ledcWrite(EPC_LEDC_CH, 0);
+        ledcAttachChannel(_epcPin, 5000, 8, EPC_LEDC_CH);
+        ledcWrite(_epcPin, 0);
         _epcEnabled = true;
     }
 
@@ -136,8 +134,8 @@ void TransmissionManager::update(uint16_t engineRpm, float tps, float vbat) {
             setSolenoid(_ssCPin, false);
             setSolenoid(_ssDPin, false);
         }
-        if (_tccEnabled) ledcWrite(TCC_LEDC_CH, 0);
-        if (_epcEnabled) ledcWrite(EPC_LEDC_CH, 0);
+        if (_tccEnabled) ledcWrite(_tccPin, 0);
+        if (_epcEnabled) ledcWrite(_epcPin, 0);
         _state.ssA = _state.ssB = _state.ssC = _state.ssD = false;
         return;
     }
@@ -350,7 +348,7 @@ void TransmissionManager::updateTCC(uint16_t engineRpm) {
     _state.tccLocked = (_state.tccDuty >= 95.0f);
     if (_tccEnabled) {
         uint8_t pwm = (uint8_t)(_state.tccDuty * 255.0f / 100.0f);
-        ledcWrite(TCC_LEDC_CH, pwm);
+        ledcWrite(_tccPin, pwm);
     }
 }
 
@@ -371,7 +369,7 @@ void TransmissionManager::updateEPC(float tps) {
     _state.epcDuty = duty;
     if (_epcEnabled) {
         uint8_t pwm = (uint8_t)(duty * 255.0f / 100.0f);
-        ledcWrite(EPC_LEDC_CH, pwm);
+        ledcWrite(_epcPin, pwm);
     }
 }
 

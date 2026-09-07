@@ -1,4 +1,5 @@
 #include "Config.h"
+#include "BoardPins.h"
 #include "esp_hmac.h"
 #include "esp_random.h"
 
@@ -118,20 +119,20 @@ void Config::setAdminPassword(const String& plaintext) { _adminPassword = plaint
 bool Config::verifyAdminPassword(const String& plaintext) const { return plaintext == _adminPassword; }
 
 bool Config::initSDCard(uint8_t csPin) {
-    if (!SD.begin(csPin, SPI, SD_SPI_SPEED * 1000000UL)) {
-        Serial.println("\nSD initialization failed.");
+    if (!ecuStorageBegin(csPin)) {
+        Serial.printf("\nSD initialization failed (%s).\n", ecuStorageBackend());
         return false;
     }
-    Serial.println("\nCard successfully initialized.\n");
+    Serial.printf("\nCard successfully initialized on %s.\n\n", ecuStorageBackend());
     _sdInitialized = true;
     return true;
 }
 
 bool Config::loadConfig(const char* filename, ProjectInfo& proj) {
-    if (!SD.exists(filename)) {
+    if (!ECU_SD.exists(filename)) {
         return saveConfig(filename, proj);
     }
-    fs::File file = SD.open(filename, FILE_READ);
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file || file.size() == 0) {
         if (file) file.close();
         return saveConfig(filename, proj);
@@ -212,51 +213,51 @@ bool Config::loadConfig(const char* filename, ProjectInfo& proj) {
     proj.cj125Enabled = doc["engine"]["cj125Enabled"] | false;
 
     // Pin assignments
-    proj.pinO2Bank1 = doc["pins"]["o2Bank1"] | 3;
-    proj.pinO2Bank2 = doc["pins"]["o2Bank2"] | 4;
-    proj.pinMap = doc["pins"]["map"] | 5;
-    proj.pinTps = doc["pins"]["tps"] | 6;
-    proj.pinClt = doc["pins"]["clt"] | 7;
-    proj.pinIat = doc["pins"]["iat"] | 8;
-    proj.pinVbat = doc["pins"]["vbat"] | 9;
-    proj.pinAlternator = doc["pins"]["alternator"] | 41;
-    proj.pinHeater1 = doc["pins"]["heater1"] | 19;
-    proj.pinHeater2 = doc["pins"]["heater2"] | 20;
-    proj.pinTcc = doc["pins"]["tcc"] | 45;
-    proj.pinEpc = doc["pins"]["epc"] | 46;
-    proj.pinHspiSck = doc["pins"]["hspiSck"] | 10;
-    proj.pinHspiMosi = doc["pins"]["hspiMosi"] | 11;
-    proj.pinHspiMiso = doc["pins"]["hspiMiso"] | 12;
-    proj.pinHspiCs = doc["pins"]["hspiCs"] | 13;
-    proj.pinMcp3204Cs = doc["pins"]["mcp3204Cs"] | 15;
-    proj.pinI2cSda = doc["pins"]["i2cSda"] | 0;
-    proj.pinI2cScl = doc["pins"]["i2cScl"] | 42;
+    proj.pinO2Bank1 = doc["pins"]["o2Bank1"] | DEF_PIN_O2_BANK1;
+    proj.pinO2Bank2 = doc["pins"]["o2Bank2"] | DEF_PIN_O2_BANK2;
+    proj.pinMap = doc["pins"]["map"] | DEF_PIN_MAP;
+    proj.pinTps = doc["pins"]["tps"] | DEF_PIN_TPS;
+    proj.pinClt = doc["pins"]["clt"] | DEF_PIN_CLT;
+    proj.pinIat = doc["pins"]["iat"] | DEF_PIN_IAT;
+    proj.pinVbat = doc["pins"]["vbat"] | DEF_PIN_VBAT;
+    proj.pinAlternator = doc["pins"]["alternator"] | DEF_PIN_ALTERNATOR;
+    proj.pinHeater1 = doc["pins"]["heater1"] | DEF_PIN_HEATER1;
+    proj.pinHeater2 = doc["pins"]["heater2"] | DEF_PIN_HEATER2;
+    proj.pinTcc = doc["pins"]["tcc"] | DEF_PIN_TCC;
+    proj.pinEpc = doc["pins"]["epc"] | DEF_PIN_EPC;
+    proj.pinHspiSck = doc["pins"]["hspiSck"] | DEF_PIN_HSPI_SCK;
+    proj.pinHspiMosi = doc["pins"]["hspiMosi"] | DEF_PIN_HSPI_MOSI;
+    proj.pinHspiMiso = doc["pins"]["hspiMiso"] | DEF_PIN_HSPI_MISO;
+    proj.pinHspiCs = doc["pins"]["hspiCs"] | DEF_PIN_HSPI_CS;
+    proj.pinMcp3204Cs = doc["pins"]["mcp3204Cs"] | DEF_PIN_MCP3204_CS;
+    proj.pinI2cSda = doc["pins"]["i2cSda"] | DEF_PIN_I2C_SDA;
+    proj.pinI2cScl = doc["pins"]["i2cScl"] | DEF_PIN_I2C_SCL;
     // Expander outputs (MCP23S17 #0)
-    proj.pinFuelPump = doc["pins"]["fuelPump"] | 200;
-    proj.pinTachOut = doc["pins"]["tachOut"] | 201;
-    proj.pinCel = doc["pins"]["cel"] | 202;
-    proj.pinCj125Ss1 = doc["pins"]["cj125Ss1"] | 208;
-    proj.pinCj125Ss2 = doc["pins"]["cj125Ss2"] | 209;
+    proj.pinFuelPump = doc["pins"]["fuelPump"] | DEF_PIN_FUEL_PUMP;
+    proj.pinTachOut = doc["pins"]["tachOut"] | DEF_PIN_TACH_OUT;
+    proj.pinCel = doc["pins"]["cel"] | DEF_PIN_CEL;
+    proj.pinCj125Ss1 = doc["pins"]["cj125Ss1"] | DEF_PIN_CJ125_SS1;
+    proj.pinCj125Ss2 = doc["pins"]["cj125Ss2"] | DEF_PIN_CJ125_SS2;
     // Transmission solenoids (MCP23S17 #1)
-    proj.pinSsA = doc["pins"]["ssA"] | 216;
-    proj.pinSsB = doc["pins"]["ssB"] | 217;
-    proj.pinSsC = doc["pins"]["ssC"] | 218;
-    proj.pinSsD = doc["pins"]["ssD"] | 219;
-    // SD card SPI
-    proj.pinSdClk = doc["pins"]["sdClk"] | 47;
-    proj.pinSdMiso = doc["pins"]["sdMiso"] | 48;
-    proj.pinSdMosi = doc["pins"]["sdMosi"] | 38;
-    proj.pinSdCs = doc["pins"]["sdCs"] | 39;
+    proj.pinSsA = doc["pins"]["ssA"] | DEF_PIN_SS_A;
+    proj.pinSsB = doc["pins"]["ssB"] | DEF_PIN_SS_B;
+    proj.pinSsC = doc["pins"]["ssC"] | DEF_PIN_SS_C;
+    proj.pinSsD = doc["pins"]["ssD"] | DEF_PIN_SS_D;
+    // SD card SPI — 0xFF on boards where the card is on the native SDMMC controller
+    proj.pinSdClk = doc["pins"]["sdClk"] | DEF_PIN_SD_CLK;
+    proj.pinSdMiso = doc["pins"]["sdMiso"] | DEF_PIN_SD_MISO;
+    proj.pinSdMosi = doc["pins"]["sdMosi"] | DEF_PIN_SD_MOSI;
+    proj.pinSdCs = doc["pins"]["sdCs"] | DEF_PIN_SD_CS;
     // Shared expander interrupt GPIO (0xFF = not connected)
     proj.pinSharedInt = doc["pins"]["sharedInt"] | 0xFF;
     // Coil/injector pin arrays (MCP23S17 #4/#5)
     {
         JsonArray ca = doc["pins"]["coils"];
         for (int i = 0; i < 12; i++)
-            proj.coilPins[i] = (ca && i < (int)ca.size()) ? (uint16_t)(int)ca[i] : (uint16_t)(i < 8 ? 264 + i : 0);
+            proj.coilPins[i] = (ca && i < (int)ca.size()) ? (uint16_t)(int)ca[i] : (uint16_t)(i < 8 ? DEF_COIL_PIN_BASE + i : 0);
         JsonArray ia = doc["pins"]["injectors"];
         for (int i = 0; i < 12; i++)
-            proj.injectorPins[i] = (ia && i < (int)ia.size()) ? (uint16_t)(int)ia[i] : (uint16_t)(i < 8 ? 280 + i : 0);
+            proj.injectorPins[i] = (ia && i < (int)ia.size()) ? (uint16_t)(int)ia[i] : (uint16_t)(i < 8 ? DEF_INJ_PIN_BASE + i : 0);
     }
 
     // Safe mode / peripherals
@@ -300,7 +301,7 @@ bool Config::loadConfig(const char* filename, ProjectInfo& proj) {
 
     // Oil pressure
     proj.oilPressureMode = doc["oilPressure"]["mode"] | 0;
-    proj.pinOilPressure = doc["oilPressure"]["pin"] | 0;
+    proj.pinOilPressure = doc["oilPressure"]["pin"] | DEF_PIN_OIL_PRESS;
     proj.oilPressureActiveLow = doc["oilPressure"]["activeLow"] | true;
     proj.oilPressureMinPsi = doc["oilPressure"]["minPsi"] | 10.0f;
     proj.oilPressureMaxPsi = doc["oilPressure"]["maxPsi"] | 100.0f;
@@ -339,12 +340,12 @@ bool Config::loadConfig(const char* filename, ProjectInfo& proj) {
 }
 
 bool Config::saveConfig(const char* filename, ProjectInfo& proj) {
-    if (SD.exists(filename)) {
-        fs::File f = SD.open(filename, FILE_READ);
+    if (ECU_SD.exists(filename)) {
+        fs::File f = ECU_SD.open(filename, FILE_READ);
         if (f && f.size() > 0) { f.close(); return false; }
         if (f) f.close();
     }
-    fs::File file = SD.open(filename, FILE_WRITE);
+    fs::File file = ECU_SD.open(filename, FILE_WRITE);
     if (!file) return false;
 
     JsonDocument doc;
@@ -483,7 +484,7 @@ bool Config::saveConfig(const char* filename, ProjectInfo& proj) {
 
 bool Config::updateConfig(const char* filename, ProjectInfo& proj) {
     if (!_sdInitialized) return false;
-    fs::File file = SD.open(filename, FILE_READ);
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file) return false;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, file);
@@ -666,7 +667,7 @@ bool Config::updateConfig(const char* filename, ProjectInfo& proj) {
     doc["oilPressure"]["mcpChannel"] = proj.oilPressureMcpChannel;
     doc["oilPressure"]["startupMs"] = proj.oilPressureStartupMs;
 
-    file = SD.open(filename, FILE_WRITE);
+    file = ECU_SD.open(filename, FILE_WRITE);
     if (!file) return false;
     serializeJson(doc, file);
     file.close();
@@ -750,8 +751,8 @@ static RuleOp strToRuleOp(const char* s) {
 bool Config::loadSensorConfig(const char* filename, SensorDescriptor* desc, uint8_t maxDesc,
                                FaultRule* rules, uint8_t maxRules) {
     if (!_sdInitialized) return false;
-    if (!SD.exists(filename)) return false;
-    fs::File file = SD.open(filename, FILE_READ);
+    if (!ECU_SD.exists(filename)) return false;
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file) return false;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, file);
@@ -856,7 +857,7 @@ bool Config::saveSensorConfig(const char* filename, const SensorDescriptor* desc
     if (!_sdInitialized) return false;
 
     // Read existing config
-    fs::File file = SD.open(filename, FILE_READ);
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file) return false;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, file);
@@ -938,7 +939,7 @@ bool Config::saveSensorConfig(const char* filename, const SensorDescriptor* desc
         }
     }
 
-    file = SD.open(filename, FILE_WRITE);
+    file = ECU_SD.open(filename, FILE_WRITE);
     if (!file) return false;
     serializeJson(doc, file);
     file.close();
@@ -952,7 +953,7 @@ bool Config::saveTuneData(const char* filename, const char* tableName,
 
     JsonDocument doc;
     // Read existing file if present
-    fs::File file = SD.open(filename, FILE_READ);
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (file) { deserializeJson(doc, file); file.close(); }
 
     JsonObject table = doc[tableName].to<JsonObject>();
@@ -972,7 +973,7 @@ bool Config::saveTuneData(const char* filename, const char* tableName,
             row.add(data[r * cols + c]);
     }
 
-    file = SD.open(filename, FILE_WRITE);
+    file = ECU_SD.open(filename, FILE_WRITE);
     if (!file) return false;
     serializeJson(doc, file);
     file.close();
@@ -983,7 +984,7 @@ bool Config::loadTuneData(const char* filename, const char* tableName,
                           float* data, uint8_t rows, uint8_t cols,
                           float* xAxis, float* yAxis) {
     if (!_sdInitialized) return false;
-    fs::File file = SD.open(filename, FILE_READ);
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file) return false;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, file);
@@ -1089,8 +1090,8 @@ static OutputRuleSource strToOsrc(const char* s) {
 
 bool Config::loadCustomPins(const char* filename, CustomPinDescriptor* pins, uint8_t maxPins,
                              OutputRule* rules, uint8_t maxRules) {
-    if (!_sdInitialized || !SD.exists(filename)) return false;
-    fs::File file = SD.open(filename, FILE_READ);
+    if (!_sdInitialized || !ECU_SD.exists(filename)) return false;
+    fs::File file = ECU_SD.open(filename, FILE_READ);
     if (!file) return false;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, file);
@@ -1223,7 +1224,7 @@ bool Config::saveCustomPins(const char* filename, const CustomPinDescriptor* pin
         }
     }
 
-    fs::File file = SD.open(filename, FILE_WRITE);
+    fs::File file = ECU_SD.open(filename, FILE_WRITE);
     if (!file) return false;
     serializeJson(doc, file);
     file.close();

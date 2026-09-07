@@ -123,13 +123,13 @@ void Logger::writeToMqtt(const char* msg) {
 
 void Logger::writeToSdCard(const char* msg) {
     if (!_sdReady) return;
-    fs::File logFile = SD.open(_logFilename.c_str(), FILE_READ);
+    fs::File logFile = ECU_SD.open(_logFilename.c_str(), FILE_READ);
     if (logFile) {
         size_t sz = logFile.size();
         logFile.close();
         if (sz > _maxFileSize) rotateLogFiles();
     }
-    logFile = SD.open(_logFilename.c_str(), FILE_APPEND);
+    logFile = ECU_SD.open(_logFilename.c_str(), FILE_APPEND);
     if (!logFile) return;
     logFile.println(msg);
     logFile.close();
@@ -144,11 +144,11 @@ String Logger::getRotatedFilename(uint8_t index) {
 void Logger::rotateLogFiles() {
     if (!_sdReady) return;
     String oldestFile = getRotatedFilename(_maxRotatedFiles);
-    if (SD.exists(oldestFile.c_str())) SD.remove(oldestFile.c_str());
+    if (ECU_SD.exists(oldestFile.c_str())) ECU_SD.remove(oldestFile.c_str());
     for (int i = _maxRotatedFiles - 1; i >= 1; i--) {
         String oldName = getRotatedFilename(i);
         String newName = getRotatedFilename(i + 1);
-        if (SD.exists(oldName.c_str())) SD.rename(oldName.c_str(), newName.c_str());
+        if (ECU_SD.exists(oldName.c_str())) ECU_SD.rename(oldName.c_str(), newName.c_str());
     }
     String compressedName = getRotatedFilename(1);
     if (_compressionAvailable && compressFile(_logFilename.c_str(), compressedName.c_str())) {
@@ -157,26 +157,26 @@ void Logger::rotateLogFiles() {
         int dotIdx = _logFilename.lastIndexOf('.');
         String baseName = (dotIdx > 0) ? _logFilename.substring(0, dotIdx) : _logFilename;
         String fallbackName = baseName + ".1.txt";
-        SD.rename(_logFilename.c_str(), fallbackName.c_str());
+        ECU_SD.rename(_logFilename.c_str(), fallbackName.c_str());
     }
 }
 
 bool Logger::compressFile(const char* srcPath, const char* destPath) {
     if (!_sdReady || !_compressionAvailable) return false;
-    fs::File srcFile = SD.open(srcPath, FILE_READ);
+    fs::File srcFile = ECU_SD.open(srcPath, FILE_READ);
     if (!srcFile) return false;
     srcFile.close();
     String tmpDir = "/_log_rotate";
     String tmpPath = tmpDir + "/" + String(srcPath);
-    SD.mkdir(tmpDir.c_str());
-    SD.rename(srcPath, tmpPath.c_str());
-    fs::File outFile = SD.open(destPath, FILE_WRITE);
-    if (!outFile) { SD.rename(tmpPath.c_str(), srcPath); SD.rmdir(tmpDir.c_str()); return false; }
-    size_t result = TarGzPacker::compress(&SD, tmpDir.c_str(), &outFile);
+    ECU_SD.mkdir(tmpDir.c_str());
+    ECU_SD.rename(srcPath, tmpPath.c_str());
+    fs::File outFile = ECU_SD.open(destPath, FILE_WRITE);
+    if (!outFile) { ECU_SD.rename(tmpPath.c_str(), srcPath); ECU_SD.rmdir(tmpDir.c_str()); return false; }
+    size_t result = TarGzPacker::compress(&ECU_SD, tmpDir.c_str(), &outFile);
     outFile.close();
     bool success = (result > 0);
-    if (success) { SD.remove(tmpPath.c_str()); }
-    else { SD.rename(tmpPath.c_str(), srcPath); if (SD.exists(destPath)) SD.remove(destPath); }
-    SD.rmdir(tmpDir.c_str());
+    if (success) { ECU_SD.remove(tmpPath.c_str()); }
+    else { ECU_SD.rename(tmpPath.c_str(), srcPath); if (ECU_SD.exists(destPath)) ECU_SD.remove(destPath); }
+    ECU_SD.rmdir(tmpDir.c_str());
     return success;
 }

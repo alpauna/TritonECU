@@ -167,9 +167,8 @@ void CustomPinManager::initPin(uint8_t slot) {
                     p.pwmChannel = _nextPwmChannel++;
                 }
                 if (p.pwmChannel <= 15) {
-                    ledcSetup(p.pwmChannel, p.pwmFreq, p.pwmResolution);
-                    ledcAttachPin(p.pin, p.pwmChannel);
-                    ledcWrite(p.pwmChannel, 0);
+                    ledcAttachChannel(p.pin, p.pwmFreq, p.pwmResolution, p.pwmChannel);
+                    ledcWrite(p.pin, 0);
                 }
             }
             p.value = 0;
@@ -201,7 +200,7 @@ void CustomPinManager::deinitPin(uint8_t slot) {
         _timers[slot] = nullptr;
     }
     if (p.mode == CPIN_PWM_OUT && p.pwmChannel <= 15) {
-        ledcDetachPin(p.pin);
+        ledcDetach(p.pin);
     }
     p.initialized = false;
 }
@@ -351,7 +350,7 @@ void CustomPinManager::setOutput(uint8_t slot, float value) {
         p.value = on ? 1.0f : 0.0f;
     } else if (p.mode == CPIN_PWM_OUT && p.pwmChannel <= 15) {
         uint32_t duty = constrain((uint32_t)value, 0, (1 << p.pwmResolution) - 1);
-        ledcWrite(p.pwmChannel, duty);
+        ledcWrite(p.pin, duty);
         p.value = (float)duty;
     }
 }

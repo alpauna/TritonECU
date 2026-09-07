@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 #include <Arduino.h>
-#include <SD.h>
+#include "EcuStorage.h"
 #include "ArduinoJson.h"
 #include "mbedtls/base64.h"
 #include "mbedtls/gcm.h"

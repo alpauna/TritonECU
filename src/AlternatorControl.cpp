@@ -13,9 +13,13 @@ void AlternatorControl::begin(uint8_t pin, float targetV) {
     _targetVoltage = targetV;
     _lastUpdateMs = millis();
 
-    // Configure LEDC for 25kHz PWM (channel 0)
-    ledcSetup(0, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
-    ledcAttachPin(_pin, 0);
+    // Configure LEDC for 25kHz PWM (channel 0).
+    // Arduino core 3.x is pin-addressed: attach binds pin->channel, and every
+    // later ledcWrite() takes the pin, not the channel.
+    if (!ledcAttachChannel(_pin, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS, 0)) {
+        Log.error("ALT", "LEDC attach failed on pin %d", _pin);
+        return;
+    }
     setDuty(0);
 
     Log.info("ALT", "Alternator control on pin %d, target %.1fV", _pin, _targetVoltage);
@@ -69,5 +73,5 @@ void AlternatorControl::setDuty(float percent) {
     _dutyPercent = constrain(percent, 0.0f, MAX_DUTY_PERCENT);
     uint32_t maxDutyVal = (1 << PWM_RESOLUTION_BITS) - 1;
     uint32_t dutyVal = (uint32_t)(_dutyPercent / 100.0f * maxDutyVal);
-    ledcWrite(0, dutyVal);  // Channel 0
+    ledcWrite(_pin, dutyVal);
 }

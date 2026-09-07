@@ -3,11 +3,12 @@
 #include <esp_system.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
+#include "EcuStorage.h"
 #include <WiFi.h>
 #include <SimpleFTPServer.h>
 #include <TaskSchedulerDeclarations.h>
 #include "Logger.h"
+#include "BoardPins.h"
 #include "Config.h"
 #include "WebHandler.h"
 #include "MQTTHandler.h"
@@ -56,11 +57,12 @@ static const char* getResetReasonStr(esp_reset_reason_t r) {
 
 extern const char compile_date[] = __DATE__ " " __TIME__;
 
-// SD card SPI pins — read from NVS on boot (bootstrap before SD card init)
-static uint8_t SD_CLK  = 47;
-static uint8_t SD_MISO = 48;
-static uint8_t SD_MOSI = 38;
-static uint8_t SD_CS   = 39;
+// SD card SPI pins — read from NVS on boot (bootstrap before SD card init).
+// Unused when the card is on the native SDMMC controller (ESP32-P4).
+static uint8_t SD_CLK  = DEF_PIN_SD_CLK;
+static uint8_t SD_MISO = DEF_PIN_SD_MISO;
+static uint8_t SD_MOSI = DEF_PIN_SD_MOSI;
+static uint8_t SD_CS   = DEF_PIN_SD_CS;
 
 // Config and networking
 Config config;
@@ -265,19 +267,19 @@ Task tBootStable(30 * TASK_SECOND, TASK_ONCE, []() {
 // WiFi event handler
 void onWiFiEvent(arduino_event_id_t event, arduino_event_info_t info) {
     switch (event) {
-        case SYSTEM_EVENT_STA_GOT_IP:
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
             _wifiDisconnectCount = 0;
             tWaitOnWiFi.disable();
             webHandler.startNtpSync();
             Log.info("WIFI", "Got ip: %s", webHandler.getWiFiIP());
             break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             if (_apModeActive) break;
             tWaitOnWiFi.enableDelayed();
             mqttHandler.stopReconnect();
             Log.warn("WIFI", "WiFi lost connection");
             break;
-        case SYSTEM_EVENT_STA_CONNECTED:
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
             Serial.printf("WiFi Connected\n");
             mqttHandler.startReconnect();
             break;
@@ -346,19 +348,21 @@ void setup() {
         Serial.printf("[BOOT] Reset: %s, boot count: %lu\n", _resetReasonStr, _bootCount);
     }
 
+#ifdef ECU_SD_USE_SPI
     // Read SD card pins from NVS (bootstrap — config is ON the SD card)
     {
         Preferences prefs;
         prefs.begin("sdpins", true);  // read-only
-        SD_CLK  = prefs.getUChar("clk",  47);
-        SD_MISO = prefs.getUChar("miso", 48);
-        SD_MOSI = prefs.getUChar("mosi", 38);
-        SD_CS   = prefs.getUChar("cs",   39);
+        SD_CLK  = prefs.getUChar("clk",  DEF_PIN_SD_CLK);
+        SD_MISO = prefs.getUChar("miso", DEF_PIN_SD_MISO);
+        SD_MOSI = prefs.getUChar("mosi", DEF_PIN_SD_MOSI);
+        SD_CS   = prefs.getUChar("cs",   DEF_PIN_SD_CS);
         prefs.end();
     }
 
     // Initialize SD card with custom SPI pins
     SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+#endif
 
     // Set XOR obfuscation key for password encryption
     Config::setObfuscationKey(XOR_KEY);
@@ -369,7 +373,11 @@ void setup() {
     }
 
     // Initialize config from SD card
+#ifdef ECU_SD_USE_SPI
     Serial.printf("SD SPI: CLK=%d MISO=%d MOSI=%d CS=%d\n", SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+#else
+    Serial.printf("SD backend: %s\n", ecuStorageBackend());
+#endif
     if (config.initSDCard(SD_CS)) {
         Serial.println("SD Card initialized.");
         if (config.loadConfig(_filename, proj)) {
@@ -381,7 +389,12 @@ void setup() {
             _MQTT_PASSWORD = config.getMqttPassword();
         }
     } else {
-        Serial.println("SD Card FAILED - check wiring to CLK=47 MISO=48 MOSI=38 CS=39");
+#ifdef ECU_SD_USE_SPI
+        Serial.printf("SD Card FAILED - check wiring to CLK=%d MISO=%d MOSI=%d CS=%d\n",
+                      SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+#else
+        Serial.println("SD Card FAILED - no card in the TF slot, or a card the SDMMC bus cannot train");
+#endif
     }
 
     // Check forceSafeMode from config

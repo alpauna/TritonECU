@@ -1,5 +1,5 @@
 #include "OtaUtils.h"
-#include <SD.h>
+#include "EcuStorage.h"
 #include <Update.h>
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
@@ -13,7 +13,7 @@ bool backupFirmwareToSD(const char* path) {
     if (!running) { Log.error("OTA", "Could not get running partition"); return false; }
     size_t sketchSize = ESP.getSketchSize();
     if (sketchSize < MIN_FIRMWARE_SIZE) { Log.error("OTA", "Sketch size too small: %u", sketchSize); return false; }
-    File backup = SD.open(path, FILE_WRITE);
+    File backup = ECU_SD.open(path, FILE_WRITE);
     if (!backup) { Log.error("OTA", "Failed to open %s for writing", path); return false; }
     Log.info("OTA", "Backing up firmware (%u bytes) to %s", sketchSize, path);
     uint8_t buf[OTA_BUF_SIZE];
@@ -21,8 +21,8 @@ bool backupFirmwareToSD(const char* path) {
         size_t toRead = sketchSize - offset;
         if (toRead > OTA_BUF_SIZE) toRead = OTA_BUF_SIZE;
         esp_err_t err = esp_partition_read(running, offset, buf, toRead);
-        if (err != ESP_OK) { Log.error("OTA", "Flash read failed"); backup.close(); SD.remove(path); return false; }
-        if (backup.write(buf, toRead) != toRead) { Log.error("OTA", "SD write failed"); backup.close(); SD.remove(path); return false; }
+        if (err != ESP_OK) { Log.error("OTA", "Flash read failed"); backup.close(); ECU_SD.remove(path); return false; }
+        if (backup.write(buf, toRead) != toRead) { Log.error("OTA", "SD write failed"); backup.close(); ECU_SD.remove(path); return false; }
     }
     backup.close();
     Log.info("OTA", "Firmware backup complete (%u bytes)", sketchSize);
@@ -30,7 +30,7 @@ bool backupFirmwareToSD(const char* path) {
 }
 
 bool revertFirmwareFromSD(const char* path) {
-    File backup = SD.open(path, FILE_READ);
+    File backup = ECU_SD.open(path, FILE_READ);
     if (!backup) { Log.error("OTA", "Failed to open %s", path); return false; }
     size_t fileSize = backup.size();
     if (fileSize < MIN_FIRMWARE_SIZE) { Log.error("OTA", "Backup too small: %u", fileSize); backup.close(); return false; }
@@ -54,14 +54,14 @@ bool revertFirmwareFromSD(const char* path) {
 bool applyFirmwareFromSD(const char* path) {
     backupFirmwareToSD();
     bool ok = revertFirmwareFromSD(path);
-    if (ok) { SD.remove(path); Log.info("OTA", "Removed %s after successful apply", path); }
+    if (ok) { ECU_SD.remove(path); Log.info("OTA", "Removed %s after successful apply", path); }
     return ok;
 }
 
-bool firmwareBackupExists(const char* path) { return SD.exists(path); }
+bool firmwareBackupExists(const char* path) { return ECU_SD.exists(path); }
 
 size_t firmwareBackupSize(const char* path) {
-    File f = SD.open(path, FILE_READ);
+    File f = ECU_SD.open(path, FILE_READ);
     if (!f) return 0;
     size_t s = f.size();
     f.close();

@@ -138,7 +138,7 @@ void WebHandler::serveFile(AsyncWebServerRequest* request, const String& path) {
         return;
     }
     String fullPath = "/www" + path;
-    fs::File file = SD.open(fullPath.c_str(), FILE_READ);
+    fs::File file = ECU_SD.open(fullPath.c_str(), FILE_READ);
     if (!file) { request->send(404, "text/plain", "Not found: " + path); return; }
     size_t fileSize = file.size();
     if (fileSize == 0) { file.close(); request->send(200, getContentType(path), ""); return; }
@@ -487,17 +487,17 @@ void WebHandler::setupRoutes() {
 
     // Preset files from SD card
     _server.on("/presets/engines", HTTP_GET, [](AsyncWebServerRequest* r) {
-        if (!SD.exists("/engines.json")) { r->send(200, "application/json", "{}"); return; }
-        r->send(SD, "/engines.json", "application/json");
+        if (!ECU_SD.exists("/engines.json")) { r->send(200, "application/json", "{}"); return; }
+        r->send(ECU_SD, "/engines.json", "application/json");
     });
     _server.on("/presets/transmissions", HTTP_GET, [](AsyncWebServerRequest* r) {
-        if (!SD.exists("/transmissions.json")) { r->send(200, "application/json", "{}"); return; }
-        r->send(SD, "/transmissions.json", "application/json");
+        if (!ECU_SD.exists("/transmissions.json")) { r->send(200, "application/json", "{}"); return; }
+        r->send(ECU_SD, "/transmissions.json", "application/json");
     });
 
     _server.on("/presets/pins", HTTP_GET, [](AsyncWebServerRequest* r) {
-        if (!SD.exists("/pins.json")) { r->send(200, "application/json", "{}"); return; }
-        r->send(SD, "/pins.json", "application/json");
+        if (!ECU_SD.exists("/pins.json")) { r->send(200, "application/json", "{}"); return; }
+        r->send(ECU_SD, "/pins.json", "application/json");
     });
 
     // Theme
@@ -1281,12 +1281,12 @@ void WebHandler::setupRoutes() {
     }, nullptr, [this](AsyncWebServerRequest*, uint8_t* data, size_t len, size_t index, size_t total) {
         if (index == 0) {
             _otaUploadOk = false;
-            _otaFile = SD.open("/firmware.new", FILE_WRITE);
+            _otaFile = ECU_SD.open("/firmware.new", FILE_WRITE);
             if (!_otaFile) return;
             Log.info("OTA", "Saving firmware to SD (%u bytes)", total);
         }
         if (_otaFile) {
-            if (_otaFile.write(data, len) != len) { _otaFile.close(); SD.remove("/firmware.new"); _otaFile = File(); }
+            if (_otaFile.write(data, len) != len) { _otaFile.close(); ECU_SD.remove("/firmware.new"); _otaFile = File(); }
         }
         if (index + len == total && _otaFile) { _otaFile.close(); _otaUploadOk = true; Log.info("OTA", "Firmware saved"); }
     });
