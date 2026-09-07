@@ -24,6 +24,11 @@ The old tree stays in git history and on the `esp32-p4` branch. Proven pieces
 get ported forward deliberately — `TuneTable`, `CJ125Controller` and the sensor
 maths are worth keeping. Everything else earns its place again.
 
+## Scope
+
+**[`v1-scope.md`](v1-scope.md) is the build list.** Anything not on it is
+deferred, regardless of how good an idea it is.
+
 ## Principles
 
 1. **Hard real-time is physically separate.** Spark and injection timing run
