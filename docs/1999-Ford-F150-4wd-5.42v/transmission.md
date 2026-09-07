@@ -65,10 +65,11 @@ Four expander inputs, no ADC channel. Decode the pattern to PRNDL.
    transmission control: shift points and line pressure should not be the same
    in low range as in high.
 
-**[CONFIRM]** whether the transfer case is the electronic-shift type (C201) or
-mechanical (C260). If electronic, something has to drive it — and on this truck
-that something is currently the GEM, not the PCM, so it may not be the
-replacement ECU's problem at all.
+**Resolved:** the transfer case has its own **shift relay module (C221)** in the
+dash, fed by the 4WD mode switch (C230). It is a self-contained subsystem and
+the replacement ECU does not have to actuate it — see `dash-modules.md`. The
+ECU may still want to *know* the range, since low range should change shift
+points and line pressure.
 
 ## Outputs at C183 (from the EEC-V pinout)
 
