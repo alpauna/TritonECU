@@ -1,4 +1,4 @@
-// ESP-ECU rebuild — M0: board bring-up.
+// ESP-ECU rebuild — M0 board bring-up, M1 storage and config.
 //
 // Proves the toolchain, the upload path and the board identity, and nothing
 // else. It reports what silicon it is actually running on, because two things
@@ -20,6 +20,8 @@
 #include <esp_timer.h>
 
 #include "Board.h"
+#include "Config.h"
+#include "Storage.h"
 #include "Version.h"
 
 namespace {
@@ -73,6 +75,8 @@ void reportIdentity() {
                   (unsigned)(heapTotal / 1024),
                   (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024));
     Serial.printf("  last reset   : %s\n", resetReasonName(esp_reset_reason()));
+    storage::report();
+    config::report();
     Serial.println("=======================================================");
 
     // A rev300+ part runs at 400 MHz and needs the esp32-p4_r3 board. Say so
@@ -95,6 +99,16 @@ void setup() {
     const int64_t deadline = esp_timer_get_time() + 1500 * 1000;
     while (!Serial && esp_timer_get_time() < deadline) { /* wait */ }
 
+    // Storage and config before the banner, so the banner can report them.
+    if (!storage::begin()) {
+        Serial.println("[SD] mount failed — continuing on built-in defaults");
+    }
+    config::load();
+    config::data.bootCount++;
+    if (storage::mounted() && !config::save()) {
+        Serial.println("[cfg] could not persist boot count");
+    }
+
     reportIdentity();
 
     const esp_timer_create_args_t args = {
@@ -107,7 +121,7 @@ void setup() {
     ESP_ERROR_CHECK(esp_timer_create(&args, &g_heartbeatTimer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(g_heartbeatTimer, 1000 * 1000));  // 1 Hz
 
-    Serial.println("M0: board bring-up. Heartbeat every 5 s.");
+    Serial.println("M0/M1 up. Heartbeat every 5 s.");
 }
 
 void loop() {
