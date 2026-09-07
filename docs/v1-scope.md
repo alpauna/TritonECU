@@ -16,7 +16,7 @@
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17 | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
-| Storage | SD card, SDMMC | ✅ |
+| Storage | SD card, **SDMMC 1-bit** | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |
 
 That is a complete engine **and transmission** controller. Nothing in it is
@@ -75,19 +75,22 @@ Counted by [`../hardware/pinmap.py`](../hardware/pinmap.py) rather than by hand:
 
 ```
 GPIOs on the P4                 55
-Committed (C6, SD, UART, strap) 18
-Available                       37
+Committed (C6, SD, UART, strap) 15
+Available                       40
 Core (engine + transmission)    34
 J1850, routed for later          3
 ASSIGNED                        37
+SPARE                            3     <- GPIO42, 43, 44
 ```
 
 **One CPU, one board, engine and transmission together.** The core build needs
 **34** pins of the 37 available, and J1850 fits in the remaining three.
 
-Moving the SD card to 1-bit SDMMC frees three more, which is the recommended
-v1 configuration — it turns a zero-margin layout into one that can absorb a
-mistake.
+The SD card runs **1-bit SDMMC**, which frees GPIO42–44. It carries config and
+logs only, so 4-bit bandwidth buys nothing, and three spare pins turn a
+zero-margin layout into one that can absorb a mistake found at assembly.
+
+Still in reserve: semi-sequential injection (+4) and tach/VSS over SCP (+2).
 
 ## What actually remains open
 

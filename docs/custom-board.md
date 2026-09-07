@@ -29,9 +29,9 @@ on wake or the pin appears stuck.
 | 54 | ESP32-C6 reset |
 | 35, 36 | boot strapping — BOOT_MODE, BOOT_MODE2 |
 | 37, 38 | UART0 — console and flashing |
-| 39–45 | SD card, SDMMC slot 0 (45 = card power) |
+| 39–41, 45 | SD card, **SDMMC 1-bit** — CLK, CMD, D0, card power |
 
-That is 20 committed, leaving **35**, plus GPIO24/25 if USB OTG is not fitted.
+That is **15 committed, leaving 40**.
 
 ### Engine control
 
@@ -84,9 +84,14 @@ needed:
 | Semi-sequential injection (8 → 4 drivers) | +4 |
 | Tach and VSS over SCP instead of discrete outputs | +2 |
 
-**Take the 1-bit SDMMC option on v1.** Three spare pins for a card that only
-carries config and logs is a good trade, and it turns a zero-margin layout into
-one with room to fix a mistake.
+**Decided: 1-bit SDMMC on v1.** D1–D3 (GPIO42–44) are freed. The card carries
+config and logs only, so 4-bit bandwidth buys nothing, and three spare pins turn
+a zero-margin layout into one that can absorb a mistake found at assembly.
+
+Final: **37 assigned of 40, 3 spare (GPIO42, 43, 44).**
+
+Levers still in reserve if they are ever needed: semi-sequential injection
+(8 → 4 drivers, +4) and moving tach and VSS onto SCP (+2).
 
 `OE2` on the same buffer is driven by a hardware watchdog rather than a GPIO,
 so it costs no pin — see [`output-drivers.md`](output-drivers.md). The

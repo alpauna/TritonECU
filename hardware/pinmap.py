@@ -8,7 +8,11 @@ COMMITTED = {
     "ESP32-C6 reset":        [54],
     "Boot strapping":        [35, 36],
     "UART0 console/flash":   [37, 38],
-    "SD card, SDMMC 4-bit":  [39, 40, 41, 42, 43, 44, 45],
+    # 1-bit SDMMC: CLK, CMD, D0 plus card power. D1-D3 are freed -- the card
+    # only carries config and logs, so 4-bit bandwidth buys nothing here, and
+    # three spare pins turn a zero-margin layout into one that can absorb a
+    # mistake found at assembly.
+    "SD card, SDMMC 1-bit":  [39, 40, 41, 45],
 }
 
 CORE = {
@@ -66,7 +70,7 @@ print(f"{'='*52}")
 print(f"  duplicate assignments : {dup if dup else 'none'}")
 print(f"  clashes with committed: {clash if clash else 'none'}")
 print(f"  spare pins            : {sorted(free - used)}")
-print(f"\n  Levers if more is ever needed:")
-print(f"    SD in 1-bit SDMMC (drop D1-D3)          +3")
+print(f"\n  Levers still in reserve:")
 print(f"    Semi-sequential injection (8 -> 4)      +4")
 print(f"    Tach/VSS over SCP instead of discrete   +2")
+print(f"    (1-bit SDMMC already taken)")

@@ -14,6 +14,18 @@ bool begin() {
     // Never pass format_if_mount_failed. An unmountable card is far more often
     // the wrong filesystem than a broken one, and formatting it would destroy
     // whatever is on it. Report and continue instead.
+#ifdef ECU_SD_ONE_BIT
+    // The custom board wires only CLK, CMD and D0 -- D1-D3 were traded for
+    // three GPIOs. The card carries config and logs, so 4-bit bandwidth buys
+    // nothing. Go straight to 1-bit rather than failing 4-bit first.
+    if (SD_MMC.begin("/sdcard", true)) {
+        g_mounted = true;
+        g_oneBit = true;
+        return true;
+    }
+    g_mounted = false;
+    return false;
+#else
     if (SD_MMC.begin("/sdcard", false)) {
         g_mounted = true;
         g_oneBit = false;
@@ -27,6 +39,7 @@ bool begin() {
     }
     g_mounted = false;
     return false;
+#endif
 }
 
 bool mounted() { return g_mounted; }
