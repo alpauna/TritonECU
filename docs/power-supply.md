@@ -154,8 +154,12 @@ The LM5155-Q1 reaches 2.2 MHz specifically so the **fundamental and every
 harmonic sit above the band**. It also shrinks the inductors from 10 µH to
 3.3 µH.
 
-The cost is switching loss, which is why the part is rated to 125 °C and why
-the thermal note below matters.
+The cost is switching loss — and, more importantly, **layout difficulty**.
+Radiated emission scales with loop area × di/dt × frequency², so raising the
+fundamental 5.5× makes the hot-loop area far less forgiving. 2.2 MHz solves the
+AM-band problem and creates a layout problem in its place. See
+[`supply-layout.md`](supply-layout.md); this is not a detail to leave until
+after the schematic.
 
 ### Worked numbers
 
