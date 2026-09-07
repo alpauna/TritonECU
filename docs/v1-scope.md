@@ -2,6 +2,12 @@
 
 **Goal: an engine that runs.** Everything else waits.
 
+## Form factor: carrier board, Nucleo plugs in
+
+v1 is a **carrier for the Nucleo-144**, not a raw-chip board — see
+[`carrier-board.md`](carrier-board.md). The MCU section stops being a risk, and
+ST-Link, USB console and Ethernet all come for free.
+
 ## On the board
 
 | Block | Parts | Decided |
