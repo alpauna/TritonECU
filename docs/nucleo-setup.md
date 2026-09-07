@@ -70,13 +70,21 @@ the SWD interface is blocked. That is what makes the failure confusing.
 ### Fix
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/system/99-platformio-udev.rules \
-  | sudo tee /etc/udev/rules.d/99-platformio-udev.rules >/dev/null
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+tools/setup-usb-permissions.sh
 ```
 
-Or, for ST-Link alone:
+It reports which attached probes are blocked, writes the rules, reloads udev,
+and tells you whether a replug is needed. Covers ST-Link V2/V2.1/V3, the CH343
+and CH340, CP2102, FT232, Espressif USB-Serial-JTAG and Teensy — so it also
+covers the other boards on this bench.
+
+Check without changing anything, and without sudo:
+
+```bash
+tools/setup-usb-permissions.sh --check
+```
+
+Doing it by hand instead:
 
 ```bash
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="374b", MODE="0666"' \
@@ -161,7 +169,7 @@ it is. Each reopen discards the kernel buffer. Hold the port open.*
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `LIBUSB_ERROR_ACCESS` on upload | no udev rule for ST-Link | step 3, **and replug** |
+| `LIBUSB_ERROR_ACCESS` on upload | no udev rule for ST-Link | `tools/setup-usb-permissions.sh`, **and replug** |
 | Fix applied but still fails | board not replugged | unplug/replug |
 | Serial works, upload does not | VCP is unprivileged, SWD is not | step 3 |
 | Garbled serial | host reconnecting on every error | hold the port open |
