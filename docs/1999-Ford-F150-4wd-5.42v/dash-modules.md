@@ -78,10 +78,45 @@ rewiring, and it must not be — it is the one thing that stops the pump feeding
 ruptured fuel line after a crash. It also explains a classic no-start: a tripped
 inertia switch looks exactly like a dead fuel pump relay.
 
-Note as well that ECU pin 40 is a **fuel pump monitor** input. The OEM PCM
-watches the pump circuit and can tell a commanded-on pump from a running one —
-worth reproducing, because it is what distinguishes "I asked for fuel pressure"
-from "I have fuel pressure".
+### Fuel pump monitor — tap it *downstream* of the inertia switch
+
+ECU pin 40 is a **fuel pump monitor** input (DK GRN/YEL). Reproducing it is
+worthwhile, and where it is tapped decides what it can tell you.
+
+**Tap after the inertia switch, at the pump feed.** Then, with the relay
+commanded on:
+
+| Relay | Monitor reads | Meaning |
+|---|---|---|
+| on | ~battery | circuit intact, pump is being fed |
+| on | ~0 V | **open somewhere in the chain** — tripped inertia switch, open relay contact, blown fuse, or broken wire |
+| off | ~0 V | normal |
+| off | ~battery | relay contact welded closed |
+
+Tapping *upstream* of the inertia switch only proves the relay and fuse are
+good, which is the half that rarely fails. The inertia switch is the component
+that trips silently and produces a no-start indistinguishable from a dead relay
+— so it is the one worth being on the far side of.
+
+**What it can and cannot prove.** Voltage monitoring proves the *circuit* is
+intact. It does not prove the pump is turning: a seized pump with good windings
+still reads battery voltage. Proving actual flow needs either current sensing
+(a shunt or a hall sensor in the pump feed, which would also show a pump drawing
+locked-rotor current) or a fuel pressure sensor — and the EEC-V pinout has a
+spare "Fuel Press" position at pin 63 that the MegaSquirt build noted as
+*"Will add fuel pressure to truck"*.
+
+**Electrically.** This is a battery-voltage input, so it needs a divider and a
+clamp — it will see load-dump transients well above 14 V. Read it as an analog
+value rather than a digital one: the actual voltage distinguishes a healthy
+circuit from a corroded connection dropping several volts under load, which a
+threshold comparator would call "fine" right up until it is not.
+
+**Fault reporting.** Relay commanded on and monitor low for more than a short
+debounce is a specific, actionable DTC — "fuel pump circuit open, check inertia
+switch" — rather than a truck that cranks and does not start for no stated
+reason. Only valid during the prime and run windows; with the relay off the
+line is unpowered either way.
 
 ## Other data link connectors
 

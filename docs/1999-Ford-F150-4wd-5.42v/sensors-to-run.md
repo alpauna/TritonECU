@@ -67,6 +67,7 @@ this line affects how *well* it runs, not whether it runs.
 | Input | Notes |
 |---|---|
 | **Oil pressure switch**, C101 | **Binary, not a sender.** Warning lamp only. Fit a real sender if pressure logging is wanted |
+| **Fuel pump monitor**, ECU pin 40 | Analog, battery-referenced. Tap **downstream of the inertia switch (C204)** so it detects a tripped switch, not just a bad relay. Needs a divider and clamp — see `dash-modules.md` |
 | **Brake switch** | Unlocks the torque converter. Safety-relevant |
 | **A/C request**, C139/C170 | Idle-up and compressor cutout |
 
@@ -81,7 +82,7 @@ Listed because "what makes it run" is not only sensors.
 | **Coil-on-plug drivers** | **8** | C1011–C1018. Individually timed. **[CONFIRM]** dumb coils needing an IGBT each, or smart coils with logic input |
 | **Injector drivers** | 8 | C125–C132. High-impedance saturated, low-side |
 | **IAC valve**, C110 | 1 PWM | Without it there is no idle control at all — the engine will only idle on the throttle stop |
-| **Fuel pump relay** | 1 | |
+| **Fuel pump relay** | 1 | Inertia switch (C204) stays in series downstream — safety device, do not remove |
 | **VREF supply** | 2 feeds | see Tier 1 |
 | **IMCC**, C118 | 1 | Intake manifold runner control. **[CONFIRM]** on/off or PWM |
 | **Cooling fan, A/C clutch (C106), MIL** | 3 | Slow — expander chain |
