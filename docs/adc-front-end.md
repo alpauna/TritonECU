@@ -336,3 +336,79 @@ AD7606B and C. That decides mounting location, not performance. The OEM PCM on
 this truck sits in the cabin, so 85 °C is very likely fine — but it rules out an
 under-hood enclosure. **[CONFIRM]** where the ECU will live before committing
 to an enclosure design.
+
+---
+
+## PCB notes: serial mode, and why the pull-downs matter
+
+### Serial data outputs differ substantially
+
+| | AD7606 (200 kSPS) | AD7606C-16 |
+|---|---|---|
+| Serial outputs | **DOUTA (24), DOUTB (25)** — two lines | **DOUTA (24), DOUTB (25), DOUTC (27), DOUTD (28), DOUTE (19), DOUTF (20), DOUTG (21), DOUTH (22)** — eight |
+| Serial data **input** | none | **DB11/SDI (29)** — register writes in software mode |
+| Byte-mode pins | DB14/**HBEN** (32), DB15/**BYTE SEL** (33) | plain DB14, DB15 — byte mode dropped |
+
+The C can stream all eight channels on eight separate lines simultaneously,
+which is how it sustains 1 MSPS. Reading a single DOUTA works on both parts, so
+a design that uses only DOUTA is portable — it just leaves the C's throughput
+on the table, which for this ECU is fine.
+
+**Byte mode is the pin reuse on the AD7606:** with `PAR/SER/BYTE SEL` high and
+`DB15/BYTE SEL` high, the part enters parallel *byte* mode and `DB14/HBEN`
+selects whether the **high byte or the low byte** of the 16-bit result comes out
+first on DB[7:0]. The C drops this entirely — those pins are plain data bits.
+
+### Pins that must be tied in serial mode — and the hazard
+
+The AD7606C-16 datasheet is explicit: *"When using the serial interface, tie the
+DB0 to DB2 pins to AGND."* (pins 16–18).
+
+On the **AD7606**, those same pads are DB0–DB2, plain **parallel data outputs**.
+A board that hard-grounds pins 16–18 for the C, then has an AD7606 populated,
+is shorting three digital outputs to ground any time they drive high.
+
+**The 10 kΩ resistor arrays are the correct fix.** A 10 kΩ pull-down satisfies
+the C's requirement — it is a logic-level tie, not a current path — while
+limiting fault current to about 0.5 mA if an AD7606 ever drives that pin high.
+Safe with either part populated, and it keeps one layout genuinely usable for
+both projects.
+
+Worth extending the same treatment to every pin whose function differs:
+
+| Pin | Treat how | Why |
+|---|---|---|
+| 16–18 (DB0–DB2) | **10 kΩ to AGND** | C requires grounding in serial mode; AD7606 drives them |
+| 29 (DB11/SDI) | 10 kΩ, and route to MCU MOSI | SDI on the C in software mode; a data output on the AD7606 |
+| 19–22 (DB3–DB6 / DOUTE–H) | leave routed, no hard tie | serial outputs on the C, parallel outputs on the AD7606 |
+| 9/10 (CONVST, WR) | 0 Ω link, not a hard trace | see the pin 9/10 note above |
+| 32, 33 | no hard tie | HBEN / BYTE SEL on the AD7606, plain data on the C |
+
+### Two pins to get right regardless of part
+
+- **REF SELECT (34)** — identical on both. **High selects the internal 2.5 V
+  reference.** Tied low, the internal reference is *disabled* and an external
+  2.5 V must be supplied on REFIN/REFOUT (42). Leaving this floating or low by
+  accident produces a part that converts, but against nothing.
+- **REFCAPA (44) / REFCAPB (45)** — must be shorted together and decoupled to
+  AGND with a low-ESR 10 µF. They sit at about 4.5 V. REFIN/REFOUT wants its own
+  10 µF to REFGND.
+
+### The VxGND pins are what make the MAF measurement work
+
+Each analog input is a **pair**: V1 (49) and V1GND (50), V2 (51) and V2GND, and
+so on. The block diagram shows both going into the front-end amplifier as `+`
+and `−` through separate input clamps.
+
+The datasheets advise connecting VxGND to the AGND plane, which is right for an
+ordinary single-ended sensor. **The MAF is the exception, and the reason this
+part was chosen:** MAF signal (circuit 967) to V1, and MAF *signal return*
+(circuit 968) to V1GND — not to AGND. That is what cancels the ground drop
+caused by the hot-wire's own supply current. See
+`1999-Ford-F150-4wd-5.42v/oem-connectors.md`.
+
+**[CONFIRM]** the allowable VxGND voltage range relative to AGND before relying
+on this. It only needs to accommodate a few tens of millivolts of harness ground
+drop, which should be comfortably inside spec — but exceeding it would be a
+design error rather than a degradation, so it is worth reading the number rather
+than assuming.
