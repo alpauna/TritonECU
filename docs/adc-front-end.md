@@ -287,6 +287,48 @@ for knowing what was actually bought — and for deciding whether the same
 supplier is worth using again for the scope's C-series part, where the
 difference is the whole point.
 
+### One footprint, but not identical pin functions
+
+All three generations are **LQFP-64 and footprint-compatible**, so one PCB
+layout can serve both projects — the ECU board populating a B, the scope board a
+C. Worth drawing once, properly, with the input protection and decoupling the
+datasheets ask for.
+
+But **footprint-compatible is not function-identical**. Comparing the Tokmas
+AD7606-class datasheet against the AD7606C-16 datasheet:
+
+| Pin | AD7606 (200 kSPS) | AD7606C-16 | Matters? |
+|---|---|---|---|
+| **9, 10** | **CONVSTA, CONVSTB** — two conversion-start inputs | **CONVST (9), WR (10)** — WR is the parallel write strobe | **Yes — see below** |
+| 3–5 | OS0–OS2, oversampling only | OS0–OS2, and one code **selects software mode** | Yes |
+| 6 | PAR/SER/**BYTE** SEL | PAR/SER SEL — no byte mode | Minor |
+| 7 | STBY (with RANGE, selects power-down mode) | STBY **ignored in software mode**; tie high | Minor |
+| 8 | RANGE | RANGE **ignored in software mode**, but must still be tied | Minor |
+| 19–22 | DB3–DB6 / DOUTE–DOUTH in serial | same | No |
+| 23 | VDRIVE 2.3–5 V | VDRIVE **1.71**–5.25 V | No |
+
+**The pin 9/10 difference is the one to get right.** Standard AD7606 practice is
+to short CONVSTA and CONVSTB together so all eight channels sample
+simultaneously — which is what the existing breakout does (the Teensy driver
+notes CONVST "also drives WR via the breakout's own tie").
+
+On an AD7606C those same two pads are CONVST and WR. That is **safe**: the C's
+datasheet explicitly permits WR to be "tied high, tied low, or shorted to
+CONVST" in hardware mode, and WR is unused entirely over the serial interface.
+
+So a board that shorts 9 and 10 works with either part — as long as it is
+driven over SPI, or in hardware mode. It would only break if a C were later run
+in **software mode over the parallel interface**, where WR becomes an active-low
+register write strobe and shorting it to CONVST would corrupt every write.
+
+Since this design uses the serial interface throughout, shorting them is fine.
+Worth a jumper or a 0 Ω link rather than a hard trace, so the scope board keeps
+the option of software mode later.
+
+**AD7606C-16 and AD7606C-18 are pin-identical to each other**, so an 18-bit
+upgrade on the scope board is a populate-different-part change with no layout
+work.
+
 ### If it is the 200 kSPS part, the only constraint that bites
 
 Operating temperature: **−40 to +85 °C**, against −40 to +125 °C for the
