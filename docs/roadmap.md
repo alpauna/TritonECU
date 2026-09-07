@@ -45,8 +45,8 @@ maths are worth keeping. Everything else earns its place again.
 | **M1** ✅ | Storage + config | SDMMC, JSON config, persistence | **Done 2026-09-06.** Mounts 4-bit, bootstraps a missing config, persists across resets, and reads back edits made on a PC |
 | **M2** ✅ | Analog front end | AD7606 | **Done 2026-09-06.** Two known signals read correctly (±1.22 V scope on V1, 0–2 V 1 kHz on V8) after establishing SPI_MODE2. See [`adc-front-end.md`](adc-front-end.md) |
 | **M3** ◐ | **Crank sync** | VR conditioning + 36-1 decode | Decode logic **done** — 10 native tests pass, 200 to 6000 rpm including a degraded cranking gap ratio. Electrical half still needs the MAX9926 |
-| **M4** | Cam sync | full engine position | Knows the stroke; 720° position stable across restarts |
-| **M5** | Spark output | timed output | Scope shows dwell and advance matching commanded values across rpm |
+| **M4** ◐ | Cam sync | full engine position | Logic **done** — 6 native tests. Rejects implausible cam pulses and drops 720° sync with crank sync. Needs hardware |
+| **M5** ◐ | Spark output | timed output | Scheduler **done** — 12 native tests, incl. the rpm at which dwell overlaps. Needs coil drivers |
 | **M6** | Injection output | timed output | Scope shows pulse width and phasing; 8 channels sequential |
 | **M7** | Sensors → fuel | the maths | MAF/TPS/CHT/IAT feed a fuel calculation; open-loop numbers sane |
 | **M8** | Wi-Fi + status page | ESP32-C6 hosted link | Serves live engine state over Wi-Fi |
