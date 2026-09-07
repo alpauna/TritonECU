@@ -134,8 +134,65 @@ current, and the ECU would shut itself off every cold start. Leave it at 10 mΩ.
 | 45 V | 0.47 A | 4.7 | 0.10 A | 1.0 |
 
 **A few millivolts at normal running.** That rules out feeding it straight to
-the ADC — 3.3 mV on the AD7606's ±10 V range is eleven counts. It needs a
-current-sense amplifier with gain, then the amplifier's output goes to the ADC.
+the ADC — 3.3 mV on the AD7606's ±10 V range is eleven counts.
+
+### Use an I²C power monitor: INA238-Q1
+
+Better than an analog current-sense amp, and it costs **no ADC channel and no
+GPIO** — I²C is already on the board.
+
+| | |
+|---|---|
+| Common mode | **−0.3 V to +85 V** |
+| Resolution | 16-bit |
+| Shunt full scale | **±163.84 mV** or ±40.96 mV |
+| Measures | shunt voltage, **bus voltage**, current, power, charge |
+| Qualification | **AEC-Q100** |
+| Interface | I²C, with an ALERT output |
+
+85 V common mode is far more than the 6–30 V this node sees, which means it
+survives a fault that pushes OUT above the clamp rather than being destroyed
+by it.
+
+**Use the ±163.84 mV range, not ±40.96 mV.** The narrower range gives finer
+resolution but saturates at 4.1 A across 10 mΩ — and full load at cold crank is
+3.53 A, uncomfortably close, with the breaker not tripping until 5 A. The wide
+range covers 16.4 A, keeps ~500 µA of resolution, and stays linear right
+through the trip point where the data is most interesting.
+
+At 3.3 mV running that is still roughly 660 counts. Ample.
+
+The **ALERT pin** is worth wiring: it can flag a programmable over-current
+threshold *before* the LTC4364's breaker acts, turning "the ECU shut down" into
+"the ECU logged a rising fault and then shut down".
+
+If 20-bit resolution and energy/charge accumulation are wanted, the
+**INA228-Q1** is pin- and register-similar with the same 85 V range.
+
+### It does not replace the battery-voltage channel
+
+Worth being explicit, because the two look interchangeable and are not.
+
+The INA238-Q1 sits on the **protected** side, so it reports **the ECU's own
+supply rail and the ECU's own current draw**. That is exactly what is wanted
+for self-diagnostics.
+
+But **the injectors and coils are fed 12 V directly from the vehicle**, not
+through the LTC4364. So:
+
+- During a surge, OUT is clamped at 30 V while the injectors see the full
+  transient. The INA238 would report 30 V and be right about its own node and
+  useless about theirs.
+- Injector **dead-time** and coil **dwell** compensation both need the voltage
+  *at the load*, which is raw battery.
+
+So the separate battery-voltage divider on an ADC channel stays. The two
+measurements answer different questions:
+
+| Measurement | Answers |
+|---|---|
+| INA238-Q1 on the protected rail | is the ECU healthy, and how much is it drawing |
+| Battery divider on the ADC | what voltage are the injectors and coils actually seeing |
 
 ### The common mode is friendlier than it first appears
 
@@ -144,11 +201,10 @@ side, downstream of both MOSFETs. So its common-mode voltage is the **clamped
 output**, not the raw input: roughly 6 V to 30 V, never the 80 V+ a surge
 brings.
 
-That makes the amplifier choice ordinary rather than exotic. An INA240-class
-part (−4 V to 80 V common mode) has ample headroom, and gain of 20–50 turns the
-3.3 mV running signal into 66–165 mV — comfortable for the ADC.
+That makes the amplifier choice ordinary rather than exotic. An INA238-Q1
+(−0.3 V to 85 V common mode) has ample headroom — see above.
 
-### Two layout requirements
+### Two layout requirements (either implementation)
 
 1. **Kelvin the measurement taps from the resistor's own pads**, separately from
    the LTC4364's connections. Sharing a trace puts the measurement's error into
