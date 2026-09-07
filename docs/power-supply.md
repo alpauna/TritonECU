@@ -330,11 +330,16 @@ crowbar is normally sized against a fast fuse that clears in milliseconds. A
 PTC takes **seconds**, and the SCR has to carry full short-circuit current for
 all of it — which means a much larger SCR than the threshold alone suggests.
 
-### Use a surge stopper instead
+### Use a surge stopper instead — **LTC4364-2**
 
-An **LT4356-class surge stopper** puts a MOSFET in series and holds it in
-*linear* regulation during an overvoltage, clamping the downstream rail while
-the surge passes:
+Selected; full configuration in [`surge-stopper.md`](surge-stopper.md). It is
+**AEC-Q100 qualified**, runs 4–80 V, protects against reverse input to −40 V
+via an integrated **ideal diode controller**, and includes a timed current
+limit — so it absorbs the reverse-polarity P-FET and the primary overcurrent
+protection as well as the overvoltage job.
+
+A surge stopper puts a MOSFET in series and holds it in *linear* regulation
+during an overvoltage, clamping the downstream rail while the surge passes:
 
 - **The ECU keeps running.** The rail is limited, not shorted — no stall.
 - **It rides out a 400 ms load dump by design**, which is the case a crowbar
@@ -346,24 +351,24 @@ the surge passes:
 - The same series FET can provide **reverse-polarity protection**, absorbing
   the P-FET.
 
-**[CONFIRM]** an AEC-Q100 variant and its energy rating against the intended
-load-dump level.
+The LTC4364 is AEC-Q100 qualified. What still needs sizing is the **pass FET's
+safe operating area**: while clamping it dissipates roughly 40 W for up to
+400 ms, about 16 J, in linear mode. See [`surge-stopper.md`](surge-stopper.md).
 
 ### Resulting input chain
 
 ```
-Battery ─► resettable fuse ─► reverse-polarity P-FET ─► TVS ─► surge stopper ─► LM5155-Q1 SEPIC
-                                                    (fast transients)   (load dump, sustained OV)
+Battery ─► fuse ─► TVS ─► LTC4364-2 ─► LM5155-Q1 SEPIC ─► 6.0 V
+                (fast pulses)  (reverse, load dump, overcurrent, brownout holdup)
 ```
 
 Each element covers what the next cannot:
 
 | Element | Handles |
 |---|---|
-| Resettable fuse | sustained overcurrent, downstream short |
-| P-FET | reverse polarity, without a Schottky's permanent drop and heat |
-| TVS | fast, high-energy ISO 7637 pulses — nanoseconds to microseconds |
-| **Surge stopper** | **load dump (400 ms) and sustained overvoltage, without shorting the rail** |
+| Fuse | the pass FET failing short — the one mode nothing downstream can self-protect against |
+| TVS | sub-microsecond ISO 7637 pulses, faster than any FET-based scheme can respond |
+| **LTC4364-2** | **reverse polarity to −40 V, load dump, overcurrent, brownout holdup, UV lockout** |
 | LM5155-Q1 | everything from 3.5 V to 45 V, which is most of the job |
 
 The TVS stays: it catches the sub-microsecond pulses faster than any active
