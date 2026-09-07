@@ -230,3 +230,81 @@ adaptive fuel trims, DTCs — with the key off. The replacement ECU stores that
 on the SD card and in NVS, so KAPWR is unnecessary. What it does need instead
 is a clean power-down: detect loss of the run line and flush learned state
 before the rail collapses.
+
+---
+
+## Engine compartment component locations (5.4L, sheet 1 of 2)
+
+Source: `Engine-Component-Locations.png`
+
+### Engine-management components identified
+
+| Ref | Component |
+|---|---|
+| C1011–C1018 | **Coil-on-plug, cylinders 1–8** |
+| C100 | Camshaft position (CMP) sensor |
+| C101 | Engine oil pressure **switch** |
+| C107 | Intake air temperature (IAT) sensor |
+| C108 | Heated oxygen sensor (HO2S) #21 |
+| C110 | Idle air control (IAC) valve |
+| C118 | Intake manifold communicator control (IMCC) |
+| C123 | Throttle position (TP) sensor |
+| C179 | **Cylinder head temperature (CHT) sensor** |
+| C174 | Powertrain control module (PCM) |
+| C175 | Battery junction box (relays and diodes) |
+| C139 / C170 | A/C clutch cycling pressure switch / A/C pressure cutoff switch |
+| C176–C178 | Generator |
+| G101, G104 | Chassis ground points |
+
+CKP does not appear on this sheet — expected on sheet 2 of 2.
+
+### CORRECTION: this engine is coil-on-plug, not wasted spark
+
+The target document previously stated, on the strength of a parts-catalogue
+search, that the '99 5.4L used **two 4-tower coil packs firing in wasted-spark
+pairs, needing four coil drivers**. The factory schematic shows
+**eight individual coil-on-plug units, C1011 through C1018**. The earlier claim
+was wrong.
+
+Consequences:
+
+- **Eight coil drivers, not four.** Directly worsens the pin budget.
+- Dwell is per-cylinder, so each coil needs its own timed output. There is no
+  companion-cylinder pairing to exploit for free.
+- On the upside, COP allows true per-cylinder spark timing, which the OEM does
+  not fully use but a replacement could.
+
+### CHT, not ECT
+
+Coolant temperature is measured as **cylinder head temperature** (C179) on this
+engine — an NTC threaded into the head rather than sitting in a coolant
+passage. Ford moved to CHT so the engine still has a usable temperature reading
+after coolant loss, which is what enables their fail-safe cooling strategy.
+
+For the replacement ECU this means:
+
+- The sensor curve is a CHT curve, not an ECT curve. They are not
+  interchangeable — head metal runs hotter than coolant and responds faster.
+- Warm-up enrichment and fan control should be calibrated against CHT.
+- **[CONFIRM]** on sheet 2 whether a separate ECT sensor also exists for the
+  gauge, or whether the cluster temperature gauge is driven from CHT via the
+  PCM. If the latter, the replacement has to drive the gauge.
+
+### Oil pressure is a switch, not a sender
+
+C101 is an **engine oil pressure switch** — binary, not analog. The design
+carried it as an analog channel; it is a digital input, which frees an ADC
+channel. If a real pressure reading is wanted for logging or protection, that
+requires fitting a sender the truck does not currently have.
+
+### IMCC is an output that was not in the inventory
+
+C118, intake manifold communicator control — the runner/charge-motion control
+solenoid on this intake. It is a PCM output and needs a driver. Low speed, so
+it belongs on the MCP23S17 expander chain rather than a native pin.
+**[CONFIRM]** whether it is a simple on/off solenoid or PWM-controlled.
+
+### Still no knock sensor visible
+
+Nothing on this sheet. Consistent with the 2V having none, but sheet 2 is
+needed before calling it settled.
