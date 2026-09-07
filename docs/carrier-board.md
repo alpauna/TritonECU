@@ -64,6 +64,12 @@ here is a wasted board spin.
 Even after all of that, ~114 I/O against 37 needed leaves the assignment
 unconstrained. That is the point of the platform change.
 
+## Setting up a Nucleo from scratch
+
+See [`nucleo-setup.md`](nucleo-setup.md) — the full runbook, including the one
+thing that actually blocks a first-time bring-up (the ST-Link udev rule) and
+the two quirks that waste time if you meet them unprepared.
+
 ## Order of work
 
 1. ~~M0 on the Nucleo~~ **Done 2026-09-07.** Device ID 0x451 rev 0x1001,
