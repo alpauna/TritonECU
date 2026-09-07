@@ -74,6 +74,61 @@ Mitigations, in order of effectiveness:
 - **A shield can over the power stage**, with a footprint provided even if not
   fitted initially.
 
+## Smaller parts: let the surge stopper set the voltage class
+
+Small components make a small hot loop, and 100 V devices are not small. But
+100 V was chosen against the **LM5155-Q1's** 45 V maximum — not against what the
+SEPIC will actually see.
+
+**The surge stopper is upstream, and it decides that.** If it regulates the
+downstream rail to ~30 V during a surge, the switch never sees 45 V:
+
+| Condition | Vin at SEPIC | Switch stress (Vin + Vout + Vd) |
+|---|---|---|
+| Running, nominal | 13.8 V | **20.3 V** |
+| Surge stopper regulating | 30 V | **36.5 V** |
+| Surge stopper failed, TVS clamping | ~40 V | 46.5 V |
+
+Adding ringing overshoot to the middle case gives roughly 44 V. **80 V devices
+carry good margin against that**, and cover the failed-surge-stopper case too.
+
+### 80 V is better than 100 V for more than size
+
+At 2.2 MHz, switching loss is proportional to **f × Q_G × V_DS** — so gate
+charge is a first-order term, not a detail. A 60–80 V MOSFET typically carries
+roughly **half the Q_G and half the C_oss** of a 100 V part at comparable
+R_DS(on). That buys three things at once:
+
+- **Smaller package** — tighter hot loop, which is the whole point.
+- **Lower switching loss** — directly attacks the 3.2 W the design has to
+  dissipate.
+- **Lower C_oss** — less ringing energy, so a smaller snubber or none.
+
+Going from 100 V to 80 V is not a compromise here. It is better on every axis
+that matters at this frequency, and the surge stopper is what makes it safe.
+
+### The trap in the coupling capacitor
+
+Cs charges to **Vin**, so it sees up to 30 V in normal surge conditions. It is
+tempting to fit 50 V ceramics for their much higher capacitance density.
+
+**Watch the DC bias derating.** A class-II ceramic loses most of its
+capacitance under DC bias — a 10 µF 50 V X7R at 30 V may deliver 3–4 µF, and
+the datasheet's headline value is measured at essentially zero volts. Losing
+60 % of Cs raises its ripple voltage and shifts the converter's behaviour.
+
+Two consequences:
+
+- **Choose Cs on measured capacitance at the working voltage**, not on the
+  marking. Use the manufacturer's bias curves.
+- **63–100 V parts derate less** at 30 V, which partly cancels their lower base
+  capacitance. The right answer comes from the bias curve, not from the ratio
+  of the ratings.
+
+Cs also has to carry **3.1 A rms**, so it is a parallel bank regardless — and
+several smaller parts in parallel is better for the hot loop than one large one
+anyway.
+
 ## Verify, do not assume
 
 Two checks worth doing before the board is trusted:

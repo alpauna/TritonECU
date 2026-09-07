@@ -191,10 +191,16 @@ high line and light input current, which is normal for a SEPIC.
 
 | Part | Requirement |
 |---|---|
-| MOSFET | ≥ 52 V blocking, ≥ 7 A peak → **80–100 V** for ringing margin |
-| Diode | ≥ 52 V, 3 A average, 7 A peak → **100 V Schottky** |
+| MOSFET | ≥ 52 V blocking, ≥ 7 A peak → **80 V**, not 100 V — see below |
+| Diode | ≥ 52 V, 3 A average, 7 A peak → **80 V Schottky** |
 | Inductors | 2 × 3.3 µH, **saturation > 4.5 A each** |
 | **Coupling cap Cs** | ≥ 52 V, **3.1 A rms** |
+
+**On the voltage class:** 52 V comes from the LM5155-Q1's 45 V maximum, but the
+surge stopper regulates the rail well below that — around 36.5 V of switch
+stress during a surge, 20.3 V running. **80 V parts** cover it with margin, and
+at 2.2 MHz their lower gate charge and output capacitance cut switching loss and
+ringing as well as package size. See [`supply-layout.md`](supply-layout.md).
 
 **Cs is the part most often under-specified.** It carries 3.1 A rms at cold
 crank — one ceramic will not do it, and its ESR is dissipating that current
