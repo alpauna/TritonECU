@@ -11,6 +11,9 @@ bool g_oneBit = false;
 }  // namespace
 
 bool begin() {
+    // Never pass format_if_mount_failed. An unmountable card is far more often
+    // the wrong filesystem than a broken one, and formatting it would destroy
+    // whatever is on it. Report and continue instead.
     if (SD_MMC.begin("/sdcard", false)) {
         g_mounted = true;
         g_oneBit = false;
@@ -38,7 +41,14 @@ uint64_t usedBytes()     { return g_mounted ? SD_MMC.usedBytes() : 0; }
 
 void report() {
     if (!g_mounted) {
-        Serial.println("  storage      : no card (TF slot empty, or a card the bus cannot train)");
+        // The IDF log above this line distinguishes the two cases:
+        //   sdmmc_init_ocr / send_op_cond timeout -> no card responding
+        //   mount_to_vfs failed                   -> card present, filesystem
+        //                                            unreadable (usually exFAT;
+        //                                            FATFS needs FAT16/FAT32)
+        Serial.println("  storage      : unavailable — no card, or a filesystem");
+        Serial.println("                 FATFS cannot read. Cards over 32 GB ship");
+        Serial.println("                 as exFAT; reformat as FAT32.");
         return;
     }
     const char* type = "unknown";
