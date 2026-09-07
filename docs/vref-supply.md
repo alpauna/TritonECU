@@ -7,6 +7,12 @@ provides on two pins (A-20, C-20). See
 **Specified:** separate supply, isolated from the internal 5 V, outbound
 resettable fuse, **3 A** output.
 
+**Open:** the EEC-V pinout for this truck shows only **one** VREF pin (pin 90,
+BRN/WHT), while the Ford power-pin sheet lists two (A-20, C-20). If this truck
+really uses one, the two-feed argument below reduces to a single limited feed.
+**[CONFIRM]** — see
+[`1999-Ford-F150-4wd-5.42v/eec-v-pinout.md`](1999-Ford-F150-4wd-5.42v/eec-v-pinout.md).
+
 The separation is right and matters. The current figure is worth revisiting.
 
 ---

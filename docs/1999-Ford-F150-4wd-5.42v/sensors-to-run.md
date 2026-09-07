@@ -54,8 +54,8 @@ this line affects how *well* it runs, not whether it runs.
 | Sensor | Type | Notes |
 |---|---|---|
 | **TSS** — turbine shaft speed | speed sensor | Present on '99 4R70W. Slip calculation and shift quality. **[CONFIRM]** VR or Hall |
-| **OSS** — output shaft speed | speed sensor | Road speed. Also the cluster's speedometer source |
-| **TR** — transmission range | multi-position switch | Park/neutral/gear. Also gates cranking |
+| **OSS** — output shaft speed | **variable reluctance** | Road speed, cluster speedometer, and the cruise control feed (pin 68). The MegaSquirt build conditioned it with an LM1815 — it needs the same treatment as CKP |
+| **TR** — transmission range | **4-bit digital code** | Park/neutral/gear. Four digital inputs (pins 34/49/50/64), not an analog ladder — expander inputs, no ADC channel needed |
 | **TFT** — trans fluid temperature | NTC | Blocks converter lockup when cold |
 
 ---
@@ -88,7 +88,7 @@ Listed because "what makes it run" is not only sensors.
 | **Speed control servo**, C157 | — | Cruise control is a PCM function on this truck; it stops working unless the replacement drives it |
 | **HO2S heaters** | 4 | Needed before the O2 sensors read at all |
 | **Tach + road speed to cluster** | 2 | Or over SCP, if Phase 0 shows the cluster takes them that way |
-| **4R70W: SSA, SSB, TCC, EPC** | 4 | Two on/off, two PWM |
+| **4R70W: SS1, SS2, CSS, TCC, EPC** | 5 | Three on/off, two PWM. **CSS (coast clutch, pin 20) was missing from earlier lists.** EPC needs a flyback diode to 12 V |
 
 ---
 
