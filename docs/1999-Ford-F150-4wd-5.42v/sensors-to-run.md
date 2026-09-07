@@ -79,8 +79,8 @@ Listed because "what makes it run" is not only sensors.
 
 | Output | Count | Notes |
 |---|---|---|
-| **Coil-on-plug drivers** | **8** | C1011–C1018. Individually timed. **[CONFIRM]** dumb coils needing an IGBT each, or smart coils with logic input |
-| **Injector drivers** | 8 | C125–C132. High-impedance saturated, low-side |
+| **Coil-on-plug drivers** | **8** | C1011–C1018. Individually timed. **Dumb coils, confirmed** — 12 V one side, driver grounds the other. Ignition IGBT with integrated clamp per channel, ~6–10 A peak |
+| **Injector drivers** | 8 | C125–C132. High-impedance saturated, low-side, ~1 A. Clamp at 40–70 V, **not** a plain freewheel diode — see `../custom-board.md` |
 | **IAC valve**, C110 | 1 PWM | Without it there is no idle control at all — the engine will only idle on the throttle stop |
 | **Fuel pump relay** | 1 | Inertia switch (C204) stays in series downstream — safety device, do not remove |
 | **VREF supply** | 2 feeds | see Tier 1 |

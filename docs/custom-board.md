@@ -121,24 +121,62 @@ Also check the driver's **UVLO** behaviour: many hold the output low until
 their supply is valid, which covers the brown-out and cranking cases for free.
 Worth choosing a part that does.
 
-### Coils are not just another inductive load
+### Coils: confirmed dumb, low-side switched
 
-**[CONFIRM ON TRUCK]** whether the '99 5.4L COP coils are "dumb" two-wire coils
-or "smart" coils with an integrated driver and logic-level input. It decides
-the whole ignition output stage:
+**Resolved on the truck.** The COP coils are plain two-wire units — permanently
+at 12 V on one side, and the driver grounds the other. Same arrangement for the
+injectors. So the board owns the switch, the clamping and the energy in both
+cases.
 
-- **Smart coils** — feed them a logic-level signal. The coil owns the current
-  limiting and clamping. Nothing more needed.
-- **Dumb coils** — the board must provide the switch, and an ignition primary
-  flies back to several hundred volts on turn-off. That wants a purpose-built
-  **ignition IGBT with integrated clamp**, not a general-purpose MOSFET. The
-  clamp is what dissipates the coil's stored energy in a controlled way; a
-  plain FET without one avalanches, and repeated avalanche at 400 sparks per
-  second is not a long life.
+Rough currents, which set the device sizing:
 
-Injectors are gentler but still inductive: a saturated high-impedance Ford
-injector needs a flyback path, either an avalanche-rated FET within its energy
-spec or an explicit clamp.
+| Load | Peak current | Device |
+|---|---|---|
+| Coil primary, end of dwell | **~6–10 A** | ignition IGBT |
+| Injector, high-Z ~12–16 Ω at 14 V | **~1 A** | small logic-level MOSFET |
+
+### The flyback strategy is opposite for the two
+
+This is the part that is easy to get backwards, because "snubber on every
+inductive output" is the right instinct almost everywhere else.
+
+**A coil's flyback is the spark. Do not dissipate it.**
+
+When the primary opens, its collapsing field is what generates the secondary
+voltage. The primary side rises to roughly 300–400 V, and that rise *is* the
+energy transfer. So:
+
+- **No freewheel diode across an ignition primary.** It would clamp the primary
+  near battery voltage, the field would decay slowly through the diode, and the
+  spark would be feeble or absent. This single component turns a working
+  ignition into a no-start.
+- **No energy-absorbing RC snubber either**, for the same reason — anything
+  that soaks up the flyback is taking it from the spark.
+- **Use an ignition IGBT with an integrated active clamp**, typically around
+  **350–450 V**. It lets the primary rise to where the energy transfers, then
+  holds it below the device's breakdown. The clamp is a limit, not a dump.
+
+A small RC across the switch to damp ringing is still reasonable — that is
+different from clamping the flyback, and it should be sized to control edges
+rather than to absorb the pulse.
+
+**An injector's flyback is waste. Get rid of it — but not with a plain diode.**
+
+Here the goal is a fast, repeatable close, because minimum pulse width and
+idle fuelling accuracy depend on it.
+
+- **A simple freewheel diode makes the injector close slowly.** Current decays
+  through the diode at only a diode-drop of forcing voltage, the pintle stays
+  open longer than commanded, and short pulses over-fuel. The error is worst at
+  idle, where pulses are shortest and consistency matters most.
+- **Clamp at roughly 40–70 V instead** — a zener or an avalanche-rated FET
+  inside its energy spec. Higher reverse voltage collapses the current faster,
+  so the pintle closes crisply and the delivered quantity tracks the commanded
+  pulse width down to small values.
+
+Summarised: **clamp both, dissipate neither, and pick the clamp voltage for what
+the load is meant to do** — high for a coil because the flyback is the product,
+moderate for an injector because a fast close is the product.
 
 Also: keep coil and injector outputs off GPIO35/36. They are strapping pins,
 sampled at reset, and a driver's pulldown would fight the boot configuration.
