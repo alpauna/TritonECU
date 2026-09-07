@@ -304,7 +304,85 @@ solenoid on this intake. It is a PCM output and needs a driver. Low speed, so
 it belongs on the MCP23S17 expander chain rather than a native pin.
 **[CONFIRM]** whether it is a simple on/off solenoid or PWM-controlled.
 
-### Still no knock sensor visible
+### Knock sensor
 
-Nothing on this sheet. Consistent with the 2V having none, but sheet 2 is
-needed before calling it settled.
+Not on this sheet — it is on sheet 2 as C103. See below.
+
+---
+
+## Engine compartment component locations (5.4L, sheet 2 of 2)
+
+Source: `Engine-Component-Locations-2.png`
+
+| Ref | Component |
+|---|---|
+| C102 | **Crankshaft position (CKP) sensor** |
+| C103 | **Knock sensor (KS)** |
+| C109 | Heated oxygen sensor (HO2S) #11 |
+| C121 | EGR vacuum regulator (EVR) solenoid |
+| C122 | Differential pressure feedback EGR (DPFE) sensor |
+| C125–C132 | **Fuel injectors #1–#8** |
+| C164 | **EVAP canister purge valve** |
+| C157 | **Speed control servo** |
+| C106 | A/C compressor clutch solenoid |
+| C180 / C181 | 4x4 / 4x2 center axle disconnect solenoid |
+| C146, C147 | 4WABS module |
+| C1019, C1020 | Starter motor |
+| G102, G103 | Chassis grounds |
+
+### CORRECTION: there *is* a knock sensor
+
+Both earlier documents recorded the knock sensor as "believed absent on the 2V,
+confirm on sheet 2". Sheet 2 shows **C103, knock sensor (KS)**. It is present.
+
+This is a genuine addition to the design, not a detail — knock detection is the
+one input that protects the engine from itself, and it is the hardest analog
+channel on the truck:
+
+- The sensor is **piezoelectric**: a high-impedance charge source producing a
+  small, fast, broadband signal. It is not a slow 0–5 V sensor and cannot share
+  the general sensor path.
+- Knock on a 5.4L (3.55 in bore) rings in roughly the **6–8 kHz** region.
+  **[CONFIRM]** the exact window by logging real knock rather than trusting a
+  bore-diameter estimate.
+- Detection is **windowed**: sample only during each cylinder's combustion
+  event, and compare against a rolling background noise floor that rises with
+  rpm. A fixed threshold produces false positives at high rpm and misses knock
+  at low rpm.
+
+Two implementation routes:
+
+1. **Dedicated knock IC** (TPIC8101 / HIP9011 class) — SPI-programmable
+   bandpass, gain and integrator; hands back a single integrated magnitude per
+   window. Proven, low MCU load, less tunable.
+2. **Sample raw and do the DSP on the P4** — the AD7606C-16 is fast enough
+   (8 kHz needs well under its per-channel rate) and the P4 is a 360 MHz
+   dual-core with headroom on core 0. Gives a full FFT per window, per
+   cylinder, and lets the detection strategy be tuned in software rather than
+   in hardware. More work, far better diagnostics.
+
+Given the P4 and the ADC are already in the design, route 2 is the more
+interesting one and costs one ADC channel plus a charge amp. It also fits the
+existing web UI: knock spectra per cylinder would be genuinely useful on the
+tuning page.
+
+### Two more outputs that were missing
+
+- **EVAP canister purge valve (C164)** — PWM solenoid, PCM-driven. Not needed
+  to run, but without it the tank vents through the canister with no purge and
+  the EVAP monitor never completes.
+- **Speed control servo (C157)** — cruise control is a PCM function on this
+  truck. Replacing the PCM means cruise stops working unless the replacement
+  drives the servo and reads the steering-wheel switches. **[CONFIRM]** whether
+  the servo is the vacuum type (vent + vacuum solenoids) or an electric
+  actuator.
+
+### CKP located
+
+**C102** — pairs with C100 (CMP) from sheet 1. Both still expected to be
+variable-reluctance; that has not changed.
+
+### Injectors located
+
+**C125–C132**, eight individual connectors, consistent with sequential
+injection and with the eight coil-on-plug units from sheet 1.

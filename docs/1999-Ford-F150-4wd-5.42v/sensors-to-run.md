@@ -12,7 +12,7 @@ schematic is tagged.
 
 | Sensor | Type | Signal | Notes |
 |---|---|---|---|
-| **CKP** — crankshaft position | 36-1 **variable reluctance** | self-generated sine, mV at cranking to tens of V at speed | The one irreplaceable input. Position *and* rpm. **Needs a VR conditioner** — cannot drive a GPIO. **[CONFIRM]** connector ref, on location sheet 2 |
+| **CKP** — crankshaft position | 36-1 **variable reluctance**, C102 | self-generated sine, mV at cranking to tens of V at speed | The one irreplaceable input. Position *and* rpm. **Needs a VR conditioner** — cannot drive a GPIO |
 | **CMP** — camshaft position | **variable reluctance**, C100 | 1 pulse/cam rev | Identifies which stroke. With coil-on-plug and sequential injection this is mandatory, not optional. Also needs VR conditioning |
 | **MAF** — mass air flow | hot wire, C141 | 0–5 V **differential** (967 signal / 968 return) | The load signal. Fuelling is computed from it |
 | **TPS** — throttle position | potentiometer, C123 | 0–5 V ratiometric to VREF | Idle/WOT detection, transient (accelerator-pump) fuel |
@@ -35,6 +35,7 @@ this line affects how *well* it runs, not whether it runs.
 | **CHT** — cylinder head temperature | NTC, C179 | Warm-up enrichment. Without it the engine either floods when cold or leans out when hot. **Note: CHT, not ECT** — different curve, mounted in the head, faster and hotter than coolant |
 | **IAT** — intake air temperature | NTC, C107 | Air density correction. Separate sensor on this truck — confirmed, C141 pins 1/6 unused |
 | **Battery voltage** | divider, internal | Injector dead-time compensation. At 10 V cranking an injector opens measurably slower than at 14 V; ignore it and cranking mixture is wrong exactly when it matters |
+| **Knock sensor**, C103 | piezo | Not needed to *start*, but it is what stops the engine destroying itself under load on pump fuel. Needs a charge amp and windowed detection — see `oem-connectors.md`. Until it works, run conservative timing |
 
 ---
 
@@ -42,9 +43,9 @@ this line affects how *well* it runs, not whether it runs.
 
 | Sensor | Type | Notes |
 |---|---|---|
-| **HO2S upstream ×2** | narrowband heated, C108 = #21 | Closed-loop trim. Replaceable with LSU 4.9 wideband + CJ125, which the firmware already supports and which is far better for tuning |
+| **HO2S upstream ×2** | narrowband heated, C109 = #11, C108 = #21 | Closed-loop trim. Replaceable with LSU 4.9 wideband + CJ125, which the firmware already supports and which is far better for tuning |
 | **HO2S downstream ×2** | narrowband heated | Catalyst efficiency monitoring only. Not needed to run; needed for a clean OBD-II readiness set |
-| **DPFE** — EGR differential pressure | 0–5 V | Only if EGR is retained |
+| **DPFE** — EGR differential pressure | 0–5 V, C122 | Only if EGR is retained |
 
 ---
 
@@ -76,12 +77,15 @@ Listed because "what makes it run" is not only sensors.
 | Output | Count | Notes |
 |---|---|---|
 | **Coil-on-plug drivers** | **8** | C1011–C1018. Individually timed. **[CONFIRM]** dumb coils needing an IGBT each, or smart coils with logic input |
-| **Injector drivers** | 8 | High-impedance saturated, low-side |
+| **Injector drivers** | 8 | C125–C132. High-impedance saturated, low-side |
 | **IAC valve**, C110 | 1 PWM | Without it there is no idle control at all — the engine will only idle on the throttle stop |
 | **Fuel pump relay** | 1 | |
 | **VREF supply** | 2 feeds | see Tier 1 |
 | **IMCC**, C118 | 1 | Intake manifold runner control. **[CONFIRM]** on/off or PWM |
-| **Cooling fan, A/C clutch, MIL** | 3 | Slow — expander chain |
+| **Cooling fan, A/C clutch (C106), MIL** | 3 | Slow — expander chain |
+| **EVAP purge valve**, C164 | 1 PWM | Not needed to run |
+| **EGR vacuum regulator**, C121 | 1 PWM | Only if EGR retained |
+| **Speed control servo**, C157 | — | Cruise control is a PCM function on this truck; it stops working unless the replacement drives it |
 | **HO2S heaters** | 4 | Needed before the O2 sensors read at all |
 | **Tach + road speed to cluster** | 2 | Or over SCP, if Phase 0 shows the cluster takes them that way |
 | **4R70W: SSA, SSB, TCC, EPC** | 4 | Two on/off, two PWM |
