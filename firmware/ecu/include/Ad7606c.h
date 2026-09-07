@@ -30,8 +30,15 @@ constexpr uint8_t kChannels = 8;
 
 enum class Range : uint8_t { kBipolar5V = 0, kBipolar10V = 1 };
 
-// Hardware oversampling ratio, set on OS0..OS2. Higher ratios trade conversion
-// time for noise: each step halves the noise floor's bandwidth.
+// Hardware oversampling ratio, set on OS0..OS2. Higher ratios trade throughput
+// for noise, and the setting is GLOBAL across all eight channels — at x16 the
+// whole part drops to ~16 kSPS, which is useless for knock.
+//
+// Default is kNone, with averaging done in software instead: the same sqrt(N)
+// noise reduction, applied per channel at whatever depth each one deserves,
+// without throttling the fast channel. The analog anti-aliasing filter (22 kHz)
+// is always in circuit and is unaffected by this setting.
+// See docs/adc-front-end.md.
 enum class Oversampling : uint8_t {
     kNone = 0, kX2 = 1, kX4 = 2, kX8 = 3, kX16 = 4, kX32 = 5, kX64 = 6,
 };
@@ -49,7 +56,7 @@ struct Pins {
 };
 
 bool begin(const Pins& pins, Range range = Range::kBipolar10V,
-           Oversampling os = Oversampling::kX16);
+           Oversampling os = Oversampling::kNone);
 
 // Triggers a conversion and reads all 8 channels. Returns false on BUSY
 // timeout, which is a real signal — miswiring, no RESET, or a dead part —

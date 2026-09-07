@@ -144,28 +144,153 @@ burst reads **one** 16-bit word and raises CS rather than clocking all eight.
 That is what keeps a 100 kSPS knock window affordable on a modest SPI clock.
 It does mean **knock should sit on channel 0**, so its word arrives first.
 
-## So which part?
+## Which part — and a naming trap worth knowing about
 
-**For this build: keep the AD7606C-16 already on the bench.** There is no
-saving in buying a slower part when the faster one is in hand and its driver is
-already validated.
+Three generations share one footprint:
 
-**For a second unit or a production board, the AD7606 is defensible.** What the
-C adds, and whether it matters here:
+| | AD7606 | AD7606**B** | AD7606**C**-16 |
+|---|---|---|---|
+| Throughput | 200 kSPS | 800 kSPS | 1 MSPS |
+| Operating temp | **−40 to +85 °C** | −40 to **+125 °C** | −40 to +125 °C |
+| Input clamp | ±16.5 V | **±21 V** | ±21 V |
+| Input impedance | 1 MΩ | 5 MΩ | 5 MΩ (lower drift) |
+| VDRIVE floor | 2.3 V | 1.71 V | 1.71 V |
+| Software/register mode | no | yes | yes |
+| Per-channel range | no | no | **yes** |
+| On-chip diagnostics | no | yes | yes |
 
-| AD7606C feature | Matters? |
-|---|---|
-| 1 MSPS vs 200 kSPS | **No** — 1 % utilised either way |
-| Software/register mode | **No** — this design uses hardware mode |
-| Per-channel input range | **No** in hardware mode; would matter if ranges were mixed |
-| Per-channel gain/offset/phase calibration | **Minor** — can be done in software against known references |
-| **On-chip diagnostics (open-circuit detection)** | **Possibly yes** — a disconnected sensor is a routine truck fault, and having the ADC flag it beats inferring it from an implausible reading |
+### The trap: "AD7606BSTZ" is not "AD7606B"
 
-**[CONFIRM]** the plain AD7606's analog input over-voltage clamp before
-substituting. The ±16.5 V clamp is a real part of why this family suits an
-automotive harness, and it should not be assumed identical across the family
-without checking the datasheet.
+The `B` in **AD7606BSTZ** is a *grade letter* in the original AD7606's ordering
+code (B grade, ST = LQFP-64, Z = RoHS). The **AD7606B** is a different, newer,
+faster part. The two look almost identical in a parts listing.
 
-The honest summary: **speed is not the reason to choose the C.** Diagnostics
-might be, and that is a smaller argument than the 5× throughput headline
-suggests.
+The Tokmas datasheet on file (`~/Documents/Tokmas AD7606B-Datasheer.pdf`) is
+headed **AD7606BSTZ**, and its specifications are the original AD7606's:
+
+- 16-bit, **200 kSPS** on all channels
+- **±16.5 V** input clamp
+- **1 MΩ** input impedance
+- **−40 °C to +85 °C**
+- VDRIVE 2.3–5 V, AVDD 4.75–5.25 V
+
+So this is an AD7606-class part at an AD7606B-sounding part number. That is not
+necessarily misrepresentation — it is the correct ordering code for what it is
+— but it is easy to read as the 800 kSPS part.
+
+ADI themselves warn about the sharper version of this: because all three are
+**footprint-identical**, a re-marked 200 kSPS AD7606 can be sold as an 800 kSPS
+AD7606B and pass visual inspection. If throughput ever actually mattered, it
+would need measuring rather than trusting the marking. Here it does not.
+
+### Verdict at a 10× price difference
+
+**Use the cheap part.** At roughly $5.60 against $55, and with the throughput
+analysis above showing ~1 % utilisation, the AD7606C's advantages do not come
+close to justifying ten times the price for this build.
+
+The clamp question raised earlier is **resolved in its favour**: ±16.5 V is
+present, along with 1 MΩ input impedance, 8 kV ESD protection on the analog
+inputs, and a second-order anti-aliasing filter at −3 dB / 22 kHz. That is the
+protection package that makes this family suit an automotive harness, and the
+cheap part has it.
+
+Two things to weigh before ordering:
+
+1. **Temperature: −40 to +85 °C, not +125 °C.** This decides where the ECU can
+   mount. The OEM PCM on this truck sits in the cabin, not the engine bay, so
+   85 °C is very likely fine — but it rules out an under-hood enclosure, and
+   that is a decision better made now than after the board is built.
+   **[CONFIRM]** the intended mounting location.
+2. **1 MΩ input impedance, not 5 MΩ.** It loads the source slightly. Irrelevant
+   for low-impedance sensors, but the battery-voltage divider should be stiff
+   enough that 1 MΩ across it does not shift the ratio — keep the divider
+   resistances well under 100 kΩ.
+
+Neither is a reason to spend the extra $50.
+
+---
+
+## Oversampling is global, so do the averaging in software
+
+The hardware oversampling pins trade throughput for noise, and the conversion
+time scales with the ratio (typical values from the datasheet):
+
+| OS | Conversion time | Max throughput |
+|---|---|---|
+| off | 2.9 µs | 200 kSPS (spec limit) |
+| ×2 | 7 µs | ~143 kSPS |
+| ×4 | 15 µs | ~67 kSPS |
+| ×8 | 31 µs | ~32 kSPS |
+| ×16 | 63 µs | ~16 kSPS |
+| ×32 | 127 µs | ~7.9 kSPS |
+| ×64 | 255 µs | ~3.9 kSPS |
+
+**OS0–2 are one setting shared by all eight channels.** There is no way to
+oversample the slow sensors while sampling knock fast — at ×16 the whole part
+drops to ~16 kSPS, which is at Nyquist for an 8 kHz knock signal and useless
+for an FFT.
+
+So: **run with oversampling off and average in software.** Averaging N samples
+gives the same √N noise reduction as hardware oversampling, applied per channel
+at whatever depth each one deserves — heavy on coolant temperature, none on
+knock. The cost is SPI traffic and a little CPU, both of which there is plenty
+of.
+
+Nothing is lost in anti-aliasing by doing this: the second-order analog filter
+at 22 kHz is always in circuit and is independent of the OS setting. The
+digital filter was only ever noise averaging, and software does that just as
+well with far more control.
+
+---
+
+## Which part is actually on the bench? Measure BUSY.
+
+The part bought for the Teensy scope turned out to be a **B-series, not a C**.
+For the scope that is a real setback — a scope's whole value is bandwidth, and
+200 kSPS against 1 MSPS is a fivefold cut. For this ECU it changes nothing: the
+throughput analysis above puts utilisation around 1 % either way.
+
+**So the ECU should take the B-series part now**, rather than waiting behind a
+new C-series board. The scope gets the C when that PCB exists. The part that
+disappointed one project is the correct choice for the other.
+
+### Identifying it without buying anything
+
+There is still a question worth answering: is it a genuine 800 kSPS AD7606B, or
+an AD7606-class 200 kSPS part in AD7606B-looking clothing? The Tokmas datasheet
+on file is headed `AD7606BSTZ` but specifies 200 kSPS — and ADI warn that all
+three generations are footprint-identical, so a re-marked part passes visual
+inspection.
+
+**Conversion time settles it, and the Teensy rig can already measure it.** Time
+the BUSY pulse — CONVST rising to BUSY falling — with oversampling off:
+
+| Part | Conversion time, OS off | Implied throughput |
+|---|---|---|
+| AD7606 (200 kSPS) | **~2.9 µs** typ (2.6–3.2) | 200 kSPS |
+| AD7606B (800 kSPS) | **~1.25 µs** | 800 kSPS |
+
+More than a 2× separation, far wider than any measurement error on a Teensy 4.1
+with `micros()` — or better, capture BUSY on a scope channel directly.
+
+Two supporting checks that need no instrumentation, both from the datasheet
+differences:
+
+- **Input impedance.** 1 MΩ (AD7606) vs 5 MΩ (AD7606B). Measurable with a known
+  series resistor and a DC input: the divider ratio reveals which.
+- **VDRIVE floor.** The AD7606B runs down to 1.71 V, the AD7606 only to 2.3 V.
+  Not worth testing deliberately, but relevant if 1.8 V logic were ever wanted.
+
+Whatever it turns out to be, **both are adequate here**. The measurement matters
+for knowing what was actually bought — and for deciding whether the same
+supplier is worth using again for the scope's C-series part, where the
+difference is the whole point.
+
+### If it is the 200 kSPS part, the only constraint that bites
+
+Operating temperature: **−40 to +85 °C**, against −40 to +125 °C for the
+AD7606B and C. That decides mounting location, not performance. The OEM PCM on
+this truck sits in the cabin, so 85 °C is very likely fine — but it rules out an
+under-hood enclosure. **[CONFIRM]** where the ECU will live before committing
+to an enclosure design.
