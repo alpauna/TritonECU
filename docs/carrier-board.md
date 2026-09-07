@@ -124,6 +124,55 @@ generic error:
 | `card did not initialise (err 0x01…)` | nothing responded — wiring, CS, or 5 V module |
 | `filesystem is unreadable` | card is there; wrong filesystem (FAT16/32 only) |
 
+## AD7606 — SPI2, its own bus
+
+| Signal | Nucleo | Note |
+|---|---|---|
+| SCK | **PB10** | SPI2_SCK |
+| DOUTA | **PC2** | SPI2_MISO |
+| *(MOSI)* | PC3 | unused in hardware mode; wired for a later software-mode part |
+| CS | **PB12** | |
+| CONVST | **PB11** | tie CONVSTA and CONVSTB together |
+| BUSY | **PB1** | |
+| RESET | **PB2** | active high — must sit low to run |
+| FRSTDATA | **PB15** | optional |
+| OS0 / OS1 / OS2 | **PB3 / PB4 / PB5** | oversampling off for now |
+| RANGE | **PB6** | ±10 V high, ±5 V low |
+
+**A separate bus from the SD card**, which is on SPI4. The ADC is sampled at
+engine rate and must never wait behind a card write — sharing a bus would put
+filesystem latency directly into the sampling interval.
+
+Avoids PB0/PB7/PB14 (LEDs) and PB13 (Ethernet RMII_TXD1).
+
+**The SPI mode must be re-established on this host.** The same AD7606 needed
+MODE0 on the Teensy and MODE2 on the ESP32-P4 — it is a property of the
+host/ADC pairing, not of the ADC. The driver's default is inherited from the P4
+and is a placeholder until swept. A wrong CPHA reads **exactly 2× high while
+looking perfectly stable**, which is the failure mode that cost time on the P4
+and would cost it again.
+
+## Using an external ST-Link
+
+The Nucleo's on-board ST-Link failed during bring-up: first dropping characters
+on its VCP, then refusing to enumerate at all. The same cable and the same USB
+port enumerated a Teensy without trouble, which isolates it to the ST-Link.
+
+To drive the on-board MCU from an external ST-Link:
+
+1. **Remove both CN2 jumpers** — these connect the on-board ST-Link to the
+   target MCU. Leaving them in puts two debuggers on one SWD bus.
+2. Connect the external probe to **SWDIO (PA13)**, **SWCLK (PA14)**, **GND**,
+   and **NRST**.
+3. `upload_protocol = stlink` is unchanged — PlatformIO does not care which
+   ST-Link it finds.
+
+**[CONFIRM]** the CN2 designation against UM1974 for your board revision.
+
+**Bring SWD out to a header on the carrier.** Four pins, and it means a failed
+on-board debugger never blocks the project again. This session is the argument
+for it.
+
 ## Order of work
 
 1. ~~M0 on the Nucleo~~ **Done 2026-09-07.** Device ID 0x451 rev 0x1001,

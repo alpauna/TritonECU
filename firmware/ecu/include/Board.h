@@ -75,6 +75,26 @@ constexpr uint8_t kMosi = PE6;   // SPI4_MOSI
 constexpr uint8_t kCs   = PE4;   // software-driven chip select
 }  // namespace sd
 
+// --- AD7606 analog front end, SPI2 -----------------------------------------
+// Its own bus, separate from the SD card on SPI4. The ADC is sampled at engine
+// rate and must never wait behind a card write.
+//
+// Avoids PB0/PB7/PB14 (LEDs) and PB13 (Ethernet RMII_TXD1).
+namespace adc {
+constexpr uint8_t kSck      = PB10;  // SPI2_SCK
+constexpr uint8_t kMiso     = PC2;   // SPI2_MISO  <- AD7606 DOUTA
+constexpr uint8_t kMosi     = PC3;   // SPI2_MOSI  (unused in hardware mode)
+constexpr uint8_t kCs       = PB12;
+constexpr uint8_t kConvst   = PB11;
+constexpr uint8_t kBusy     = PB1;
+constexpr uint8_t kReset    = PB2;
+constexpr uint8_t kFrstdata = PB15;
+constexpr uint8_t kOs0      = PB3;
+constexpr uint8_t kOs1      = PB4;
+constexpr uint8_t kOs2      = PB5;
+constexpr uint8_t kRange    = PB6;
+}  // namespace adc
+
 // --- Pins committed by the Nucleo-144 itself --------------------------------
 // Do not assign these. [CONFIRM] against UM1974 before finalising a carrier;
 // this list is from the board family rather than the document.
