@@ -22,6 +22,7 @@
 #include "Ad7606c.h"
 #include "Board.h"
 #include "Config.h"
+#include "PinSelfTest.h"
 #include "Storage.h"
 #include "Version.h"
 
@@ -123,6 +124,10 @@ void setup() {
     ESP_ERROR_CHECK(esp_timer_create(&args, &g_heartbeatTimer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(g_heartbeatTimer, 1000 * 1000));  // 1 Hz
 
+#ifdef ECU_PIN_SELFTEST
+    pintest::run();
+#endif
+
     // M2 — external ADC. Absence is not fatal: the board is useful without it
     // and this milestone is still being wired.
     const ad7606c::Pins adcPins{
@@ -134,6 +139,11 @@ void setup() {
         .os2 = board::adc::kOs2,       .frstdata = board::adc::kFrstdata,
     };
     g_adcReady = ad7606c::begin(adcPins);
+    if (!g_adcReady) {
+        pintest::adcDiagnose(board::adc::kBusy, board::adc::kMiso,
+                             board::adc::kConvst, board::adc::kReset,
+                             board::adc::kCs);
+    }
     if (g_adcReady) {
         Serial.printf("  ADC          : AD7606 responding, +/-10 V, OS off, "
                       "SPI %lu kHz\n", (unsigned long)(ad7606c::spiHz() / 1000));
