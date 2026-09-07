@@ -196,3 +196,75 @@ the other two if needed.
 
 The knock sensor is **not** one of these — it is a piezo needing a charge
 amplifier and a sampled ADC channel, not edge detection.
+
+---
+
+## Build sheet — MAX9926, Mode A2, two channels
+
+Channel 1 = **CKP** (crank, C102). Channel 2 = **OSS** (output shaft speed,
+C187) — or CMP, if that turns out to be VR rather than Hall.
+
+### Connections
+
+| Pin | Name | Connect to |
+|---|---|---|
+| 1 | INT_THRS1 | GND |
+| 2 | EXT1 | *no connection* |
+| 3 | BIAS1 | GND |
+| 4 | COUT1 | 10 kΩ to **3V3**, and to P4 **GPIO2** |
+| 5 | COUT2 | 10 kΩ to **3V3**, and to P4 **GPIO3** |
+| 6 | BIAS2 | GND |
+| 7 | EXT2 | *no connection* |
+| 8 | INT_THRS2 | GND |
+| 9 | IN2+ | OSS+ via 2 × 5 kΩ in series |
+| 10 | IN2− | OSS− via 2 × 5 kΩ in series |
+| 11 | GND | GND |
+| 12 | DIRN | *no connection* |
+| 13 | ZERO_EN | **GND** (must be actively pulled low — internal 10 kΩ pull-up to VCC) |
+| 14 | VCC | **5 V**, decoupled |
+| 15 | IN1− | CKP− via 2 × 5 kΩ in series |
+| 16 | IN1+ | CKP+ via 2 × 5 kΩ in series |
+
+Plus: 1 nF across IN1+/IN1−, and 1 nF across IN2+/IN2−.
+
+### Bill of materials
+
+| Qty | Part | Notes |
+|---|---|---|
+| 1 | MAX9926UAEE+ | QSOP-16 |
+| 8 | 5 kΩ, **0805** | input series — two per leg, four legs |
+| 2 | 1 nF | across each channel's inputs; ~16 kHz corner with 10 kΩ |
+| 2 | 10 kΩ | COUT pull-ups **to 3.3 V** |
+| 1 | 10 nF | VCC decoupling — **closest to the pins** |
+| 1 | 0.1 µF | VCC decoupling |
+| 1 | 1 µF | VCC decoupling |
+
+Total 15 passives and one IC. No BIAS divider, no bypass pair per channel, no
+EXT network — all of which Mode A1 or B would have added.
+
+### Two things to get right
+
+1. **Pull COUT up to 3.3 V, not 5 V.** The part runs on 5 V; the open-drain
+   output takes its level from the pull-up rail. Pull to 3.3 V and it lands
+   directly on the P4 with no level shifter. Pull to 5 V out of habit and it
+   damages the input.
+2. **ZERO_EN must be actively tied low.** It has an internal 10 kΩ pull-up to
+   VCC, so leaving it floating gives Mode A1 — which then also needs the
+   external BIAS dividers that A2 avoids. A missing pulldown here fails
+   quietly, as a part that mostly works.
+
+### First bench test
+
+Feed a signal generator into IN1+/IN1− and watch COUT1:
+
+1. **1 kHz sine, 500 mV peak** — a stand-in for cranking. COUT should give one
+   clean edge per cycle.
+2. **Raise the amplitude to 10 V.** The edge should stay at the same *phase* —
+   that is the zero-crossing behaving as advertised, and it is the property
+   ignition timing depends on. If the edge moves with amplitude, the part is in
+   the wrong mode.
+3. **Sweep 100 Hz to 4 kHz** — 170 rpm to 6700 rpm on a 36-tooth wheel.
+4. **Note which edge** (rising or falling) corresponds to the tooth. Polarity
+   depends on wiring, and the datasheet's pin table appears to transpose the
+   IN1+/IN1− descriptions, so determine it rather than assume it. The decoder
+   does not care which, only that it is consistent.
