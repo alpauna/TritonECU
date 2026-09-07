@@ -138,3 +138,95 @@ designed to avoid. Bond 57 and 570 at a single star point inside the ECU.
 
 **[CONFIRM]** how many sensors sit on 570 as more connector sheets arrive; two
 data points establish the pattern but not its extent.
+
+---
+
+## EEC-V PCM — power, ground and reference pins
+
+Source: `EEC-V-Power-Pins.png`
+
+| Function | Description | Pin |
+|---|---|---|
+| VPWR | Voltage input to module | A-32, A-33 |
+| PWRGND | Power ground | A-24, A-25, A-26, A-27 |
+| CSEGND | Case ground | A-43 |
+| SIGRTN | Connector A signal return | A-17 |
+| SIGRTN | Connector B signal return | B-17 |
+| SIGRTN | Connector C signal return | C-17 |
+| VREF | Buffered 5 V reference | A-20, C-20 |
+| KAPWR | Keep-alive power | A-44 |
+| FEPS | Flash EPROM programming supply | A-13 |
+
+### 1. The ECU must *source* a buffered 5 V reference — this was missing
+
+`VREF` is an **output** of the PCM, on two pins (A-20 and C-20), feeding every
+three-wire sensor on the truck: TPS, DPFE, and anything else ratiometric. The
+replacement ECU has to generate it, and generate it properly:
+
+- **Buffered, current-limited, and short-to-ground survivable.** A shorted VREF
+  is a routine field fault (chafed harness, wet connector). If it takes the ECU
+  down with it, the truck stops.
+- **Two independent feeds**, as the OEM does, so a fault on one harness branch
+  does not pull down sensors on the other.
+- **Accurate and stable**, because every sensor on it is *ratiometric* — a TPS
+  reads a fraction of VREF, not an absolute voltage. VREF drift is
+  indistinguishable from sensor movement.
+
+**This has a direct consequence for the AD7606C.** The AD7606C measures against
+its own internal 2.5 V reference, so it is *not* ratiometric to VREF. Left
+alone, a 1 % VREF error becomes a 1 % TPS error. Two ways to fix it:
+
+- **Measure VREF on an ADC channel and divide in software.** Simple, robust,
+  costs one channel. Recommended.
+- Derive the ADC reference from VREF. Cleaner in principle, but couples ADC
+  accuracy to the sensor supply and complicates the reference design.
+
+Taking a channel for VREF sense means the earlier 8-channel allocation is now
+oversubscribed — something moves to the P4's native ADC. DPFE is the natural
+one to move: it is slow and not fuelling-critical.
+
+### 2. Signal return is per-connector, not one net
+
+There are **three** SIGRTN pins — A-17, B-17, C-17 — one per harness connector.
+The PCM does not present a single sensor ground; it presents three branches
+that meet only inside the module. That is star grounding done at the source.
+
+The replacement ECU should reproduce that: three separate return branches
+brought back to one internal star point, rather than commoning them at the
+connector. Commoning them turns three stars into one loop and re-creates the
+noise coupling the design was avoiding. Combined with the DLC sheet, this is
+the circuit-570 network seen from the other end.
+
+### 3. Four power ground pins
+
+`PWRGND` is split across A-24 through A-27 because injector and coil-driver
+return current is large and pulsed. Whatever the replacement ECU uses for
+low-side drivers needs comparable return capacity, kept off the SIGRTN
+branches entirely.
+
+`CSEGND` (A-43) is a separate case/shield ground — again not to be commoned
+with either of the above except at the star point.
+
+### 4. FEPS resolves the DLC pin 13 question
+
+`FEPS` — Flash EPROM Programming Supply — is the line Ford pulls to roughly
+18 V to put the PCM into reflash mode. The DLC sheet showed pin 13 (circuit
+107, VT) as an unexplained "PCM input", and FEPS is a PCM input that has to
+arrive from somewhere a tool can reach.
+
+So DLC pin 13 is almost certainly the FEPS line, **not** the self-test input as
+suggested earlier. **[CONFIRM]** against a wiring page that actually traces
+circuit 107 from C228-13 to A-13.
+
+Practical effect: the replacement ECU should **leave this pin unconnected**.
+Nothing good happens if 18 V arrives on a 3.3 V system, and a scan tool
+attempting a reflash has nothing to talk to anyway. If it is left wired, it
+needs clamping.
+
+### 5. KAPWR is not required
+
+Keep-alive power (A-44) is constant 12 V holding the OEM PCM's volatile RAM —
+adaptive fuel trims, DTCs — with the key off. The replacement ECU stores that
+on the SD card and in NVS, so KAPWR is unnecessary. What it does need instead
+is a clean power-down: detect loss of the run line and flush learned state
+before the rail collapses.
