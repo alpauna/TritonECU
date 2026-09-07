@@ -11,7 +11,7 @@
 | Rails | buck → 3.3 V; LDOs → 5 V digital, 5 V analog, 5.00 V VREF | ✅ |
 | MCU | ESP32-P4 (v3.x) + ESP32-C6-MINI-1 module + flash + crystal | ✅ |
 | Analog in | AD7606, 8 channels, SPI_MODE2 | ✅ |
-| Crank/cam | **1 × MAX9926**, Mode A2 | ✅ |
+| Crank/cam/OSS | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS (+1 spare) | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17 | ✅ |
@@ -61,7 +61,7 @@ was always the point of the split, and it does not require two chips.
 | **INA238-Q1 current monitor** | Diagnostics. The engine runs without knowing its own current draw | **yes** — I²C, two pads |
 | **Knock sensing** | Run conservative timing until it works. The engine runs; it just cannot use all its timing | **yes** — one ADC channel routed |
 | **J1850 / SCP** | Needed for the cluster and OBD-II, not to run. Tach and speedo can be discrete outputs | **yes** — it is only three GPIOs and a transceiver |
-| **Second MAX9926** | TSS does not exist on the 4R70W, so only CKP, CMP and OSS need conditioning — three channels, and one dual package covers two. **[CONFIRM]** whether CMP is Hall; if so, one package does all of it | maybe — see below |
+
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
 | **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1 | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
@@ -98,8 +98,9 @@ Two things, and both are measurements rather than decisions:
 
 1. **Coil primary inductance** — sets the dwell limit against the ISL9V3040's
    300 mJ rating. Measure one coil.
-2. **CMP sensor type** — Hall or VR. Decides whether it uses a MAX9926 channel
-   or connects nearly directly. One look at the connector.
+
+~~CMP sensor type~~ **Resolved: VR, single-ended.** Two MAX9926 packages,
+three channels used, one spare.
 
 Everything else in `docs/` is decided or deliberately deferred.
 

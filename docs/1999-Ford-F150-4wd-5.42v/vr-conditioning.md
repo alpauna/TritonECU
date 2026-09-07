@@ -5,12 +5,25 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 | Sensor | Pins | Confirmed by |
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
+| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — confirmed by the owner |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
 | ~~TSS~~ | 59 | **Not fitted.** C192 is 4R100-only — confirmed by the owner. The PCM pin exists for other applications |
 
-**CMP (pin 85) is unresolved** — a single wire with no matching negative, which
-is equally consistent with a Hall sensor or a single-ended VR. **[CONFIRM]**
-before committing a channel.
+**CMP is VR — confirmed by the owner.** Pin 85 shows a lone "CMP+" with no
+matching negative because it is a **single-ended VR**: the coil's other end
+returns on sensor ground (pin 91, SGND) rather than a dedicated wire.
+
+The MAX9926 handles single-ended VR sensors directly. Wire it as:
+
+| MAX9926 | Connect to |
+|---|---|
+| IN2+ | CMP signal (pin 85) via 2 × 5 kΩ |
+| IN2− | **sensor ground (pin 91)** via 2 × 5 kΩ |
+
+**Use the same series resistance in both legs.** The differential amplifier's
+common-mode rejection depends on the two paths being balanced — grounding IN2−
+directly while IN+ sees 10 kΩ throws that away, and CMRR is the whole reason
+for using a differential input in an engine bay.
 
 ## Why it cannot be done in software
 
@@ -187,12 +200,18 @@ Two mechanisms, and both matter for cranking:
   intermittent connection. At 200 rpm cranking a 36-1 tooth arrives every
   ~8.3 ms, so normal cranking never trips it — it is there for faults.
 
-## Channel count
+## Channel count — three, so two packages
 
-**Two channels needed — CKP and OSS** — plus CMP if it turns out to be VR
-rather than Hall, and possibly the transfer case speed sensor (C199) on this
-4x4. A single dual-channel MAX9926 covers CKP and OSS; a second package covers
-the other two if needed.
+| Channel | Sensor | Package |
+|---|---|---|
+| 1 | **CKP** (differential) | MAX9926 #1, ch 1 |
+| 2 | **CMP** (single-ended) | MAX9926 #1, ch 2 |
+| 3 | **OSS** (differential) | MAX9926 #2, ch 1 |
+| — | spare | MAX9926 #2, ch 2 |
+
+Three channels across two dual packages. The spare channel is genuinely useful
+later: it takes the **transfer case speed sensor (C199)** on this 4x4, or TSS if
+a 4R100 ever appears behind this engine.
 
 The knock sensor is **not** one of these — it is a piezo needing a charge
 amplifier and a sampled ADC channel, not edge detection.
