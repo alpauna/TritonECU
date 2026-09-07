@@ -35,6 +35,14 @@ const char* resetReasonName() {
     return "unknown";
 }
 
+// The ST-Link's VCP drops the occasional byte on a long burst at 115200 --
+// observed on the bench, cosmetic on a console but not something to build
+// datalogging on. A short pause between lines is enough to avoid it.
+void slowPrint(const char* line) {
+    Serial.println(line);
+    delayMicroseconds(500);
+}
+
 void reportIdentity() {
     const uint16_t flashKb = *reinterpret_cast<const uint16_t*>(kFlashSizeReg);
     const uint32_t* uid    = reinterpret_cast<const uint32_t*>(kUidReg);
@@ -74,8 +82,9 @@ void reportIdentity() {
 
 void setup() {
     Serial.begin(115200);
-    const uint32_t deadline = millis() + 1500;
-    while (!Serial && millis() < deadline) { /* wait for the VCP */ }
+    // On an ST-Link VCP the port exists whether or not a host is listening, so
+    // there is nothing to wait for -- just settle before the first write.
+    delay(200);
 
     pinMode(board::kLedGreen, OUTPUT);
     pinMode(board::kLedBlue, OUTPUT);
@@ -85,11 +94,20 @@ void setup() {
     digitalWrite(board::kLedRed, LOW);
 
     reportIdentity();
-    Serial.println("M0: board bring-up. Heartbeat every 5 s.");
+    Serial.println("M0: board bring-up. Heartbeat every 5 s. Send 'i' to repeat this.");
     g_lastBeatMs = millis();
 }
 
 void loop() {
+    // The ST-Link's VCP and SWD share one USB device, so resetting the target
+    // over SWD disconnects the serial port -- which makes the boot banner
+    // awkward to catch. Reprinting on demand sidesteps that entirely, and is
+    // worth having on a bench regardless.
+    while (Serial.available()) {
+        const int c = Serial.read();
+        if (c == 'i' || c == 'I') reportIdentity();
+    }
+
     const uint32_t now = millis();
     if (now - g_lastBeatMs >= 1000) {
         g_lastBeatMs += 1000;

@@ -46,7 +46,7 @@ deferred, regardless of how good an idea it is.
 
 | # | Milestone | Proves | Done when |
 |---|---|---|---|
-| **M0** ✅ | Board bring-up | toolchain, upload path, board identity | Boots, reports chip rev / PSRAM / flash over serial, heartbeat runs |
+| **M0** ✅ | Board bring-up | toolchain, upload path, board identity | **Done on both targets.** ESP32-P4 2026-09-06; **STM32F767ZI 2026-09-07** — device ID 0x451 rev 0x1001, 216 MHz, 2048 KB flash |
 | **M1** ✅ | Storage + config | SDMMC, JSON config, persistence | **Done 2026-09-06.** Mounts 4-bit, bootstraps a missing config, persists across resets, and reads back edits made on a PC |
 | **M2** ✅ | Analog front end | AD7606 | **Done 2026-09-06.** Two known signals read correctly (±1.22 V scope on V1, 0–2 V 1 kHz on V8) after establishing SPI_MODE2. See [`adc-front-end.md`](adc-front-end.md) |
 | **M3** ◐ | **Crank sync** | VR conditioning + 36-1 decode | Decode logic **done** — 10 native tests pass, 200 to 6000 rpm including a degraded cranking gap ratio. Electrical half still needs the MAX9926 |

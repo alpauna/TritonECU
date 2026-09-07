@@ -66,8 +66,15 @@ unconstrained. That is the point of the platform change.
 
 ## Order of work
 
-1. **M0 on the Nucleo** — boot, identity, heartbeat. Confirms toolchain and
-   ST-Link.
+1. ~~M0 on the Nucleo~~ **Done 2026-09-07.** Device ID 0x451 rev 0x1001,
+   216 MHz, 2048 KB flash, all read from the chip's own registers.
+
+   Two bench notes worth keeping: the ST-Link needed a **udev rule** before
+   OpenOCD could claim it (`LIBUSB_ERROR_ACCESS`), and its **VCP and SWD share
+   one USB device** — so resetting over SWD disconnects the console. The
+   firmware reprints its identity on receiving `i`, which sidesteps that. The
+   VCP also drops the occasional byte on a long burst at 115200; fine for a
+   console, not something to base datalogging on.
 2. **Pin map** — assign the 37 signals to real morpho pins, avoiding the list
    above.
 3. **AD7606 on flying leads** — port the driver, **re-sweep the SPI mode**, and
