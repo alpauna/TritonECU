@@ -107,6 +107,46 @@ current limit sits.
 - **Fault flag into a GPIO** so a VREF short becomes a logged DTC — "VREF
   circuit A shorted" — rather than a truck that mysteriously will not run.
 
+### Choosing the PTC — not the 150 V parts
+
+The 2920L030/150GR devices freed up from the input (see
+[`schematic-review-power.md`](schematic-review-power.md) §5) are the right *kind*
+of part for this job but the wrong rating, for the reason that disqualified them
+upstream: **high-voltage PPTCs trip in 8–16 seconds.** That is inherent — a
+120–150 V element needs a thick polymer body, and thickness is thermal mass.
+
+VREF is a **5 V** rail. There is no reason to carry a 150 V rating here, and
+dropping it buys back an order of magnitude of response:
+
+| | 150 V part | 16 V part |
+|---|---|---|
+| Trip time | **8–16 s** | 0.1–0.5 s |
+| Resistance | 1–3 Ω | lower for the same hold current |
+
+Size the hold current at ~100–150 mA — above the ~25 mA real load, matched to
+the electronic limiter it backs up.
+
+### Whatever PTC is used, VREF must be sensed downstream of it
+
+This is the constraint that matters more than the trip time. **A PPTC is a
+thermistor by construction**, so its resistance rises with current and ambient,
+and roughly doubles after each trip. In series with VREF that is not a
+calibratable offset — it wanders:
+
+```
+25 mA through 3 Ω  =  75 mV  on 5.00 V  =  1.5 % error
+                                        ≈  1.35° of throttle angle out of 90°
+```
+
+Every sensor on VREF is ratiometric, so that error lands directly in the
+reported value, and idle control is where it will show.
+
+**The fix is free: take the regulator's feedback from the far side of the PTC**
+rather than at the regulator output. The drop is then inside the loop and
+regulated out, and the PTC's drift stops mattering. Without that, series
+protection on a precision reference trades measurement accuracy for fault
+protection — and this design does not have to make that trade.
+
 ### On "isolated"
 
 Worth being explicit: this should be a **separate regulator with a common

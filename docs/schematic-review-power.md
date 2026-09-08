@@ -296,11 +296,17 @@ trips too.
 
 ### Where these parts *do* belong
 
-Not wasted — moved. [`vref-supply.md`](vref-supply.md) calls for a resettable
-fuse on the **VREF output**, and that is exactly the case a PPTC is built for:
-a persistent harness short on a sensor line, a modest current, and auto-recovery
-once the fault clears. Seconds of trip time is fine there because nothing
-upstream is being destroyed while it heats.
+The *position* is right — [`vref-supply.md`](vref-supply.md) calls for a
+resettable backstop on the **VREF output**, and a persistent sensor-harness
+short with auto-recovery is exactly what a PPTC is built for. Seconds of trip
+time harm nothing there, because nothing upstream is being destroyed while it
+heats.
+
+**But not these parts.** A 120–150 V element trips in 8–16 s and carries 1–3 Ω,
+and VREF is a 5 V rail that has no use for the voltage rating. Use a 16 V part
+at ~100–150 mA hold, and take the regulator's feedback from the far side of it
+so the resistance stays inside the loop — see
+[`vref-supply.md`](vref-supply.md#choosing-the-ptc--not-the-150-v-parts).
 
 ### Replacement — and why not "just use the truck's fuse"
 
