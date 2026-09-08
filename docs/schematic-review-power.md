@@ -181,33 +181,79 @@ shorts the input. That is normal practice and it is what clears the fuse — but
 it means the LTC4364's −40 V reverse blocking never gets to act, and protection
 falls entirely on the series element opening. Which makes §5 worse.
 
-## 5. The PTCs are undersized and add resistance where it hurts most
+## 5. The PPTCs — 150 V is confirmed, and it is the only thing that is right
 
-2920L030 = **0.30 A hold, 0.60 A trip** each; two in parallel gives 0.6 A hold.
+**Voltage rating confirmed at 150 V**, which matters because they sit upstream
+of the TVS and see the full transient. Everything else about them is wrong for
+this position.
+
+### The 3 s trip time is disqualifying, and it takes the TVS with it
+
+A PPTC is a **thermal** device. It does not interrupt a fault; it warms up over
+seconds until its polymer matrix expands. Against the two faults this element
+exists to cover:
+
+**Reverse battery.** D1/D2 are unidirectional, so they forward-conduct and the
+harness dumps into them until something opens. Comparing what the TVS survives
+against what a 3 s trip delivers:
 
 ```
-cold crank: 6 V in, ~4 W out, ~85 % eff  →  0.78 A input
+SMDJ36A forward surge   ≈ 200 A for 8.3 ms  →  I²t ≈ 166 A²s
+PPTC at 3 s, ~60 A harness-limited          →  I²t ≈ 10,800 A²s     65×
 ```
 
-Above the hold current before any derating, and PPTC hold current falls roughly
-40 % at 85 °C, to ~0.36 A. It will nuisance-trip on the exact event the supply
-exists to survive.
+**The TVS is vaporised long before the PPTC notices.** Protection that destroys
+the protector is not protection.
 
-Worse, PPTCs of this class are 0.65–1.5 Ω each — 0.33–0.75 Ω paralleled — so at
-0.78 A they drop **0.25–0.6 V**. Against a floor now known to be ~4.4 V (§2),
-that is headroom the design cannot spare.
+**Pass FET fails short.** The board sits directly across the battery for three
+seconds. The LTC4364 shuts down its own path in 5.4 ms (§3); the backstop for
+it failing takes 550× longer.
 
-**Paralleling PPTCs also does not behave like one bigger device.** As one
-begins to trip its resistance rises steeply, pushing current into the other,
-which then trips too.
+A **7.5 A automotive blade fuse** clears in roughly 10 ms at 100 A, with a
+melting I²t around 20–40 A²s — comfortably below the TVS's 166 A²s, so the fuse
+opens first. That is what protection coordination looks like.
 
-The LTC4364 already provides overcurrent protection at 5.6 A. Per
-[`power-supply.md`](power-supply.md) the series element guards one mode — **the
-pass FET failing short** — so it should be a **plain fast fuse above the
-LTC4364 limit**, around 7.5–10 A, with near-zero series resistance.
+### The current rating fails in ordinary use, not just at fault
 
-**[verify]** the `/150` suffix is a 150 V rating and not 15 V. These sit
-upstream of the TVS and see the full transient.
+2920L030 = **0.30 A hold** each; two in parallel gives 0.6 A at 20 °C. PPTC hold
+current falls to roughly **52 % at 85 °C**, so ~0.31 A in a hot cabin:
+
+| Condition | Input current | vs 0.31 A hold at 85 °C |
+|---|---|---|
+| Running, 13.8 V, real ~4.6 W load | **0.33 A** | **already tripping** |
+| Cold crank, 6 V | **0.77 A** | 2.5× over |
+| Design max, 3 A at 6 V | 3.5 A | 11× over |
+
+It nuisance-trips on a hot day at idle, before any fault exists.
+
+### And the series resistance lands where there is none to spare
+
+A 0.30 A / 150 V device in a 2920 is a high-resistance part — 1–3 Ω each, so
+0.5–1.5 Ω paralleled, and R<sub>1max</sub> after a trip is typically double
+that. At the 0.77 A crank current that is **0.4–1.2 V**, on top of a floor now
+known to be ~4.4 V (§2). It eats the cranking margin the SEPIC was chosen for.
+
+**Paralleling PPTCs also does not behave like one bigger device.** As one begins
+to trip its resistance rises steeply, pushing current into the other, which then
+trips too.
+
+### Where these parts *do* belong
+
+Not wasted — moved. [`vref-supply.md`](vref-supply.md) calls for a resettable
+fuse on the **VREF output**, and that is exactly the case a PPTC is built for:
+a persistent harness short on a sensor line, a modest current, and auto-recovery
+once the fault clears. Seconds of trip time is fine there because nothing
+upstream is being destroyed while it heats.
+
+### Replacement
+
+**One ~7.5 A fast fuse**, above the LTC4364's 5.6 A limit so a legitimate
+current-limit event does not clear it, with near-zero series resistance.
+
+**Coordinate with the vehicle.** PCM power on the 1999 F-150 already runs
+through fuses in the power distribution box, so the on-board fuse should be
+**smaller than those** and clear first — otherwise a board fault sends the owner
+to the under-hood fuse box.
 
 ## 6. Q1 SOA **[verify]**
 
@@ -244,7 +290,7 @@ the input connector.
 | # | Change | Severity |
 |---|---|---|
 | 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
-| 5 | F1/F2 → one ~7.5 A fast fuse, not 2 × 0.3 A PPTC | **blocking** |
+| 5 | F1/F2 → one ~7.5 A fast fuse; move the PPTCs to VREF | **blocking** |
 | 2 | **R4: 2.2k → 470 Ω, C2: 100 nF → 470 nF**, UV → ~4.5 V | high |
 | 4 | Verify Q1 V<sub>DS</sub> vs the 96.8 V clamp; prefer one SMDJ36A | high |
 | 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |

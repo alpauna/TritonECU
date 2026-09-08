@@ -75,6 +75,13 @@ The **3.5 V minimum is the headline for this application** — it covers the
 worst cranking sag with enormous margin, which is the whole reason a SEPIC was
 chosen over a buck.
 
+> **But 3.5 V is the SEPIC's floor, not the system's.** The LTC4364 ahead of it
+> needs 4 V at V<sub>CC</sub>, plus whatever its series feed resistor drops, and
+> when it shuts off its back-to-back FETs pass nothing at all. The real floor is
+> **~4.4 V at the battery terminal** with R4 = 470 Ω, or 5.65 V with the 2.2 kΩ
+> the datasheet example uses. See
+> [`schematic-review-power.md`](schematic-review-power.md) §2.
+
 It is a **controller with an external switch**, not an integrated converter, so
 output current is set by the FET, inductors, diode and thermal design rather
 than by the IC.
@@ -451,7 +458,7 @@ against ~3 A rms of rating on the part chosen for capacitance. Met 12× over.
 Energy per µF strongly favours the high side, since energy goes as V²:
 
 ```
-input,  12 V → 3.5 V (SEPIC floor)   65.9 µJ/µF
+input,  12 V → 4.4 V (system floor)  62.3 µJ/µF
 output,  6 V → 4.0 V (3.3 V buck)    10.0 µJ/µF     6.6× worse
 ```
 
@@ -489,8 +496,9 @@ requirement is met by capacitors that had to be there regardless.
 
 ### What hold-up is *not* for
 
-Not cranking. The SEPIC runs down to **3.5 V input**, so a starter dip to 6 V
-is not a brownout for this design — it is normal operation. Bulk capacitance
+Not cranking. The chain runs down to **~4.4 V input** — the SEPIC alone would
+manage 3.5 V, but the LTC4364 ahead of it cuts off first — so a starter dip to
+6 V is not a brownout for this design, it is normal operation. Bulk capacitance
 covers the gaps the topology cannot: contact bounce, an intermittent terminal,
 and the shutdown flush. Sizing it as if it had to carry a crank is what
 produced the 2000 µF figure.
@@ -528,7 +536,7 @@ there, and 5 mΩ would raise Q to 14.
 
 Topology is not the risk. Beyond the input chain above:
 
-- **Cold-crank ride-through** — carried by the SEPIC running down to 3.5 V,
+- **Cold-crank ride-through** — carried by the chain running down to ~4.4 V,
   not by capacitance. See [input bulk](#input-bulk-capacitance--1000-µf-in-hold-up-on-the-6-v-side) for
   why the two are often confused.
 - **Thermal design at the top of the input range.** The worst case for a
