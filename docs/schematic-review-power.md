@@ -680,9 +680,68 @@ anyway for a fault that is not going to clear itself.
    continuously. If sustained clamping is ever wanted, that is what the TO-262
    version bolted to the enclosure is for.
 
-**[verify]** the LTC4364's HGATE drive voltage against V<sub>GS(th)</sub> =
-2.0–4.0 V. The charge pump should give ~10 V above SOURCE, which is ample, but
-it is worth reading rather than assuming.
+### Gate drive checked — and the maximum is the constraint, not the minimum
+
+DGATE drive (V<sub>DGATE</sub> − V<sub>SOURCE</sub>), no fault:
+
+| V<sub>CC</sub> | Min | Typ | Max |
+|---|---|---|---|
+| 4 V | **5 V** | 8.5 V | 12 V |
+| 8 – 80 V | 10 V | 12 V | **16 V** |
+
+**The 16 V maximum is the part that matters, and it rules out most logic-level
+FETs.** Logic-level devices are typically rated ±12 V or ±16 V V<sub>GS</sub> —
+against a 16 V drive that is zero margin, and a gate-oxide failure is a
+dead short from gate to source. **IRF540N is ±20 V**, leaving 4 V. That was luck
+rather than judgement in the selection above, but it is the right answer, and it
+is worth stating as a criterion: **V<sub>GS(max)</sub> ≥ 20 V.**
+
+### The minimum is fine, because the current is small
+
+At the input floor, drive is **5 V min** against V<sub>GS(th)</sub> up to 4.0 V —
+1 V of worst-case overdrive, which looks alarming until it is compared with what
+the FET actually has to pass:
+
+```
+gfs = 21 S min
+overdrive needed to carry 0.8 A in saturation  =  0.8 / 21  =  38 mV
+
+available worst case  1 V   →  26× more than required
+```
+
+The device is deep in the ohmic region even at 1 V of overdrive. Scaling
+R<sub>DS(on)</sub> from 44 mΩ at ~7 V of overdrive gives roughly **310 mΩ** at
+1 V, so:
+
+```
+drop per FET at 0.8 A     0.25 V
+Q1 + Q2 in series         0.50 V        dissipation 0.2 W each — trivial
+```
+
+That is a triple-stacked worst case: maximum V<sub>th</sub>, minimum drive, and
+minimum input all at once. Typical is 8.5 V of drive against a 3 V threshold —
+5.5 V overdrive, ~56 mΩ, 45 mV per FET.
+
+### So quote the input floor honestly
+
+```
+LTC4364 VCC minimum                4.0 V
++ R4 (220 Ω) at 750 µA             0.17 V
+                                   ------
+supply cuts off at                 4.17 V at the battery terminal
+
+at 4.4 V in, worst-case FET drop   0.50 V
+SEPIC therefore sees               3.90 V     against its 3.5 V minimum ✓
+```
+
+It works, with about 0.4 V of margin at the very bottom in a stacked worst case.
+[`power-supply.md`](power-supply.md) should quote **~4.4 V at the battery
+terminal**, not the SEPIC's 3.5 V.
+
+**[verify]** the equivalent HGATE spec. DGATE drives Q2, which is only ever
+fully on or off; HGATE drives Q1, which is actively regulated during clamping,
+so its full-enhancement figure needs reading separately even though it is likely
+the same charge pump.
 
 ### Setting the current limit — 4 A is right, but not for the reason it looks like
 

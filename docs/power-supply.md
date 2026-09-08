@@ -76,11 +76,12 @@ worst cranking sag with enormous margin, which is the whole reason a SEPIC was
 chosen over a buck.
 
 > **But 3.5 V is the SEPIC's floor, not the system's.** The LTC4364 ahead of it
-> needs 4 V at V<sub>CC</sub>, plus whatever its series feed resistor drops, and
-> when it shuts off its back-to-back FETs pass nothing at all. The real floor is
-> **~4.4 V at the battery terminal** with R4 = 470 Ω, or 5.65 V with the 2.2 kΩ
-> the datasheet example uses. See
-> [`schematic-review-power.md`](schematic-review-power.md) §2.
+> needs 4 V at V<sub>CC</sub>, plus 0.17 V across R4 (220 Ω), and when it shuts
+> off its back-to-back FETs pass nothing at all. Worst-case gate drive at that
+> corner is 5 V against a 4 V threshold, costing up to 0.5 V across Q1+Q2. So
+> the system cuts off at **~4.2 V at the battery terminal**, and at 4.4 V in the
+> SEPIC sees 3.9 V — 0.4 V of margin over its own limit. Quote **~4.4 V**, not
+> 3.5 V. See [`schematic-review-power.md`](schematic-review-power.md) §2 and §6.
 
 It is a **controller with an external switch**, not an integrated converter, so
 output current is set by the FET, inductors, diode and thermal design rather
