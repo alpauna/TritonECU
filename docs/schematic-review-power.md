@@ -308,54 +308,68 @@ at ~100–150 mA hold, and take the regulator's feedback from the far side of it
 so the resistance stays inside the loop — see
 [`vref-supply.md`](vref-supply.md#choosing-the-ptc--not-the-150-v-parts).
 
-### Replacement — and why not "just use the truck's fuse"
+### DECIDED: no fuse on the board — the truck's PDB fusing is the branch protection
 
-Reasonable question, since **OEM modules generally have no input fuse** — the
-EEC-V does not, and neither do most Ford modules. They rely on the power
-distribution box. Three things make this board different.
+**This is the OEM answer and it is defensible.** The EEC-V has no input fuse and
+neither do most Ford modules; PCM power already runs through the power
+distribution box. Adding a second series element only adds resistance at low
+line, an un-serviceable part inside a sealed box, and one more thing to fail.
 
-**First, work out what the fuse is actually for.** The LTC4364 already handles
-every sustained overcurrent, and better than a fuse does: it limits at 5.6 A
-and shuts its own path down in 5.4 ms. So the fuse covers exactly two cases,
-both of which are *the protection itself having failed*:
+What the decision actually rests on: **the LTC4364 is the protection.** It
+limits at 5.6 A and shuts its own path down in 5.4 ms — faster and more
+precisely than any fuse. The series element was only ever the backstop for the
+LTC4364 itself failing, and the PDB fuse fills that role.
 
-- the pass FET failing short
-- reverse battery, where D1/D2 forward-conduct and something must open
+### The consequence: the TVS becomes a sacrificial part, and that is acceptable
 
-**Second, the vehicle fuse is sized for a circuit, not for this board.** A PDB
-feed in the 15–20 A class has a melting I²t somewhere around 150–300 A²s,
-against the SMDJ36A's ~166 A²s of forward surge. **Relying on it to clear
-before the TVS dies is a coin flip.** A small fuse is not a coin flip.
+Under reverse battery, D1/D2 forward-conduct and the PDB fuse is now the only
+thing that opens:
 
 ```
-3 A fast fuse    I²t ≈ 15–25 A²s     ← opens with 7–10× margin under the TVS
-15–20 A PDB fuse I²t ≈ 150–300 A²s   ← at or above what the TVS survives
+harness-limited current       ~60–120 A
+20 A PDB fuse at ~100 A       ~10–50 ms   →  I²t ≈ 200 A²s
+SMDJ36A forward surge                        I²t ≈ 166 A²s
 ```
 
-**Third, a big fuse cannot see a soft fault.** Something on the board drawing
-4 A continuously is invisible to a 20 A fuse and cooks quietly. It is not
-invisible to a 3 A one.
+Marginal — the TVS probably does not survive. **But its failure mode is
+benign:** a TVS fails *short*, which pulls the fault current up and blows the
+PDB fuse faster, protecting everything downstream. The sequence is reverse
+battery → TVS conducts → TVS fails short → fuse clears → board survives. Two
+cheap parts consumed, nothing else damaged.
 
-**[verify]** the actual PDB rating for the PCM feed on this truck before
-choosing, since the point is to be well below it.
+Treat D1/D2 as **serviceable items to inspect after any reverse-polarity
+event**, and keep the footprint accessible.
 
-### Size it at 3 A, not 7.5 A
+### This does not reopen the bidirectional question
 
-An earlier revision of this review said 7.5 A, reasoning that the fuse must
-sit above the LTC4364's 5.6 A limit. That was wrong: the part **only holds
-5.6 A for t<sub>OC</sub> = 5.4 ms** before shutting down, so the fuse never
-sees sustained limit current.
+§4a recommended unidirectional partly because a fast 3 A fuse solved reverse
+battery. Without that fuse the argument is weaker, but the conclusion holds:
 
-```
-sustained load, 13.8 V           0.33 A          →  11 % of a 3 A fuse
-inrush, once per key-on          5.6 A × 2.6 ms  →  I²t = 0.08 A²s
-3 A fast fuse melting I²t                        ≈  15–25 A²s      180× margin
-```
+- Negative transients (ISO 7637 pulse 1) are a **routine electrical event**;
+  reverse battery is a **one-time installation error**.
+- A bidirectional part would put the LTC4364's SOURCE pin past its −40 V rating
+  on every pulse-1 event, to save a $0.50 TVS on an event that should never
+  happen twice.
 
-**[verify]** whether the "-2" suffix latches off or auto-retries. On auto-retry
-with an undersized C8 (§3), the board would retry indefinitely and the fuse
-would see repeated inrush pulses rather than one. Fixing C8 removes the
-question either way.
+Stay unidirectional.
+
+### [verify] "the truck already has reverse diodes in the fuse box"
+
+Worth confirming against the wiring diagrams already in
+[`1999-Ford-F150-4wd-5.42v/`](1999-Ford-F150-4wd-5.42v/), because the two
+possibilities behave completely differently:
+
+- **Relay coil suppression diodes** — common in Ford PDB/CJB assemblies, fitted
+  across relay coils to catch flyback. These give **no reverse-battery
+  protection at all**, and under reverse polarity they forward-conduct and
+  become a load themselves.
+- **A system reverse-blocking diode** — would have to carry full vehicle
+  current, so it would be a large stud-mounted device. Unusual, and its absence
+  is why so many vehicles are damaged by reversed jump starts.
+
+If it is the first, nothing above changes. If it is genuinely the second, the
+reverse-battery case disappears entirely and the TVS is never at risk — which
+would be worth knowing, so it is worth ten minutes with the schematic.
 
 ### Schurter 3-101-231 (T9-817, 8 A) — take it for the bench, not the truck
 
@@ -454,7 +468,7 @@ the input connector.
 | # | Change | Severity |
 |---|---|---|
 | 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
-| 5 | F1/F2 → one **3 A** fast fuse, inline in the harness; PPTCs → VREF | **blocking** |
+| 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 470 Ω, C2: 100 nF → 470 nF**, UV → ~4.5 V | high |
 | 4 | Verify Q1 V<sub>DS</sub>: ≥150 V keeps 60 V, else move OV+TVS to 43 V; one SMDJ, unidirectional | high |
 | 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |
