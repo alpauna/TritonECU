@@ -146,40 +146,97 @@ V<sub>OUT</sub> = 0 V", which implies it is lower when the FET is dropping
 less. If so the real inrush margin is better than this, but 220 nF costs
 nothing and removes the question.
 
-## 4. The TVS clamp is set by Q1's V<sub>DS</sub>, not by the IC
+## 4. TVS — the 60 V standoff is coordinated with the 60 V OV, and that was right
 
-**Revised twice — here is the correct framing.** The clamping architecture
-protects the LTC4364 by itself: during any overvoltage, SOURCE, SENSE and OUT
-all sit at the regulated **27 V**, and VCC is held below 71 V by R4/D3 (the
-datasheet states this explicitly for a 200 V input transient). So no LTC4364
-pin is exposed, and my earlier claims about the 80 V rating and the INA238 were
-both wrong.
+**Revised again.** Two earlier revisions treated the TVS level as free to lower.
+It is not: **the TVS standoff and the OV threshold are one decision.**
 
-**What does see the full transient is Q1's drain.** The TVS clamp must sit
-below Q1's V<sub>DS</sub> rating with margin:
+### Why 36 V would be wrong
+
+The LTC4364 is designed to *linearly clamp* everything between the 27 V
+regulation point and the OV threshold — that is the entire reason it was chosen
+over a crowbar. A TVS is a **transient** device; put it in sustained conduction
+and it overheats and fails.
 
 ```
-SMCJ60A clamping voltage at 15.5 A   =  96.8 V
+OV threshold  = 60 V     ← LTC4364 clamps 27–60 V, then shuts down
+SMCJ60A       = 60 V standoff, 66.7 V breakdown
 ```
 
-**[verify] what YJQ40G10A is rated at.** If it is a 100 V part, 96.8 V is 3 %
-margin, which is not margin. Either drop to an **SMCJ36A** (58.1 V clamp — the
-60 V OV threshold still works, since OV trips at 60 V and the TVS only starts
-conducting at 40 V breakdown, which is above the 27 V clamp point) or move Q1
-to a 150 V+ device.
+So the TVS sits *just above* where the controller stops clamping and starts
+disconnecting. Nothing overlaps. **Dropping the TVS to 36 V while OV stays at
+60 V puts it in the 36–60 V band the LTC4364 is meant to ride through** — a
+stuck regulator at 40 V or a 24 V jump start at 28–29 V would cook it.
+
+The clean statement: **TVS standoff must sit above the OV threshold.** If you
+want a lower TVS, lower OV with it.
+
+### The pairing worth considering
+
+| | OV | TVS | Clamp | Q1 must block | FET drop while clamping |
+|---|---|---|---|---|---|
+| **As drawn** | 60 V | SMCJ60A | 96.8 V | **≥150 V** | 33 V → 26 W |
+| **Alternative** | 43 V | SMCJ43A | 69.4 V | ≥100 V | **16 V → 13 W** |
+
+The alternative **halves the FET's clamping dissipation** and brings the peak
+inside a 100 V device. OV must stay above a suppressed load dump — ~35 V on a
+modern alternator — so 43 V is about the lowest sensible setting if the engine
+is to keep running through one.
+
+Divider for 43 V OV / 4.5 V UV, same 10 kΩ rule:
+
+```
+R9 (R3) = 10 kΩ        R8 (R2) = 86.6 kΩ        R6 (R1) = 249 kΩ
+OV = 1.25 × 345.6/10   = 43.2 V
+UV = 1.25 × 345.6/96.6 =  4.47 V
+```
+
+**The decision is Q1's V<sub>DS</sub> rating.** If YJQ40G10A is 150 V+, keep
+everything as drawn. If it is 100 V, either move to the 43 V pairing or fit a
+higher-voltage FET.
+
+## 4a. Bidirectional TVS — right instinct, but it moves the problem
+
+Bidirectional (the **CA** suffix — SMCJ60CA) blocks in both directions instead
+of forward-conducting. Under reverse battery it does not conduct at all, so the
+**LTC4364's back-to-back FETs do exactly what they are specified for** and
+nothing blows. That is genuinely better than destroying a TVS and a fuse.
+
+**The catch is negative transients.** ISO 7637-2 pulse 1 is −100 V:
+
+| | Negative clamp | LTC4364 SOURCE rating |
+|---|---|---|
+| Unidirectional | **−1 V** (forward conduction) | −40 V |
+| Bidirectional 60CA | **−96.8 V** | −40 V |
+| Bidirectional 43CA | −69.4 V | −40 V |
+
+Per the datasheet, a negative input pulls SOURCE below ground through M2's body
+diode, and the LTC4364 responds by shorting HGATE to SOURCE to turn M1 off —
+designed behaviour, but only down to **−40 V**. **No bidirectional TVS with
+enough standoff for automotive positive transients clamps negative inside
+that.** A unidirectional part clamps at −1 V and the question never arises.
+
+### Recommendation: stay unidirectional
+
+The trade is symmetric on paper — reverse battery versus negative transients —
+but two things break the tie:
+
+1. **The 3 A fuse (§5) already solves reverse battery.** At 15–25 A²s it opens
+   well before the TVS's ~166 A²s. When the PPTCs were taking 3 s this was a
+   real hazard; with a fast fuse it costs a 50-cent part and tells the installer
+   plainly what they did wrong.
+2. **Negative transients are a normal electrical event**, not an installation
+   error. Trading routine protection for one-off protection is the wrong way
+   round.
+
+Bidirectional would be the right call if the fuse were staying slow — which is
+another way of saying §5 and this section are the same decision.
 
 ### Also: paralleling two TVS does not give 2× capability
 
 Breakdown-voltage tolerance means the lower-V<sub>br</sub> device takes most of
-the current and fails first. One **SMDJ36A** (3000 W, same DO-214AB footprint)
+the current and fails first. One **SMDJ** (3000 W, same DO-214AB footprint)
 replaces D1+D2 with no sharing assumption.
-
-### Consequence worth knowing
-
-D1/D2 are **unidirectional**, so reverse battery forward-conducts them and
-shorts the input. That is normal practice and it is what clears the fuse — but
-it means the LTC4364's −40 V reverse blocking never gets to act, and protection
-falls entirely on the series element opening. Which makes §5 worse.
 
 ## 5. The PPTCs — 150 V is confirmed, and it is the only thing that is right
 
@@ -342,7 +399,7 @@ the input connector.
 | 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
 | 5 | F1/F2 → one **3 A** fast fuse, inline in the harness; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 470 Ω, C2: 100 nF → 470 nF**, UV → ~4.5 V | high |
-| 4 | Verify Q1 V<sub>DS</sub> vs the 96.8 V clamp; prefer one SMDJ36A | high |
+| 4 | Verify Q1 V<sub>DS</sub>: ≥150 V keeps 60 V, else move OV+TVS to 43 V; one SMDJ, unidirectional | high |
 | 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |
 | 7 | ADCRANGE=0 | low |
 | 8 | Confirm single-point PGND/GND tie | low |
