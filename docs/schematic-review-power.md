@@ -647,6 +647,113 @@ Specify **16 V or 25 V rating in 0805**. TMR only reaches 1.35 V so DC bias
 derating is small at those ratings, but a 6.3 V part in 0402 can lose 20–30 %
 of its capacitance at bias — which lands straight in the timing.
 
+### Auto-retry confirmed — and the duty cycle cannot be tuned away
+
+The "-2" auto-retries. Into a persistent short that gives:
+
+```
+fault on                                      54 ms
+cooldown, TMR discharge at ~2.5 µA  [verify]  1.19 s
+duty                                          4.3 %
+average dissipation in Q1   57.4 W × 0.043  ≈  2.5 W
+```
+
+**The duty cycle is fixed by the ratio of the two TMR currents, not by C8:**
+
+```
+duty = tOC / (tOC + tcool) = (1/55) / ((1/55) + (1/2.5)) = 4.3 %
+```
+
+Both times scale with C8 identically, so it cancels. **2.5 W of average
+dissipation is a property of the part, and the only levers are Q1's thermal
+path or stopping the retries.**
+
+### The primary fix is copper, not firmware
+
+A D2Pak at the datasheet's 40 °C/W "PCB mount" figure gives
+`85 + 2.5 × 40 = 185 °C` — past the 175 °C limit. The requirement is:
+
+```
+RθJA ≤ (175 − 85) / 2.5  =  36 °C/W
+```
+
+A D2Pak on roughly **1 in² of 2 oz copper reaches 25–30 °C/W**, giving
+Tj ≈ 147 °C. Size the pour for this deliberately — it is the one number that
+makes auto-retry safe unconditionally.
+
+**Why firmware cannot be the primary fix:** the fault that motivates this is a
+short on the LTC4364's output, which discharges C_out through the fault. The
+MCU loses its rail immediately and is not running to count anything. Retry
+limiting only helps where the MCU survives.
+
+### Firmware retry limiting — worth having, for the cases where it runs
+
+A configurable max-retry count latching SHDN# is right for the faults that do
+*not* kill the rail: a partial overload rather than a dead short, an
+intermittent harness fault, a downstream branch drawing too much. It also
+converts an invisible slow cook into a logged, reportable event.
+
+**Distinguishing the two FLT# causes** is the design detail, because FLT#
+asserts for both the OV early warning and an overcurrent fault, and they want
+opposite responses:
+
+| FLT# with… | Means | Response |
+|---|---|---|
+| INA238 bus voltage **high** | OV early warning, 44 ms to go | shed injectors and coils, flush |
+| INA238 bus voltage normal, current at limit | overcurrent fault | count it; latch SHDN# after N |
+
+That is a second payoff from reusing the LTC4364's shunt for the INA238 — the
+same part that measures battery current also disambiguates the fault pin.
+
+**The OV early warning is the case that earns FLT# its GPIO**, because there the
+MCU is definitely alive and 44 ms is real notice.
+
+### Sizing C8 properly: 2.2 µF, and it must be ceramic
+
+At 56 nF the tolerance of the capacitor was irrelevant. At 1.5 µF it sets
+whether the board survives a load dump, so it has to be sized from worst case,
+not nominal.
+
+**X7R stacks two errors against the 400 ms target:**
+
+```
+capacitance tolerance    ±10 %
+X7R temperature coeff.   ±15 %  over −55 to +125 °C
+                         ------
+worst case               ≈ −23 %
+
+1.5 µF  →  405 ms nominal  →  312 ms worst case      short of 400 ms ✗
+2.2 µF  →  594 ms nominal  →  457 ms worst case      ✓
+```
+
+**Use 2.2 µF.** The knock-ons stay comfortable on the IRF540NS:
+
+```
+OC shutdown  = 2.2 µF × 1.35 V / 55 µA = 54 ms      15× the 3.6 ms inrush ✓
+short        = 57 W × 54 ms = 3.1 J,  ΔTj ≈ 20 °C   ✓
+clamp        = 7.0 W × 594 ms,        ΔTj ≈ 28 °C   ✓
+early warning= 2.2 µF × 0.1 V / 5 µA  = 44 ms       ✓
+```
+
+**[verify]** the min/max on I<sub>TMR</sub> — the datasheet quotes 5 µA and
+55 µA as typicals. If the spread is ±20 %, that compounds with the −23 % above
+and 3.3 µF may be needed to hold 400 ms at every corner.
+
+### It must be X7R or C0G — never tantalum or electrolytic
+
+The TMR pin charges at **5 µA**. Any leakage current is a direct timing error at
+that scale:
+
+- **X7R / C0G ceramic**: insulation resistance > 10 GΩ, so leakage at 1.35 V is
+  sub-nanoamp. Invisible.
+- **Tantalum or aluminium**: leakage is specified in **microamps** — the same
+  order as the charging current. The timer would run long, short, or not
+  complete at all, and it would drift with temperature.
+
+Specify **16 V or 25 V rating in 0805**. TMR only reaches 1.35 V so DC bias
+derating is small at those ratings, but a 6.3 V part in 0402 can lose 20–30 %
+of its capacitance at bias — which lands straight in the timing.
+
 ### [verify] Is the "-2" latch-off or auto-retry?
 
 This now matters more than it did. Auto-retry into a persistent short repeats
