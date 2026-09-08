@@ -223,3 +223,114 @@ part with an electrolyte, unlike everything else on the board, and socketing
 converts an unknown lifetime from a design risk into a service interval. It
 also makes the 12 mm lead pitch and 17 × 16 mm footprint a fixed mechanical
 commitment, so the socket choice comes before the layout.
+
+### FXU0H105ZF — KEMET 1 F / 5.5 V, AEC-Q200 — the qualification winner, wrong job
+
+This is the first genuinely **automotive-qualified** part looked at, and on
+paper it is not close:
+
+| | |
+|---|---|
+| Capacitance | 1.0 F, **−20 % / +80 %** |
+| Working voltage | 5.5 V, no temperature derating stated |
+| Operating temperature | **−40 °C to +105 °C** |
+| Qualification | **AEC-Q200 rev E**, IATF 16949 plant, PPAP/PSW, change control |
+| Endurance | 1000 h at **105 °C** rated voltage; 1000 h **85 °C / 85 % RH** biased |
+| **ESR** | **10 Ω max at 1 kHz** |
+| Leakage | 1.5 mA at 30 min |
+| Package | Ø21.5 × 10.0 mm, **7.62 mm pitch**, 8.0 g |
+| Assembly | wave solder only, **once**, body ≤ 90 °C |
+
+AEC-Q200 rev E with PPAP and change control is the thing the DGH does not have
+and cannot be argued into having. +105 °C and 85/85 mean it is not restricted
+to the cabin.
+
+#### 10 Ω is disqualifying, and it is a category difference
+
+The DGH is 0.8 Ω DC. This is **12× worse**, and it is not a manufacturing
+spread — it is what separates a *memory-backup* EDLC from a *power* EDLC. The
+ceiling on what any source can deliver is V²/4R:
+
+```
+warm, new    (10 Ω)  →  5.5² / 40  = 0.76 W   theoretical, at 50 % efficiency
+warm, aged   (20 Ω)  →             = 0.38 W   ESR doubles over rated life
+```
+
+Usable output is a small fraction of a matched-load maximum. Against a
+shutdown draw of ~0.5 W this has no margin when new and none at all aged.
+Concretely, at 100 mA a fresh part drops **1.0 V** across its own ESR and an
+aged one drops **2.0 V** — out of a 5.5 V start, before any energy is used.
+
+#### The cold-temperature spec is the real find
+
+KEMET publishes what happens at temperature, and it is sobering:
+
+| | Capacitance | ESR |
+|---|---|---|
+| −25 °C | ≥ 50 % of initial | ≤ 400 % of initial |
+| **−40 °C** | **≥ 30 % of initial** | **≤ 700 % of initial** |
+
+At −40 °C this is a **0.3 F, 70 Ω** part — 0.11 W matched-load ceiling. A
+cold-start hold-up is precisely the case we care about most, and it is the case
+where an EDLC is weakest, because ionic mobility in the electrolyte falls with
+temperature.
+
+**"−40 °C to +105 °C" is a survival range, not a performance range.** This is a
+correction that applies to everything above.
+
+#### And it retroactively weakens the DGH
+
+The DGH datasheet gives a −40 °C rating and **no cold-temperature curve at
+all** — no capacitance derating, no ESR multiplier. The FXU almost certainly
+does not have worse cold physics than the DGH; it has a better datasheet. So
+the DGH's headline −40 °C should be read as unsupported rather than good, and
+its 0.8 Ω is a **+20 °C** number that may be several times higher when it
+matters.
+
+Disclosure is not a defect. The part that tells you is the safer part.
+
+## The measurement that was never made: how much energy is actually needed
+
+Both parts were sized against a number nobody checked. Doing it:
+
+```
+SD block write, generously          ~100 ms
+MCU + card during that              ~0.7 W
+                                    -------
+energy required                      0.07 J
+```
+
+**0.07 J.** The DGH's 2.5 J is 35× that. And a figure that small does not need
+a supercapacitor at all — it needs bulk capacitance that is *already in the
+design*:
+
+```
+2200 µF on the 12 V input, held from 12 V to the SEPIC's 3.5 V floor:
+    ½ × 2200 µF × (12² − 3.5²)  =  0.15 J   ≈ 200 ms at 0.7 W
+```
+
+The input bulk capacitor the LM5155-Q1 needs anyway covers graceful shutdown
+with margin, at zero added parts, zero leakage, zero wear-out, and no
+temperature curve worth worrying about.
+
+### What this changes
+
+The supercapacitor was justified by **three** jobs. It only ever had one.
+
+| Job | Energy | Verdict |
+|---|---|---|
+| Graceful shutdown / KAPWR replacement | 0.07 J | **input bulk capacitance already does this** |
+| Crank ride-through | ~3 J for 2 s | the only real case for a supercap |
+| Brownout immunity generally | as above | same case |
+
+And crank ride-through is the job **neither part can do**: the FXU is
+ESR-limited out of contention, and the DGH's 1.7 s is a +20 °C figure with no
+cold data behind it.
+
+**So the LM5155-Q1 SEPIC stays, and it stays for the reason it was chosen —
+it works at low line, which is what cranking actually demands.** The
+supercapacitor idea is not blocked on finding a better part; it is blocked on
+there being no requirement left that justifies one.
+
+If it is revisited, the order is: measure the shutdown current budget, then the
+cold ESR of a real part on a bench at −40 °C, then decide. Not the reverse.
