@@ -755,16 +755,23 @@ Absolute Maximum:   DGATE, HGATE .... SOURCE − 0.3 V to SOURCE + 10 V   (Note 
 Electrical Char.:   DGATE − SOURCE ... 10 V min / 12 V typ / 16 V max
 ```
 
-**The typical drive exceeds the absolute maximum.** That is not an error in the
-datasheet — it is the standard pattern where **absolute maxima apply to
-externally applied voltages**, while the part's own charge pump is exempt
-because it is internally limited. **[verify] Note 3** to confirm that wording,
-because everything below depends on it.
+**The typical drive exceeds the absolute maximum**, which is not an error.
+Note 3 resolves it:
+
+> *Internal clamps limit the HGATE and DGATE pins to minimum of 10 V above the
+> SOURCE pin. Driving these pins to voltages beyond the clamp may damage the
+> device.*
+
+So the "SOURCE + 10 V" figure is the **guaranteed minimum clamp level**, not a
+ceiling on the part's own output. The charge pump runs up to the clamp — 12 V
+typical, 16 V maximum — and the rating is a restriction on what *we* may apply
+from outside.
 
 Two consequences, and the second is the one that changes the schematic:
 
-**1. The FET rating is still set by 16 V, not 10 V.** The chip drives to 16 V
-max, so V<sub>GS(max)</sub> ≥ 20 V remains the criterion. IRF540N ✓.
+**1. The FET rating is set by 16 V, not 10 V.** The clamp is a *minimum* of
+10 V and the pump drives to it, so the gate can reach the 16 V electrical
+maximum. **V<sub>GS(max)</sub> ≥ 20 V** remains the criterion — IRF540N ✓.
 
 **2. Nothing external may force these pins.** The 10 V limit is a real
 constraint on anything *we* connect:
@@ -774,10 +781,11 @@ constraint on anything *we* connect:
   enhancement at exactly the moment R<sub>DS(on)</sub> matters.
 - **No pull-up or pull-down to a rail.**
 - **A slew capacitor, if one were ever fitted, goes HGATE-to-SOURCE, never
-  HGATE-to-GND.** SOURCE moves with the input; a capacitor referenced to ground
-  would let that movement drive V<sub>GS</sub> outside the −0.3 V / +10 V window
-  during a transient, which is precisely the failure this rating exists to
-  prevent.
+  HGATE-to-GND.** SOURCE moves with the input. A ground-referenced capacitor
+  would hold the gate up while SOURCE fell, sourcing current *into* the internal
+  clamp — which is exactly what "driving these pins beyond the clamp may damage
+  the device" describes. Referenced to SOURCE it simply rides along and drives
+  nothing.
 
 That last point is a third reason the HGATE slew capacitor proposed earlier
 stays dropped — it was already unnecessary once C8 grew, and it would have to be
