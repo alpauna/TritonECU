@@ -171,29 +171,64 @@ stuck regulator at 40 V or a 24 V jump start at 28–29 V would cook it.
 The clean statement: **TVS standoff must sit above the OV threshold.** If you
 want a lower TVS, lower OV with it.
 
-### The pairing worth considering
+### DECIDED: SMCJ43A — which means the OV divider changes too
+
+**These are one change, not two.** Moving the TVS to 43 V without moving OV
+would put it in conduction across the 43–60 V band the LTC4364 is designed to
+clamp through.
 
 | | OV | TVS | Clamp | Q1 must block | FET drop while clamping |
 |---|---|---|---|---|---|
-| **As drawn** | 60 V | SMCJ60A | 96.8 V | **≥150 V** | 33 V → 26 W |
-| **Alternative** | 43 V | SMCJ43A | 69.4 V | ≥100 V | **16 V → 13 W** |
+| As drawn | 60 V | SMCJ60A | 96.8 V | ≥150 V | 33 V → 26 W |
+| **Decided** | **43 V** | **SMDJ43A** | **69.4 V** | **≥100 V** | **16 V → 13 W** |
 
-The alternative **halves the FET's clamping dissipation** and brings the peak
-inside a 100 V device. OV must stay above a suppressed load dump — ~35 V on a
-modern alternator — so 43 V is about the lowest sensible setting if the engine
-is to keep running through one.
-
-Divider for 43 V OV / 4.5 V UV, same 10 kΩ rule:
+New divider, same 10 kΩ rule:
 
 ```
-R9 (R3) = 10 kΩ        R8 (R2) = 86.6 kΩ        R6 (R1) = 249 kΩ
-OV = 1.25 × 345.6/10   = 43.2 V
-UV = 1.25 × 345.6/96.6 =  4.47 V
+R9 = 10 kΩ        R8 = 86.6 kΩ        R6 = 249 kΩ        total 345.6 kΩ
+
+OV = 1.25 × 345.6 / 10   = 43.2 V
+UV = 1.25 × 345.6 / 96.6 =  4.47 V
 ```
 
-**The decision is Q1's V<sub>DS</sub> rating.** If YJQ40G10A is 150 V+, keep
-everything as drawn. If it is 100 V, either move to the 43 V pairing or fit a
-higher-voltage FET.
+### Why this is the better pairing
+
+- **FET clamping dissipation halves** — 16 V across Q1 instead of 33 V, so 13 W
+  rather than 26 W while riding out an overvoltage. That is the number that
+  sizes Q1's SOA (§6).
+- **69.4 V fits inside a 100 V FET**, which 96.8 V did not.
+- **43 V still clears a suppressed load dump.** A modern alternator's internal
+  suppression caps pulse 5b at ~35 V, so the LTC4364 clamps through it and the
+  engine keeps running. Above 43 V it disconnects instead, which is the right
+  answer for a fault that large.
+- **Coordination holds at the top.** Highest *sustained* input worth planning
+  for is a 24 V jump start at ~29 V, comfortably below the 43 V standoff, so
+  the TVS never conducts continuously. It only sees transients above its 47.8 V
+  minimum breakdown, by which point OV has already disconnected the load.
+
+### Use SMDJ43A, not SMCJ43A
+
+Same DO-214AB footprint, same 69.4 V clamp, **3000 W instead of 1500 W**. That
+matters specifically because of the fuse decision (§5): with no board fuse, the
+reverse-battery case now depends on the TVS surviving forward conduction until
+the truck's PDB fuse clears, and forward surge capability is exactly what the
+bigger die buys. One SMDJ43A also replaces D1+D2 without the sharing assumption
+that paralleling two parts requires.
+
+The positive-going transients are undemanding by comparison — ISO 7637 pulse 2a
+(50 V, 2 Ω) and pulse 3b (100 V, 50 Ω) both deliver about 1 A into a 48 V
+breakdown. Reverse battery is the case that sizes this part.
+
+### Knock-on: D3 becomes optional
+
+With the clamp at 69.4 V against V<sub>CC</sub>'s 80 V maximum, the Zener no
+longer has anything to do — the datasheet's R4/D3 network existed to survive a
+200 V transient with no TVS in front of it. Keep it as cheap insurance if you
+like, but **R4 can then drop to 220 Ω** (VCC floor 4.17 V, giving the 4.47 V UV
+threshold 300 mV of margin instead of 120 mV), and D3 still only passes 24 mA
+at the TVS clamp. Raise C2 to 470 nF either way to hold the VCC filter RC.
+
+**Still open:** Q1's V<sub>DS</sub> rating must be ≥100 V for the 69.4 V clamp.
 
 ## 4a. Bidirectional TVS — right instinct, but it moves the problem
 
@@ -469,8 +504,8 @@ the input connector.
 |---|---|---|
 | 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
 | 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
-| 2 | **R4: 2.2k → 470 Ω, C2: 100 nF → 470 nF**, UV → ~4.5 V | high |
-| 4 | Verify Q1 V<sub>DS</sub>: ≥150 V keeps 60 V, else move OV+TVS to 43 V; one SMDJ, unidirectional | high |
+| 2 | **R4: 2.2k → 220 Ω, C2: 100 nF → 470 nF**; UV = 4.47 V from §4 divider | high |
+| 4 | **TVS → one SMDJ43A + OV divider → 249k/86.6k/10k**; verify Q1 ≥100 V | high |
 | 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |
 | 7 | ADCRANGE=0 | low |
 | 8 | Confirm single-point PGND/GND tie | low |
