@@ -1,5 +1,10 @@
 # Power supply
 
+> **Alternative under consideration:** replacing the SEPIC with a plain buck
+> plus a supercapacitor bank on its input — see
+> [`power-supply-super-cap.md`](power-supply-super-cap.md). Preliminary only;
+> what follows is still the current design.
+
 ## Current budget first — it decides the topology
 
 | Load | 5 V rail draw |
