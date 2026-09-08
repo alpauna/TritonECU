@@ -78,7 +78,49 @@ real power, so it is an **SOA selection**, not an R<sub>DS(on)</sub> one — the
 same argument as the LTC4364's pass FET. Ramp time trades inrush current
 against FET stress and neither has been worked out.
 
-## What still needs solving
+## A 20 F cell at $1 changes the shape, not the size
+
+Cheap high-value supercaps are **2.7 V** parts, so they cannot sit on a 12 V
+rail directly. That forces a choice, and the obvious one is the worse one.
+
+### Series stack — the obvious answer, and worse
+
+Six 2.7 V cells in series gives 16.2 V and **3.3 F**. That is 33× more than the
+0.1 F actually needed, and the downsides scale with it:
+
+- **Inrush becomes 33× worse** — the problem the gate ramp exists to solve
+- **~240 J stored** at 12 V, all of which has to go somewhere in a fault
+- **Balancing** across six cells
+
+More capacitance is not free. Sizing for what is cheap rather than what is
+needed makes the hard parts harder.
+
+### One cell plus a boost — better
+
+Keep a single 20 F cell at 2.7 V and boost it to 5 V only when the input fails:
+
+```
+usable energy  = ½ × 20 F × (2.7² − 1.0²) = 63 J
+ECU load       = 5 V × 0.3 A = 1.5 W
+runtime        ≈ 40 s
+```
+
+Against ~2 s for cranking and ~100 ms for a graceful shutdown, that is enormous
+margin from one part. But the real win is **simplicity**:
+
+- **No balancing** — one cell.
+- **Inrush solves itself.** Charge from the 5 V rail through a resistor: 10 Ω
+  limits initial current to 270 mA and it tops up over a few minutes while the
+  ECU runs on main power. No gate ramp, no SOA calculation, no hot-swap
+  controller — the whole inrush problem disappears.
+- **73 J stored at 2.7 V** rather than 240 J at 16 V.
+
+Cost is a small boost converter and a changeover, both idle until they are
+needed.
+
+**This moves the hold-up from the input side to the output side**, which
+sidesteps inrush rather than engineering around it. If this idea is pursued,
+this is the version to pursue.
 
 - **VREF.** A charger's 5 V is neither accurate nor quiet enough for a sensor
   reference, and every three-wire sensor is ratiometric to it. From a 5 V rail
@@ -100,7 +142,7 @@ against FET stress and neither has been worked out.
 | Layout risk | **significant** — 2.2 MHz hot loop next to a 16-bit ADC | minimal |
 | Brownout, other causes | not covered | **covered** |
 | Graceful shutdown | needs separate hold-up | **included** |
-| Inrush | handled by the LTC4364 | **becomes our problem** |
+| Inrush | handled by the LTC4364 | **our problem on the input side; disappears on the output side** |
 | Noise near the ADC | controlled | unknown if a module is used |
 
 Not a decision. But the layout row is the one that matters most, and it is the
