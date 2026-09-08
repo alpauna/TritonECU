@@ -245,15 +245,65 @@ a persistent harness short on a sensor line, a modest current, and auto-recovery
 once the fault clears. Seconds of trip time is fine there because nothing
 upstream is being destroyed while it heats.
 
-### Replacement
+### Replacement — and why not "just use the truck's fuse"
 
-**One ~7.5 A fast fuse**, above the LTC4364's 5.6 A limit so a legitimate
-current-limit event does not clear it, with near-zero series resistance.
+Reasonable question, since **OEM modules generally have no input fuse** — the
+EEC-V does not, and neither do most Ford modules. They rely on the power
+distribution box. Three things make this board different.
 
-**Coordinate with the vehicle.** PCM power on the 1999 F-150 already runs
-through fuses in the power distribution box, so the on-board fuse should be
-**smaller than those** and clear first — otherwise a board fault sends the owner
-to the under-hood fuse box.
+**First, work out what the fuse is actually for.** The LTC4364 already handles
+every sustained overcurrent, and better than a fuse does: it limits at 5.6 A
+and shuts its own path down in 5.4 ms. So the fuse covers exactly two cases,
+both of which are *the protection itself having failed*:
+
+- the pass FET failing short
+- reverse battery, where D1/D2 forward-conduct and something must open
+
+**Second, the vehicle fuse is sized for a circuit, not for this board.** A PDB
+feed in the 15–20 A class has a melting I²t somewhere around 150–300 A²s,
+against the SMDJ36A's ~166 A²s of forward surge. **Relying on it to clear
+before the TVS dies is a coin flip.** A small fuse is not a coin flip.
+
+```
+3 A fast fuse    I²t ≈ 15–25 A²s     ← opens with 7–10× margin under the TVS
+15–20 A PDB fuse I²t ≈ 150–300 A²s   ← at or above what the TVS survives
+```
+
+**Third, a big fuse cannot see a soft fault.** Something on the board drawing
+4 A continuously is invisible to a 20 A fuse and cooks quietly. It is not
+invisible to a 3 A one.
+
+**[verify]** the actual PDB rating for the PCM feed on this truck before
+choosing, since the point is to be well below it.
+
+### Size it at 3 A, not 7.5 A
+
+An earlier revision of this review said 7.5 A, reasoning that the fuse must
+sit above the LTC4364's 5.6 A limit. That was wrong: the part **only holds
+5.6 A for t<sub>OC</sub> = 5.4 ms** before shutting down, so the fuse never
+sees sustained limit current.
+
+```
+sustained load, 13.8 V           0.33 A          →  11 % of a 3 A fuse
+inrush, once per key-on          5.6 A × 2.6 ms  →  I²t = 0.08 A²s
+3 A fast fuse melting I²t                        ≈  15–25 A²s      180× margin
+```
+
+**[verify]** whether the "-2" suffix latches off or auto-retries. On auto-retry
+with an undersized C8 (§3), the board would retry indefinitely and the fuse
+would see repeated inrush pulses rather than one. Fixing C8 removes the
+question either way.
+
+### Put it inline in the harness, not inside the box
+
+An on-board fuse in a sealed ECU is un-serviceable — blowing it means opening
+the enclosure, which is why OEMs do not fit them. An **inline holder in the
+harness pigtail** keeps the fast, correctly-sized protection and stays
+replaceable at the roadside. For the bench build, a board-mounted holder is
+fine and convenient.
+
+**Position is already correct on the schematic:** the fuse must be *upstream*
+of the TVS so that TVS conduction clears it. F1/F2 are drawn ahead of D1/D2. ✓
 
 ## 6. Q1 SOA **[verify]**
 
@@ -290,7 +340,7 @@ the input connector.
 | # | Change | Severity |
 |---|---|---|
 | 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
-| 5 | F1/F2 → one ~7.5 A fast fuse; move the PPTCs to VREF | **blocking** |
+| 5 | F1/F2 → one **3 A** fast fuse, inline in the harness; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 470 Ω, C2: 100 nF → 470 nF**, UV → ~4.5 V | high |
 | 4 | Verify Q1 V<sub>DS</sub> vs the 96.8 V clamp; prefer one SMDJ36A | high |
 | 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |
