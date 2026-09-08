@@ -722,30 +722,57 @@ pull-up dies with it — which is harmless, because the MCU is unpowered at the
 same moment. During the early warning the rail is still up and FLT# reads
 correctly, and that is the case that matters.
 
-### FLT# must be masked at startup, or it will log a fault every key-on
+### RETRACTED: FLT# does not need startup masking
 
-TMR charges during inrush, and the early-warning threshold is only 100 mV:
+An earlier revision of this review claimed inrush would reach 90 % of the
+early-warning threshold on every key-on. **That was wrong**, and the pin
+description shows why:
+
+> *An open-drain output that pulls low after the TMR pin reaches the warning
+> threshold of **1.25 V**.*
+
+The **100 mV in the datasheet's `CTMR = 1 ms × 5 µA / 100 mV` is not a
+threshold** — it is the *gap* between the 1.25 V warning level and the 1.35 V
+shutdown level. TMR does not start the fault sequence at 100 mV; it finishes it
+there.
+
+Redone correctly, with C8 = 2.2 µF:
 
 ```
-time for TMR to reach 100 mV = 2.2 µF × 0.1 V / 55 µA  =  4.0 ms
-inrush time                  = 1236 µF × 12 V / 4.1 A  =  3.6 ms
-                                                          ------
-                                                          90 % of the way there
+TMR to the 1.25 V warning during inrush (55 µA)  =  50 ms
+inrush                                            =  3.6 ms
+                                                     -------
+                                                     7 % of the way — 14× margin
 ```
 
-**Inrush gets to 90 % of the early-warning threshold on every single boot.**
-Component tolerances — C8 at +10 %, C_out at the high end, a marginal battery
-during cranking — can push it over. Firmware would then log a supply fault at
-each key-on and, with the retry counter, eventually latch SHDN# on a board that
-is working perfectly.
+No false assertion at boot. Masking is harmless insurance but it is not
+required, and it should not be presented as a fix for a problem that does not
+exist.
 
-**Mask FLT# for the first ~100 ms after the rail comes up.** Cheap, and it
-removes a class of false failure that would be maddening to diagnose in the
-truck.
+### Warning lead time differs 11× between the two fault types
 
-Then debounce what remains: interrupt on the falling edge, wait ~1 ms, re-read,
-and confirm against the INA238 before acting. That costs 1 ms of the 44 ms
-budget and rules out both noise and the startup transient.
+Both thresholds are fixed; only the charge current changes, so the warning
+window scales with it:
+
+| Fault | I<sub>TMR</sub> | Time to shutdown | **Warning lead** |
+|---|---|---|---|
+| Overvoltage | 5 µA | 594 ms | **44 ms** |
+| Overcurrent | 55 µA | 54 ms | **4.0 ms** |
+
+**An overcurrent fault gives almost no notice.** That is acceptable — in a hard
+output short the rail is collapsing regardless — but it means the debounce
+(edge interrupt → 1 ms wait → re-read → confirm against the INA238) spends a
+quarter of the overcurrent budget while costing nothing on the overvoltage side.
+Design the response path for the 44 ms case; treat the 4 ms one as best effort.
+
+### Drive capability confirmed
+
+> *The internal FET is capable of sinking up to **2 mA** and can withstand up to
+> **80 V**. Connect to GND if unused.*
+
+10 kΩ to 3.3 V draws 330 µA — **6× inside** the sink rating, and open-drain is
+confirmed rather than assumed. The 80 V tolerance means it could be pulled to a
+higher rail if something ever needed that; 3.3 V is correct for the MCU.
 
 **The OV early warning is the case that earns FLT# its GPIO**, because there the
 MCU is definitely alive and 44 ms is real notice.
