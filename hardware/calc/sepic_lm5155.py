@@ -10,7 +10,7 @@ not compute.
 """
 
 VOUT   = 6.0      # V, main rail
-IOUT   = 3.0      # A
+IOUT   = 2.0      # A
 VD     = 0.5      # V, Schottky forward drop
 # Switching frequency: 2.2 MHz, chosen for EMC rather than for efficiency.
 #

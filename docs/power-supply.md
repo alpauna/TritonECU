@@ -86,7 +86,26 @@ It is a **controller with an external switch**, not an integrated converter, so
 output current is set by the FET, inductors, diode and thermal design rather
 than by the IC.
 
-## 4 A: yes, and here is what changes
+## SUPERSEDED: the 4 A analysis
+
+**Decided 2026-09-08: 2 A at 6.0 V.** The section below worked out what 4 A
+would cost and is kept because its reasoning still applies — but the answer went
+the other way, for a reason that only emerged from the LTC4364 review.
+
+The rail tree further down totals the real internal load at **~650 mA from the
+6 V rail, about 4 W**. 2 A is 3× that. What settled it was the input side:
+[`schematic-review-power.md`](schematic-review-power.md) fixes the LTC4364's
+current limit at **4 A**, and at the 4.4 V input floor a 12 W output needs 3.2 A
+of input current while an 18 W output needs 4.8 A. **18 W does not fit behind a
+4 A limit at low line; 12 W does, with margin.** Raising the limit to suit would
+have put the pass FET's short-circuit stress back up, and that part is already
+the hardest one in the chain.
+
+Lower output current also improves every magnetic and thermal number at once —
+switch peak 6.96 A → **4.78 A**, Cs ripple 3.1 → **2.1 A rms**, inductor
+saturation 4.5 → **3.1 A**, continuous dissipation 3.2 → **2.1 W**.
+
+### The original 4 A analysis
 
 Achievable, and the existing 3–30 V design already handles comparable switch
 stress — at 3 V in and 3 A out it drew 5.9 A of input current, which is harder
@@ -142,13 +161,13 @@ under automotive transients and one that is not.
 Reusing the existing design at a lower current is otherwise sound — derating a
 3 A design to 1.5 A improves margin everywhere.
 
-## Decided: 3 A at 6.0 V, 2.2 MHz
+## Decided: 2 A at 6.0 V, 2.2 MHz
 
 Reproducible in [`../hardware/calc/sepic_lm5155.py`](../hardware/calc/sepic_lm5155.py).
 
 | | |
 |---|---|
-| Output | **6.0 V at 3 A** (18 W) |
+| Output | **6.0 V at 2 A** (12 W) |
 | Input design range | **6 V** (cold crank) to **45 V** (LM5155-Q1 max) |
 | Switching frequency | **2.2 MHz** |
 | Inductors | **2 × 3.3 µH**, separate |
@@ -177,10 +196,10 @@ after the schematic.
 
 | Condition | Vin | Duty | Switch + diode peak | Blocking V |
 |---|---|---|---|---|
-| Cold crank | 6.0 V | 52 % | **6.96 A** | 12.5 V |
-| Running | 13.8 V | 32 % | 5.14 A | 20.3 V |
-| Surge pass-through | 30 V | 17.8 % | 4.44 A | 36.5 V |
-| LM5155 max | 45 V | 12.6 % | 4.25 A | **51.5 V** |
+| Cold crank | 6.0 V | 52 % | **4.78 A** | 12.5 V |
+| Running | 13.8 V | 32 % | 3.63 A | 20.3 V |
+| Surge pass-through | 30 V | 17.8 % | 3.21 A | 36.5 V |
+| LM5155 max | 45 V | 12.6 % | 3.10 A | **51.5 V** |
 
 Duty peaks at 52 % against a 93 % ceiling — comfortable, and the reason a SEPIC
 handles cranking where a buck cannot.
@@ -203,10 +222,10 @@ high line and light input current, which is normal for a SEPIC.
 
 | Part | Requirement |
 |---|---|
-| MOSFET | ≥ 52 V blocking, ≥ 7 A peak → **80 V**, not 100 V — see below |
-| Diode | ≥ 52 V, 3 A average, 7 A peak → **80 V Schottky** |
-| Inductors | 2 × 3.3 µH, **saturation > 4.5 A each** |
-| **Coupling cap Cs** | ≥ 52 V, **3.1 A rms** |
+| MOSFET | ≥ 52 V blocking, ≥ 4.8 A peak → **80 V**, not 100 V — see below |
+| Diode | ≥ 52 V, 2 A average, 4.8 A peak → **80 V Schottky** |
+| Inductors | 2 × 3.3 µH, **saturation > 3.1 A each** |
+| **Coupling cap Cs** | ≥ 52 V, **2.1 A rms** |
 
 **On the voltage class:** 52 V comes from the LM5155-Q1's 45 V maximum, but the
 surge stopper regulates the rail well below that — around 36.5 V of switch
@@ -214,14 +233,14 @@ stress during a surge, 20.3 V running. **80 V parts** cover it with margin, and
 at 2.2 MHz their lower gate charge and output capacitance cut switching loss and
 ringing as well as package size. See [`supply-layout.md`](supply-layout.md).
 
-**Cs is the part most often under-specified.** It carries 3.1 A rms at cold
+**Cs is the part most often under-specified.** It carries 2.1 A rms at cold
 crank — one ceramic will not do it, and its ESR is dissipating that current
 squared. Several 100 V X7R in parallel, chosen for ripple-current rating rather
 than capacitance alone.
 
 ### Thermal — the case that actually sizes the design
 
-At 13.8 V nominal, 18 W out at 85 % efficiency is **3.2 W dissipated**.
+At 13.8 V nominal, 12 W out at 85 % efficiency is **2.1 W dissipated**.
 
 Not during cranking, which is brief. **Continuously, forever**, at whatever the
 enclosure's ambient turns out to be. That is the number the copper pour and the
@@ -431,12 +450,12 @@ halves ESR, and the two cancel exactly:
 Identical. Against the worst-case negative input resistance at cold crank:
 
 ```
-R_in = −Vin²/Pin  =  −6.0² / 4 W  =  −9 Ω      (design max 3 A → −1.8 Ω)
+R_in = −Vin²/Pin  =  −6.0² / 4 W  =  −9 Ω      (design max 2 A → −2.7 Ω)
 f0   = 1/(2π√(5 µH · 1000 µF))  =  2.25 kHz
 ```
 
-0.208 Ω against 1.8 Ω is **8.7× — 19 dB of Middlebrook margin** even at the
-3 A design point. The second can adds margin of zero and costs board area,
+0.208 Ω against 2.7 Ω is **13× — 22 dB of Middlebrook margin** even at the
+2 A design point. The second can adds margin of zero and costs board area,
 money, and 6 ms of extra inrush through the LTC4364's pass FET.
 
 What *does* improve damping is a proper damping branch, not more bulk.
@@ -478,7 +497,7 @@ carries real ripple:
 ```
 Irms = Iout · √(D/(1−D))
 
-   3 A design point, D = 0.52 (cold crank)    3.12 A rms   ← sizes the bank
+   2 A design point, D = 0.52 (cold crank)    2.08 A rms   ← sizes the bank
    0.65 A actual load, D = 0.52               0.68 A rms
 ```
 
@@ -487,7 +506,7 @@ Size the 6 V bank for its ripple rating and the hold-up arrives free:
 ```
 2 × 3300 µF, 6 V → 4 V:   ½ × 6600 µF × (36 − 16)  =  0.066 J
    at 0.7 W after load shed                        ≈  94 ms
-   at 4 W actual full load                         ≈  17 ms
+   at 4.6 W actual full load                       ≈  14 ms
 ```
 
 94 ms covers the ~100 ms SD flush that
@@ -508,7 +527,7 @@ produced the 2000 µF figure.
 | Ref | Part | Why |
 |---|---|---|
 | C_in | **1 × 1000 µF / 50 V, 105 °C low-impedance radial** | filter damping — 50 V is 40 % derating on the 30 V clamp |
-| C_out | **2 × 3300 µF / 10 V, 105 °C low-impedance** | 3.1 A rms ripple; hold-up is the by-product |
+| C_out | **2 × 3300 µF / 10 V, 105 °C low-impedance** | 2.1 A rms ripple; hold-up is the by-product |
 | C_hf | 2 × 10 µF X7R/50 V in, 4 × 22 µF X7R/16 V out, + 100 nF | the 2.2 MHz content no electrolytic can carry |
 | R_d + C_d | 0.1 Ω 1 W + 220 µF — **stuff option** | populate only if the input rings; leave the footprint |
 
