@@ -136,9 +136,9 @@ schematic has 3× that.
 CTMR ≥ t_inrush × 55 µA / 1.35 V = 2.6 ms × 40.7 nF/ms = 106 nF
 ```
 
-**Use 220 nF** for 2× margin — t<sub>OC</sub> = 5.4 ms, early warning 4.4 ms,
-OV shutdown 59 ms. Q1 then sees `5.6 A × ~6 V average × 2.6 ms` = 0.09 J during
-inrush, which is nothing.
+**Superseded — use 1.5 µF.** Sizing for inrush alone gives 220 nF, but once Q1
+is an IRF540NS (§6) the timer can be set by the 400 ms load dump instead, which
+is what the LTC4364 was chosen to ride out. See §6 for the full check.
 
 **[verify]** whether I<sub>TMR(UP)</sub> scales with V<sub>DS</sub> — the
 datasheet quotes 55 µA specifically for "a severe output short where
@@ -548,15 +548,73 @@ Q2 is the ideal-diode FET. It is either fully enhanced or fully off — **never
 linear** — so none of the above applies, and 15 mΩ at 40 A in a 3.3 mm package
 is genuinely good there. Buy two part numbers, not one.
 
-### Selecting Q1
+### DECIDED: Q1 → IRF540NS (D2Pak)
 
-- V<sub>DS</sub> ≥ 100 V
-- **A published SOA curve with 1 ms / 10 ms / 100 ms / DC lines** — this is the
-  filter, not R<sub>DS(on)</sub>
-- 14 V at 5.6 A for 10 ms must sit inside that curve
-- 16 V at 0.7 A for 400 ms must sit inside it
-- DPAK or D2PAK, planar or explicitly linear/hot-swap rated
-- R<sub>DS(on)</sub> barely matters: at 0.8 A even 100 mΩ costs 64 mW
+Datasheet: [`Schematics/IRF540-Datasheet.pdf`](Schematics/IRF540-Datasheet.pdf).
+It clears every criterion, and the first one is the one that mattered:
+
+| Criterion | IRF540NS |
+|---|---|
+| **Published SOA curve** | **Fig 8, with 100 µs / 1 ms / 10 ms single-pulse lines** ✓ |
+| Technology | **planar HEXFET** — not trench; well-behaved in linear mode ✓ |
+| V<sub>DSS</sub> | **100 V** vs the 69.4 V clamp — 31 % margin ✓ |
+| Package | **D2Pak** ✓ (TO-262 through-hole available as IRF540NL) |
+| R<sub>θJC</sub> | 1.15 °C/W max |
+| R<sub>θJA</sub> | 40 °C/W, PCB mount |
+| T<sub>J</sub> | **175 °C** — 25 °C more headroom than the trench part |
+| R<sub>DS(on)</sub> | 44 mΩ — irrelevant here: 28 mW at 0.8 A |
+
+Against the sizing case:
+
+```
+output short:  14 V × 4.1 A = 57 W        far inside the 10 ms SOA line
+               Zθ(10 ms) ≈ 0.12 °C/W  →   ΔTj ≈ 7 °C
+```
+
+The 10 ms SOA line at 14 V sits in the tens of amps. We need 4.1 A.
+
+### And that headroom buys real load-dump ride-through
+
+With Q1 no longer the constraint, C8 can be sized for what the system actually
+wants rather than for the FET's survival. The binding requirement becomes the
+**400 ms ISO 7637 load dump** — the event the LTC4364 was chosen to ride out:
+
+| C8 | OC shutdown (55 µA) | OV shutdown (5 µA) | OV early warning (100 mV) |
+|---|---|---|---|
+| 56 nF (drawn) | 1.4 ms | 15 ms | 1.1 ms |
+| 300 nF | 7.4 ms | 81 ms | 6 ms |
+| **1.5 µF** | **36.8 ms** | **405 ms** ✓ | **30 ms** |
+
+**C8 = 1.5 µF.** Check each consequence against the IRF540NS:
+
+```
+inrush 3.6 ms         vs  36.8 ms timer                      10× margin ✓
+short  57 W × 36.8 ms = 2.1 J,  Zθ(37 ms) ≈ 0.3 °C/W  →  ΔTj ≈ 17 °C ✓
+clamp  16 V × 0.44 A = 7.0 W for 405 ms, Zθ ≈ 3 °C/W  →  ΔTj ≈ 21 °C ✓
+```
+
+All three trivial. **This is what the right FET buys** — not a smaller
+component, but the freedom to set the fault timer by the vehicle's requirements
+instead of the silicon's.
+
+The 30 ms of **early warning on FLT#** is a bonus worth wiring to a GPIO: it is
+enough notice to shed injectors and coils before the rail disconnects.
+
+### Two things this changes elsewhere
+
+1. **Gate slew control is no longer needed.** §"the bigger lever" proposed a
+   HGATE capacitor to keep inrush out of current limit. With a 36.8 ms timer
+   against 3.6 ms of inrush there is nothing to solve, and inrush energy is
+   ½CV² = 0.089 J either way — nothing for a D2Pak. Skip it; fewer parts.
+2. **Steady-state clamping is still bounded by the timer, not the package.**
+   At 40 °C/W a D2Pak sustains ~2.2 W at 85 °C ambient, below the 7.0 W of
+   clamping — but the TMR disconnects at 405 ms, so Q1 never sees it
+   continuously. If sustained clamping is ever wanted, that is what the TO-262
+   version bolted to the enclosure is for.
+
+**[verify]** the LTC4364's HGATE drive voltage against V<sub>GS(th)</sub> =
+2.0–4.0 V. The charge pump should give ~10 V above SOURCE, which is ample, but
+it is worth reading rather than assuming.
 
 ### Setting the current limit — 4 A is right, but not for the reason it looks like
 
@@ -578,8 +636,8 @@ as √t in the single-pulse regime — so **ΔT<sub>j</sub> ∝ √I<sub>LIM</su
 
 | R<sub>SNS</sub> | I<sub>LIM(MIN)</sub> | Short power | Inrush | t<sub>OC</sub> | C8 | Relative ΔT<sub>j</sub> |
 |---|---|---|---|---|---|---|
-| 8 mΩ (drawn) | 5.6 A | 78 W | 2.6 ms | 5.4 ms | 220 nF | 1.00 |
-| **11 mΩ** | **4.1 A** | 57 W | 3.6 ms | 7.4 ms | **300 nF** | **0.85** |
+| 8 mΩ (drawn) | 5.6 A | 78 W | 2.6 ms | 5.4 ms | — | 1.00 |
+| **11 mΩ** | **4.1 A** | 57 W | 3.6 ms | 36.8 ms | **1.5 µF** | **0.85** |
 | 15 mΩ | 3.0 A | 42 W | 4.9 ms | 9.8 ms | 400 nF | 0.73 |
 | 25 mΩ | 1.8 A | 25 W | 8.2 ms | 16.7 ms | 680 nF | 0.57 |
 
@@ -648,11 +706,11 @@ the input connector.
 
 | # | Change | Severity |
 |---|---|---|
-| 3 | **C8: 56 nF → 300 nF** (with R<sub>SNS</sub> = 11 mΩ) — faults on inrush as drawn | **blocking** |
+| 3 | **C8: 56 nF → 1.5 µF** — faults on inrush as drawn; 1.5 µF also buys 400 ms load-dump ride-through | **blocking** |
 | 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 220 Ω, C2: 100 nF → 470 nF**; UV = 4.47 V from §4 divider | high |
 | 4 | **TVS → one SMDJ43A + OV divider → 249k/86.6k/10k**; verify Q1 ≥100 V | high |
-| 6 | **Q1 → a FET with a published SOA curve, DPAK/D2PAK**; keep YJQ40G10A for Q2 | **blocking** |
+| 6 | **Q1 → IRF540NS (D2Pak)**; keep YJQ40G10A for Q2 | resolved |
 | 7 | ADCRANGE=0 | low |
 | 8 | Confirm single-point PGND/GND tie | low |
 | 1 | UV/OV divider — **no change, it is correct** | none |
