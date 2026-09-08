@@ -136,9 +136,10 @@ schematic has 3× that.
 CTMR ≥ t_inrush × 55 µA / 1.35 V = 2.6 ms × 40.7 nF/ms = 106 nF
 ```
 
-**Superseded — use 1.5 µF.** Sizing for inrush alone gives 220 nF, but once Q1
+**Superseded — use 2.2 µF.** Sizing for inrush alone gives 220 nF, but once Q1
 is an IRF540NS (§6) the timer can be set by the 400 ms load dump instead, which
-is what the LTC4364 was chosen to ride out. See §6 for the full check.
+is what the LTC4364 was chosen to ride out. 2.2 µF rather than 1.5 µF because
+X7R tolerance has to be spent against that 400 ms. See §6.
 
 **[verify]** whether I<sub>TMR(UP)</sub> scales with V<sub>DS</sub> — the
 datasheet quotes 55 µA specifically for "a severe output short where
@@ -600,6 +601,73 @@ instead of the silicon's.
 The 30 ms of **early warning on FLT#** is a bonus worth wiring to a GPIO: it is
 enough notice to shed injectors and coils before the rail disconnects.
 
+### Sizing C8 properly: 2.2 µF, and it must be ceramic
+
+At 56 nF the tolerance of the capacitor was irrelevant. At 1.5 µF it sets
+whether the board survives a load dump, so it has to be sized from worst case,
+not nominal.
+
+**X7R stacks two errors against the 400 ms target:**
+
+```
+capacitance tolerance    ±10 %
+X7R temperature coeff.   ±15 %  over −55 to +125 °C
+                         ------
+worst case               ≈ −23 %
+
+1.5 µF  →  405 ms nominal  →  312 ms worst case      short of 400 ms ✗
+2.2 µF  →  594 ms nominal  →  457 ms worst case      ✓
+```
+
+**Use 2.2 µF.** The knock-ons stay comfortable on the IRF540NS:
+
+```
+OC shutdown  = 2.2 µF × 1.35 V / 55 µA = 54 ms      15× the 3.6 ms inrush ✓
+short        = 57 W × 54 ms = 3.1 J,  ΔTj ≈ 20 °C   ✓
+clamp        = 7.0 W × 594 ms,        ΔTj ≈ 28 °C   ✓
+early warning= 2.2 µF × 0.1 V / 5 µA  = 44 ms       ✓
+```
+
+**[verify]** the min/max on I<sub>TMR</sub> — the datasheet quotes 5 µA and
+55 µA as typicals. If the spread is ±20 %, that compounds with the −23 % above
+and 3.3 µF may be needed to hold 400 ms at every corner.
+
+### It must be X7R or C0G — never tantalum or electrolytic
+
+The TMR pin charges at **5 µA**. Any leakage current is a direct timing error at
+that scale:
+
+- **X7R / C0G ceramic**: insulation resistance > 10 GΩ, so leakage at 1.35 V is
+  sub-nanoamp. Invisible.
+- **Tantalum or aluminium**: leakage is specified in **microamps** — the same
+  order as the charging current. The timer would run long, short, or not
+  complete at all, and it would drift with temperature.
+
+Specify **16 V or 25 V rating in 0805**. TMR only reaches 1.35 V so DC bias
+derating is small at those ratings, but a 6.3 V part in 0402 can lose 20–30 %
+of its capacitance at bias — which lands straight in the timing.
+
+### [verify] Is the "-2" latch-off or auto-retry?
+
+This now matters more than it did. Auto-retry into a persistent short repeats
+the fault at a duty cycle set by the TMR discharge current:
+
+```
+fault on           54 ms
+cooldown at ~2.5 µA discharge from 1.35 V, 2.2 µF   ≈ 1.19 s
+duty                                                  4.3 %
+average dissipation in Q1   57 W × 0.043            ≈ 2.5 W
+```
+
+A D2Pak at 40 °C/W sustains about **2.2 W at 85 °C ambient**. So on auto-retry
+the average is right at the package limit, and Q1 would slowly heat while the
+short persists. On latch-off there is no issue at all.
+
+If it is auto-retry, the fixes are a larger copper pour under Q1, the TO-262
+version bolted to the enclosure, or having firmware latch the supply off via
+SHDN# after a few FLT# events — the last being free, and the right behaviour
+anyway for a fault that is not going to clear itself.
+
 ### Two things this changes elsewhere
 
 1. **Gate slew control is no longer needed.** §"the bigger lever" proposed a
@@ -706,7 +774,7 @@ the input connector.
 
 | # | Change | Severity |
 |---|---|---|
-| 3 | **C8: 56 nF → 1.5 µF** — faults on inrush as drawn; 1.5 µF also buys 400 ms load-dump ride-through | **blocking** |
+| 3 | **C8: 56 nF → 2.2 µF X7R/C0G, 16 V** — faults on inrush as drawn; 2.2 µF holds 400 ms load-dump ride-through at worst-case tolerance | **blocking** |
 | 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 220 Ω, C2: 100 nF → 470 nF**; UV = 4.47 V from §4 divider | high |
 | 4 | **TVS → one SMDJ43A + OV divider → 249k/86.6k/10k**; verify Q1 ≥100 V | high |
