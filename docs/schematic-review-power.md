@@ -28,39 +28,75 @@ before committing to fab.
 - **35 V rating is correct.** 14 V continuous is 40 % of rating; the 27 V clamp
   is below rated voltage, so it is not even a surge condition. Question closed.
 - **INA238 reusing the LTC4364 shunt** is a good economy — battery voltage and
-  current from one 8 mΩ resistor that had to be there.
+  current from one 8 mΩ resistor that had to be there. It is also behind the
+  clamp, so its 85 V common-mode limit is never approached.
 
-## 1. SMCJ60A is the wrong TVS — this one is serious
+## 1. SMCJ60A clamps above the LTC4364's rating — coordination gap, not exposure
 
-| | |
-|---|---|
-| SMCJ60A standoff | 60 V |
-| SMCJ60A **clamping voltage** | **96.8 V** at 15.5 A |
-| LTC4364 absolute max (VCC, SOURCE, SENSE, OUT, HGATE, DGATE) | **80 V** |
-| INA238 common-mode max (IN+, IN−, VBUS) | **85 V** |
+**Corrected 2026-09-08.** An earlier revision of this review claimed the 96.8 V
+TVS clamp reaches the output capacitors and the INA238. It does not, and the
+reason is worth writing down because it is the whole point of the part:
 
-**The TVS lets through 17 V more than the part it is protecting can survive.**
-R4/D3 shields VCC alone; SOURCE, SENSE, OUT and both gate pins see the full
-96.8 V, and so do all three INA238 high-side inputs.
+**The LTC4364 regulates OUT to 27 V, and everything downstream of the pass FETs
+is behind that.**
 
-A 60 V standoff is also far higher than a 12 V system needs. The requirement is
-only to sit above a 24 V jump start (~28 V):
+| Node | Normal | Load dump | Fast (sub-µs) pulse |
+|---|---|---|---|
+| B+, Q1 drain | 14 V | up to TVS clamp | TVS clamp |
+| SOURCE (Q1 s / Q2 d) | ≈14 V | **27 V** — Q1 in linear mode drops the rest | held near the caps through Q2 |
+| SENSE, OUT, C3–C7, INA238 | ≈14 V | **27 V** | **27 V** |
+| VCC | ≈14 V | clamped by R4/D3 | clamped by R4/D3 |
+
+So: **C3–C7 at 35 V are correct**, and the INA238's IN+/IN−/VBUS all sit on the
+clamped side and never approach their 85 V common-mode limit. My §7 claim that
+they sit "at battery potential" was wrong — they sit at *clamped* potential.
+
+For a fast pulse, SOURCE is tied through a fully-on Q2 to 1120 µF, and that
+capacitance holds it down far more effectively than the TVS does.
+
+### What is actually wrong with it
+
+Protection coordination. A TVS should clamp **below** the rating of what it
+protects, and this one does not:
+
+```
+LTC4364 absolute max (VCC, SOURCE, SENSE, OUT)      80 V
+SMCJ60A clamping voltage at 15.5 A                  96.8 V
+                                                    ------
+window where the TVS conducts but the IC is out of spec   80 – 96.8 V
+```
+
+The TVS also does nothing at all below 66.7 V, while the LTC4364 is rated to
+80 V and handles everything up to it by itself. So as drawn the TVS adds
+protection only in a band where the IC is already over-stressed — it is
+contributing almost nothing.
+
+A 60 V standoff is far more than a 12 V system needs; the requirement is just
+to sit above a 24 V jump start (~28 V):
 
 | Part | Standoff | Clamp | Verdict |
 |---|---|---|---|
 | SMCJ33A | 33 V | 53.3 V | good margin |
-| **SMCJ36A** | 36 V | **58.1 V** | **recommended** |
+| **SMCJ36A** | 36 V | **58.1 V** | **recommended — entirely inside the 80 V rating** |
 | SMCJ40A | 40 V | 64.5 V | acceptable |
-| SMCJ60A | 60 V | 96.8 V | **exceeds both ICs** |
+| SMCJ60A | 60 V | 96.8 V | clamps above what it protects |
+
+Cheap change, closes a real gap, and it lets R4/D3 go away (§4).
 
 ### Also: paralleling two TVS does not give 2× capability
 
-Breakdown voltage tolerance means the lower-V<sub>br</sub> device takes most of
+Breakdown-voltage tolerance means the lower-V<sub>br</sub> device takes most of
 the current and fails first. **One larger part beats two smaller ones** — an
 **SMDJ36A** (3000 W, same DO-214AB footprint) replaces D1+D2 with a single
 device and no sharing assumption.
 
-Fixing this also removes the need for R4/D3 (see §4).
+### One consequence worth knowing
+
+D1/D2 are **unidirectional**, so under reverse battery they forward-conduct and
+short the input. That is normal practice and it is what clears the fuse — but
+it means the LTC4364's −40 V reverse blocking never gets to do its job, and the
+protection depends entirely on the series element opening. Another reason §3
+matters.
 
 ## 2. C8 = 56 nF — the fault timer looks orders of magnitude short **[verify]**
 
@@ -167,13 +203,17 @@ irrelevant here. **DPAK or D2PAK for Q1** if the curve does not cover it. Q2
 
 ## 7. INA238 details
 
-- **No series protection on IN+/IN−.** Standard practice is 10–100 Ω in each
-  leg plus a differential cap, which also filters. Cheap insurance on a part
-  sitting at battery potential.
+- **Not an exposure risk** — see §1. Both shunt inputs and VBUS are on the
+  clamped side, so 27 V against an 85 V common-mode limit. Series resistors in
+  IN+/IN− are still worth adding as ordinary practice (10–100 Ω each, plus a
+  differential cap) because they filter the shunt signal, but this is a
+  refinement and not a protection fix.
 - **ADCRANGE vs the current limit.** At 8 mΩ, ADCRANGE=1 (±40.96 mV) reads
   ±5.12 A and saturates *below* the LTC4364's 6.25 A trip, so a fault current
   would be unmeasurable. ADCRANGE=0 (±163.84 mV) gives ±20.5 A. Pick 0 unless
   the extra resolution is needed.
+- Reusing the LTC4364's shunt for the INA238 is a genuinely good economy —
+  battery current and voltage from a resistor that had to be there anyway.
 
 ## 8. PGND and GND
 
@@ -186,12 +226,12 @@ the input connector.
 
 | # | Change | Severity |
 |---|---|---|
-| 1 | D1/D2 → one **SMDJ36A** (58.1 V clamp, under both ICs' limits) | **blocking** |
+| 1 | D1/D2 → one **SMDJ36A** (58.1 V clamp, inside the 80 V rating) | high |
 | 2 | C8: recompute for 400 ms load dump + 2.15 ms inrush | **blocking** |
 | 3 | F1/F2 → one ~7.5 A fast fuse, not 2 × 0.3 A PPTC | **blocking** |
 | 4 | Delete R4/D3, or R4 → 100 Ω | high |
 | 5 | Verify UV tap; 1.40 V is not a UV threshold | high |
 | 6 | Verify Q1 SOA at 400 ms; consider DPAK | high |
-| 7 | Series R + differential cap on INA238 inputs; ADCRANGE=0 | medium |
+| 7 | ADCRANGE=0; series R on INA238 inputs is a refinement, not a fix | low |
 | 8 | Confirm single-point PGND/GND tie | medium |
-| — | C3–C7 at 35 V: **keep as drawn** | none |
+| — | C3–C7 at 35 V: **keep as drawn** — output is clamped to 27 V | none |
