@@ -102,6 +102,77 @@ Verify:
 ls -la /dev/bus/usb/001/0NN     # should now be crw-rw-rw-
 ```
 
+## 3b. If the on-board ST-Link fails — using an external probe
+
+The on-board ST-Link on this board degraded during bring-up: dropping console
+characters first, then refusing to enumerate. An external **STLINK-V3** works,
+but three things have to be right and none are obvious.
+
+### Wiring: CN6, with the CN2 jumpers **fitted**
+
+Counter-intuitive, and the thing that cost the most time. **CN6 sits on the
+ST-Link side of the CN2 jumpers.** Removing them isolates the MCU from the
+on-board ST-Link *and* from CN6 — the opposite of what "disconnect the broken
+debugger" suggests.
+
+| STLINK-V3 | Nucleo |
+|---|---|
+| **VTREF / VDD_TARGET** | **a real 3V3 pin** (Arduino or morpho header) |
+| SWDIO | CN6 pin 2 |
+| SWCLK | CN6 pin 4 |
+| GND | GND |
+
+**VTREF must come from an actual 3.3 V rail.** CN6 pin 1 is labelled
+`VDD_TARGET` but it is a *sense input* for the on-board ST-Link to read an
+external target's voltage — it reads 0 V with nothing attached, which is
+correct, not a fault.
+
+PA13/PA14 are **not** on the morpho headers of a Nucleo-144, so they are not an
+alternative. CN2's target-side pins are, if the jumpers are pulled.
+
+Success looks like:
+
+```
+Info : SWD DPIDR 0x5ba02477
+Info : [stm32f7x.cpu] Cortex-M7 r1p0 processor detected
+Info : [stm32f7x.cpu] Examination succeed
+```
+
+### The board file assumes the wrong transport
+
+`nucleo_f767zi` targets the on-board V2.1, which uses OpenOCD's **hla**
+transport. An STLINK-V3 speaks plain SWD and is rejected outright:
+
+```
+Debug adapter doesn't support 'hla_swd' transport
+```
+
+So the upload is driven directly rather than through the board file:
+
+```ini
+upload_protocol = custom
+upload_command = $PROJECT_PACKAGES_DIR/tool-openocd/bin/openocd
+  -s $PROJECT_PACKAGES_DIR/tool-openocd/openocd/scripts
+  -f interface/stlink.cfg -c "transport select swd"
+  -f target/stm32f7x.cfg
+  -c "init; reset halt; program {$SOURCE}; reset run; shutdown"
+```
+
+### No `verify`
+
+OpenOCD verifies by loading a CRC routine into target RAM and executing it.
+That fails consistently here:
+
+```
+Error: timed out while waiting for target halted
+Error: error executing cortex_m crc algorithm
+```
+
+Programming itself succeeds every time and the firmware demonstrably runs, so
+verify is omitted. The ST-Link checks flash writes regardless. **Worse, a
+failed verify leaves the target halted**, which looks exactly like a dead
+board — resume it with `reset run` or just upload again.
+
 ## 4. Upload
 
 ```bash
@@ -194,6 +265,11 @@ which is what you want when the debugger is the thing misbehaving.*
 | Console silent after debugging | SWD reset dropped the VCP | reopen the port; use the `i` command |
 | `pio device monitor` crashes | needs a TTY, not a pipe | read the port directly, or run interactively |
 | Wrong `/dev/ttyACMn` | numbering shifts between boards | use the `by-id` path |
+| `Debug adapter doesn't support 'hla_swd'` | external V3 vs. a board file written for V2.1 | drive OpenOCD directly — §3b |
+| `target voltage may be too low` | VTREF not on a real 3.3 V rail | CN6 pin 1 is a *sense input*, not a supply |
+| `unable to connect to the target` | wrong connector or jumper state | CN6 **with** CN2 jumpers fitted |
+| `error executing cortex_m crc algorithm` | verify step | drop `verify`; target is left halted, so resume it |
+| Enumeration errors `-110` / `-62` | cascaded bus-powered hubs | plug directly into the PC |
 
 ## Verifying it actually works
 
