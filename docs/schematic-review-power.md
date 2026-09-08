@@ -558,22 +558,76 @@ is genuinely good there. Buy two part numbers, not one.
 - DPAK or D2PAK, planar or explicitly linear/hot-swap rated
 - R<sub>DS(on)</sub> barely matters: at 0.8 A even 100 mΩ costs 64 mW
 
-### Option worth considering: raise R<sub>SNS</sub> instead
+### Setting the current limit — 4 A is right, but not for the reason it looks like
 
-Short-circuit stress scales directly with the current limit, and 5.6 A is 7×
-the actual load:
+**The short-circuit energy is invariant.** t<sub>OC</sub> has to exceed the
+inrush time or the board faults at every key-on (§3), and inrush time is
+`C·V/I_LIM`. So:
 
-| R<sub>SNS</sub> | I<sub>LIM</sub> | Short power | Inrush time | C8 needed |
-|---|---|---|---|---|
-| 8 mΩ (drawn) | 5.6 A | **78 W** | 2.6 ms | 220 nF |
-| 15 mΩ | 3.0 A | **42 W** | 4.9 ms | 330 nF |
-| 25 mΩ | 1.8 A | **25 W** | 8.2 ms | 470 nF |
+```
+E_short = 14 V × ILIM × tOC     and    tOC ∝ 1/ILIM
 
-25 mΩ cuts Q1's worst case by a factor of three and improves the INA238's
-resolution, but 1.8 A does not cover the 3 A design rating at crank (3.5 A
-needed). **15 mΩ is the compromise** — it halves the stress and still covers
-1.23 A of real cold-crank draw with 2.4× margin. Decide this alongside whether
-the supply is really being built for 3 A.
+        →  E_short = constant = 0.42 J     at any current limit
+```
+
+Lowering the limit does not remove energy from Q1. It trades **power for
+time**.
+
+That still helps, because peak junction rise is `P × Zθ(t)` and Zθ goes roughly
+as √t in the single-pulse regime — so **ΔT<sub>j</sub> ∝ √I<sub>LIM</sub>**:
+
+| R<sub>SNS</sub> | I<sub>LIM(MIN)</sub> | Short power | Inrush | t<sub>OC</sub> | C8 | Relative ΔT<sub>j</sub> |
+|---|---|---|---|---|---|---|
+| 8 mΩ (drawn) | 5.6 A | 78 W | 2.6 ms | 5.4 ms | 220 nF | 1.00 |
+| **11 mΩ** | **4.1 A** | 57 W | 3.6 ms | 7.4 ms | **300 nF** | **0.85** |
+| 15 mΩ | 3.0 A | 42 W | 4.9 ms | 9.8 ms | 400 nF | 0.73 |
+| 25 mΩ | 1.8 A | 25 W | 8.2 ms | 16.7 ms | 680 nF | 0.57 |
+
+**4 A buys 15 %.** Useful, free, and nowhere near enough to rescue a DFN 3.3 —
+Q1 still needs a published SOA curve in a DPAK or D2PAK.
+
+### What 4 A does decide: the output rating
+
+This is the real content of the choice. Required limit at the input floor:
+
+| Output design point | At 6 V in | At 4.4 V in |
+|---|---|---|
+| Real ~4.6 W load | 0.90 A | 1.23 A |
+| **2 A / 12 W** | 2.35 A | **3.2 A** ✓ |
+| 3 A / 18 W | 3.53 A | **4.8 A** ✗ |
+
+**A 4 A limit is a decision to build a 2 A supply.** It covers 12 W down to the
+4.4 V floor with margin, covers 18 W only above ~5.5 V input, and gives the
+real load 3.3×. That matches
+[`power-supply.md`](power-supply.md)'s own conclusion — 2 A is 3× the actual
+load, and 3 A was headroom for loads not yet stated.
+
+**R<sub>SNS</sub> = 11 mΩ** (45 mV / 4 A), with **C8 = 300 nF**. Note the
+datasheet example lands on the same 4 A target and picks 10 mΩ, which would
+give 4.5 A.
+
+### The bigger lever: keep inrush out of current limit entirely
+
+The invariance above only holds because startup *uses* the current limit. It
+does not have to. **Slewing HGATE with a gate capacitor** keeps inrush below the
+limit, so TMR never starts at power-up and t<sub>OC</sub> is freed to be short:
+
+```
+hold inrush to 1 A with 1236 µF   →  dV/dt = 1 A / 1236 µF = 809 V/s
+                                  →  ramp to 12 V in 14.8 ms
+C_gate = I_HGATE(UP) / (dV/dt)    →  ~25 nF at 20 µA          [verify I_HGATE]
+
+then tOC need only cover a genuine fault:  1–2 ms
+E_short = 14 V × 4.1 A × 2 ms = 0.11 J        ← 4× less than 0.42 J
+```
+
+Inrush energy in Q1 is unchanged at ½CV² = 0.089 J either way — that is fixed
+by the capacitance — but it is spread over 15 ms instead of concentrated, and
+the *short-circuit* case improves four-fold.
+
+**[verify]** against the datasheet whether HGATE slew control with an external
+capacitor is supported here, and what I<sub>HGATE(UP)</sub> is. If it is, this
+is worth more than any R<sub>SNS</sub> change.
 
 ## 7. INA238
 
@@ -594,7 +648,7 @@ the input connector.
 
 | # | Change | Severity |
 |---|---|---|
-| 3 | **C8: 56 nF → 220 nF** — faults on inrush as drawn | **blocking** |
+| 3 | **C8: 56 nF → 300 nF** (with R<sub>SNS</sub> = 11 mΩ) — faults on inrush as drawn | **blocking** |
 | 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 220 Ω, C2: 100 nF → 470 nF**; UV = 4.47 V from §4 divider | high |
 | 4 | **TVS → one SMDJ43A + OV divider → 249k/86.6k/10k**; verify Q1 ≥100 V | high |
