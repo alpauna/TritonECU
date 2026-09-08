@@ -357,44 +357,56 @@ with an undersized C8 (§3), the board would retry indefinitely and the fuse
 would see repeated inrush pulses rather than one. Fixing C8 removes the
 question either way.
 
-### Thermal circuit breaker (8 A, 48 VDC) — right for the bench, wrong for the truck
+### Schurter 3-101-231 (T9-817, 8 A) — take it for the bench, not the truck
 
-Considered as a replacement for the fuse. It is a genuinely good idea in one
-place and reopens a solved problem in the other.
+Checked against the [T9-817
+datasheet](https://www.schurter.com/en/datasheet/typ_T9-817.pdf). One line
+settles it before any trip-curve argument:
 
-**Where it wins: bench bring-up.** During power-supply development you will
-short things repeatedly, and a resettable breaker beats hunting for fuses every
-time. The LTC4364 is doing the actual electrical protection anyway (5.6 A limit,
-5.4 ms shutdown); the breaker is only the "oops" recovery path. Its 48 VDC
-interrupting rating is ample against a 12–14 V bench supply, and 8 A sits well
-clear of both the 0.33 A running load and the 5.6 A × 2.6 ms inrush.
+| | |
+|---|---|
+| **Allowable operating temperature** | **−5 °C to +60 °C** (4 A version: −5 to +50 °C) |
 
-**Where it loses: the truck.** A thermal breaker is a bimetallic element, so it
-has thermal mass and a trip curve much like a PPTC's — just less extreme:
+**That is disqualifying for a vehicle on its own.** A truck sees −20 °C or
+colder in winter and a closed cabin exceeds 60 °C in summer sun — the part is
+outside its rating at both ends of an ordinary year. Schurter says as much
+directly: automotive requirements to IATF 16949 "can be offered exclusively
+with customer-specific, individual agreements", so the catalogue part is not
+automotive-qualified.
 
-```
-~200 % of rating    5–30 s
-~500 %              0.5–3 s
-~1000 %             0.1–1 s
-```
+Three supporting points, none of which are needed once temperature has decided
+it:
 
-Under reverse battery, with D1/D2 forward-conducting at a harness-limited ~60 A:
+- **UL 1077 makes it a *supplementary protector***, explicitly not branch
+  circuit protection. It is designed to sit behind existing upstream
+  protection — which is the role we wanted, but it also means it is not the
+  primary interrupter.
+- **Minimum trip time is ~0.1 s even at 10× rated**, from the datasheet curve
+  (x-axis 1–10× I<sub>n</sub>, y-axis bottoming at 0.1 s). At the ~60 A
+  reverse-battery current that is 0.2–0.5 s → roughly **1080 A²s against the
+  SMDJ36A's ~166 A²s.** The TVS is still destroyed before it opens, exactly as
+  with the PPTCs.
+- **12.5 g on THT leads**, wave-solder only, with a moving mechanism. That is a
+  vibration-fatigue item in a vehicle.
 
-```
-breaker at 0.3 s    I²t ≈ 1080 A²s
-SMDJ36A survives    I²t ≈  166 A²s        6.5× over
-```
+### What it is genuinely good at
 
-**That is the PPTC failure again** — the protector is destroyed before the
-protection acts. Everything in §4a that argued for a unidirectional TVS assumed
-a fast series element; a breaker takes that assumption away.
+For the **bench supply**, this is the right part and worth buying:
 
-The 8 A rating is also larger than the load justifies, and it cannot see a soft
-fault any better than a big fuse can.
+- **Push-to-reset** — during power-supply bring-up you will short things
+  repeatedly, and pushing a button beats hunting for fuses.
+- **2 kA interrupting capacity at 48 VDC** — genuinely strong, far beyond a
+  glass fuse.
+- **2500 switching cycles at 150 % I<sub>r</sub>** — it will outlast the
+  project.
+- Ambient derating is mild compared with a PPTC: the correction factor is 1.21
+  at +60 °C (≈17 % less trip current) against roughly 48 % for a polyfuse.
 
-**Use both, in different places.** Since the fuse is going inline in the harness
-rather than on the board (below), the two do not conflict: a breaker on the
-bench fixture, a 3 A fuse in the vehicle pigtail.
+**Take the 4 A version, not 8 A.** The board draws 0.33 A running — 8 % of a
+4 A part — and the once-per-key-on inrush of 5.6 A for 2.6 ms is far too brief
+to trip anything (1.4× rated needs on the order of a second). A 4 A breaker
+catches a bench mistake meaningfully sooner than an 8 A one, and the LTC4364
+covers everything below it anyway.
 
 ### Put it inline in the harness, not inside the box
 
