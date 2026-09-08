@@ -1,12 +1,28 @@
-# ESP-ECU
+# TritonECU
 
-Standalone engine and transmission controller for a **1999 Ford F-150 4WD,
-5.4L Triton 2V, 4R70W** — replacing the factory EEC-V PCM.
+Standalone engine and transmission controller for **Ford modular V8s of the
+EEC-V era** — replacing the factory PCM.
 
-Built on an **STM32F767ZI**. Being rewritten from scratch on the `rebuild`
-branch; the previous ESP32-S3 firmware is described in
+Developed against a **1999 F-150 4WD, 5.4L Triton 2V, 4R70W**, but the
+architecture is the modular family rather than one truck: 4.6L and 5.4L 2V
+share the crank trigger, the sensor set, the SCP bus and the connector, so
+Mustangs and other EEC-V modular applications of the period are the same
+problem with a different calibration.
+
+Built on an **STM32F767ZI**. Rewritten from scratch on the `rebuild` branch;
+the previous ESP32-S3 firmware is described in
 [`docs/legacy-esp32s3-README.md`](docs/legacy-esp32s3-README.md) and still
 lives on `main`.
+
+**What is vehicle-specific and what is not:**
+
+| Portable across EEC-V modulars | Specific to this truck |
+|---|---|
+| 36-1 VR crank decode, cam sync | firing order, displacement |
+| EEC-V 104-pin connector and pinout | 4R70W shift logic (4R100 differs) |
+| SCP / J1850 PWM bus | 4x4 transfer case inputs |
+| Ignition and injection output stages | VE and spark tables |
+| Sensor conditioning and protection | |
 
 ---
 
@@ -76,7 +92,7 @@ Design is frozen — [`docs/v1-scope.md`](docs/v1-scope.md) is the build list.
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
 
-## The vehicle
+## The reference vehicle
 
 Every design decision traces to a factory schematic, recorded in
 [`docs/1999-Ford-F150-4wd-5.42v/`](docs/1999-Ford-F150-4wd-5.42v/). Several
