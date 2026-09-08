@@ -705,6 +705,48 @@ opposite responses:
 That is a second payoff from reusing the LTC4364's shunt for the INA238 — the
 same part that measures battery current also disambiguates the fault pin.
 
+### FLT# wiring: 10 k to 3.3 V, plus 1 nF
+
+10 kΩ to 3.3 V sinks **330 µA** when asserted — well inside any open-drain
+output, and the rise time is `10 kΩ × ~20 pF` = 200 ns against a 44 ms event.
+**[verify]** FLT# is open-drain and not push-pull, though the `#` suffix and the
+LTC4364's conventions both say it is.
+
+**Add ~1 nF at the MCU pin.** This board low-side switches **eight ignition
+coils**, and a 10 kΩ pull-up is a high-impedance line running past them. 1 nF
+gives `RC = 10 µs` of filtering — invisible against 44 ms, and real protection
+against a coil event triggering a spurious shutdown sequence.
+
+The pull-up rail is downstream of the LTC4364, so when it disconnects the
+pull-up dies with it — which is harmless, because the MCU is unpowered at the
+same moment. During the early warning the rail is still up and FLT# reads
+correctly, and that is the case that matters.
+
+### FLT# must be masked at startup, or it will log a fault every key-on
+
+TMR charges during inrush, and the early-warning threshold is only 100 mV:
+
+```
+time for TMR to reach 100 mV = 2.2 µF × 0.1 V / 55 µA  =  4.0 ms
+inrush time                  = 1236 µF × 12 V / 4.1 A  =  3.6 ms
+                                                          ------
+                                                          90 % of the way there
+```
+
+**Inrush gets to 90 % of the early-warning threshold on every single boot.**
+Component tolerances — C8 at +10 %, C_out at the high end, a marginal battery
+during cranking — can push it over. Firmware would then log a supply fault at
+each key-on and, with the retry counter, eventually latch SHDN# on a board that
+is working perfectly.
+
+**Mask FLT# for the first ~100 ms after the rail comes up.** Cheap, and it
+removes a class of false failure that would be maddening to diagnose in the
+truck.
+
+Then debounce what remains: interrupt on the falling edge, wait ~1 ms, re-read,
+and confirm against the INA238 before acting. That costs 1 ms of the 44 ms
+budget and rules out both noise and the startup transient.
+
 **The OV early warning is the case that earns FLT# its GPIO**, because there the
 MCU is definitely alive and 44 ms is real notice.
 
