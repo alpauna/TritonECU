@@ -719,8 +719,18 @@ Q1 + Q2 in series         0.50 V        dissipation 0.2 W each — trivial
 ```
 
 That is a triple-stacked worst case: maximum V<sub>th</sub>, minimum drive, and
-minimum input all at once. Typical is 8.5 V of drive against a 3 V threshold —
-5.5 V overdrive, ~56 mΩ, 45 mV per FET.
+minimum input all at once. What the board will actually measure:
+
+| Condition | Drive (typ) | Overdrive on a 3 V V<sub>th</sub> | R<sub>DS(on)</sub> | Drop, Q1+Q2 at 0.8 A |
+|---|---|---|---|---|
+| At the floor, V<sub>CC</sub> = 4 V | **8.5 V** | 5.5 V | ~56 mΩ | **90 mV** |
+| Running, V<sub>CC</sub> ≥ 8 V | **12 V** | 9 V | 44 mΩ | **70 mV** |
+| Stacked worst case | 5 V | 1 V | ~310 mΩ | 500 mV |
+
+So in practice the pass pair costs under 100 mV across the whole input range,
+and the 0.5 V figure is a margin calculation rather than a prediction. The
+minimums are what the design has to survive; the typicals are what it will
+show on the bench.
 
 ### So quote the input floor honestly
 
