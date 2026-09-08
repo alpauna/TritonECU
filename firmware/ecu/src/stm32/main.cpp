@@ -12,6 +12,7 @@
 #include <stdarg.h>
 
 #include "Board.h"
+#include "Ad7606c.h"
 #include "Console.h"
 #include "Config.h"
 #include "StorageStm32.h"
@@ -24,6 +25,7 @@ constexpr uint32_t kFlashSizeReg = 0x1FF0F442;   // 16-bit, in kilobytes
 constexpr uint32_t kUidReg       = 0x1FF0F420;   // 96-bit unique device ID
 
 uint32_t g_heartbeats = 0;
+bool g_adcReady = false;
 uint32_t g_lastBeatMs = 0;
 
 const char* resetReasonName() {
@@ -77,6 +79,13 @@ void reportIdentity() {
                   (unsigned long)uid[0], (unsigned long)uid[1], (unsigned long)uid[2]);
     console::printf("  last reset   : %s\n", resetReasonName());
     console::settle();
+    if (g_adcReady) {
+        console::printf("  ADC          : AD7606 responding, +/-10 V, OS off, SPI %lu kHz\n",
+                        (unsigned long)(ad7606c::spiHz() / 1000));
+    } else {
+        console::printf("  ADC          : AD7606 not responding\n");
+    }
+    console::settle();
     storage::report();
     config::report();
     console::println("=======================================================");
@@ -116,6 +125,16 @@ void setup() {
         console::println("[cfg] could not persist boot count");
     }
 
+    const ad7606c::Pins adcPins{
+        .sck = board::adc::kSck,       .miso = board::adc::kMiso,
+        .cs = board::adc::kCs,         .convst = board::adc::kConvst,
+        .busy = board::adc::kBusy,     .reset = board::adc::kReset,
+        .range = board::adc::kRange,
+        .os0 = board::adc::kOs0,       .os1 = board::adc::kOs1,
+        .os2 = board::adc::kOs2,       .frstdata = board::adc::kFrstdata,
+    };
+    g_adcReady = ad7606c::begin(adcPins);
+
     reportIdentity();
     console::println("M0/M1: board, storage, config. Heartbeat every 5 s. Send 'i' for identity, 's' to remount the card.");
     g_lastBeatMs = millis();
@@ -128,7 +147,17 @@ void loop() {
     // worth having on a bench regardless.
     for (int c = console::read(); c >= 0; c = console::read()) {
         if (c == 'i' || c == 'I') {
-            reportIdentity();
+            const ad7606c::Pins adcPins{
+        .sck = board::adc::kSck,       .miso = board::adc::kMiso,
+        .cs = board::adc::kCs,         .convst = board::adc::kConvst,
+        .busy = board::adc::kBusy,     .reset = board::adc::kReset,
+        .range = board::adc::kRange,
+        .os0 = board::adc::kOs0,       .os1 = board::adc::kOs1,
+        .os2 = board::adc::kOs2,       .frstdata = board::adc::kFrstdata,
+    };
+    g_adcReady = ad7606c::begin(adcPins);
+
+    reportIdentity();
         } else if (c == 's' || c == 'S') {
             // Remount without a power cycle -- useful because resetting over
             // SWD drops the VCP, so a fresh boot is awkward to observe.
@@ -152,6 +181,17 @@ void loop() {
 
         if (g_heartbeats % 5 == 0) {
             console::printf("[%6lu s] alive\n", (unsigned long)g_heartbeats);
+            if (g_adcReady) {
+                float v[ad7606c::kChannels];
+                if (ad7606c::readVolts(v)) {
+                    console::settle();
+                    console::printf("   V1-V8:");
+                    for (uint8_t i = 0; i < ad7606c::kChannels; i++) {
+                        console::printf(" %+7.4f", v[i]);
+                    }
+                    console::printf(" V\n");
+                }
+            }
         }
     }
 }

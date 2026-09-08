@@ -47,15 +47,18 @@ enum class Oversampling : uint8_t {
 };
 
 struct Pins {
-    int8_t sck;
-    int8_t miso;      // AD7606C DOUTA
-    int8_t cs;        // software-driven, not hardware SPI CS
-    int8_t convst;    // also drives WR on the usual breakouts
-    int8_t busy;
-    int8_t reset;
-    int8_t range;
-    int8_t os0, os1, os2;
-    int8_t frstdata = -1;  // optional; -1 if not wired
+    // int16_t, not int8_t: STM32duino's pin constants run past 127 (PB10 is
+    // 199), while -1 still means "not wired". The ESP32's numbering happened
+    // to fit in a signed byte; that was luck rather than design.
+    int16_t sck;
+    int16_t miso;      // AD7606C DOUTA
+    int16_t cs;        // software-driven, not hardware SPI CS
+    int16_t convst;    // also drives WR on the usual breakouts
+    int16_t busy;
+    int16_t reset;
+    int16_t range;
+    int16_t os0, os1, os2;
+    int16_t frstdata = -1;  // optional; -1 if not wired
 };
 
 // spiHz defaults to 1 MHz — deliberately slow for bring-up over flying leads.

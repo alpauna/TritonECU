@@ -158,20 +158,37 @@ upload_command = $PROJECT_PACKAGES_DIR/tool-openocd/bin/openocd
   -c "init; reset halt; program {$SOURCE}; reset run; shutdown"
 ```
 
-### No `verify`
+### Program the ELF, and keep `verify` on
 
-OpenOCD verifies by loading a CRC routine into target RAM and executing it.
-That fails consistently here:
+**`program firmware.bin` writes nothing and reports success.** A raw `.bin`
+carries no address information, so without an explicit `0x08000000` OpenOCD
+happily does nothing — the board resets and runs the *previous* image. The
+symptom is maddening: correct build, `Programming Finished`, clean reset, and
+firmware that is silently one version old.
+
+Program the **ELF**, which carries its own load addresses:
 
 ```
-Error: timed out while waiting for target halted
-Error: error executing cortex_m crc algorithm
+-c "init; reset halt; program {$BUILD_DIR/${PROGNAME}.elf} verify; reset run; shutdown"
 ```
 
-Programming itself succeeds every time and the firmware demonstrably runs, so
-verify is omitted. The ST-Link checks flash writes regardless. **Worse, a
-failed verify leaves the target halted**, which looks exactly like a dead
-board — resume it with `reset run` or just upload again.
+**Keep `verify`.** Earlier CRC verify failures looked like a nuisance to work
+around; they were in fact the symptom of nothing having been written. Turning
+verify off removed the only signal that anything was wrong. `** Verified OK **`
+is the line to look for.
+
+### `%f` prints nothing
+
+STM32duino links **newlib-nano**, whose `printf` omits float support to save
+space. `%f` does not error — it prints *nothing at all*, leaving gaps in
+otherwise correct output.
+
+```ini
+build_flags = -Wl,-u,_printf_float
+```
+
+Easy to misread as a data problem when every voltage in a table comes out
+blank.
 
 ## 4. Upload
 
@@ -268,7 +285,9 @@ which is what you want when the debugger is the thing misbehaving.*
 | `Debug adapter doesn't support 'hla_swd'` | external V3 vs. a board file written for V2.1 | drive OpenOCD directly — §3b |
 | `target voltage may be too low` | VTREF not on a real 3.3 V rail | CN6 pin 1 is a *sense input*, not a supply |
 | `unable to connect to the target` | wrong connector or jumper state | CN6 **with** CN2 jumpers fitted |
-| `error executing cortex_m crc algorithm` | verify step | drop `verify`; target is left halted, so resume it |
+| `error executing cortex_m crc algorithm` | usually: nothing was written | program the **ELF**, not the `.bin` |
+| Upload succeeds, old firmware runs | `.bin` has no load address | program the **ELF**; keep `verify` on |
+| `%f` prints nothing | newlib-nano printf | `-Wl,-u,_printf_float` |
 | Enumeration errors `-110` / `-62` | cascaded bus-powered hubs | plug directly into the PC |
 
 ## Verifying it actually works
