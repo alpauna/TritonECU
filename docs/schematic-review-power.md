@@ -357,6 +357,45 @@ with an undersized C8 (§3), the board would retry indefinitely and the fuse
 would see repeated inrush pulses rather than one. Fixing C8 removes the
 question either way.
 
+### Thermal circuit breaker (8 A, 48 VDC) — right for the bench, wrong for the truck
+
+Considered as a replacement for the fuse. It is a genuinely good idea in one
+place and reopens a solved problem in the other.
+
+**Where it wins: bench bring-up.** During power-supply development you will
+short things repeatedly, and a resettable breaker beats hunting for fuses every
+time. The LTC4364 is doing the actual electrical protection anyway (5.6 A limit,
+5.4 ms shutdown); the breaker is only the "oops" recovery path. Its 48 VDC
+interrupting rating is ample against a 12–14 V bench supply, and 8 A sits well
+clear of both the 0.33 A running load and the 5.6 A × 2.6 ms inrush.
+
+**Where it loses: the truck.** A thermal breaker is a bimetallic element, so it
+has thermal mass and a trip curve much like a PPTC's — just less extreme:
+
+```
+~200 % of rating    5–30 s
+~500 %              0.5–3 s
+~1000 %             0.1–1 s
+```
+
+Under reverse battery, with D1/D2 forward-conducting at a harness-limited ~60 A:
+
+```
+breaker at 0.3 s    I²t ≈ 1080 A²s
+SMDJ36A survives    I²t ≈  166 A²s        6.5× over
+```
+
+**That is the PPTC failure again** — the protector is destroyed before the
+protection acts. Everything in §4a that argued for a unidirectional TVS assumed
+a fast series element; a breaker takes that assumption away.
+
+The 8 A rating is also larger than the load justifies, and it cannot see a soft
+fault any better than a big fuse can.
+
+**Use both, in different places.** Since the fuse is going inline in the harness
+rather than on the board (below), the two do not conflict: a breaker on the
+bench fixture, a 3 A fuse in the vehicle pigtail.
+
 ### Put it inline in the harness, not inside the box
 
 An on-board fuse in a sealed ECU is un-serviceable — blowing it means opening
