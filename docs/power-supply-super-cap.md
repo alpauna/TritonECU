@@ -122,6 +122,8 @@ needed.
 sidesteps inrush rather than engineering around it. If this idea is pursued,
 this is the version to pursue.
 
+## What it does not solve
+
 - **VREF.** A charger's 5 V is neither accurate nor quiet enough for a sensor
   reference, and every three-wire sensor is ratiometric to it. From a 5 V rail
   there is no LDO headroom, so it needs a small boost first — which was free
@@ -147,3 +149,77 @@ this is the version to pursue.
 
 Not a decision. But the layout row is the one that matters most, and it is the
 part of the current design most likely to cause trouble on a first spin.
+
+## Candidate parts
+
+Two real parts have been looked at. The temperature spec decides between them.
+
+### SLA3R8O2060813 — 3.8 V lithium-ion capacitor — rejected
+
+**−20 °C lower limit.** That is the end of the discussion for a vehicle in this
+climate; the ECU has to work on a cold morning. LICs also need an
+over-discharge cutoff, because taking one below about 2.2 V damages it
+permanently — an extra protection circuit the EDLC does not need.
+
+### DGH504Q5R5 — 0.5 F / 5.5 V EDLC — viable, with one conflict
+
+From the datasheet (`~/Documents/DGH504Q5R5-Datasheet.pdf`):
+
+| | |
+|---|---|
+| Capacitance | 0.5 F, **−10 % / +30 %** |
+| Working voltage | 5.5 V to +65 °C, **4.6 V at +85 °C** |
+| **Operating temperature** | **−40 °C to +85 °C** (storage −40 to +70 °C) |
+| ESR | 400 mΩ at 1 kHz, **800 mΩ DC** at 20 °C |
+| Max continuous current | **0.6 A** (ΔT = 15 °C); 0.96 A for 1 s; 6.8 A short circuit |
+| Leakage | **8 µA** at 72 h |
+| Stored energy | 2.1 mWh = 7.6 J at 5.5 V |
+| Life | 1500 h at rated voltage *and* rated temperature; **500,000 cycles** |
+| Package | 17 × 16 × 8.5 mm, 2.2 g, 12 mm lead pitch, 0.6 mm leads |
+
+**−40 °C is confirmed**, which was the open item and the LIC's disqualifier. The
+8 µA leakage is the other good number: a parked truck loses nothing measurable
+to it, which is what a KAPWR replacement has to be true of.
+
+#### It sits directly on the 5 V rail — no boost needed
+
+5.5 V is above the rail it holds up, so the changeover is a diode, not a
+converter. Discharging 5.5 → 4.5 V:
+
+```
+½ × 0.5 F × (5.5² − 4.5²) = 2.5 J
+÷ 1.5 W                   ≈ 1.7 s
+```
+
+At 0.3 A the 800 mΩ ESR costs 0.24 V, which is inside that budget.
+
+#### But the deep-discharge numbers do not transfer
+
+The 20 F sketch above assumed discharging to 1.0 V through a boost. Do that
+here and the boost's input current climbs as the cap falls: at 2.0 V it needs
+**0.75 A**, past the 0.6 A continuous rating, and 800 mΩ throws away 0.6 V of
+what is left. **Small EDLCs are ESR-limited, not energy-limited.** The 63 J /
+40 s figure belongs to the 20 F cell and does not scale down.
+
+So this part buys **graceful shutdown (~1.7 s), not crank ride-through** — and
+crank ride-through was the reason to consider replacing the SEPIC at all. It
+supports the KAPWR requirement; it does not retire
+[`power-supply.md`](power-supply.md).
+
+#### The one conflict: 4.6 V at 85 °C
+
+Sitting on a 5.0 V rail over-volts the part at 85 °C. A cabin-mounted ECU
+should not see 85 °C, but "should not" is not a design margin. Options, none
+worked out: charge through a series Schottky (→ ~4.7 V, still thin), clamp the
+charge path to ~4.5 V, or measure the actual mounting-location temperature and
+accept it.
+
+#### Life: socketed, so it is a maintenance item
+
+**Decision: the cap is socketed and field-replaceable.** 1500 h is a worst-case
+figure — rated voltage at rated temperature simultaneously — and real service
+is far longer at a derated charge and cabin temperature. But an EDLC is a wear
+part with an electrolyte, unlike everything else on the board, and socketing
+converts an unknown lifetime from a design risk into a service interval. It
+also makes the 12 mm lead pitch and 17 × 16 mm footprint a fixed mechanical
+commitment, so the socket choice comes before the layout.
