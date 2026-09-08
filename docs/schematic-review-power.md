@@ -180,7 +180,7 @@ clamp through.
 | | OV | TVS | Clamp | Q1 must block | FET drop while clamping |
 |---|---|---|---|---|---|
 | As drawn | 60 V | SMCJ60A | 96.8 V | ≥150 V | 33 V → 26 W |
-| **Decided** | **43 V** | **SMDJ43A** | **69.4 V** | **≥100 V** | **16 V → 13 W** |
+| **Decided** | **43 V** | **SMDJ43A** | **69.4 V** | **100 V ✓ confirmed** | **16 V → 2.7 W real / 10.7 W max** |
 
 New divider, same 10 kΩ rule:
 
@@ -228,7 +228,7 @@ like, but **R4 can then drop to 220 Ω** (VCC floor 4.17 V, giving the 4.47 V UV
 threshold 300 mV of margin instead of 120 mV), and D3 still only passes 24 mA
 at the TVS clamp. Raise C2 to 470 nF either way to hold the VCC filter RC.
 
-**Still open:** Q1's V<sub>DS</sub> rating must be ≥100 V for the 69.4 V clamp.
+**Confirmed:** YJQ40G10A is 100 V, so the 69.4 V clamp has 31 % margin — see §6, which is also where that part turns out to be wrong for Q1.
 
 ## 4a. Bidirectional TVS — right instinct, but it moves the problem
 
@@ -468,20 +468,112 @@ fine and convenient.
 **Position is already correct on the schematic:** the fuse must be *upstream*
 of the TVS so that TVS conduction clears it. F1/F2 are drawn ahead of D1/D2. ✓
 
-## 6. Q1 SOA **[verify]**
+## 6. Q1 — YJQ40G10A is right for Q2 and wrong for Q1
 
-Only Q1 (HGATE) runs in linear mode, and that sizes it. The datasheet's own
-guidance: "The pass device, M1, should be chosen to withstand an output short
-condition with V<sub>CC</sub> = 14 V."
+Datasheet: [`Schematics/YJQ40G10A-Datasheet.pdf`](Schematics/YJQ40G10A-Datasheet.pdf).
+
+### The good news: 100 V, which validates the 43 V decision
 
 ```
-output short at 14 V, 5.6 A limit, for tOC     =  78 W for 5.4 ms  =  0.42 J
-clamping a 35 V load dump to 27 V at 0.8 A     =  6.4 W, sustained
+BVDSS = 100 V
+
+SMCJ60A clamp  96.8 V  →   3 % margin      not margin
+SMDJ43A clamp  69.4 V  →  31 % margin      ✓
 ```
 
-Check YJQ40G10A's SOA curve at 5–10 ms, not its R<sub>DS(on)</sub> or
-continuous rating. **DPAK or D2PAK for Q1** if an SO-8 does not cover it. Q2
-only ever conducts fully on, so it can stay small.
+The TVS change in §4 was not a refinement — it was necessary for this FET.
+
+### The problem: it is a switching FET in a 3.3 × 3.3 mm package
+
+| | |
+|---|---|
+| Technology | **split-gate trench** — optimised for switching |
+| Package | **DFN 3.3 × 3.3 mm** |
+| R<sub>θJA</sub> | 25 typ / **30 max °C/W** even for t ≤ 10 s |
+| R<sub>θJC</sub> | 1.8 / 2.3 °C/W |
+| V<sub>GS(th)</sub> | **1.0 – 2.5 V** (wide spread) |
+| **SOA curve** | **not published** |
+
+Three independent problems, any one of which is disqualifying for a **linear**
+pass element:
+
+1. **No SOA curve.** Q1 spends its working life in linear mode — during
+   clamping and during current limit. A part with no published safe operating
+   area cannot be verified for the only job it has here. That is the finding;
+   the rest is why it would fail anyway.
+
+2. **Split-gate trench is the wrong device class.** These are built for low
+   R<sub>DS(on)</sub> and low Q<sub>gd</sub> (C<sub>rss</sub> = 18 pF, which is
+   excellent for switching). In linear mode they suffer thermal instability —
+   current concentrates in the lowest-V<sub>th</sub> cells, which heat, which
+   lowers their V<sub>th</sub> further. The **1.0–2.5 V threshold spread**
+   makes that sharing worse. Linear-mode SOA for parts like this sits well
+   below the thermal limit, which is exactly why hot-swap designs use planar or
+   explicitly linear-rated FETs.
+
+3. **The package is too small.** 30 °C/W for pulses up to 10 s leaves almost no
+   thermal headroom.
+
+### The case that sizes it is the output short, not the clamp
+
+The datasheet's own guidance: *"The pass device, M1, should be chosen to
+withstand an output short condition with V<sub>CC</sub> = 14 V."*
+
+```
+short:  14 V × 5.6 A = 78 W  for tOC = 5.4 ms (with C8 = 220 nF)  =  0.42 J
+
+Tj rise < 100 °C needs  Zθ(5.4 ms) < 1.28 °C/W
+    D2PAK   ≈ 0.5–1 °C/W    ✓
+    DPAK    ≈ 1–2 °C/W      marginal
+    DFN3.3  ≈ 1.5–3 °C/W    ✗
+```
+
+**Correction to §4:** an earlier revision put the clamping dissipation at 13 W
+using 0.8 A. That was the *12 V input* current. While clamping, the LTC4364
+holds the output at 27 V, so Q1 carries the load current **at 27 V**:
+
+| | Current through Q1 | Q1 dissipation at 43 V in |
+|---|---|---|
+| Real ~4.6 W load | 0.17 A | **2.7 W** |
+| 18 W design rating | 0.67 A | 10.7 W |
+
+At the real load, clamping is easy — 400 ms at 2.7 W is a ~20–40 °C rise on any
+sensible package. At the 3 A design rating it is marginal. This is more support
+for [`power-supply.md`](power-supply.md)'s own conclusion that 2 A gives 3×
+margin on the real load and 3 A is headroom for loads not yet stated.
+
+### Keep it for Q2
+
+Q2 is the ideal-diode FET. It is either fully enhanced or fully off — **never
+linear** — so none of the above applies, and 15 mΩ at 40 A in a 3.3 mm package
+is genuinely good there. Buy two part numbers, not one.
+
+### Selecting Q1
+
+- V<sub>DS</sub> ≥ 100 V
+- **A published SOA curve with 1 ms / 10 ms / 100 ms / DC lines** — this is the
+  filter, not R<sub>DS(on)</sub>
+- 14 V at 5.6 A for 10 ms must sit inside that curve
+- 16 V at 0.7 A for 400 ms must sit inside it
+- DPAK or D2PAK, planar or explicitly linear/hot-swap rated
+- R<sub>DS(on)</sub> barely matters: at 0.8 A even 100 mΩ costs 64 mW
+
+### Option worth considering: raise R<sub>SNS</sub> instead
+
+Short-circuit stress scales directly with the current limit, and 5.6 A is 7×
+the actual load:
+
+| R<sub>SNS</sub> | I<sub>LIM</sub> | Short power | Inrush time | C8 needed |
+|---|---|---|---|---|
+| 8 mΩ (drawn) | 5.6 A | **78 W** | 2.6 ms | 220 nF |
+| 15 mΩ | 3.0 A | **42 W** | 4.9 ms | 330 nF |
+| 25 mΩ | 1.8 A | **25 W** | 8.2 ms | 470 nF |
+
+25 mΩ cuts Q1's worst case by a factor of three and improves the INA238's
+resolution, but 1.8 A does not cover the 3 A design rating at crank (3.5 A
+needed). **15 mΩ is the compromise** — it halves the stress and still covers
+1.23 A of real cold-crank draw with 2.4× margin. Decide this alongside whether
+the supply is really being built for 3 A.
 
 ## 7. INA238
 
@@ -506,7 +598,7 @@ the input connector.
 | 5 | **Delete F1/F2** — truck PDB fusing is the branch protection; PPTCs → VREF | **blocking** |
 | 2 | **R4: 2.2k → 220 Ω, C2: 100 nF → 470 nF**; UV = 4.47 V from §4 divider | high |
 | 4 | **TVS → one SMDJ43A + OV divider → 249k/86.6k/10k**; verify Q1 ≥100 V | high |
-| 6 | Verify Q1 SOA at 5–10 ms; consider DPAK | high |
+| 6 | **Q1 → a FET with a published SOA curve, DPAK/D2PAK**; keep YJQ40G10A for Q2 | **blocking** |
 | 7 | ADCRANGE=0 | low |
 | 8 | Confirm single-point PGND/GND tie | low |
 | 1 | UV/OV divider — **no change, it is correct** | none |
