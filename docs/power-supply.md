@@ -385,129 +385,151 @@ surge stopper's clamp** and pair it with a **fast fuse rather than the PTC** —
 at that point it is protecting against the surge stopper itself failing short,
 which is a real if unlikely mode.
 
-## Input bulk capacitance — 2000 µF
+## Input bulk capacitance — 1000 µF in, hold-up on the 6 V side
 
-**Decided: 2 × 1000 µF / 50 V, on the LTC4364 output.** Sized for input-filter
-damping, not for hold-up — the reasoning matters because it points the opposite
-way from the usual instinct.
+**Decided: 1 × 1000 µF / 50 V at the SEPIC input, hold-up energy on the 6 V
+output.** An earlier revision specified 2000 µF on the input. That was
+over-specified, and the reason is worth keeping.
 
 ### Placement: after the surge stopper, not before
 
 ```
-Battery ─ fuse ─ TVS ─ LTC4364-2 ─┬─ 2 × 1000 µF ─ LM5155-Q1 SEPIC
-                                   │
-                            clamped side: cap never sees the transient
+Battery ─ fuse ─ TVS ─ LTC4364-2 ─┬─ 1000 µF ─ LM5155-Q1 SEPIC ─ 6.0 V ─┬─ 2 × 3300 µF
+                                   │                                      │
+                            clamped side, 30 V max               ripple + hold-up
 ```
 
-On the harness side it would see raw ISO 7637 pulses, need a 100 V rating, and
-sit in parallel with the TVS fighting it. On the clamped side it sees at most
-the surge pass-through voltage — **30 V** per the worked table above — and gets
-the LTC4364's inrush current limiting for free.
+On the harness side the cap would see raw ISO 7637 pulses, need a 100 V rating,
+and sit in parallel with the TVS fighting it. On the clamped side it sees at
+most the 30 V surge pass-through and gets the LTC4364's inrush limiting free.
 
-### Ripple current is not the constraint — and this surprises people
+### Why the second 1000 µF bought nothing
 
-A SEPIC's input current is **continuous**, since the source feeds an inductor
-rather than a switch. That is a structural advantage over a buck, and it means
-the input capacitor only carries L1's ripple:
-
-```
-inductor ripple (asymptotic)   0.90 A pk-pk, triangular
-input cap ripple current       0.90 / (2√3)  =  0.26 A rms
-```
-
-A single 1000 µF / 50 V low-impedance part is rated around 3 A rms. The
-requirement is met **12× over** by parts chosen for capacitance alone, so
-ripple rating should not drive this selection.
-
-### Hold-up is real but modest — do not oversize expecting seconds
+The input capacitor's real job is damping the filter formed with harness
+inductance, so the converter does not oscillate against its own supply. Peak
+filter output impedance is:
 
 ```
-½ × 2000 µF × (12² − 3.5²)  =  0.13 J     down to the SEPIC's 3.5 V floor
-
-  at 18 W (3 A full load)   →    7 ms
-  at  9 W (1.5 A budget)    →   15 ms
-  at 0.7 W (after load shed) →  190 ms
+Zpeak = Z0 · Q = Z0² / ESR = (L/C)/ESR = L / (C · ESR)
 ```
 
-Milliseconds, not seconds. That covers starter-engagement dips, relay contact
-bounce and an intermittent terminal — and, after shedding injectors and coils,
-the SD flush. **It is not cold-crank ride-through.** That job belongs to the
-SEPIC's ability to run at 3.5 V input, which is why the topology was chosen.
-No practical amount of capacitance substitutes for it.
+**Paralleling identical electrolytics leaves that unchanged.** Doubling C
+halves ESR, and the two cancel exactly:
 
-### The actual reason for 2000 µF: input stability
+| | Z0 | ESR | Q | Zpeak |
+|---|---|---|---|---|
+| 1 × 1000 µF | 70.7 mΩ | 24 mΩ | 2.95 | **0.208 Ω** |
+| 2 × 1000 µF | 50.0 mΩ | 12 mΩ | 4.17 | **0.208 Ω** |
 
-A switching converter is a **constant-power load**, so its incremental input
-resistance is negative:
-
-```
-R_in = −Vin² / Pin     →   −7.2 Ω at 13.8 V
-                           −1.8 Ω at 6.0 V   ← worst case, cold crank
-```
-
-The harness is an inductor — roughly 1 µH/m, so 5 µH to the battery through the
-fuse box. That inductance and the input capacitance form a filter, and
-**Middlebrook's criterion** requires the filter's output impedance to stay well
-below |R_in| or the converter oscillates against its own supply:
+Identical. Against the worst-case negative input resistance at cold crank:
 
 ```
-f0 = 1 / (2π √(5 µH × 2000 µF))          =  1.6 kHz
-Z0 = √(L/C) = √(5 µH / 2000 µF)          =  50 mΩ
+R_in = −Vin²/Pin  =  −6.0² / 4 W  =  −9 Ω      (design max 3 A → −1.8 Ω)
+f0   = 1/(2π√(5 µH · 1000 µF))  =  2.25 kHz
 ```
 
-50 mΩ against a 1.8 Ω worst-case negative resistance is a **36× margin** — but
-only if the resonance is damped. Undamped, the peak is Z0·Q.
+0.208 Ω against 1.8 Ω is **8.7× — 19 dB of Middlebrook margin** even at the
+3 A design point. The second can adds margin of zero and costs board area,
+money, and 6 ms of extra inrush through the LTC4364's pass FET.
 
-### Which is why this must not be all-ceramic
+What *does* improve damping is a proper damping branch, not more bulk.
 
-**Here, low ESR is a defect.** The optimal damping resistance is √(L/C) — the
-same 50 mΩ — and an aluminium electrolytic's own ESR lands almost exactly on
-it:
+### Ripple current is not the input constraint
 
-| Bulk choice | ESR | Q = Z0/ESR | Peak impedance |
+A SEPIC's input current is **continuous** — the source feeds an inductor, not a
+switch. That is a structural advantage over a buck, and it means the input cap
+carries only L1's ripple:
+
+```
+0.90 A pk-pk triangular  →  0.90/(2√3)  =  0.26 A rms
+```
+
+against ~3 A rms of rating on the part chosen for capacitance. Met 12× over.
+
+### Why hold-up belongs on the 6 V rail
+
+Energy per µF strongly favours the high side, since energy goes as V²:
+
+```
+input,  12 V → 3.5 V (SEPIC floor)   65.9 µJ/µF
+output,  6 V → 4.0 V (3.3 V buck)    10.0 µJ/µF     6.6× worse
+```
+
+But **energy per cm³ and per dollar favour the low side**, because the input
+cap's 50 V rating is forced by the 30 V surge and is then mostly unused at 12 V
+nominal, while a 10 V part runs at 60 % of its rating:
+
+| | Volume | Usable energy | Density |
 |---|---|---|---|
-| Ceramic / polymer | ~5 mΩ | **10** | 0.50 Ω — rings |
-| 2 × 1000 µF electrolytic | ~12 mΩ | 4.2 | 0.21 Ω — acceptable |
-| Single higher-ESR can | ~50 mΩ | **1.0** | 0.05 Ω — critically damped |
+| 1000 µF / 50 V, 18 × 20 mm | 5.09 cm³ | 0.066 J | 13.0 mJ/cm³ |
+| 3300 µF / 10 V, 10 × 20 mm | 1.57 cm³ | 0.033 J | **21.0 mJ/cm³** |
 
-The electrolytic is doing two jobs, and the second one is invisible on a BOM.
-Substituting "better" low-ESR parts later is a real way to break a working
-board — worth a note on the schematic.
+**And on the output the capacitors are needed anyway.** A SEPIC's output
+current is *discontinuous* — the diode conducts only during off-time — so Cout
+carries real ripple:
 
-At −40 °C electrolytic ESR rises severalfold, which **over**-damps. Harmless
-here, and the added loss is 0.26² × 0.2 Ω ≈ 13 mW.
+```
+Irms = Iout · √(D/(1−D))
+
+   3 A design point, D = 0.52 (cold crank)    3.12 A rms   ← sizes the bank
+   0.65 A actual load, D = 0.52               0.68 A rms
+```
+
+Size the 6 V bank for its ripple rating and the hold-up arrives free:
+
+```
+2 × 3300 µF, 6 V → 4 V:   ½ × 6600 µF × (36 − 16)  =  0.066 J
+   at 0.7 W after load shed                        ≈  94 ms
+   at 4 W actual full load                         ≈  17 ms
+```
+
+94 ms covers the ~100 ms SD flush that
+[`power-supply-super-cap.md`](power-supply-super-cap.md) sized at 0.07 J. The
+requirement is met by capacitors that had to be there regardless.
+
+### What hold-up is *not* for
+
+Not cranking. The SEPIC runs down to **3.5 V input**, so a starter dip to 6 V
+is not a brownout for this design — it is normal operation. Bulk capacitance
+covers the gaps the topology cannot: contact bounce, an intermittent terminal,
+and the shutdown flush. Sizing it as if it had to carry a crank is what
+produced the 2000 µF figure.
 
 ### Parts
 
 | Ref | Part | Why |
 |---|---|---|
-| C_in1,2 | **2 × 1000 µF / 50 V, 105 °C, low-impedance radial** | exactly 2000 µF, splits ripple, lower profile than one 2200 µF can |
-| — | Panasonic FR / Nichicon UPW class, 10,000 h at 105 °C | −40 °C rated, long life is the wear-out item here |
-| C_hf | 2 × 10 µF X7R / 50 V + 100 nF, at the SEPIC pin | HF decoupling the electrolytic cannot do at 2.2 MHz |
-| R_d + C_d | **0.1 Ω 1 W in series with 220 µF — stuff option** | populate only if the input rings; leave the footprint |
+| C_in | **1 × 1000 µF / 50 V, 105 °C low-impedance radial** | filter damping — 50 V is 40 % derating on the 30 V clamp |
+| C_out | **2 × 3300 µF / 10 V, 105 °C low-impedance** | 3.1 A rms ripple; hold-up is the by-product |
+| C_hf | 2 × 10 µF X7R/50 V in, 4 × 22 µF X7R/16 V out, + 100 nF | the 2.2 MHz content no electrolytic can carry |
+| R_d + C_d | 0.1 Ω 1 W + 220 µF — **stuff option** | populate only if the input rings; leave the footprint |
 
-50 V against a 30 V clamp is 40 % derating, which is what electrolytic life
-actually responds to.
+Panasonic FR / Nichicon UPW class, 10,000 h at 105 °C, −40 °C rated. **Do not
+substitute low-ESR polymer or ceramic for C_in** — ESR is doing the damping
+there, and 5 mΩ would raise Q to 14.
 
-### Two things that will bite during bring-up
+### Three things that will bite during bring-up
 
-1. **The LTC4364 fault timer must outlast the inrush.** Charging 2000 µF at a
-   2 A limit takes `t = CV/I = 12 ms`, with the pass FET in linear mode
-   dissipating ~12 W for that time (0.14 J — inside SOA for an 80 V part, but
-   check it). If the TMR capacitor is set shorter than 12 ms the supply
-   **faults every key-on** and it will look like a broken design.
+1. **The LTC4364 fault timer must outlast the inrush.** 1000 µF at a 2 A limit
+   is `t = CV/I` = **6 ms**, pass FET dissipating ~12 W in linear mode (0.07 J,
+   inside SOA for an 80 V part — still check it). Set the TMR capacitor shorter
+   and the supply **faults every key-on**, which will look like a broken board.
 
-2. **A current-limited bench supply will trip on 2000 µF.** Bring it up with
-   the supply's current limit raised, or ramp the voltage from zero, or let the
-   LTC4364 do the soft-start. This is the first thing to hit on the bench and
-   it is not a fault.
+2. **A current-limited bench supply will trip on the inrush.** Raise the limit,
+   ramp from zero, or let the LTC4364 soft-start do it. Not a fault.
+
+3. **6600 µF on the output invalidates the designed loop.** It drops the output
+   pole by more than an order of magnitude. For a SEPIC that is broadly
+   stabilising — the RHP zero caps bandwidth anyway — but the compensation
+   numbers must be recomputed against the actual Cout before trusting them, and
+   transient response will be slow.
 
 ## What actually determines reliability here
 
 Topology is not the risk. Beyond the input chain above:
 
 - **Cold-crank ride-through** — carried by the SEPIC running down to 3.5 V,
-  not by capacitance. See [input bulk](#input-bulk-capacitance--2000-µf) for
+  not by capacitance. See [input bulk](#input-bulk-capacitance--1000-µf-in-hold-up-on-the-6-v-side) for
   why the two are often confused.
 - **Thermal design at the top of the input range.** The worst case for a
   switcher is not cranking; it is 14 V continuous, forever, at whatever the
