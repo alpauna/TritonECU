@@ -748,10 +748,44 @@ It works, with about 0.4 V of margin at the very bottom in a stacked worst case.
 [`power-supply.md`](power-supply.md) should quote **~4.4 V at the battery
 terminal**, not the SEPIC's 3.5 V.
 
-**[verify]** the equivalent HGATE spec. DGATE drives Q2, which is only ever
-fully on or off; HGATE drives Q1, which is actively regulated during clamping,
-so its full-enhancement figure needs reading separately even though it is likely
-the same charge pump.
+### The absolute maximum contradicts the drive spec — and that is the useful part
+
+```
+Absolute Maximum:   DGATE, HGATE .... SOURCE − 0.3 V to SOURCE + 10 V   (Note 3)
+Electrical Char.:   DGATE − SOURCE ... 10 V min / 12 V typ / 16 V max
+```
+
+**The typical drive exceeds the absolute maximum.** That is not an error in the
+datasheet — it is the standard pattern where **absolute maxima apply to
+externally applied voltages**, while the part's own charge pump is exempt
+because it is internally limited. **[verify] Note 3** to confirm that wording,
+because everything below depends on it.
+
+Two consequences, and the second is the one that changes the schematic:
+
+**1. The FET rating is still set by 16 V, not 10 V.** The chip drives to 16 V
+max, so V<sub>GS(max)</sub> ≥ 20 V remains the criterion. IRF540N ✓.
+
+**2. Nothing external may force these pins.** The 10 V limit is a real
+constraint on anything *we* connect:
+
+- **No gate-source Zener.** Standard practice on a discrete gate driver, wrong
+  here — a 12 V clamp fights the charge pump, and a 10 V one prevents full
+  enhancement at exactly the moment R<sub>DS(on)</sub> matters.
+- **No pull-up or pull-down to a rail.**
+- **A slew capacitor, if one were ever fitted, goes HGATE-to-SOURCE, never
+  HGATE-to-GND.** SOURCE moves with the input; a capacitor referenced to ground
+  would let that movement drive V<sub>GS</sub> outside the −0.3 V / +10 V window
+  during a transient, which is precisely the failure this rating exists to
+  prevent.
+
+That last point is a third reason the HGATE slew capacitor proposed earlier
+stays dropped — it was already unnecessary once C8 grew, and it would have to be
+referenced carefully if it ever came back.
+
+**HGATE and DGATE share this rating**, so the Q1 side is covered by the same
+answer as Q2: the charge pump fully enhances an IRF540N (V<sub>GS(th)</sub>
+2.0–4.0 V) at every input above the 4.2 V cutoff.
 
 ### Setting the current limit — 4 A is right, but not for the reason it looks like
 
