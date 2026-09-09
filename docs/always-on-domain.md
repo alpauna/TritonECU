@@ -245,7 +245,12 @@ The 100 nF matters: a 10 µF ceramic self-resonates near 1.6 MHz, so above that
 it is inductive and its own ESL sets the floor. The small cap carries the high
 end.
 
-### If the pi filter is used anyway, check its resonance
+**Firmware consequence: allow ~10 ms after enabling the reference** before the
+first valid conversion. `5 × RC = 5 ms` for the input to settle, plus the
+reference's own turn-on time. Since the reference is gated for sleep (below),
+that delay lands at key-on, where 10 ms is nothing against an engine start.
+
+### If a pi filter is used instead, check its resonance
 
 A ferrite is the right choice over a wound inductor there — it is lossy, so the
 LC is damped rather than peaking. But it is not fully damped:

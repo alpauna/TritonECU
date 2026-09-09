@@ -1,5 +1,47 @@
 # Power supply
 
+> ## STATUS: superseded in part — the SEPIC is retired
+>
+> **Decided 2026-09-08.** The LM5155-Q1 SEPIC described below has been replaced
+> by two integrated switchers:
+>
+> ```
+> B+ ─ TVS ─ LTC4364 ─► MAX25239 (5.0 V fixed) ─┬─► TLV62085 ──► 3.3 V
+>                                                ├─► 2.5 V reference (gated)
+>                                                └─► VREF via current-limited load switch
+> ```
+>
+> See [`always-on-domain.md`](always-on-domain.md) for the current architecture.
+> What follows is still the reference for the **input chain** (LTC4364, TVS,
+> fusing) and for the reasoning behind the rail structure, current budget and
+> EMC choices — all of which carried forward. The SEPIC-specific sections
+> (topology, magnetics, Cs, compensation, 2.2 MHz layout) no longer describe
+> what is being built.
+>
+> ### What retiring the SEPIC removes
+>
+> | | |
+> |---|---|
+> | External 80 V MOSFET, 80 V Schottky | gone |
+> | 2 × 3.3 µH inductors | gone — one 2.2 µH per converter |
+> | Coupling cap Cs at 2.1 A rms | gone |
+> | SEPIC compensation | replaced by the MAX25239's COMP network, with datasheet values |
+> | 2.2 MHz hot-loop layout | mostly gone — the loop is inside the package |
+> | 6.0 V main rail | **5.0 V**, since there are no LDOs needing headroom |
+>
+> ### And it simplifies ENOUT
+>
+> [`schematic-review-power.md`](schematic-review-power.md) §9 specified a
+> 100 kΩ / 61.9 kΩ divider so the LM5155-Q1's EN pin would see a safe voltage at
+> the 27 V clamp. **The MAX25239's EN is rated to 42 V**, above the clamp, so
+> the divider is unnecessary: **100 kΩ from VIN to EN, with ENOUT tied to EN.**
+> One resistor.
+>
+> The MAX25239's EN is a logic threshold (~1.8 V), not a precision reference, so
+> it cannot set input UVLO — which does not matter, because the LTC4364's 4.47 V
+> UV already does.
+
+
 > **Alternative under consideration:** replacing the SEPIC with a plain buck
 > plus a supercapacitor bank on its input — see
 > [`power-supply-super-cap.md`](power-supply-super-cap.md). Preliminary only;
