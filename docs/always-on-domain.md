@@ -617,6 +617,170 @@ Place the reference, its RC and its output caps all on the **analog side** of
 the section ferrite, so this filtering cascades with that rather than duplicating
 it.
 
+### DECIDED: ADR431BRZ (2.5 V, SOIC-8)
+
+Datasheet:
+[`Datasheets/ADR430_431_433_434_435.pdf`](Datasheets/ADR430_431_433_434_435.pdf).
+
+| | ADR431B |
+|---|---|
+| Output | 2.500 V, **±1 mV** initial (±0.04 %) |
+| Tempco | **3 ppm/°C** |
+| Noise | 3.5 µV p-p (0.1–10 Hz), 80 nV/√Hz at 1 kHz |
+| Output current | **30 mA source**, 20 mA sink |
+| Quiescent | 580 µA typ, **800 µA max** |
+| **Supply range** | **4.5 V to 18 V**, headroom V<sub>IN</sub> − V<sub>OUT</sub> ≥ **2 V** |
+| Long-term stability | 40 ppm / 1000 h |
+| Pins | 2 VIN, 4 GND, 5 TRIM, 6 VOUT, **7 COMP** |
+
+### Correction: I overstated the drift benefit earlier
+
+An earlier revision claimed the AD7606's internal reference costs "3.5 % on a
+narrowband HO2S". **That was wrong** — it treated a reference error as a
+full-scale offset. A reference error is a **gain** error, so it scales with the
+reading, not with the range:
+
+| | Drift over −40…+125 °C | Gain error |
+|---|---|---|
+| AD7606 internal, ~10 ppm/°C | 1650 ppm | **0.165 %** |
+| ADR431B, 3 ppm/°C | 495 ppm | **0.05 %** |
+
+On a 450 mV HO2S that is 0.74 mV versus 0.22 mV. Both are small. The ADR431 is
+a 3.3× improvement on a term that was already minor.
+
+**The real wins are elsewhere:** ±1 mV initial accuracy against the internal
+reference's typical ±0.1–0.2 %, plus 40 ppm/1000 h long-term stability and
+3.5 µV p-p noise — which is 1.4 ppm, or 14 µV on a 10 V reading, comfortably
+under a 305 µV LSB.
+
+### The 10 µF question is answered — and it needs the COMP network
+
+The open item was whether the reference is stable driving the 10 µF at REFIN.
+The datasheet answers both halves:
+
+> *Other than a 0.1 µF capacitor at the output to help improve noise
+> suppression, **a large output capacitor at the output is not required for
+> circuit stability**.*
+
+So it is stable either way. But large capacitance is not free:
+
+> *…references are used increasingly to drive the reference input of an ADC that
+> may present a dynamic, switching capacitive load. **Large capacitors, in the
+> microfarad range, reduce the change in reference voltage to less than one-half
+> LSB**.*
+>
+> *…With various values of capacitive loading, the **predicted noise peaking
+> becomes evident**.*
+>
+> *The **82 kΩ resistor and 10 nF capacitor** eliminate noise peaking. Leave the
+> COMP pin unconnected if unused.*
+
+ADI explicitly endorses microfarad-range output capacitance for driving an ADC
+reference input — which is exactly the AD7606 charge-kick problem — and gives
+the fix for the noise peaking it causes.
+
+**Fit all three: 10 µF + 100 nF at REFIN, and 82 kΩ + 10 nF on COMP.** The COMP
+network is easy to leave off, since the part works without it and the penalty is
+noise rather than oscillation.
+
+### Change the input filter to 47 Ω / 22 µF
+
+The **4.5 V minimum supply** is the tightest spec in the part, against a 5 V
+rail set by a 1 % divider and a ±1.75 % feedback reference:
+
+```
+5 V rail, worst-case low                        4.836 V
+100 Ω × 800 µA (the earlier value)             −0.080 V  →  4.756 V, 256 mV margin
+ 47 Ω × 800 µA                                 −0.038 V  →  4.798 V, 298 mV margin
+```
+
+**47 Ω with 22 µF** holds the same corner — `1/(2π·47·22 µF)` = **154 Hz**
+against the 159 Hz of 100 Ω / 10 µF — while halving the drop. Same attenuation,
+more headroom, no downside. Keep the 100 nF alongside.
+
+### Gating is confirmed necessary
+
+The pinout is DNC / VIN / NIC / GND / TRIM / VOUT / COMP / DNC — **there is no
+enable pin**. At 800 µA maximum it would take the sleep budget from 945 µA to
+1745 µA, nearly doubling it, for a part that is only useful while converting.
+
+**External load switch, GPIO-driven.** And leave TRIM unconnected: ±1 mV initial
+accuracy is already 0.04 %, so there is nothing worth trimming.
+
+### Settling: the 10 ms guidance holds
+
+```
+input RC        5 × 47 Ω × 22 µF        = 5.2 ms   ← dominant
+10 µF at 30 mA source                   = 0.8 ms
+reference turn-on, CL = 0               =  10 µs
+```
+
+About 6 ms total, so **10 ms after enabling before the first valid conversion**
+stands.
+
+### Filtering the reference — RC beats an LC pi here
+
+Filtering its input is correct: a reference's PSRR is strong at DC and poor by
+2 MHz, which is exactly where both switchers live.
+
+But at 950 µA of supply current with 2.5 V of headroom to spare, **a series
+resistor outperforms a ferrite**:
+
+```
+R = 100 Ω, C = 10 µF ∥ 100 nF
+
+corner        1 / (2π × 100 × 10 µF)          =  159 Hz
+attenuation   at 2.1 MHz, ESL-limited          ≈  78 dB
+cost          950 µA × 100 Ω                   =  95 mV
+headroom left 5.0 − 0.095 = 4.9 V, against ~3.0 V needed   ✓
+```
+
+**No resonance, no ferrite to characterise, two components.**
+
+The 100 nF matters: a 10 µF ceramic self-resonates near 1.6 MHz, so above that
+it is inductive and its own ESL sets the floor. The small cap carries the high
+end.
+
+**Firmware consequence: allow ~10 ms after enabling the reference** before the
+first valid conversion. `5 × RC = 5 ms` for the input to settle, plus the
+reference's own turn-on time. Since the reference is gated for sleep (below),
+that delay lands at key-on, where 10 ms is nothing against an engine start.
+
+### If a pi filter is used instead, check its resonance
+
+A ferrite is the right choice over a wound inductor there — it is lossy, so the
+LC is damped rather than peaking. But it is not fully damped:
+
+```
+typical bead ≈ 1 µH at low frequency, with C = 1 µF
+f0 = 1 / (2π √(1 µH × 1 µF))  =  159 kHz
+```
+
+**That is inside the range both converters actually visit.** The MAX25239 in
+skip mode and the TLV62085 in Power Save Mode both drop their switching
+frequency at light load, which is precisely the always-on sleep condition. A
+filter that peaks where the supply is noisiest is worse than no filter.
+
+Fix either way: **put 10 Ω in series with the bead**. It damps the resonance,
+costs 9.5 mV, and adds attenuation. Or move `f0` well below the PSM range with a
+larger output capacitor.
+
+### The output side matters more than the input
+
+The AD7606 is a SAR converter, so **REFIN sees charge kicks on every
+conversion**, not a steady load. Two things follow:
+
+- Put **10 µF + 100 nF right at the REFIN pin**, short traces. This is the
+  decoupling that actually sets reference settling between samples, and no
+  amount of input filtering substitutes for it.
+- **Confirm the reference is stable driving that capacitance.** Some precision
+  references oscillate into large ceramic loads, and the ones that do not
+  usually say so explicitly. Check before committing to the part.
+
+Place the reference, its RC and its output caps all on the **analog side** of
+the section ferrite, so this filtering cascades with that rather than duplicating
+it.
+
 ### Budget the reference's supply current — it can double the parked drain
 
 Precision references are not low-power parts:
