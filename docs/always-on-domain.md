@@ -153,6 +153,142 @@ Datasheet: [`Datasheets/TLV62085RLTR-Datasheet.pdf`](Datasheets/TLV62085RLTR-Dat
 | Package | VSON-HR (RLT), **2 × 2 mm**, 7 pins |
 | Temperature | −40 to +125 °C |
 
+### All-switched settles the rail voltage: use the fixed 5.0 V option
+
+**Decided: two switched rails, no LDOs.** That removes the constraint that
+forced 6 V in the first place — [`power-supply.md`](power-supply.md) chose 6 V
+purely to give the 5 V LDOs headroom, and with no LDOs there is nothing to give
+headroom to.
+
+```
+6.0 V nominal → TLV62085 sees 6.12 V at +2 %   over its 6.0 V rating   ✗
+5.5 V nominal → 5.61 V                          7 % margin             ✓
+5.0 V fixed   → 5.10 V                          18 % margin            ✓✓
+```
+
+**Use MAX25239AFFA's fixed 5.0 V option.** It is factory-trimmed to ±2 %, needs
+no feedback divider, and gives the TLV62085 real input margin. The adjustable
+mode is no longer needed anywhere.
+
+### But VREF still needs isolation — a load switch, not an LDO
+
+Dropping the LDOs drops two things that were doing real work, and only one of
+them was headroom.
+
+**A harness short on VREF now pulls down the same 5 V rail that feeds the
+AD7606 and both MAX9926s.** A chafed TPS wire would take out crank and cam
+conditioning — the engine stops. That is the failure
+[`vref-supply.md`](vref-supply.md) exists to prevent.
+
+**Use a current-limited load switch** rather than an LDO. It keeps the
+all-switched character — a FET at tens of milliohms, not a linear drop — while
+providing an electronic current limit and a fault flag. VREF stays at the rail
+voltage; the ADC and the VR conditioners stay up when the harness faults.
+
+### And put a ferrite between the analog and digital sections
+
+The other LDO job was keeping the AD7606 and MAX9926s off the rail that feeds
+the 74HCT541 gating eight ignition coils. On one rail, replace that split with a
+**ferrite bead plus local bulk** at the analog section. Switching and gate-drive
+noise is above 1 MHz, where a ferrite works well, and the AD7606's own 22 kHz
+anti-alias filter catches what gets through. Not as good as an LDO's PSRR, good
+enough here.
+
+## The 2.5 V ADC reference
+
+Right call — an external reference on the AD7606's REFIN beats the internal one
+on drift, which is the term that matters over a −40 to +125 °C ECU:
+
+```
+AD7606 internal   ~10 ppm/°C  →  ~1650 ppm over range  =  16 mV on ±10 V
+ADR4525            2 ppm/°C   →  ~330 ppm              =   3.3 mV
+```
+
+16 mV is nothing on a MAP sensor and **3.5 % on a narrowband HO2S switching
+around 450 mV** — which lands directly in fuel trim. That is what buys the part.
+
+### It fixes absolute accuracy, not ratiometric accuracy
+
+Worth being precise, because this is easy to conflate:
+
+| Measurement | Tracks | Improved by a 2.5 V reference? |
+|---|---|---|
+| HO2S, absolute voltages | ADC reference | **yes** |
+| TPS, MAP, three-wire sensors | **VREF** | **no** |
+
+Ratiometric sensors report a fraction of VREF, so their accuracy depends on
+VREF, not on the ADC's reference. **Sample VREF on an ADC channel and divide** —
+with the AD7606 sampling simultaneously, VREF and the sensor are captured at the
+same instant, so supply ripple cancels exactly. That is worth more than any
+regulator on VREF, and it is free.
+
+### Budget the reference's supply current — it can double the parked drain
+
+Precision references are not low-power parts:
+
+| Part | Drift | Supply current |
+|---|---|---|
+| ADR4525 | 2 ppm/°C | **950 µA** |
+| ADR3425 | 8 ppm/°C | 100 µA |
+| REF3025 | 75 ppm/°C | 42 µA |
+
+**950 µA would more than double the 875 µA sleep budget** for a part that is
+only useful while the engine runs. **Gate it** — a GPIO-driven load switch, or a
+reference with a shutdown pin — and keep the good drift spec. Do not compromise
+to 75 ppm/°C to save current that switching off saves anyway.
+
+### Revised drain budget
+
+| Item | Sleep current |
+|---|---|
+| LTC4364 quiescent | 750 µA |
+| MAX25239 #1, 3.3 V, skip mode | **95 µA** |
+| MAX25239 #2, 6 V rail, EN low | **5 µA** |
+| STM32F767 Standby + backup SRAM | 3 µA |
+| **Total** | **≈ 853 µA** → 0.61 Ah/month |
+
+Unchanged conclusion: comfortable, and still dominated by the LTC4364.
+
+### Package is the practical objection
+
+**FC2QFN, 4.25 × 4.25 mm, 22 pins** — flip-chip QFN, no visible joints, not
+hand-solderable. That is a real problem for bench work.
+
+**MAX25239EAFNA/VY+** is the same silicon and same options (8.2 A, <6.5 V adj,
+2100 kHz) in an **18-pin FCQFN at 5.00 × 5.00 mm** — fewer, larger pads.
+Prefer it for anything hand-assembled.
+
+## Architecture: cascade, not two independent rails
+
+**Decided:** MAX25239 makes the main rail, TLV62085 makes 3.3 V from it.
+
+```
+B+ ─ TVS ─ LTC4364 ─► MAX25239 ─► 5.5 V ─┬─► TLV62085 ──► 3.3 V   (MCU, SD, peripherals)
+                       (always on)        ├─► LDO ───────► 5 V digital
+                                          ├─► LDO ───────► 5 V analog
+                                          └─► LDO ───────► 5.00 V VREF
+```
+
+This replaces the earlier "two independent 3.3 V rails" sketch. Both converters
+stay powered when parked; the MCU's Standby mode does the saving.
+
+### TLV62085RLTR
+
+Datasheet: [`Datasheets/TLV62085RLTR-Datasheet.pdf`](Datasheets/TLV62085RLTR-Datasheet.pdf).
+
+| | |
+|---|---|
+| Input | **2.5 V to 6.0 V** ← the number that sets the main rail |
+| Output | 0.8 V to V<sub>IN</sub>, adjustable, **3 A** |
+| Switching | 2.4 MHz (DCS-Control, load-dependent) |
+| **Quiescent** | **17 µA** no load |
+| Shutdown | **0.7 µA**, EN low |
+| Light load | **Power Save Mode**, automatic |
+| Dropout | **100 % duty cycle** capable |
+| Fault | **Hiccup short-circuit protection** |
+| Package | VSON-HR (RLT), **2 × 2 mm**, 7 pins |
+| Temperature | −40 to +125 °C |
+
 ### Set the main rail at 5.5 V, not 6.0 V
 
 The TLV62085's **6.0 V absolute input maximum** collides with the 6 V main rail
