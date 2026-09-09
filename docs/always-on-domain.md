@@ -222,6 +222,64 @@ with the AD7606 sampling simultaneously, VREF and the sensor are captured at the
 same instant, so supply ripple cancels exactly. That is worth more than any
 regulator on VREF, and it is free.
 
+### Filtering the reference — RC beats an LC pi here
+
+Filtering its input is correct: a reference's PSRR is strong at DC and poor by
+2 MHz, which is exactly where both switchers live.
+
+But at 950 µA of supply current with 2.5 V of headroom to spare, **a series
+resistor outperforms a ferrite**:
+
+```
+R = 100 Ω, C = 10 µF ∥ 100 nF
+
+corner        1 / (2π × 100 × 10 µF)          =  159 Hz
+attenuation   at 2.1 MHz, ESL-limited          ≈  78 dB
+cost          950 µA × 100 Ω                   =  95 mV
+headroom left 5.0 − 0.095 = 4.9 V, against ~3.0 V needed   ✓
+```
+
+**No resonance, no ferrite to characterise, two components.**
+
+The 100 nF matters: a 10 µF ceramic self-resonates near 1.6 MHz, so above that
+it is inductive and its own ESL sets the floor. The small cap carries the high
+end.
+
+### If the pi filter is used anyway, check its resonance
+
+A ferrite is the right choice over a wound inductor there — it is lossy, so the
+LC is damped rather than peaking. But it is not fully damped:
+
+```
+typical bead ≈ 1 µH at low frequency, with C = 1 µF
+f0 = 1 / (2π √(1 µH × 1 µF))  =  159 kHz
+```
+
+**That is inside the range both converters actually visit.** The MAX25239 in
+skip mode and the TLV62085 in Power Save Mode both drop their switching
+frequency at light load, which is precisely the always-on sleep condition. A
+filter that peaks where the supply is noisiest is worse than no filter.
+
+Fix either way: **put 10 Ω in series with the bead**. It damps the resonance,
+costs 9.5 mV, and adds attenuation. Or move `f0` well below the PSM range with a
+larger output capacitor.
+
+### The output side matters more than the input
+
+The AD7606 is a SAR converter, so **REFIN sees charge kicks on every
+conversion**, not a steady load. Two things follow:
+
+- Put **10 µF + 100 nF right at the REFIN pin**, short traces. This is the
+  decoupling that actually sets reference settling between samples, and no
+  amount of input filtering substitutes for it.
+- **Confirm the reference is stable driving that capacitance.** Some precision
+  references oscillate into large ceramic loads, and the ones that do not
+  usually say so explicitly. Check before committing to the part.
+
+Place the reference, its RC and its output caps all on the **analog side** of
+the section ferrite, so this filtering cascades with that rather than duplicating
+it.
+
 ### Budget the reference's supply current — it can double the parked drain
 
 Precision references are not low-power parts:
