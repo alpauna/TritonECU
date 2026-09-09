@@ -303,6 +303,68 @@ Designing there costs transient response at 13.8 V, and buys one compensation
 network that is stable across the entire range. The datasheet's guidance, and
 the right trade for a vehicle.
 
+## SPS: yes, enable spread spectrum — but tie it to VCC, not 5 V
+
+### ⚠ SPS is a 2.2 V pin
+
+```
+Absolute Maximum:   VCC, SPS to AGND ............ −0.3 V to +2.2 V
+                    COMP, FB to AGND ............ −0.3 V to VCC + 0.3 V
+```
+
+**"Tie SPS high" means the VCC pin — the internal ~1.8 V bias regulator with its
+4.7 µF cap — not the 5 V rail.** Strapping it to 5 V destroys the part. EN is
+the exception in this pinout, rated to 42 V; SPS, COMP and FB are all
+VCC-referenced.
+
+Easy mistake, and there is no second chance on a flip-chip QFN.
+
+### Why enable it
+
+**It costs nothing on the constraint that chose 2.1 MHz in the first place:**
+
+```
+2.1 MHz ± 6 %  =  1.974 – 2.226 MHz
+AM band top    =  1.710 MHz
+```
+
+The whole spread stays clear of the AM band, with 264 kHz to spare at the bottom.
+Spread spectrum does not create energy below the lower edge, so nothing lands in
+the band. In exchange it takes **10–20 dB off peak emissions** — which is the
+entire reason the frequency was pushed to 2.1 MHz.
+
+### And it costs nothing at the ADC either
+
+The obvious objection is that smearing the ripple spectrum makes it harder to
+filter deterministically. The numbers say it does not matter:
+
+```
+AD7606 anti-alias filter        22 kHz
+switching                      2.1 MHz, 95× above  →  ~40 dB
+10 mV rail ripple              →  ~100 µV at the ADC input
+±10 V range, 16 bit            305 µV/LSB          →  0.3 LSB
+```
+
+Below a bit either way, spread or not. And the TLV62085's DCS-Control is not
+fixed-frequency to begin with, so there is no clean beat tone being preserved by
+leaving SPS off.
+
+### Make it a strap, not a hard connection
+
+A 0 Ω to VCC or to AGND, so the choice can be reversed after bench EMI
+measurements without cutting the board.
+
+### Two things to check on the bench
+
+- **The modulation rate is not specified.** If it falls inside the 51 kHz loop
+  bandwidth the loop would track it and put ripple at that rate on the output.
+  For a current-mode converter, frequency modulation barely moves the DC
+  transfer function, so this is normally a non-issue — but compare output ripple
+  with SPS high and low during bring-up, since it is a two-minute check.
+- **Internal spread spectrum is disabled when synced to an external clock.** If
+  the two converters are ever PLL-synced, SPS becomes moot and the modulation
+  would have to come from the driving clock instead.
+
 ## The 2.5 V ADC reference
 
 Right call — an external reference on the AD7606's REFIN beats the internal one
