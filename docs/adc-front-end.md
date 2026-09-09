@@ -1,4 +1,15 @@
-# Analog front end — AD7606C-16
+# Analog front end — AD7606B
+
+> **Corrected 2026-09-09.** This document was headed "AD7606C-16" while its own
+> §"Verdict at a 10× price difference" concludes the opposite — *"the ECU should
+> take the B-series part now"*, at roughly $5.60 against $55, with the C-series
+> reserved for the scope project. The title and the build-facing references were
+> wrong; the analysis was right. References to the AD7606C in the comparison
+> tables below are deliberate and stay.
+>
+> **Nothing electrical changes.** Both use a **2.5 V** reference, so the
+> MAX6070AAUT25 selected in [`always-on-domain.md`](always-on-domain.md) is
+> correct either way, as is the ±10 V scaling and the ±16.5 V clamp assumption.
 
 The part is already on hand, wired to the Teensy 4.1 in
 `~/Claude/LxScanner/firmware-teensy` as a bench scope. The driver here is a
@@ -11,7 +22,7 @@ unchanged because they were proven on hardware.
 Eleven signals plus power. The Teensy build runs VDRIVE at 3.3 V, and the P4 is
 also 3.3 V, so **no level shifting is needed** — this is a wire-for-wire move.
 
-| AD7606C signal | Teensy 4.1 | → ESP32-P4 | Notes |
+| AD7606B signal | Teensy 4.1 | → ESP32-P4 | Notes |
 |---|---|---|---|
 | SCLK | 13 | **27** | Teensy 13 is also its onboard LED |
 | DOUTA (MISO) | 12 | **33** | |
@@ -60,7 +71,7 @@ See `1999-Ford-F150-4wd-5.42v/oem-connectors.md`.
 
 ## Why channel 7 is spent on VREF
 
-The AD7606C measures against its own internal 2.5 V reference. Every
+The AD7606B measures against a 2.5 V reference. Every
 three-wire sensor on the truck is **ratiometric to VREF** — a TPS reports a
 *fraction* of VREF, not an absolute voltage. The two references are unrelated,
 so a 1 % VREF error reads as a 1 % throttle error.

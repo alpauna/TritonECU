@@ -163,7 +163,7 @@ the star point.
 ## If 3 A is still wanted
 
 It is a reasonable spec for a **general isolated 5 V rail** that also feeds the
-AD7606C analog supply, the J1850 transceiver and any level shifting. If that is
+AD7606B analog supply, the J1850 transceiver and any level shifting. If that is
 the intent, the answer is the same diagram: build the rail at 3 A, and still
 current-limit each VREF feed at ~150 mA on its way out of the box.
 

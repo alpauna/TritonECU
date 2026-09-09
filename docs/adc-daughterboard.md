@@ -1,6 +1,6 @@
 # ADC daughterboard
 
-**Decided 2026-09-09.** The AD7606C-16, its reference and the analog front end
+**Decided 2026-09-09.** The AD7606B, its reference and the analog front end
 move to a separate board, joined to the carrier by a board-to-board connector.
 
 ## Be honest about which argument justifies it
@@ -50,7 +50,7 @@ carrier's placement is fixed — it is not something to retrofit.
 
 | On the daughterboard | Why |
 |---|---|
-| **AD7606C-16** + REFIN caps | the reason for the board |
+| **AD7606B** + REFIN caps | the reason for the board |
 | **MAX6070** + C<sub>FILTER</sub>, input RC, OUTS tap | must be within ~10 mm of REFIN |
 | **Input scaling and protection** for every analog channel | the dividers and clamps belong with the converter, not across a connector |
 | **MAX9926 ×2** (crank and cam VR) | small differential signals; losing them stops the engine. Their outputs are comparator-level and cross a connector safely |
@@ -110,7 +110,7 @@ The payoff is rejecting the **ground offset between the ECU and the sensor**,
 which in a vehicle is tens to hundreds of millivolts under starter, coil and
 alternator current — easily larger than the measurement resolution.
 
-### ⚠ [verify] how differential the AD7606C's VxGND pins actually are
+### ⚠ [verify] how differential the AD7606B's VxGND pins actually are
 
 This decides how much the second wire buys:
 
