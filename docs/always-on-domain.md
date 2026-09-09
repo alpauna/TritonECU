@@ -681,6 +681,49 @@ drop at 360 µA (260 µA max quiescent + ~100 µA REFIN)  =  79 mV
 that 85 dB is specified at — it will be far lower than 2.4 MHz — but the RC is
 belt-and-braces for 79 mV either way.
 
+### Output capacitance: 4.7 µF **and** 100 nF
+
+```
+Capacitive-Load Stability Range, IOUT ≤ 10 mA .... 0.1 µF to 10 µF
+```
+
+**0.1 µF is the minimum, not a nominal.** 100 nF alone technically satisfies the
+part, but it puts the design on the boundary — and a 100 nF 0603 X7R at 2.5 V
+bias is not 100 nF, so the real value could land under it. 4.7 µF + 100 nF gives
+4.8 µF, comfortably mid-range and well under the 10 µF ceiling.
+
+Each capacitor is doing a different job:
+
+| | Job |
+|---|---|
+| **4.7 µF** | stability margin, and the charge reservoir for the AD7606's SAR demand |
+| **100 nF** | the decade above the 4.7 µF's self-resonance, where the bulk part is inductive |
+
+**Why the bulk is needed at all.** A reference has to hold within ½ LSB *during*
+a conversion and recover between them. ½ LSB at 16 bits is 7.6 ppm of 2.5 V =
+**19 µV**, so the charge the ADC pulls has to move the rail less than that. In
+the microfarad range it does; at 100 nF it would not. This is the same reasoning
+ADI gives for the ADR43x — *"large capacitors, in the microfarad range, reduce
+the change in reference voltage to less than one-half LSB"* — and it is why
+every reference-to-ADC application note lands on microfarads rather than the
+0.1 µF a regulator would want.
+
+**Placement:** put both at the **AD7606's REFIN pin**, not at the reference,
+with a short trace back to OUTF. The charge demand is at the ADC end; the
+reference only has to see the bank as its load capacitance, which it does either
+way.
+
+**Do not confuse this with C<sub>FILTER</sub>.** The 0.1 µF on pin 1 sets the
+part's internal noise filter and is a separate component with a separate job.
+
+Use a **16 V or 25 V X7R** for the 4.7 µF — at 2.5 V bias a 6.3 V part can lose
+30 %, and while 3.3 µF effective is still inside the stability range, there is no
+reason to spend the margin.
+
+**[verify] the AD7606 datasheet's own REFIN decoupling recommendation.** If ADI
+specifies a value for that part it governs, and 4.7 µF here is reasoned from the
+½ LSB argument rather than read from the converter's own datasheet.
+
 ### Pinout and settling
 
 ```
