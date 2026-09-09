@@ -76,6 +76,72 @@ carrier's placement is fixed — it is not something to retrofit.
 is 5–20 nH. **Use many ground pins, interleaved between signals**, not a row of
 grounds at one end — the return path wants to be adjacent to its signal.
 
+## Connector split: 3.3 V digital on one, 5 V analog on the other
+
+**Decided.** Connector 1 carries digital signals and DGND; connector 2 carries
+the 5 V rail, AGND and the analog inputs. Grouping by voltage domain keeps 3.3 V
+logic edges physically away from 0–5 V sensor signals, which is the crosstalk
+that matters.
+
+### Having separated physically, do not split the plane internally
+
+**One solid ground plane on the daughterboard**, with the ground pins of *both*
+connectors tied to it. The temptation after splitting the connectors is to split
+AGND and DGND on the board too and join them at one point — **that re-creates
+the exact problem the daughterboard exists to avoid.**
+
+The daughterboard *is* the analog domain. Return current from the SPI lines will
+find its way back through connector 1's ground pins because that is the
+lowest-inductance path adjacent to those signals, and analog return through
+connector 2's, without anyone designing it. A split plane forces both through
+one tie and puts digital return current under the analog section to get there.
+
+**Interleave ground pins between signals on both connectors**, not grouped at
+one end.
+
+## Differential sensor returns
+
+Carrying **+ and − all the way to the sensor** is right, and it is what the OEM
+does — Ford's circuit 570 is a dedicated PCM signal-return network, not a power
+ground, and three-wire sensors get VREF, signal and return rather than grounding
+through their housing.
+
+The payoff is rejecting the **ground offset between the ECU and the sensor**,
+which in a vehicle is tens to hundreds of millivolts under starter, coil and
+alternator current — easily larger than the measurement resolution.
+
+### ⚠ [verify] how differential the AD7606C's VxGND pins actually are
+
+This decides how much the second wire buys:
+
+| If VxGND is… | The return wire gives |
+|---|---|
+| a **true differential** input | real common-mode rejection of harness ground offset |
+| a **Kelvin return internally tied to AGND** | a defined return path, but harness ground offset appears directly as signal error |
+
+Worth reading before assuming the offset is handled. If it is the second case,
+the offset has to be managed by grounding topology instead — which is a
+different design, not a smaller one.
+
+### And watch for ground loops
+
+A sensor that grounds **both** through its body to the block **and** through the
+return wire to the ECU forms a loop, and chassis current induces a voltage in
+it. Three-wire sensors are fine by construction. Check any two-wire sensor whose
+return might be its housing before running a dedicated return to it.
+
+## Sense VREF at the harness connector, not at the load switch
+
+[`adc-front-end.md`](adc-front-end.md) spends channel 7 on VREF so ratiometric
+sensors self-correct. **Take that sense connection at the harness connector**,
+downstream of the load switch and the VREF distribution.
+
+The correction is only exact if the ADC measures the same VREF the sensor sees.
+Sensing at the load switch output measures VREF before its distribution drop and
+before the PTC, which is precisely the error the measurement exists to cancel —
+see [`vref-supply.md`](vref-supply.md), where the same argument places the
+regulator's feedback on the far side of the PTC.
+
 ## Mechanical
 
 **A vehicle vibrates.** A daughterboard supported only by its connector is a
