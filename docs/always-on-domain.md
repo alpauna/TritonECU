@@ -122,33 +122,100 @@ hand-solderable. That is a real problem for bench work.
 2100 kHz) in an **18-pin FCQFN at 5.00 × 5.00 mm** — fewer, larger pads.
 Prefer it for anything hand-assembled.
 
-## Architecture: two 3.3 V rails, no ORing
+## Architecture: cascade, not two independent rails
 
-## Architecture: two 3.3 V rails, no ORing
-
-The rail tree in [`power-supply.md`](power-supply.md) takes 3.3 V from the 6 V
-main. That has to split, and the clean split avoids ORing two supplies:
+**Decided:** MAX25239 makes the main rail, TLV62085 makes 3.3 V from it.
 
 ```
-protected rail ─┬─ always-on buck ─► 3.3 V MCU        (MCU only, low-Iq)
-                │
-                └─ LM5155-Q1 SEPIC ─► 6.0 V ─┬─ buck ─► 3.3 V peripherals
-                     (enabled when running)   ├─ LDO ──► 5 V digital
-                                              ├─ LDO ──► 5 V analog
-                                              └─ LDO ──► 5.00 V VREF
+B+ ─ TVS ─ LTC4364 ─► MAX25239 ─► 5.5 V ─┬─► TLV62085 ──► 3.3 V   (MCU, SD, peripherals)
+                       (always on)        ├─► LDO ───────► 5 V digital
+                                          ├─► LDO ───────► 5 V analog
+                                          └─► LDO ───────► 5.00 V VREF
 ```
 
-- **The MCU's supply is sized for its full running current**, not just sleep, so
-  there is never a handover and no ORing device. Everything else 3.3 V — SD
-  card, peripherals — stays on the switched buck.
-- **The SEPIC is off when parked.** The hardest converter in the design no
-  longer runs 24/7, and ENOUT already sequences it (§9 of the review).
-- The always-on converter must work down to the same ~3.9 V floor, so it wants
-  to be a **buck-boost or SEPIC**, not a plain buck. At 3.9 V in, 3.3 V out, a
-  buck is at ~85 % duty with no margin for its own dropout.
+This replaces the earlier "two independent 3.3 V rails" sketch. Both converters
+stay powered when parked; the MCU's Standby mode does the saving.
 
-**[verify]** the STM32F767ZI's actual run current at the intended clock before
-sizing that converter — it sets whether this is a 300 mA or a 600 mA part.
+### TLV62085RLTR
+
+Datasheet: [`Datasheets/TLV62085RLTR-Datasheet.pdf`](Datasheets/TLV62085RLTR-Datasheet.pdf).
+
+| | |
+|---|---|
+| Input | **2.5 V to 6.0 V** ← the number that sets the main rail |
+| Output | 0.8 V to V<sub>IN</sub>, adjustable, **3 A** |
+| Switching | 2.4 MHz (DCS-Control, load-dependent) |
+| **Quiescent** | **17 µA** no load |
+| Shutdown | **0.7 µA**, EN low |
+| Light load | **Power Save Mode**, automatic |
+| Dropout | **100 % duty cycle** capable |
+| Fault | **Hiccup short-circuit protection** |
+| Package | VSON-HR (RLT), **2 × 2 mm**, 7 pins |
+| Temperature | −40 to +125 °C |
+
+### Set the main rail at 5.5 V, not 6.0 V
+
+The TLV62085's **6.0 V absolute input maximum** collides with the 6 V main rail
+that [`power-supply.md`](power-supply.md) chose for LDO headroom:
+
+```
+6.0 V nominal ± 2 % regulation  →  6.12 V     over the TLV62085's rating ✗
+5.5 V nominal ± 2 % regulation  →  5.61 V     7 % margin                ✓
+```
+
+**5.5 V satisfies both constraints:**
+
+- TLV62085 input stays inside 2.5–6.0 V with real margin
+- The 5 V LDOs keep **0.5 V of headroom** — enough for low-dropout parts at the
+  25–150 mA these rails draw, where 1 V was never actually required
+- MAX25239AFFA's adjustable range is "< 6.5 V", so 5.5 V is in range
+
+Do **not** use the part's fixed 5.0 V option: it leaves the 5 V LDOs no headroom
+at all, and VREF in particular has to be a regulated 5.00 V isolated from the
+switcher.
+
+### This largely defuses MAX25239 Note 5
+
+[`power-supply.md`](power-supply.md) flags *"output short circuit not allowed"*
+as the blocking question for using the MAX25239 more widely. In **this**
+topology it matters much less: the MAX25239's output faces **three LDOs and one
+buck, every one of them internally current-limited**, and never a connector,
+harness or anything a fault can reach. The TLV62085 brings its own hiccup
+protection, and VREF's harness exposure sits behind an LDO plus a PTC.
+
+The question still needs answering before the MAX25239 drives anything external.
+It is no longer blocking for this arrangement.
+
+### Revised drain budget
+
+| Item | Sleep current |
+|---|---|
+| LTC4364 quiescent | 750 µA |
+| MAX25239, 5.5 V, skip mode | 95 µA |
+| **TLV62085, Power Save Mode** | **17 µA** |
+| 5 V LDO quiescents (or disabled) | ~10 µA |
+| STM32F767 Standby + backup SRAM | 3 µA |
+| **Total** | **≈ 875 µA** → 0.63 Ah/month |
+
+Cascading costs 17 µA over the parallel arrangement. Irrelevant against the
+LTC4364's 750 µA.
+
+### Two notes, neither blocking
+
+- **Not AEC-Q100.** Every other part in this chain is automotive-qualified —
+  LTC4364, MAX25239 Grade 1, LM5155-Q1. The TLV62085 is rated −40 to +125 °C,
+  which is the Grade 1 *temperature* range, but without the qualification,
+  PPAP or change control. For a one-vehicle build that is a reasonable trade;
+  it should be a stated choice rather than an oversight.
+- **2.1 MHz and 2.4 MHz beat at 300 kHz**, which is inside CISPR 25's band. It
+  mostly stays internal — the TLV62085 is a point-of-load, so its switching
+  appears as load modulation that the MAX25239's output capacitors absorb rather
+  than as harness current. DCS-Control is also not rigidly fixed-frequency, so
+  there is no clean tone to beat against. Worth a look on the bench, not worth
+  designing around.
+- Power Save Mode drops the switching frequency at light load, potentially into
+  the AM band — but that only happens with the MCU asleep and the vehicle
+  parked, when the radio is off too.
 
 ## Tapping point: after the LTC4364, not before
 
