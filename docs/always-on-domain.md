@@ -194,6 +194,80 @@ noise is above 1 MHz, where a ferrite works well, and the AD7606's own 22 kHz
 anti-alias filter catches what gets through. Not as good as an LDO's PSRR, good
 enough here.
 
+## MAX25239 output capacitor and compensation
+
+Reproducible in
+[`../hardware/calc/max25239_comp.py`](../hardware/calc/max25239_comp.py), from
+datasheet Equations 8–15.
+
+Compensation is designed where the datasheet says to — **minimum input and heavy
+load**, which is the deepest boost and the lowest RHP zero:
+
+```
+Vin = 4.2 V (the LTC4364 cutoff), Vout = 5.0 V, Iout = 1.0 A, L = 2.2 µH
+
+D          = 0.160  (boost)
+RHP zero   = 255.2 kHz
+target fc  =  51.0 kHz     = fsw/41
+```
+
+### DECIDED: 4 × 22 µF
+
+| Bank | C effective | Ripple | vs 15.6 µF transient need |
+|---|---|---|---|
+| 2 × 22 µF, 0805 16 V | 24 µF | 9.8 mV | OK, 1.5× |
+| 2 × 22 µF, 1206 25 V | 33 µF | 8.9 mV | OK, 2.1× |
+| **4 × 22 µF** | **66 µF** | **7.8 mV** | **OK, 4.2×** |
+
+2 × 22 µF is genuinely sufficient on every criterion — ripple current is only
+**0.44 A rms** at the boost corner and Equation 10 asks for 15.6 µF. What makes
+4 the better answer is **DC bias derating**: a 22 µF 0805 X7R at 5 V loses
+around 45 % of its nominal, so "44 µF" is really ~24 µF, and the margin against
+the transient requirement is thinner than the label suggests. Four removes the
+question, and matches the datasheet's own 2.1 MHz application circuit.
+
+### Compensation values
+
+```
+Rc = 78.7 kΩ        (calculated 78.8 kΩ)
+Cc =  2.2 nF        (calculated 2.10 nF)
+Cp =  8.2 pF        (calculated 7.9 pF)
+```
+
+Check where that puts the poles and zeros:
+
+| | Placed at | Target |
+|---|---|---|
+| f<sub>ZEA</sub> = 1/(2π·Rc·Cc) | **919 Hz** | f<sub>PBOOST</sub> = 965 Hz ✓ |
+| f<sub>P2EA</sub> = 1/(2π·Rc·Cp) | **247 kHz** | RHP zero = 255 kHz ✓ |
+
+Both land where the datasheet wants them.
+
+### Two layout consequences
+
+- **C<sub>p</sub> is 8.2 pF, and board stray on the COMP node is 2–5 pF** — a
+  third of the value. Keep COMP compact and away from LX1/LX2. Stray adds to
+  C<sub>p</sub>, which lowers f<sub>P2EA</sub> and is conservative, but it makes
+  the placement approximate rather than designed.
+- **R<sub>c</sub> = 78.7 kΩ is a high-impedance node** next to a 2.1 MHz
+  switcher. Short trace, guarded if possible.
+
+### One thing that shifts the numbers
+
+The TLV62085's input capacitors sit on this same 5 V rail, so the MAX25239's
+true C<sub>OUT</sub> is higher than 66 µF. That pushes the real crossover
+*below* 51 kHz — slower, more stable, no action needed. Worth knowing when
+the measured loop does not match the calculation.
+
+### And why the bandwidth is conservative
+
+51 kHz is f<sub>sw</sub>/41, well below the f<sub>sw</sub>/10–20 a buck would
+allow. That is the RHP zero's doing, and it only exists in boost mode — which
+this converter enters **only below 5 V input**, i.e. during severe cranking.
+Designing there costs transient response at 13.8 V, and buys one compensation
+network that is stable across the entire range. The datasheet's guidance, and
+the right trade for a vehicle.
+
 ## The 2.5 V ADC reference
 
 Right call — an external reference on the AD7606's REFIN beats the internal one
