@@ -412,6 +412,31 @@ under 1 LSB after the ferrite, the local bulk and the AD7606's 22 kHz filter.
 shifter, and it leaves forced PWM available if bench work shows a skip artifact
 at that intermediate load.
 
+### Polarity, from the pin table
+
+> *Connect SYNC to **AGND to enable skip mode**. Connect SYNC to **VCC to enable
+> PWM mode**. Connect SYNC to a valid external clock to synchronize…*
+
+**Low is skip, high is PWM — so SYNC starts and stays low.** High would be the
+wrong default, and "high" here means **VCC (~1.8 V)**, not the 3.3 V rail,
+though the 6 V rating makes 3.3 V safe to drive.
+
+### But the startup instinct is right, for a different reason
+
+**The MCU is powered by this converter**, so at power-up its GPIO is in reset and
+high-impedance. A GPIO alone would leave SYNC **floating** through the entire
+startup — undefined mode on the converter that has to come up first.
+
+**Fit a pull-down to AGND** (10–100 kΩ) so skip mode is defined before the MCU
+exists. A push-pull GPIO overrides it easily once running. Same reasoning
+applies to any strap on this part that firmware might later want to move.
+
+### SPS is the opposite: hard strap only, never a GPIO
+
+SPS is a **2.2 V** pin. A 3.3 V GPIO driving it destroys the part — the 6 V
+tolerance belongs to SYNC and PGOOD, not to SPS. **Strap SPS to VCC with a
+0 Ω**, and leave it out of firmware's reach entirely.
+
 ### External clock sync: no
 
 Nothing to gain and three reasons not to:
@@ -435,6 +460,61 @@ regulation down to 1.9 V — far below where the LTC4364 disconnects. **So the
 LTC4364 remains the system floor with no contention**, and the MAX25239's 2 V
 minimum operating spec is backed by a real falling threshold rather than a
 typical figure.
+
+## FB: use adjustable mode, not the fixed option
+
+The pin table gives the other half of the fixed-output story:
+
+> *Connect FB to a resistor-divider between OUT and AGND to set the desired
+> output voltage… **Connect FB to V<sub>CC</sub> for the fixed output voltage
+> option**.*
+
+So the fixed 5.0 V is selected by tying FB to VCC — no divider at all. **That
+also removes the loop-injection point** designed in above, because there is no
+external feedback path to inject into.
+
+### The trade
+
+| | Fixed (FB → VCC) | Adjustable |
+|---|---|---|
+| Accuracy | **±2 %** | ~±3 % worst case |
+| Parts | none | 2 resistors |
+| Sleep drain | 0 | **+78 µA** |
+| **Loop measurable in circuit** | **no** | **yes** |
+| Output trimmable | no | yes |
+
+**Use adjustable.** The reasoning:
+
+- **The injection point is worth more than the 1 %.** This board has an RHP zero
+  in boost mode and a compensation network calculated rather than measured;
+  being able to take a Bode plot on the first article is the difference between
+  knowing and hoping.
+- **The 5 V rail's absolute accuracy has already been made irrelevant.** VREF is
+  this rail through a load switch, and the decision above is to **sample VREF on
+  an ADC channel and divide** — so ratiometric sensors self-correct regardless.
+  Nothing else on the rail cares about 1 %.
+- **78 µA is 9 % of the sleep budget**, taking it to ~945 µA and 0.68 Ah/month.
+  Still about 1 % of the battery per month.
+
+```
+Vfb = 0.800 V
+
+R_top = 53.6 kΩ, R_bot = 10.2 kΩ   →   Vout = 0.8 × 63.8/10.2 = 5.004 V
+divider current = 0.8 / 10.2 kΩ    =   78 µA
+```
+
+**Do not raise the divider impedance to save that current.** FB leakage is
+0.02 µA typical but **1 µA maximum**, so at 78 µA of divider current the
+worst-case error is 1.3 %; at 20 µA it would be 5 %.
+
+### PGOOD
+
+> *Pull up PGOOD with an external resistor to V<sub>CC</sub> or a positive
+> voltage lower than 5.5 V.*
+
+So **3.3 V is a legal pull-up rail** — take PGOOD straight to an MCU input, no
+level shifting. It asserts low below 93 % of regulation and releases above 94 %,
+which is a cheap independent check on the rail the MCU is running from.
 
 ## The 2.5 V ADC reference
 
