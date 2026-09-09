@@ -99,6 +99,59 @@ one tie and puts digital return current under the analog section to get there.
 **Interleave ground pins between signals on both connectors**, not grouped at
 one end.
 
+## Do not take the MAX6070's supply from VDRIVE
+
+**VDRIVE is the AD7606B's digital output driver supply** — it powers DOUT,
+BUSY and the rest of the SPI interface. Every clock edge is a current spike into
+trace capacitance, which makes it **by definition the noisiest 3.3 V node on the
+daughterboard.** Powering a precision reference from it is starting at the worst
+available point.
+
+### But it does not need a separate connector pin
+
+Both come from the same TLV62085 anyway, so a second pin buys isolation only as
+far back as the carrier's own distribution. The fix is a **routing rule, not a
+part**:
+
+```
+3.3 V connector pin
+        │
+        ├──► VDRIVE, with its own local decoupling
+        │
+        └──[ 220 Ω ]──┬── MAX6070 IN
+                   10 µF ∥ 100 nF
+```
+
+**Star-split at the connector entry.** VDRIVE's switching current then never
+flows through the reference's supply trace, which is the whole mechanism being
+avoided.
+
+The **220 Ω + 10 µF filter is already doing this job** — at ~85 dB it would
+probably survive being tapped off VDRIVE directly. Starting from the quiet point
+instead costs a routing choice and nothing else, so there is no reason not to.
+
+## Model the layout on the per-channel-return board
+
+Two breakout layouts are in circulation: one that ties every VxGND to a common
+plane, and one that routes each return separately. **The second is the right
+model, and for a reason that does not depend on the unresolved differential
+question below.**
+
+**Board layout cannot make the chip differential.** If VxGND is internally tied
+to AGND, no routing changes that. But routing each return separately is still
+worth it:
+
+- A **common-plane board ties all VxGND together permanently.** Whatever
+  per-channel capability the silicon has is thrown away in copper.
+- A **per-channel-return board preserves the option**, and independently gives
+  each sensor a defined return path instead of a shared wire.
+
+That second benefit is real regardless. Eight three-wire sensors drawing ~3 mA
+each through a shared 50 mΩ return is **1.2 mV appearing on every channel** —
+and worse than the offset, it is *cross-coupling*: a change in one sensor's
+current shifts every other reading. Separate returns remove it whether or not
+the inputs reject common mode.
+
 ## Differential sensor returns
 
 Carrying **+ and − all the way to the sensor** is right, and it is what the OEM
