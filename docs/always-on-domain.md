@@ -252,6 +252,41 @@ Both land where the datasheet wants them.
 - **R<sub>c</sub> = 78.7 kΩ is a high-impedance node** next to a 2.1 MHz
   switcher. Short trace, guarded if possible.
 
+### C<sub>p</sub> is not a critical value — defer it to the bench
+
+Deliberately left open until the board exists and board stray on COMP can be
+measured rather than guessed (expected ~5 pF). It costs little either way:
+
+| C<sub>p</sub> fitted | Total with 5 pF stray | f<sub>P2EA</sub> | Phase margin at 51 kHz |
+|---|---|---|---|
+| 8.2 pF | 13.2 pF | 153 kHz | **≈ 59°** |
+| 3.3 pF | 8.3 pF | 244 kHz | **≈ 66°** |
+| none | 5.0 pF | 404 kHz | ≈ 69°, less HF rolloff on COMP |
+
+Seven degrees, and every option is comfortably above the 45° that matters. The
+second pole sits 3–8× above crossover in all three cases, so it is doing very
+little at the frequency that decides stability.
+
+**Fit 8.2 pF as the starting value**; if stray measures near 5 pF and the loop
+wants the pole back on target, **3.3 pF** puts it there. Use a 0402 footprint so
+the swap is trivial.
+
+### Design in a loop-injection point now
+
+The measurement that settles C<sub>p</sub> is a **Bode plot, not a capacitance
+reading** — stray on COMP is only interesting through its effect on the loop.
+Make that measurable without cutting traces:
+
+- **10–20 Ω in series with the top of the FB divider**, with a test point either
+  side. Negligible in normal operation (FB draws ~20 nA), and it is the standard
+  injection point for a transformer or isolated generator.
+- Sweep 100 Hz to 500 kHz. Target **phase margin > 45°, gain margin > 10 dB**.
+- **Measure in boost mode**, around 4.5 V in — that is where the RHP zero lives
+  and the only place the design is actually constrained. A clean plot at 13.8 V
+  proves very little.
+
+Two resistors and two pads, decided now, save cutting into a working board later.
+
 ### One thing that shifts the numbers
 
 The TLV62085's input capacitors sit on this same 5 V rail, so the MAX25239's
