@@ -639,19 +639,66 @@ ADR4525 wins on the two that actually matter in this design.
 
 `V_IN ≥ V_OUT + 0.3 V` = **2.8 V**, against the ADR431's 4.5 V. That was the
 tightest number in the previous selection — 256 mV of margin against a
-worst-case 4.836 V rail. It becomes ~2 V.
+worst-case 4.836 V rail. It becomes roughly 2 V.
 
-**And that lets the input filter get much better**, because the drop stops
-mattering:
+### Filter resistor: 220 Ω, not 470 Ω
+
+Both are safe. 220 Ω is the better engineering choice, because **470 Ω buys
+attenuation nobody needs at a cost in three things that are real.**
+
+The reference's own noise sets the floor everything else is measured against:
 
 ```
-                       R      drop @ 715 µA    corner    attenuation @ 2.1 MHz
-ADR431, forced small   47 Ω        34 mV       154 Hz          78 dB
-ADR4525                470 Ω      336 mV        34 Hz          91 dB
+ADR4525 noise   6 ppm p-p (0.1–10 Hz)  =  15 µV p-p on 2.500 V
+                178 nV/√Hz at 1 kHz    →  26 µV rms over the AD7606's 22 kHz
 ```
 
-**13 dB more rejection**, with V<sub>IN</sub> at the reference still 4.50 V
-against a 2.8 V minimum. Use **470 Ω + 10 µF + 100 nF**.
+Against 8 mV of rail ripple at 2.1 MHz, and taking the reference's own HF
+rejection as only ~20 dB:
+
+| R | Corner | Attenuation @ 2.1 MHz | Ripple reaching V<sub>OUT</sub> | vs 26 µV noise floor |
+|---|---|---|---|---|
+| 47 Ω | 339 Hz | 78 dB | 0.10 µV | 260× below |
+| **220 Ω** | **72 Hz** | **84.6 dB** | **0.047 µV** | **550× below** |
+| 470 Ω | 34 Hz | 91 dB | 0.022 µV | 1200× below |
+
+**All three are past sufficient by two orders of magnitude.** The filter stopped
+being the limiting factor a long way back, so more resistance is not more
+performance.
+
+What it does cost — using the datasheet's real supply current, **580 min /
+765 typ / 950 max µA** over temperature, not the 715 µA headline:
+
+| | 220 Ω | 470 Ω |
+|---|---|---|
+| Drop at 950 µA max | **209 mV** | 446 mV |
+| Drop with an extra 1 mA of REFIN load | 429 mV | 917 mV |
+| V<sub>IN</sub> at the reference, worst case | **4.41 V** | 3.92 V |
+| Drop variation over the 580–950 µA range | **82 mV** | 174 mV |
+| Settling, 5 × RC | **11 ms** | 23.5 ms |
+
+Three real costs, no benefit: less headroom if REFIN's load turns out larger
+than expected, twice the drop variation over temperature (0.87 ppm against
+0.41 ppm through the 5 ppm/V line regulation — negligible either way, but it is
+the wrong direction), and twice the settling time.
+
+**220 Ω + 10 µF + 100 nF.**
+
+### Correction: tempco is better than stated above
+
+The table says 5 ppm/°C. The datasheet gives B grade as **3.6 typ / 5 max**, so
+it sits much closer to the ADR431's 3 ppm/°C than the max figure suggests.
+
+### Two more trades worth naming
+
+- **Noise is 2.2× the ADR431's** — 178 nV/√Hz against 80, and 15 µV p-p against
+  3.5 µV. It does not matter here: 26 µV rms is 10.6 ppm, which on a 10 V
+  reading is 106 µV, **0.35 LSB** against a 305 µV LSB. Named so it is a choice
+  rather than a surprise.
+- **Long-term stability is "TBD" in this datasheet.** ADI specifies theirs at
+  40 ppm/1000 h. An unspecified drift figure on a second-source reference is
+  exactly the kind of gap that argues for keeping the ADI part pin-compatible
+  in the footprint.
 
 ### ⚠ SHDN has an internal pull-up — it defaults ON
 
@@ -704,13 +751,14 @@ ADI's ADR4525BRZ drops into the same pads if this one disappoints.
 ### Settling: the 10 ms guidance holds
 
 ```
-input RC        5 × 470 Ω × 10 µF       = 23.5 ms   ← dominant, and larger now
+input RC        5 × 220 Ω × 10 µF       = 11.0 ms   ← dominant
 10 µF at ~15 mA source                  =  1.7 ms
+reference turn-on, 0.1 %, CL = 0.1 µF   = 100 µs
 ```
 
-The bigger filter resistor pushes settling out, so **wait 50 ms after releasing
-SHDN** before the first valid conversion, not 10 ms. Still nothing against a key
-turn — and now it is a firmware constant tied to a real RC rather than a guess.
+About 13 ms, so **wait 25 ms after releasing SHDN** before the first valid
+conversion. A firmware constant tied to a real RC rather than a guess — and it
+moves with the filter resistor, so the two have to change together.
 
 ### Filtering the reference — RC beats an LC pi here
 
