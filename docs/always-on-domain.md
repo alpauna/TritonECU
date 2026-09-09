@@ -427,9 +427,19 @@ though the 6 V rating makes 3.3 V safe to drive.
 high-impedance. A GPIO alone would leave SYNC **floating** through the entire
 startup — undefined mode on the converter that has to come up first.
 
-**Fit a pull-down to AGND** (10–100 kΩ) so skip mode is defined before the MCU
-exists. A push-pull GPIO overrides it easily once running. Same reasoning
-applies to any strap on this part that firmware might later want to move.
+**Fitted: 10 kΩ to AGND, with SYNC brought out to a GPIO.** Skip mode is
+defined before the MCU exists, and a push-pull GPIO overrides it at 330 µA once
+running — only in PWM mode, so it costs nothing in sleep.
+
+**This works because STM32 GPIOs go high-impedance in Standby.** The pull-down
+is what holds skip mode through the two states where firmware cannot: power-up
+before the MCU boots, and Standby while it sleeps. Those are exactly the states
+where the 95 µA quiescent matters, so the resistor is doing the load-bearing
+work and the GPIO is only an override for the running case.
+
+Driving 3.3 V into SYNC is safe and unambiguous: the pin is rated to 6 V against
+AGND, not clamped to V<sub>CC</sub>, so there is no diode to forward-bias by
+exceeding the 1.8 V rail.
 
 ### SPS is the opposite: hard strap only, never a GPIO
 
