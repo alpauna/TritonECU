@@ -617,136 +617,101 @@ Place the reference, its RC and its output caps all on the **analog side** of
 the section ferrite, so this filtering cascades with that rather than duplicating
 it.
 
-### DECIDED: ADR4525BRZ-R7 — supersedes the ADR431
+### DECIDED: MAX6070AAUT25+T — supersedes both the ADR431 and the ADR4525
 
-Datasheet:
-[`Datasheets/ADR4525BRZ-R7(TOKMAS)-Datasheet.pdf`](<Datasheets/ADR4525BRZ-R7(TOKMAS)-Datasheet.pdf>).
+Datasheet: [`Datasheets/max6070-max6071.pdf`](Datasheets/max6070-max6071.pdf).
 
-| | ADR431B | **ADR4525B** |
-|---|---|---|
-| Initial accuracy | ±1 mV (±0.04 %) | ±0.05 % |
-| Tempco | **3 ppm/°C** | 5 ppm/°C max |
-| **Headroom** | 2 V → V<sub>IN</sub> ≥ 4.5 V | **300 mV → V<sub>IN</sub> ≥ 2.8 V** |
-| Quiescent | 800 µA max | 715 µA |
-| **Sleep** | **none** | **16 µA typ, 33 µA max** |
-| COMP pin | yes (pin 7) | **no — pin 7 is NIC** |
-| Technology | XFET | bandgap |
+| | ADR431B | ADR4525B (TOKMAS) | **MAX6070A** |
+|---|---|---|---|
+| Initial accuracy | ±0.04 % | ±0.05 % | **±0.04 %** |
+| Tempco | 3 ppm/°C | 3.6 typ / 5 max | **1.5 typ** / 6 max |
+| Noise, 0.1–10 Hz | 3.5 µV p-p | 15 µV p-p | **4.8 µV p-p** |
+| **Quiescent** | 800 µA max | 950 µA max | **130 typ / 260 max** |
+| Shutdown | none | 33 µA max | **6 µA max** |
+| Dropout | 2 V | 300 mV | **200 mV** |
+| Ripple rejection | −70 dB @ 1 kHz | not specified | **85 dB** |
+| **Cap-load stability** | not specified | not specified | **0.1–10 µF, specified** |
+| Package | SOIC-8 | SOIC-8 | **SOT23-6** |
+| Vendor | ADI | TOKMAS 2nd source | **ADI, AEC-Q100 available** |
 
-The ADR431 is better on the specs references are usually compared on. The
-ADR4525 wins on the two that actually matter in this design.
+It wins on every axis that has been argued over in this section, and settles two
+open concerns outright:
 
-### The headroom matters more than the enable pin
+- **Capacitive-load stability is specified: 0.1 µF to 10 µF at I<sub>OUT</sub>
+  ≤ 10 mA.** Both previous parts were characterised only at 0.1 µF, leaving the
+  10 µF at REFIN outside documented territory. Here it is inside the range — at
+  the top of it, so **4.7 µF is the safer value** if the AD7606 does not
+  genuinely need 10 µF.
+- **5× lower quiescent.** 260 µA max against 950 µA, which changes the sleep
+  arithmetic even before gating.
 
-`V_IN ≥ V_OUT + 0.3 V` = **2.8 V**, against the ADR431's 4.5 V. That was the
-tightest number in the previous selection — 256 mV of margin against a
-worst-case 4.836 V rail. It becomes roughly 2 V.
+### Power it from 3.3 V, not the 5 V rail
 
-### Filter resistor: 220 Ω, not 470 Ω
+Two independent reasons, and the second one is a hard stop:
 
-Both are safe. 220 Ω is the better engineering choice, because **470 Ω buys
-attenuation nobody needs at a cost in three things that are real.**
+**1. V<sub>IN(MAX)</sub> is 5.5 V.** The 5 V rail's worst-case high is 5.18 V
+from the divider tolerance, and the MAX25239's output OVP does not trip until
+106–110 % of regulation — around 5.5 V. That is no margin at all.
 
-The reference's own noise sets the floor everything else is measured against:
+**2. EN is ratiometric: V<sub>IH</sub> = 0.7 × V<sub>IN</sub>.**
 
 ```
-ADR4525 noise   6 ppm p-p (0.1–10 Hz)  =  15 µV p-p on 2.500 V
-                178 nV/√Hz at 1 kHz    →  26 µV rms over the AD7606's 22 kHz
+from 5.0 V rail   →  VIH = 3.50 V   a 3.3 V GPIO CANNOT drive it high  ✗
+from 3.3 V rail   →  VIH = 2.31 V   3.3 V GPIO drives it directly      ✓
+                     VIL = 0.99 V   pull-down holds it low             ✓
 ```
 
-Against 8 mV of rail ripple at 2.1 MHz, and taking the reference's own HF
-rejection as only ~20 dB:
+From 3.3 V: V<sub>IN</sub> range 2.7–5.5 V gives 600 mV of headroom over the
+200 mV dropout, EN works from a plain GPIO, and the 5.5 V ceiling stops being a
+question. **The EN threshold decides the supply rail.**
 
-| R | Corner | Attenuation @ 2.1 MHz | Ripple reaching V<sub>OUT</sub> | vs 26 µV noise floor |
-|---|---|---|---|---|
-| 47 Ω | 339 Hz | 78 dB | 0.10 µV | 260× below |
-| **220 Ω** | **72 Hz** | **84.6 dB** | **0.047 µV** | **550× below** |
-| 470 Ω | 34 Hz | 91 dB | 0.022 µV | 1200× below |
+### Filter and passives
 
-**All three are past sufficient by two orders of magnitude.** The filter stopped
-being the limiting factor a long way back, so more resistance is not more
-performance.
+```
+220 Ω + 10 µF + 100 nF   from the 3.3 V rail
+CFILTER = 0.1 µF         on pin 1
 
-What it does cost — using the datasheet's real supply current, **580 min /
-765 typ / 950 max µA** over temperature, not the 715 µA headline:
+drop at 360 µA (260 µA max quiescent + ~100 µA REFIN)  =  79 mV
+3.3 V worst-case low 3.234 V − 79 mV = 3.155 V  vs 2.7 V minimum  →  455 mV ✓
+```
 
-| | 220 Ω | 470 Ω |
-|---|---|---|
-| Drop at 950 µA max | **209 mV** | 446 mV |
-| Drop with an extra 1 mA of REFIN load | 429 mV | 917 mV |
-| V<sub>IN</sub> at the reference, worst case | **4.41 V** | 3.92 V |
-| Drop variation over the 580–950 µA range | **82 mV** | 174 mV |
-| Settling, 5 × RC | **11 ms** | 23.5 ms |
+220 Ω carries over unchanged. Note the filter matters less here than it did:
+**85 dB of built-in ripple rejection** already puts 8 mV of rail ripple at
+0.45 µV, ten times under the part's own 4.8 µV noise. **[verify]** the frequency
+that 85 dB is specified at — it will be far lower than 2.4 MHz — but the RC is
+belt-and-braces for 79 mV either way.
 
-Three real costs, no benefit: less headroom if REFIN's load turns out larger
-than expected, twice the drop variation over temperature (0.87 ppm against
-0.41 ppm through the 5 ppm/V line regulation — negligible either way, but it is
-the wrong direction), and twice the settling time.
+### Pinout and settling
 
-**220 Ω + 10 µF + 100 nF.**
+```
+SOT23-6:   1 FILTER   2 GND   3 EN   4 IN   5 OUTS   6 OUTF
+```
 
-### Correction: tempco is better than stated above
+Turn-on and enable settling are both **6 ms to 0.01 %** with
+C<sub>FILTER</sub> = 0.1 µF. The 220 Ω / 10 µF input RC still dominates at 11 ms,
+so **the 25 ms firmware wait after releasing EN is unchanged.**
 
-The table says 5 ppm/°C. The datasheet gives B grade as **3.6 typ / 5 max**, so
-it sits much closer to the ADR431's 3 ppm/°C than the max figure suggests.
+### Still gate it, and still fit the pull-down
 
-### Two more trades worth naming
+260 µA max is 28 % of the sleep budget for a part only useful while converting,
+and EN costs nothing:
 
-- **Noise is 2.2× the ADR431's** — 178 nV/√Hz against 80, and 15 µV p-p against
-  3.5 µV. It does not matter here: 26 µV rms is 10.6 ppm, which on a 10 V
-  reading is 106 µV, **0.35 LSB** against a 305 µV LSB. Named so it is a choice
-  rather than a surprise.
-- **Long-term stability is "TBD" in this datasheet.** ADI specifies theirs at
-  40 ppm/1000 h. An unspecified drift figure on a second-source reference is
-  exactly the kind of gap that argues for keeping the ADI part pin-compatible
-  in the footprint.
+| | Sleep total |
+|---|---|
+| Ungated | 1205 µA |
+| **Gated (6 µA)** | **951 µA** |
 
-### ⚠ SHDN has an internal pull-up — it defaults ON
+**Fit a 10 kΩ pull-down on EN**, the same pattern as SYNC and the ADR4525's
+SHDN — the resistor holds shutdown through power-up and MCU Standby, the GPIO
+overrides when running. EN input current is ±1 µA, so 10 kΩ is unambiguous.
 
-> *引脚 3 SHDN — when this pin is at logic low the chip enters sleep mode,
-> supply current under 16 µA. **If the pin is left floating there is an internal
-> weak pull-up.***
+### [verify] whether this part number is the AEC-Q100 one
 
-**That is backwards for an always-on design.** In MCU Standby the GPIO goes
-high-impedance, the internal pull-up wins, and the reference stays enabled at
-715 µA — precisely the drain the SHDN pin was chosen to avoid.
-
-**Fit a 10 kΩ external pull-down**, the same pattern as SYNC: the resistor holds
-the safe state through power-up and Standby, and a push-pull GPIO overrides it
-when running. 10 kΩ beats any plausible internal pull-up; a 3.3 V GPIO driving
-it sources 330 µA.
-
-**SHDN logic high is 2 V min to V<sub>IN</sub>**, so a 3.3 V GPIO drives it
-directly with no level shift.
-
-### Tempco: worse on paper, irrelevant in practice
-
-5 ppm/°C against 3 ppm/°C is 825 ppm versus 495 ppm over −40…+125 °C — a
-**0.083 % versus 0.05 % gain error**. Per the correction above, both are far
-below anything that matters here. Trading 0.03 % of gain drift for 1.7 V of
-supply headroom and a hardware sleep pin is not a close call.
-
-### ⚠ No COMP pin, so the noise-peaking fix is unavailable
-
-Pin 7 is NIC. The ADR431's 82 kΩ + 10 nF network cannot be applied, and this
-part is characterised at **C<sub>L</sub> = 0.1 µF** like the ADR431 — so the
-10 µF at REFIN is outside its characterised range with no documented remedy.
-
-**Leave a series-resistor footprint (0 Ω initially) between VOUT and the 10 µF
-bank.** If noise peaking shows up, a few ohms isolates the reference from the
-bulk while the cap still absorbs the AD7606's SAR charge kicks. The cost is a
-small gain error — 10 Ω at 50 µA of average REFIN current is 0.5 mV, 200 ppm —
-so fit it only if measurement calls for it.
-
-### ⚠ TOKMAS, not ADI
-
-This is a **second-source part**, pin-compatible with Analog Devices' ADR4525.
-Almost certainly not AEC-Q100, with no PPAP or change control, and lot-to-lot
-consistency and long-term stability unverified. It joins the TLV62085 as the
-second non-automotive part in the chain — a reasonable trade for a one-vehicle
-build, but a stated one.
-
-**The mitigation is free: the footprint is the commitment, not the vendor.**
-ADI's ADR4525BRZ drops into the same pads if this one disappoints.
+The datasheet says *"AEC-Q100 Qualified (Refer to Ordering Information)"*, which
+means only some variants are. **MAX6070AAUT25+T** is most likely the industrial
+part. Worth checking, because it would be the **only automotive-qualified
+reference** considered — and everything else in this rail chain (TLV62085, and
+previously the TOKMAS part) has been a deliberate non-automotive compromise.
 
 ### Settling: the 10 ms guidance holds
 
