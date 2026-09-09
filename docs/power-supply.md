@@ -248,6 +248,49 @@ enclosure's ambient turns out to be. That is the number the copper pour and the
 enclosure have to be designed around, and it is why the LM5155-Q1's Grade 1
 125 °C rating matters rather than being a nicety.
 
+## OPEN: the MAX25239 may replace the SEPIC entirely
+
+Raised 2026-09-08 while selecting the always-on 3.3 V converter
+([`always-on-domain.md`](always-on-domain.md)). The **MAX25239AFFA's adjustable
+range is "< 6.5 V"**, which includes **6.0 V** — so the same part number that
+runs the 3.3 V rail can run the 6 V main rail.
+
+What that deletes from this document:
+
+| Part | Status if the MAX25239 is used |
+|---|---|
+| External 80 V MOSFET | gone — integrated H-bridge |
+| 80 V Schottky diode | gone |
+| **2 × 3.3 µH inductors** | **gone — one inductor** |
+| **Coupling cap Cs, 2.1 A rms** | **gone** — "the part most often under-specified" |
+| Loop compensation design | gone |
+| 2.2 MHz hot-loop layout ([`supply-layout.md`](supply-layout.md)) | largely gone — the loop is inside the package |
+
+And what it adds that the LM5155-Q1 design does not have: **±6 % spread
+spectrum**, PGOOD, 2.5 ms soft-start, and a single part number for both rails.
+
+A buck-boost also runs in **buck mode at 12 V in / 6 V out**, which is more
+efficient than a SEPIC at the same operating point, and it holds regulation down
+to 2 V input rather than 3.5 V.
+
+### What has to be checked before acting on this
+
+1. **Datasheet Note 5: "Output short circuit not allowed."** A SEPIC controller
+   simply current-limits. If this restriction applies broadly rather than to one
+   variant, it is a real robustness difference for a vehicle supply. **This is
+   the blocking question.**
+2. **Efficiency and thermals at 2 A**, against the 2.1 W the SEPIC dissipates
+   continuously at 13.8 V.
+3. **Package.** FC2QFN 4.25 mm is not hand-assemblable; the 18-pin FCQFN at
+   5 mm is the fallback.
+4. **Two converters at 2.1 MHz** — PLL-sync them via SYNC, or leave both in
+   spread-spectrum and accept independent operation. Do not leave one at
+   2.1 MHz and the SEPIC at 2.2 MHz, which beats at 100 kHz.
+
+**Not decided.** The SEPIC design in this document stands until Note 5 is
+resolved. But if it clears, this removes the hardest, highest-risk section of
+the entire power design.
+
 ## Rail tree
 
 VREF draws from the main rail — it has to, since it must hold up through

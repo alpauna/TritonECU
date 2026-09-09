@@ -56,6 +56,74 @@ Fuel trims, DTCs and adaptive tables are small — **4 KB is ample**, and Standb
 is 100× cheaper. Waking through a reset costs milliseconds, which is nothing
 against a key turn. Use Standby; keep anything larger in SD or flash.
 
+## The part: MAX25239AFFA
+
+Datasheet: [`Datasheets/max25239-max25240.pdf`](Datasheets/max25239-max25240.pdf).
+It fits the role better than the generic requirement written above.
+
+| | MAX25239AFFA | Why it matters here |
+|---|---|---|
+| Topology | **H-bridge buck-boost, one inductor** | the "not a plain buck" requirement, met |
+| Input | **2 V to 36 V**, 42 V transient | 2 V is far below the 4.2 V system floor |
+| Switching | **2100 kHz** | AM-clear, same rationale as the SEPIC |
+| Quiescent | **95 µA** no-load, auto skip mode | the always-on number |
+| Shutdown | **5 µA** typ, EN low | for the *switched* rail |
+| Spread spectrum | ±6 %, SPS pin | the SEPIC design has none |
+| Qualification | **AEC-Q100 Grade 1**, −40 to +125 °C | ✓ |
+| Current limit | 8.2 A, 6 A continuous | 20× the MCU load |
+| Extras | PGOOD, 2.5 ms soft-start, PLL SYNC | |
+
+### Catch: AFFA's *fixed* output is 5 V — 3.3 V needs adjustable mode
+
+From the ordering table:
+
+```
+                     ILIM    FIXED VOUT    ADJ VOUT    fSW
+MAX25239AFFA/VY+     8.2 A      5 V         < 6.5 V    2100 kHz
+```
+
+The **fixed** option on this variant is 5 V. What makes it usable at 3.3 V is
+the **adjustable** column: this variant covers anything **below 6.5 V** with an
+external feedback divider. So wire it for adjustable mode, not the fixed option.
+
+That same column is the interesting part — see below.
+
+### It must sit behind the LTC4364, not on raw B+
+
+```
+MAX25239 transient rating      42 V
+SMDJ43A clamp                  69.4 V      ← what raw B+ actually sees
+LTC4364 regulated output       27 V        ✓
+```
+
+**42 V is below the TVS clamp**, so an always-on rail tapped ahead of the
+LTC4364 would be destroyed by the first transient the TVS passes. Behind the
+LTC4364 it never sees more than 27 V, and the part's 2 V minimum means the
+LTC4364's 4.2 V cutoff remains the system floor — as intended.
+
+### Revised drain budget
+
+| Item | Sleep current |
+|---|---|
+| LTC4364 quiescent | 750 µA |
+| MAX25239 #1, 3.3 V, skip mode | **95 µA** |
+| MAX25239 #2, 6 V rail, EN low | **5 µA** |
+| STM32F767 Standby + backup SRAM | 3 µA |
+| **Total** | **≈ 853 µA** → 0.61 Ah/month |
+
+Unchanged conclusion: comfortable, and still dominated by the LTC4364.
+
+### Package is the practical objection
+
+**FC2QFN, 4.25 × 4.25 mm, 22 pins** — flip-chip QFN, no visible joints, not
+hand-solderable. That is a real problem for bench work.
+
+**MAX25239EAFNA/VY+** is the same silicon and same options (8.2 A, <6.5 V adj,
+2100 kHz) in an **18-pin FCQFN at 5.00 × 5.00 mm** — fewer, larger pads.
+Prefer it for anything hand-assembled.
+
+## Architecture: two 3.3 V rails, no ORing
+
 ## Architecture: two 3.3 V rails, no ORing
 
 The rail tree in [`power-supply.md`](power-supply.md) takes 3.3 V from the 6 V
