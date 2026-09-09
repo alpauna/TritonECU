@@ -713,6 +713,32 @@ with a short trace back to OUTF. The charge demand is at the ADC end; the
 reference only has to see the bank as its load capacitance, which it does either
 way.
 
+**OUTS taps after the caps** — that is what the force/sense pair is for. OUTF
+carries the current, OUTS senses at the load, and the reference regulates out
+whatever the OUTF trace drops. Two consequences:
+
+- **The OUTF trace is now inside the feedback loop.** Keep the reference
+  physically close to REFIN. A 30 mm run is roughly 20 nH, which with 4.8 µF
+  resonates at `1/(2π√LC)` = **514 kHz** — potentially inside the reference's
+  own loop bandwidth. **Target under 10 mm**, and tap OUTS at the capacitor node
+  itself rather than partway along a trace carrying load current.
+- **The gain is small here but free.** At ~100 µA of average REFIN current a
+  short trace drops microvolts. Kelvin sensing earns its keep if REFIN turns out
+  to draw milliamps; until then it costs one pin and no parts.
+
+**There is no ground-side Kelvin on this part.** That is the MAX6070 /
+MAX6071 split:
+
+```
+MAX6070:  1 FILTER   2 GND     3 EN   4 IN   5 OUTS   6 OUTF
+MAX6071:  1 GNDF     2 GNDS    3 EN   4 IN   5 OUTS   6 OUTF
+```
+
+**You get the noise filter or the ground force/sense, not both.** With a solid
+plane and a short return the filter is the better trade — but it does mean the
+ground-side drop is uncompensated, so the reference's GND and the AD7606's
+reference return want to be tight and on the same plane, not routed.
+
 **Do not confuse this with C<sub>FILTER</sub>.** The 0.1 µF on pin 1 sets the
 part's internal noise filter and is a separate component with a separate job.
 
