@@ -617,106 +617,100 @@ Place the reference, its RC and its output caps all on the **analog side** of
 the section ferrite, so this filtering cascades with that rather than duplicating
 it.
 
-### DECIDED: ADR431BRZ (2.5 V, SOIC-8)
+### DECIDED: ADR4525BRZ-R7 — supersedes the ADR431
 
 Datasheet:
-[`Datasheets/ADR430_431_433_434_435.pdf`](Datasheets/ADR430_431_433_434_435.pdf).
+[`Datasheets/ADR4525BRZ-R7(TOKMAS)-Datasheet.pdf`](<Datasheets/ADR4525BRZ-R7(TOKMAS)-Datasheet.pdf>).
 
-| | ADR431B |
-|---|---|
-| Output | 2.500 V, **±1 mV** initial (±0.04 %) |
-| Tempco | **3 ppm/°C** |
-| Noise | 3.5 µV p-p (0.1–10 Hz), 80 nV/√Hz at 1 kHz |
-| Output current | **30 mA source**, 20 mA sink |
-| Quiescent | 580 µA typ, **800 µA max** |
-| **Supply range** | **4.5 V to 18 V**, headroom V<sub>IN</sub> − V<sub>OUT</sub> ≥ **2 V** |
-| Long-term stability | 40 ppm / 1000 h |
-| Pins | 2 VIN, 4 GND, 5 TRIM, 6 VOUT, **7 COMP** |
-
-### Correction: I overstated the drift benefit earlier
-
-An earlier revision claimed the AD7606's internal reference costs "3.5 % on a
-narrowband HO2S". **That was wrong** — it treated a reference error as a
-full-scale offset. A reference error is a **gain** error, so it scales with the
-reading, not with the range:
-
-| | Drift over −40…+125 °C | Gain error |
+| | ADR431B | **ADR4525B** |
 |---|---|---|
-| AD7606 internal, ~10 ppm/°C | 1650 ppm | **0.165 %** |
-| ADR431B, 3 ppm/°C | 495 ppm | **0.05 %** |
+| Initial accuracy | ±1 mV (±0.04 %) | ±0.05 % |
+| Tempco | **3 ppm/°C** | 5 ppm/°C max |
+| **Headroom** | 2 V → V<sub>IN</sub> ≥ 4.5 V | **300 mV → V<sub>IN</sub> ≥ 2.8 V** |
+| Quiescent | 800 µA max | 715 µA |
+| **Sleep** | **none** | **16 µA typ, 33 µA max** |
+| COMP pin | yes (pin 7) | **no — pin 7 is NIC** |
+| Technology | XFET | bandgap |
 
-On a 450 mV HO2S that is 0.74 mV versus 0.22 mV. Both are small. The ADR431 is
-a 3.3× improvement on a term that was already minor.
+The ADR431 is better on the specs references are usually compared on. The
+ADR4525 wins on the two that actually matter in this design.
 
-**The real wins are elsewhere:** ±1 mV initial accuracy against the internal
-reference's typical ±0.1–0.2 %, plus 40 ppm/1000 h long-term stability and
-3.5 µV p-p noise — which is 1.4 ppm, or 14 µV on a 10 V reading, comfortably
-under a 305 µV LSB.
+### The headroom matters more than the enable pin
 
-### The 10 µF question is answered — and it needs the COMP network
+`V_IN ≥ V_OUT + 0.3 V` = **2.8 V**, against the ADR431's 4.5 V. That was the
+tightest number in the previous selection — 256 mV of margin against a
+worst-case 4.836 V rail. It becomes ~2 V.
 
-The open item was whether the reference is stable driving the 10 µF at REFIN.
-The datasheet answers both halves:
-
-> *Other than a 0.1 µF capacitor at the output to help improve noise
-> suppression, **a large output capacitor at the output is not required for
-> circuit stability**.*
-
-So it is stable either way. But large capacitance is not free:
-
-> *…references are used increasingly to drive the reference input of an ADC that
-> may present a dynamic, switching capacitive load. **Large capacitors, in the
-> microfarad range, reduce the change in reference voltage to less than one-half
-> LSB**.*
->
-> *…With various values of capacitive loading, the **predicted noise peaking
-> becomes evident**.*
->
-> *The **82 kΩ resistor and 10 nF capacitor** eliminate noise peaking. Leave the
-> COMP pin unconnected if unused.*
-
-ADI explicitly endorses microfarad-range output capacitance for driving an ADC
-reference input — which is exactly the AD7606 charge-kick problem — and gives
-the fix for the noise peaking it causes.
-
-**Fit all three: 10 µF + 100 nF at REFIN, and 82 kΩ + 10 nF on COMP.** The COMP
-network is easy to leave off, since the part works without it and the penalty is
-noise rather than oscillation.
-
-### Change the input filter to 47 Ω / 22 µF
-
-The **4.5 V minimum supply** is the tightest spec in the part, against a 5 V
-rail set by a 1 % divider and a ±1.75 % feedback reference:
+**And that lets the input filter get much better**, because the drop stops
+mattering:
 
 ```
-5 V rail, worst-case low                        4.836 V
-100 Ω × 800 µA (the earlier value)             −0.080 V  →  4.756 V, 256 mV margin
- 47 Ω × 800 µA                                 −0.038 V  →  4.798 V, 298 mV margin
+                       R      drop @ 715 µA    corner    attenuation @ 2.1 MHz
+ADR431, forced small   47 Ω        34 mV       154 Hz          78 dB
+ADR4525                470 Ω      336 mV        34 Hz          91 dB
 ```
 
-**47 Ω with 22 µF** holds the same corner — `1/(2π·47·22 µF)` = **154 Hz**
-against the 159 Hz of 100 Ω / 10 µF — while halving the drop. Same attenuation,
-more headroom, no downside. Keep the 100 nF alongside.
+**13 dB more rejection**, with V<sub>IN</sub> at the reference still 4.50 V
+against a 2.8 V minimum. Use **470 Ω + 10 µF + 100 nF**.
 
-### Gating is confirmed necessary
+### ⚠ SHDN has an internal pull-up — it defaults ON
 
-The pinout is DNC / VIN / NIC / GND / TRIM / VOUT / COMP / DNC — **there is no
-enable pin**. At 800 µA maximum it would take the sleep budget from 945 µA to
-1745 µA, nearly doubling it, for a part that is only useful while converting.
+> *引脚 3 SHDN — when this pin is at logic low the chip enters sleep mode,
+> supply current under 16 µA. **If the pin is left floating there is an internal
+> weak pull-up.***
 
-**External load switch, GPIO-driven.** And leave TRIM unconnected: ±1 mV initial
-accuracy is already 0.04 %, so there is nothing worth trimming.
+**That is backwards for an always-on design.** In MCU Standby the GPIO goes
+high-impedance, the internal pull-up wins, and the reference stays enabled at
+715 µA — precisely the drain the SHDN pin was chosen to avoid.
+
+**Fit a 10 kΩ external pull-down**, the same pattern as SYNC: the resistor holds
+the safe state through power-up and Standby, and a push-pull GPIO overrides it
+when running. 10 kΩ beats any plausible internal pull-up; a 3.3 V GPIO driving
+it sources 330 µA.
+
+**SHDN logic high is 2 V min to V<sub>IN</sub>**, so a 3.3 V GPIO drives it
+directly with no level shift.
+
+### Tempco: worse on paper, irrelevant in practice
+
+5 ppm/°C against 3 ppm/°C is 825 ppm versus 495 ppm over −40…+125 °C — a
+**0.083 % versus 0.05 % gain error**. Per the correction above, both are far
+below anything that matters here. Trading 0.03 % of gain drift for 1.7 V of
+supply headroom and a hardware sleep pin is not a close call.
+
+### ⚠ No COMP pin, so the noise-peaking fix is unavailable
+
+Pin 7 is NIC. The ADR431's 82 kΩ + 10 nF network cannot be applied, and this
+part is characterised at **C<sub>L</sub> = 0.1 µF** like the ADR431 — so the
+10 µF at REFIN is outside its characterised range with no documented remedy.
+
+**Leave a series-resistor footprint (0 Ω initially) between VOUT and the 10 µF
+bank.** If noise peaking shows up, a few ohms isolates the reference from the
+bulk while the cap still absorbs the AD7606's SAR charge kicks. The cost is a
+small gain error — 10 Ω at 50 µA of average REFIN current is 0.5 mV, 200 ppm —
+so fit it only if measurement calls for it.
+
+### ⚠ TOKMAS, not ADI
+
+This is a **second-source part**, pin-compatible with Analog Devices' ADR4525.
+Almost certainly not AEC-Q100, with no PPAP or change control, and lot-to-lot
+consistency and long-term stability unverified. It joins the TLV62085 as the
+second non-automotive part in the chain — a reasonable trade for a one-vehicle
+build, but a stated one.
+
+**The mitigation is free: the footprint is the commitment, not the vendor.**
+ADI's ADR4525BRZ drops into the same pads if this one disappoints.
 
 ### Settling: the 10 ms guidance holds
 
 ```
-input RC        5 × 47 Ω × 22 µF        = 5.2 ms   ← dominant
-10 µF at 30 mA source                   = 0.8 ms
-reference turn-on, CL = 0               =  10 µs
+input RC        5 × 470 Ω × 10 µF       = 23.5 ms   ← dominant, and larger now
+10 µF at ~15 mA source                  =  1.7 ms
 ```
 
-About 6 ms total, so **10 ms after enabling before the first valid conversion**
-stands.
+The bigger filter resistor pushes settling out, so **wait 50 ms after releasing
+SHDN** before the first valid conversion, not 10 ms. Still nothing against a key
+turn — and now it is a firmware constant tied to a real RC rather than a guess.
 
 ### Filtering the reference — RC beats an LC pi here
 
