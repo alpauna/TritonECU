@@ -365,6 +365,77 @@ measurements without cutting the board.
   the two converters are ever PLL-synced, SPS becomes moot and the modulation
   would have to come from the driving clock instead.
 
+## SYNC: tie it to AGND — and note it is *not* a 2.2 V pin
+
+### SPS and SYNC are adjacent straps with completely different ratings
+
+```
+VCC, SPS to AGND ......... −0.3 V to +2.2 V     ← tie to the VCC pin
+SYNC, PGOOD to AGND ...... −0.3 V to  +6 V      ← 3.3 V logic drives it directly
+SUP, EN to AGND .......... −0.3 V to +42 V
+```
+
+Easy to conflate: two small strap pins next to each other, one of which dies on
+anything above 2.2 V and one of which takes 6 V. **SYNC needs no level shift
+from 3.3 V; SPS must never see it.**
+
+### SYNC = 0 V, because that is how the 95 µA is specified
+
+```
+Standby Supply Current   ISUP_STANDBY = 95 µA
+  conditions:  VEN = VSUP, VOUT = 5 V, no load, **VSYNC = 0 V**
+```
+
+**The quiescent figure the whole always-on architecture rests on is measured
+with SYNC grounded.** Forced PWM would give that up — the converter would switch
+at 2.1 MHz continuously into no load, burning gate charge for nothing.
+
+Nothing is lost by choosing skip: **the part runs fixed-frequency PWM under load
+anyway** and only skips once inductor current goes discontinuous:
+
+```
+buck mode, 13.8 V in, 5 V out, L = 2.2 µH, 2.1 MHz
+ΔIL = Vout (Vin − Vout) / (Vin · L · fsw) = 0.69 A
+DCM boundary  =  ΔIL / 2  =  345 mA
+```
+
+| Condition | Load | Mode |
+|---|---|---|
+| Asleep | ~0.1 mA | deep skip ✓ |
+| Key on, engine off, MCU + ADC | 300–500 mA | **near the boundary** |
+| Running | ~1 A | PWM ✓ |
+
+Only the middle case is ambiguous, and skip-mode ripple there still lands well
+under 1 LSB after the ferrite, the local bulk and the AD7606's 22 kHz filter.
+
+**Route SYNC to a GPIO anyway**, defaulting low. It is one trace and no level
+shifter, and it leaves forced PWM available if bench work shows a skip artifact
+at that intermediate load.
+
+### External clock sync: no
+
+Nothing to gain and three reasons not to:
+
+- **There is no second device to synchronise to.** The TLV62085 uses
+  DCS-Control and has no SYNC input.
+- **It disables the internal spread spectrum**, which was just enabled for real
+  EMI benefit.
+- **It would make the converter depend on an MCU clock that must survive
+  sleep** — the one state where the MCU is meant to be doing nothing.
+
+### Incidental find: the two UVLOs nearly coincide
+
+```
+MAX25239  VUVLO_RISE  4.2 – 4.45 V      VUVLO_FALL  1.9 V
+LTC4364   UV release              4.47 V
+```
+
+The converter starts just as the LTC4364 releases, and once running holds
+regulation down to 1.9 V — far below where the LTC4364 disconnects. **So the
+LTC4364 remains the system floor with no contention**, and the MAX25239's 2 V
+minimum operating spec is backed by a real falling threshold rather than a
+typical figure.
+
 ## The 2.5 V ADC reference
 
 Right call — an external reference on the AD7606's REFIN beats the internal one
