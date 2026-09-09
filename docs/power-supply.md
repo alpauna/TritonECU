@@ -273,6 +273,53 @@ A buck-boost also runs in **buck mode at 12 V in / 6 V out**, which is more
 efficient than a SEPIC at the same operating point, and it holds regulation down
 to 2 V input rather than 3.5 V.
 
+### The magnetics: one 2.2 µH part covers both rails
+
+Worked from the datasheet's Equations 1–3, with V<sub>IN(MAX)</sub> = 27 V (the
+LTC4364 clamp) and V<sub>IN(MIN)</sub> = 3.9 V (the input floor from
+[`schematic-review-power.md`](schematic-review-power.md) §6), at 40 % ripple:
+
+```
+Eq 1, buck:   L = (VIN_MAX − VOUT) × VOUT / (fSW × ΔIL × VIN_MAX)
+
+  3.3 V rail, 1.5 A   →  2.30 µH
+  6.0 V rail, 2.0 A   →  2.78 µH
+
+Eq 2, boost — 0.22 µH and 0.53 µH respectively. Buck dominates both.
+```
+
+Peak current from Equation 3, with saturation 20 % above:
+
+| Rail | I<sub>L(PEAK)</sub> | Saturation needed |
+|---|---|---|
+| 3.3 V at 1.5 A | 1.8 A | **≥ 2.2 A** |
+| 6.0 V at 2.0 A | 3.6 A | **≥ 4.3 A** |
+
+**A single 2.2 µH / 5 A part covers both** — the same value the datasheet uses
+in its own 2.1 MHz application circuit. That is roughly a 4 × 4 × 3 mm shielded
+inductor. Compare what it replaces on the 6 V rail alone:
+
+```
+SEPIC        2 × 3.3 µH, > 3.1 A saturation each   +  Cs bank at 2.1 A rms
+buck-boost   1 × 2.2 µH, > 4.3 A saturation        +  nothing
+```
+
+**Do not oversize it.** The datasheet is explicit that a larger inductance
+"reduces the frequency of the RHP zero, which can cause stability concerns" — the
+same right-half-plane zero that limits the SEPIC's bandwidth. 2.2 µH is the
+answer; 4.7 µH is the 400 kHz answer.
+
+### Correction: compensation is simplified, not eliminated
+
+The table above says loop compensation is "gone". That overstates it — the part
+has a **COMP pin with an external R<sub>C</sub>/C<sub>C</sub>/C<sub>F</sub>
+network**. What changes is that the datasheet gives a working starting point for
+it, against a SEPIC where the RHP zero, the Cs resonance and the two-inductor
+interaction all have to be derived. Simpler, not absent.
+
+The rest of the app circuit is unremarkable: C<sub>IN</sub> 2 × 4.7 µF,
+C<sub>OUT</sub> 4 × 22 µF, 0.1 µF bootstraps on BST1/BST2, 4.7 µF on VCC.
+
 ### What has to be checked before acting on this
 
 1. **Datasheet Note 5: "Output short circuit not allowed."** A SEPIC controller
