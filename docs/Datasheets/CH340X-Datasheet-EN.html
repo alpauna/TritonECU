@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>CH340 USB-to-Serial Chip — Manual (1)</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+body { font-family: "Liberation Sans", Arial, sans-serif; font-size: 9.5pt; line-height: 1.45; color:#111; }
+h1 { font-size: 18pt; margin: 0 0 2pt 0; }
+h2 { font-size: 13pt; margin: 16pt 0 4pt 0; border-bottom: 1.5px solid #333; padding-bottom: 2pt; }
+h3 { font-size: 11pt; margin: 11pt 0 3pt 0; }
+.sub { color:#444; font-size:10pt; margin:0 0 10pt 0; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt 0; font-size: 8.3pt; }
+th, td { border: 0.7px solid #777; padding: 2.5pt 4pt; vertical-align: top; }
+th { background: #e8e8e8; font-weight: bold; }
+td.c, th.c { text-align: center; }
+ul { margin: 4pt 0 8pt 0; padding-left: 18pt; }
+li { margin: 1.5pt 0; }
+p { margin: 4pt 0; }
+.note { background:#f4f4f4; border-left:3px solid #666; padding:6pt 9pt; margin:9pt 0; font-size:8.8pt; }
+.tn { background:#fff8e1; border-left:3px solid #c89000; padding:6pt 9pt; margin:9pt 0; font-size:8.8pt; }
+code { font-family:"Liberation Mono",monospace; font-size:8.5pt; }
+</style></head><body>
+
+<h1>CH340 — USB-to-Serial Bus Converter</h1>
+<p class="sub">Manual (1) &middot; Version 3C &middot; http://wch.cn<br>
+<strong>English translation</strong> of <code>CH340X-Datasheet.pdf</code>. Text only — the schematic
+figures in sections 7.1–7.9 are images in the original and are not reproduced here; refer to the
+Chinese PDF for the drawings.</p>
+
+<h2>1. Overview</h2>
+<p>The CH340 is a USB bus converter that implements USB-to-serial or USB-to-printer-port conversion.</p>
+<p>In serial mode the CH340 provides the common MODEM handshake signals, allowing a computer's
+asynchronous serial ports to be extended, or an ordinary serial device to be upgraded directly to the
+USB bus. For the USB-to-printer-port function refer to Manual (2), CH340DS2.</p>
+
+<h2>2. Features</h2>
+<ul>
+<li>Full-speed USB device interface, compliant with USB V2.0.</li>
+<li>Emulates a standard serial port, for upgrading existing serial peripherals or adding extra serial ports over USB.</li>
+<li>Fully compatible with existing Windows serial-port applications; no modification required.</li>
+<li>Hardware full-duplex serial port with built-in transmit and receive buffers; supports baud rates from 50 bps to 2 Mbps.</li>
+<li>Supports the common MODEM handshake signals RTS, DTR, DCD, RI, DSR and CTS.</li>
+<li>RS232, RS485 and RS422 interfaces can be provided by adding external level-translation devices.</li>
+<li>The CH340R supports IrDA SIR infrared communication at baud rates from 2400 bps to 115200 bps.</li>
+<li>Built-in firmware, software-compatible with the CH341; the CH341 VCP driver can be used directly.</li>
+<li>Supports both 5 V and 3.3 V supply voltages.</li>
+<li>CH340C/N/K/E/X/B have a built-in clock and need no external crystal. The CH340B additionally has
+an internal EEPROM for configuring the serial number and similar items.</li>
+<li>Available in lead-free SOP-16, SOP-8, SSOP-20, ESSOP-10 and MSOP-10 packages; RoHS compliant.</li>
+</ul>
+
+<h2>3. Packages</h2>
+<table>
+<tr><th>Package</th><th class="c">Body width</th><th class="c">Pin pitch</th><th>Description</th><th class="c">Order code</th></tr>
+<tr><td>SOP-16</td><td class="c">3.9 mm / 150 mil</td><td class="c">1.27 mm / 50 mil</td><td>Standard 16-pin SMD</td><td class="c">CH340G</td></tr>
+<tr><td>SOP-16</td><td class="c">3.9 mm / 150 mil</td><td class="c">1.27 mm / 50 mil</td><td>Standard 16-pin SMD</td><td class="c">CH340C</td></tr>
+<tr><td>SOP-16</td><td class="c">3.9 mm / 150 mil</td><td class="c">1.27 mm / 50 mil</td><td>Standard 16-pin SMD</td><td class="c">CH340B</td></tr>
+<tr><td>SOP-8</td><td class="c">3.9 mm / 150 mil</td><td class="c">1.27 mm / 50 mil</td><td>Standard 8-pin SMD</td><td class="c">CH340N</td></tr>
+<tr><td>ESSOP-10</td><td class="c">3.9 mm / 150 mil</td><td class="c">1.00 mm / 39 mil</td><td>Narrow-pitch 10-pin SMD with exposed pad</td><td class="c">CH340K</td></tr>
+<tr><td>MSOP-10</td><td class="c">3.0 mm / 118 mil</td><td class="c">0.50 mm / 19.7 mil</td><td>Miniature 10-pin SMD</td><td class="c">CH340E</td></tr>
+<tr><td>MSOP-10</td><td class="c">3.0 mm / 118 mil</td><td class="c">0.50 mm / 19.7 mil</td><td>Miniature 10-pin SMD</td><td class="c"><strong>CH340X</strong></td></tr>
+<tr><td>SSOP-20</td><td class="c">5.3 mm / 209 mil</td><td class="c">0.65 mm / 25 mil</td><td>Shrink 20-pin SMD</td><td class="c">CH340T</td></tr>
+<tr><td>SSOP-20</td><td class="c">5.3 mm / 209 mil</td><td class="c">0.65 mm / 25 mil</td><td>Shrink 20-pin SMD</td><td class="c">CH340R</td></tr>
+</table>
+<div class="note"><strong>Notes:</strong>
+<ul>
+<li>CH340C, CH340N, CH340K, CH340E, CH340X and CH340B have a built-in clock and need no external crystal.</li>
+<li>The CH340B has an internal EEPROM for configuring the serial number, and some functions can be customised. If small size is required, the CH343P is recommended.</li>
+<li>The CH340K contains three internal diodes to prevent an MCU on a separate supply from back-feeding current into the CH340 through its I/O pins.</li>
+<li>On the CH340K the exposed pad is pin 0, GND — an optional connection. Pin 3, GND, is a required connection.</li>
+<li><strong>The CH340X is an improved CH340E, adding 5 V-tolerant I/O when operating from a 3.3 V supply.</strong></li>
+<li><strong>On the CH340X, an external resistor on pin 6 switches that pin from TNOW to DTR#. Both configurations are described in section 5.3.</strong></li>
+<li>On CH340C parts with a batch code beginning with 4 and last three digits greater than B40, a 4.7 kΩ pull-down on pin 8 changes it to DTR#.</li>
+<li>The CH340R provides inverted TXD and MODEM signals; it is discontinued.</li>
+<li>The CH340's USB transceiver is fully integrated per USB 2.0; series resistors on UD+ and UD− are not recommended.</li>
+</ul></div>
+
+<h2>4. Pins</h2>
+<table>
+<tr><th class="c">SSOP-20</th><th class="c">SOP-16</th><th class="c">ESSOP-10</th><th class="c">SOP-8</th><th>Name</th><th>Type</th><th>Description (text in parentheses applies to the CH340R only)</th></tr>
+<tr><td class="c">19</td><td class="c">16</td><td class="c">7</td><td class="c">5</td><td>VCC</td><td>Power</td><td>Positive supply input. Requires an external 0.1 µF decoupling capacitor.</td></tr>
+<tr><td class="c">8</td><td class="c">1</td><td class="c">3, 0</td><td class="c">3</td><td>GND</td><td>Power</td><td>Common ground. Connect directly to the USB bus ground.</td></tr>
+<tr><td class="c">5</td><td class="c">4</td><td class="c">10</td><td class="c">8</td><td>V3</td><td>Power</td><td>With a 3.3 V supply, connect to VCC and to the external supply. With a 5 V supply, connect an external 0.1 µF decoupling capacitor.</td></tr>
+<tr><td class="c" rowspan="3">9</td><td class="c" rowspan="3">7</td><td class="c" rowspan="3">—</td><td class="c" rowspan="3">—</td><td>XI</td><td>Input</td><td>CH340T/R/G: crystal oscillator input. Requires an external 12 MHz crystal and oscillation capacitors.</td></tr>
+<tr><td>NC</td><td>Unused</td><td>CH340C: no connection, must be left floating.</td></tr>
+<tr><td>RST#</td><td>Input</td><td>CH340B: external reset input, active low, internal pull-up.</td></tr>
+<tr><td class="c" rowspan="3">10</td><td class="c" rowspan="3">8</td><td class="c" rowspan="3">—</td><td class="c" rowspan="3">—</td><td>XO</td><td>Output</td><td>CH340T/R/G: crystal oscillator output. Requires an external 12 MHz crystal and oscillation capacitors.</td></tr>
+<tr><td>OUT#</td><td>Output</td><td>CH340C: general-purpose MODEM output, software-defined, active low. Some CH340C batches can switch it to a second DTR#.</td></tr>
+<tr><td>NC</td><td>Unused</td><td>CH340B: no connection, must be left floating.</td></tr>
+<tr><td class="c">6</td><td class="c">5</td><td class="c">1</td><td class="c">1</td><td>UD+</td><td>USB signal</td><td>Connect directly to the USB bus D+ line. Do not add series resistors.</td></tr>
+<tr><td class="c">7</td><td class="c">6</td><td class="c">2</td><td class="c">2</td><td>UD−</td><td>USB signal</td><td>Connect directly to the USB bus D− line. Do not add series resistors.</td></tr>
+<tr><td class="c">20</td><td class="c">—</td><td class="c">—</td><td class="c">—</td><td>NOS#</td><td>Input</td><td>Inhibit USB device suspend, active low, internal pull-up.</td></tr>
+<tr><td class="c">3</td><td class="c">2</td><td class="c">8</td><td class="c">6</td><td>TXD</td><td>Output</td><td>Serial data output (inverted on the CH340R).</td></tr>
+<tr><td class="c">4</td><td class="c">3</td><td class="c">9</td><td class="c">7</td><td>RXD</td><td>Input</td><td>Serial data input, with internal controllable pull-up and pull-down.</td></tr>
+<tr><td class="c">11</td><td class="c">9</td><td class="c">5</td><td class="c">—</td><td>CTS#</td><td>Input</td><td>MODEM handshake input, Clear To Send, active low (high).</td></tr>
+<tr><td class="c">12</td><td class="c">10</td><td class="c">—</td><td class="c">—</td><td>DSR#</td><td>Input</td><td>MODEM handshake input, Data Set Ready, active low (high).</td></tr>
+<tr><td class="c">13</td><td class="c">11</td><td class="c">—</td><td class="c">—</td><td>RI#</td><td>Input</td><td>MODEM handshake input, Ring Indicator, active low (high).</td></tr>
+<tr><td class="c">14</td><td class="c">12</td><td class="c">—</td><td class="c">—</td><td>DCD#</td><td>Input</td><td>MODEM handshake input, Data Carrier Detect, active low (high).</td></tr>
+<tr><td class="c">15</td><td class="c">13</td><td class="c">4</td><td class="c">—</td><td>DTR#</td><td>Output</td><td>MODEM handshake output, Data Terminal Ready, active low (high).</td></tr>
+<tr><td class="c">16</td><td class="c">14</td><td class="c">6</td><td class="c">4</td><td>RTS#</td><td>Output</td><td>MODEM handshake output, Request To Send, active low (high).</td></tr>
+<tr><td class="c">2</td><td class="c">—</td><td class="c">—</td><td class="c">—</td><td>ACT#</td><td>Output</td><td>USB configuration-complete status output, active low.</td></tr>
+<tr><td class="c">18</td><td class="c">15</td><td class="c">—</td><td class="c">—</td><td>R232</td><td>Input</td><td>CH340T/R/G/C: auxiliary RS232 enable, active high, internal pull-down.</td></tr>
+<tr><td class="c" rowspan="2">17</td><td class="c" rowspan="2">15</td><td class="c" rowspan="2">—</td><td class="c" rowspan="2">—</td><td>TNOW</td><td>Output</td><td>CH340T/E/X/B: serial transmission-in-progress status, active high. <strong>On the CH340X an external resistor switches this to DTR#.</strong></td></tr>
+<tr><td>IR#</td><td>Input</td><td>CH340R: serial mode select input, internal pull-up. Low selects the SIR infrared serial port, high selects the normal serial port.</td></tr>
+<tr><td class="c" rowspan="2">1</td><td class="c" rowspan="2">—</td><td class="c" rowspan="2">—</td><td class="c" rowspan="2">—</td><td>CKO</td><td>Output</td><td>CH340T: clock output.</td></tr>
+<tr><td>NC</td><td>Unused</td><td>CH340R: no connection, must be left floating.</td></tr>
+</table>
+<p><strong>Note:</strong> unused CH340 I/O pins may be left floating. The application diagrams use the
+CH340T as an example but also apply to the CH340G/C/N/K/E/X/B.</p>
+<div class="tn"><strong>Translator's note:</strong> the pin table above has columns for SSOP-20, SOP-16,
+ESSOP-10 and SOP-8 only. <strong>The MSOP-10 package used by the CH340E and CH340X is not tabulated
+here</strong>, although section 5.3 refers to CH340X pins 5, 6 and 8 by number. For MSOP-10 pin
+assignments, consult the package drawing in the original document or the CH340X product page.</div>
+
+<h2>5. Functional description</h2>
+
+<h3>5.1 Clock, reset, power and connections</h3>
+<p>The CH340G, CH340T and CH340R require an external 12 MHz clock signal on the XI pin for normal
+operation. Normally this is generated by the CH340's internal inverter together with a crystal. The
+external circuit needs only a 12 MHz crystal between XI and XO, plus an oscillation capacitor from each
+of XI and XO to ground.</p>
+<p>The CH340C/N/K/E/X/B all have a built-in clock generator and need no external crystal or capacitors.</p>
+<p>The CH340 contains a power-on reset circuit. The CH340B additionally provides an active-low external
+reset input pin.</p>
+<p>The CH340 supports either a 5 V or a 3.3 V supply. When operating from 5 V, the VCC pin takes the
+external 5 V supply and the V3 pin must have a 0.1 µF decoupling capacitor to ground. When operating
+from 3.3 V, the V3 pin must be connected to the VCC pin and to the external 3.3 V supply, and the
+operating voltage of any other circuit connected to the CH340 must not exceed 3.3 V.</p>
+<p><strong>The I/O of the CH340X, and of CH340C/N parts with batch codes beginning with 4, is 5 V
+tolerant and blocks inward current back-feed.</strong></p>
+<p>The CH340K not only blocks inward back-feed but also reduces its output drive strength, which
+reduces outward back-feed from the CH340.</p>
+<p>The CH340 automatically supports USB device suspend to save power. Holding NOS# low inhibits USB
+device suspend.</p>
+<p>On the CH340G/C/T/K the DTR# pin acts as a configuration input before USB configuration completes.
+An external 4.7 kΩ pull-down produces a default low level during USB enumeration, which requests a
+larger supply current from the USB bus through the configuration descriptor.</p>
+<p>The CH340 has built-in USB pull-up resistors; UD+ and UD− should be connected directly to the USB bus.</p>
+<p>In asynchronous serial mode the CH340's pins comprise data-transfer pins, MODEM handshake pins and
+auxiliary pins.</p>
+<p>The data-transfer pins are TXD and RXD. When the serial input is idle, RXD should be high. On the
+CH340G/C/T/R, if the R232 pin is high and the auxiliary RS232 function is enabled, an inverter is
+automatically inserted internally on the RXD pin, which then defaults low. When the serial output is
+idle, TXD is high on the CH340G/C/N/E/X/B/T, weakly high on the CH340K, and low on the CH340R.</p>
+<p>The MODEM handshake pins are CTS#, DSR#, RI#, DCD#, DTR# and RTS#; the CH340C also provides OUT#.
+All of these MODEM handshake signals are controlled by the host application, which also defines their use.</p>
+<p>The auxiliary pins are IR#, R232, CKO, ACT# and TNOW. Holding IR# low enables infrared serial mode.
+R232 controls the auxiliary RS232 function; when R232 is high the RXD input is automatically inverted.
+ACT# outputs the USB device configuration-complete status (for example, USB infrared adapter ready).
+TNOW indicates with a high level that the CH340 is transmitting data on the serial port, and goes low
+when transmission completes; in half-duplex modes such as RS485, TNOW can be used to switch the
+transceiver direction. <strong>The IR# and R232 pins are sampled only once, after power-on reset.</strong></p>
+
+<h3>5.2 CH340B configuration data</h3>
+<p>The CH340B provides an EEPROM configuration data area. A dedicated PC utility can set information
+such as a product serial number for each chip. The configuration area is as follows.</p>
+<table>
+<tr><th class="c">Byte address</th><th class="c">Name</th><th>Description of the configuration data area</th><th class="c">Default</th></tr>
+<tr><td class="c">00H</td><td class="c">SIG</td><td>For the CH340B: internal configuration valid flag, must be 5BH. For the CH340H/S: external configuration chip valid flag, must be 53H. Any other value makes the configuration invalid.</td><td class="c">00H</td></tr>
+<tr><td class="c">01H</td><td class="c">MODE</td><td>Serial mode, must be 23H.</td><td class="c">23H</td></tr>
+<tr><td class="c">02H</td><td class="c">CFG</td><td>Detailed configuration. Bit 5 configures the product serial-number string: 0 = enabled, 1 = disabled.</td><td class="c">FEH</td></tr>
+<tr><td class="c">03H</td><td class="c">WP</td><td>Internal configuration write-protect flag. 57H makes it read-only; any other value allows rewriting.</td><td class="c">00H</td></tr>
+<tr><td class="c">05H–04H</td><td class="c">VID</td><td>Vendor ID, high byte last, any value. Setting 0000H or FFFFH makes VID and PID use the manufacturer defaults.</td><td class="c">1A86H</td></tr>
+<tr><td class="c">07H–06H</td><td class="c">PID</td><td>Product ID, high byte last, any value.</td><td class="c">7523H</td></tr>
+<tr><td class="c">0AH</td><td class="c">PWR</td><td>Max Power, maximum supply current in units of 2 mA.</td><td class="c">31H</td></tr>
+<tr><td class="c">17H–10H</td><td class="c">SN</td><td>Serial Number, product serial-number ASCII string, 8 characters. If the first byte is not an ASCII character (21H–7FH), the serial number is disabled.</td><td class="c">12345678</td></tr>
+<tr><td class="c">3FH–1AH</td><td class="c">PROD</td><td>For the CH340B: Product String, product description Unicode string. The first byte is the total byte count (not exceeding 26H), the second byte is 03H, followed by the Unicode string. If it does not match this format, the manufacturer's default description is used.</td><td class="c">First byte 00H → default product description used</td></tr>
+<tr><td class="c">Other</td><td class="c">—</td><td>(reserved locations)</td><td class="c">00H or FFH</td></tr>
+</table>
+
+<h3>5.3 DTR and multi-mode MCU download</h3>
+<p><strong>On the CH340X, pin 6 defaults to TNOW.</strong> It has a weak pull-up during power-on or
+reset, and during normal operation it outputs TNOW for half-duplex transceiver switching. Adding an
+external resistor on pin 6 switches TNOW to DTR#. The two options are:</p>
+<ul>
+<li><strong>① Open-drain DTR enhanced mode.</strong> Connect a 4.7 kΩ pull-down resistor from pin 6 to
+GND. Pin 6 automatically switches to an open-drain-driven DTR# for connecting to an MCU's BOOT mode
+pin. By default DTR# does not drive and is held low by the external resistor, but the application can
+set DTR# to output a high level or to not drive. This suits multi-mode MCU download where DTR# defaults
+low.</li>
+<li><strong>② Push-pull DTR enhanced mode.</strong> Connect a 4.7 kΩ resistor between pin 6 and pin 5.
+Pin 6 automatically switches to a push-pull-driven DTR# for connecting to an MCU control pin, and the
+application can set DTR# high or low. This suits multi-mode MCU download where DTR# defaults high.</li>
+</ul>
+<p>On CH340C parts with a batch code beginning with 4 and last three digits greater than B40, pin 8
+defaults to OUT#, with a weak pull-up during power-on or reset and the MODEM OUT# output during normal
+operation. Adding a 4.7 kΩ pull-down to pin 8 enters open-drain DTR enhanced mode: pin 8 automatically
+switches to an open-drain-driven second DTR# for connecting to the MCU's BOOT mode. By default this
+second DTR# does not drive and is held low by the external resistor, but the application can set it
+high or leave it undriven — suiting multi-mode MCU download where DTR# defaults low. Separately, the
+original DTR# on pin 13 suits multi-mode MCU download where DTR# defaults high.</p>
+
+<h3>5.4 Serial port characteristics</h3>
+<p>The CH340 has independent internal transmit and receive buffers and supports simplex, half-duplex
+and full-duplex asynchronous serial communication. A serial frame consists of one low-level start bit,
+5, 6, 7 or 8 data bits, and 1 or 2 high-level stop bits, with support for odd, even, mark and space
+parity. The CH340 supports the common baud rates: 50, 75, 100, 110, 134.5, 150, 300, 600, 900, 1200,
+1800, 2400, 3600, 4800, 9600, 14400, 19200, 28800, 33600, 38400, 56000, 57600, 76800, 115200, 128000,
+153600, 230400, 460800, 921600, 1500000 and 2000000.</p>
+<p>For applications above 1 Mbps unidirectional, or above 500 kbps bidirectional, the CH343 with
+hardware automatic flow control is recommended instead.</p>
+<p>The CH340's serial receiver tolerates a baud-rate error of about 2 %. The transmit baud-rate error
+is less than 0.3 % on the CH340G/CH340T/CH340R, and less than 1.2 % on the
+CH340C/340N/340K/340E/<strong>340X</strong>/340B.</p>
+<p>Under Windows on the host, the CH340 driver emulates a standard serial port, so the great majority
+of existing serial applications are fully compatible and normally need no modification.</p>
+<p>The CH340 can be used to upgrade existing serial peripherals, or to add extra serial ports to a
+computer over USB. With external level-translation devices it can further provide RS232, RS485 and
+RS422 interfaces.</p>
+<p>The CH340R needs only an external infrared transceiver to add an SIR infrared adapter to a computer
+over USB, enabling infrared communication between the computer and IrDA-compliant external devices.</p>
+
+<h2>6. Parameters</h2>
+
+<h3>6.1 Absolute maximum ratings</h3>
+<p>Operation at or beyond the absolute maximum ratings may cause the chip to malfunction or be damaged.</p>
+<table>
+<tr><th class="c">Symbol</th><th>Parameter</th><th class="c">Min</th><th class="c">Max</th><th class="c">Unit</th></tr>
+<tr><td class="c" rowspan="3">TA</td><td>Operating ambient temperature — CH340G/CH340T/CH340R</td><td class="c">−40</td><td class="c">85</td><td class="c">°C</td></tr>
+<tr><td>Operating ambient temperature — CH340C/CH340N/CH340K/CH340E/CH340B</td><td class="c">−20</td><td class="c">70</td><td class="c">°C</td></tr>
+<tr><td><strong>Operating ambient temperature — CH340X, and CH340C/N with batch codes beginning with 4</strong></td><td class="c"><strong>−40</strong></td><td class="c"><strong>85</strong></td><td class="c">°C</td></tr>
+<tr><td class="c">TS</td><td>Storage ambient temperature</td><td class="c">−55</td><td class="c">125</td><td class="c">°C</td></tr>
+<tr><td class="c">VCC</td><td>Supply voltage (VCC to supply, GND to ground)</td><td class="c">−0.5</td><td class="c">6.0</td><td class="c">V</td></tr>
+<tr><td class="c">VIO</td><td>Voltage on an input or output pin</td><td class="c">−0.5</td><td class="c">VCC+0.5</td><td class="c">V</td></tr>
+</table>
+
+<h3>6.2 5 V electrical characteristics</h3>
+<p>Test conditions: TA = 25 °C, VCC = 5 V, excluding the pins connected to the USB bus.</p>
+<table>
+<tr><th class="c">Symbol</th><th>Parameter</th><th class="c">Min</th><th class="c">Typ</th><th class="c">Max</th><th class="c">Unit</th></tr>
+<tr><td class="c">VCC</td><td>Supply voltage — V3 pin with decoupling capacitor only, not tied to VCC</td><td class="c">4.0</td><td class="c">5</td><td class="c">5.3</td><td class="c">V</td></tr>
+<tr><td class="c" rowspan="2">ICC</td><td>Total supply current, operating — CH340G/C/N/K/E/X/T/R</td><td class="c"></td><td class="c">7</td><td class="c">20</td><td class="c">mA</td></tr>
+<tr><td>Total supply current, operating — CH340B</td><td class="c"></td><td class="c">6</td><td class="c">15</td><td class="c">mA</td></tr>
+<tr><td class="c" rowspan="2">ISLP</td><td>Total supply current, USB suspended — CH340G/K/T/R/B</td><td class="c"></td><td class="c">0.09</td><td class="c">0.2</td><td class="c">mA</td></tr>
+<tr><td>Total supply current, USB suspended — CH340C/N/E/X</td><td class="c"></td><td class="c">0.05</td><td class="c">0.15</td><td class="c">mA</td></tr>
+<tr><td class="c">VIL</td><td>Low-level input voltage</td><td class="c">0</td><td class="c"></td><td class="c">0.9</td><td class="c">V</td></tr>
+<tr><td class="c">VIH</td><td>High-level input voltage</td><td class="c">2.3</td><td class="c"></td><td class="c">VCC</td><td class="c">V</td></tr>
+<tr><td class="c">VOL</td><td>Low-level output voltage (6 mA sink current)</td><td class="c"></td><td class="c"></td><td class="c">0.5</td><td class="c">V</td></tr>
+<tr><td class="c">VOH</td><td>High-level output voltage (2 mA source current; only 100 µA during chip reset)</td><td class="c">VCC−0.6</td><td class="c"></td><td class="c"></td><td class="c">V</td></tr>
+<tr><td class="c">IUP</td><td>Input current at an input with an internal pull-up</td><td class="c">3</td><td class="c">150</td><td class="c">300</td><td class="c">µA</td></tr>
+<tr><td class="c">IDN</td><td>Input current at an input with an internal pull-down</td><td class="c">−40</td><td class="c">−100</td><td class="c">−300</td><td class="c">µA</td></tr>
+<tr><td class="c">VR</td><td>Power-on reset voltage threshold</td><td class="c">2.4</td><td class="c">2.6</td><td class="c">2.8</td><td class="c">V</td></tr>
+</table>
+
+<h3>6.3 3.3 V electrical characteristics</h3>
+<p>Test conditions: TA = 25 °C, VCC = V3 = 3.3 V, excluding the pins connected to the USB bus.</p>
+<table>
+<tr><th class="c">Symbol</th><th>Parameter</th><th class="c">Min</th><th class="c">Typ</th><th class="c">Max</th><th class="c">Unit</th></tr>
+<tr><td class="c" rowspan="2">VCC</td><td>Supply voltage, V3 pin tied to VCC — CH340G/T/R</td><td class="c">2.9</td><td class="c">3.3</td><td class="c">3.6</td><td class="c">V</td></tr>
+<tr><td>Supply voltage, V3 pin tied to VCC — CH340C/N/K/E/<strong>X</strong>/B</td><td class="c">3.1</td><td class="c">3.3</td><td class="c">3.6</td><td class="c">V</td></tr>
+<tr><td class="c" rowspan="2">ICC</td><td>Total supply current, operating — CH340G/C/N/K/E/X/T/R</td><td class="c"></td><td class="c">4</td><td class="c">12</td><td class="c">mA</td></tr>
+<tr><td>Total supply current, operating — CH340B</td><td class="c"></td><td class="c">3</td><td class="c">9</td><td class="c">mA</td></tr>
+<tr><td class="c" rowspan="2">ISLP</td><td>Total supply current, USB suspended — CH340G/K/T/R/B</td><td class="c"></td><td class="c">0.08</td><td class="c">0.2</td><td class="c">mA</td></tr>
+<tr><td>Total supply current, USB suspended — CH340C/N/E/X</td><td class="c"></td><td class="c">0.04</td><td class="c">0.15</td><td class="c">mA</td></tr>
+<tr><td class="c">VIL</td><td>Low-level input voltage</td><td class="c">0</td><td class="c"></td><td class="c">0.8</td><td class="c">V</td></tr>
+<tr><td class="c">VIH</td><td>High-level input voltage</td><td class="c">1.9</td><td class="c"></td><td class="c">VCC</td><td class="c">V</td></tr>
+<tr><td class="c">VOL</td><td>Low-level output voltage (4 mA sink current)</td><td class="c"></td><td class="c"></td><td class="c">0.5</td><td class="c">V</td></tr>
+<tr><td class="c">VOH</td><td>High-level output voltage (2 mA source current; only 40 µA during chip reset)</td><td class="c">VCC−0.6</td><td class="c"></td><td class="c"></td><td class="c">V</td></tr>
+<tr><td class="c">IUP</td><td>Input current at an input with an internal pull-up</td><td class="c">3</td><td class="c">70</td><td class="c">200</td><td class="c">µA</td></tr>
+<tr><td class="c">IDN</td><td>Input current at an input with an internal pull-down</td><td class="c">−30</td><td class="c">−70</td><td class="c">−200</td><td class="c">µA</td></tr>
+<tr><td class="c">VR</td><td>Power-on reset voltage threshold</td><td class="c">2.4</td><td class="c">2.6</td><td class="c">2.8</td><td class="c">V</td></tr>
+</table>
+
+<h3>6.4 Timing parameters</h3>
+<p>Test conditions: TA = 25 °C, VCC = 5 V or 3.3 V.</p>
+<table>
+<tr><th class="c">Symbol</th><th>Parameter</th><th class="c">Min</th><th class="c">Typ</th><th class="c">Max</th><th class="c">Unit</th></tr>
+<tr><td class="c">FCLK</td><td>Frequency of the input clock signal on the XI pin</td><td class="c">11.98</td><td class="c">12.00</td><td class="c">12.02</td><td class="c">MHz</td></tr>
+<tr><td class="c">TPR</td><td>Power-on reset time</td><td class="c">20</td><td class="c">35</td><td class="c">50</td><td class="c">ms</td></tr>
+</table>
+
+<h2>7. Applications</h2>
+<p><em>The schematic figures referenced below are images in the original document and are not
+reproduced in this translation.</em></p>
+
+<h3>7.1 USB to 9-wire serial port</h3>
+<p>The figure shows a USB-to-RS232 serial port implemented with the CH340T (or CH340C/B). The CH340
+provides the common serial and MODEM signals; level-translation circuit U8 converts the TTL serial port
+to RS232. Port P11 is a DB9 plug whose pins and functions match an ordinary 9-pin PC serial port.
+Devices similar to U8 include the MAX213, ADM213, SP213 and MAX211.</p>
+<p>If only a USB-to-TTL serial port is required, U8 and capacitors C46/C47/C48/C49/C40 can be omitted.
+Only RXD, TXD and the common ground need be connected; the other signal lines are optional and may be
+left floating when unused.</p>
+<p>P2 is the USB port. The USB bus comprises a 5 V supply pair and a data signal pair; conventionally
+the +5 V line is red, ground is black, D+ is green and D− is white. The USB bus can supply up to 500 mA,
+and in most cases the CH340 and low-power USB products can be powered directly from the USB 5 V supply.
+If the USB product has its own permanent supply, the CH340 should use that same supply, which avoids
+I/O back-feed between it and the USB supply. If the USB bus supply is also to be used, connect the USB
+5 V line to the product's 5 V permanent supply through a resistor of about 1 Ω, and connect the two
+grounds directly together.</p>
+<p>Capacitor C8 on the V3 pin is 0.1 µF and decouples the CH340's internal 3.3 V supply node; C9 is
+0.1 µF and decouples the external supply.</p>
+<p>For the CH340G/T/R, crystal X2 with capacitors C6 and C7 forms the clock oscillator. X2 is a 12 MHz
+quartz crystal; C6 and C7 are 33 pF monolithic or high-frequency ceramic capacitors. If a low-cost
+ceramic resonator is used for X2, C6 and C7 must take the resonator manufacturer's recommended value,
+typically 47 pF. For crystals that start reluctantly, halving C6 is recommended.</p>
+<p>For the CH340C/N/K/E/X/B, crystal X2 and capacitors C6 and C7 are not required.</p>
+<p><strong>PCB layout notes:</strong> place decoupling capacitors C8 and C9 as close as possible to the
+CH340 pins they connect to; route D+ and D− as a closely coupled parallel pair, with ground traces or
+copper pour on both sides where possible to reduce external interference; keep the XI and XO signal
+traces as short as possible, and surround the associated components with ground trace or copper pour
+to reduce high-frequency interference.</p>
+
+<h3>7.2 USB to RS232 serial port</h3>
+<p>The figure shows the most basic and most common 3-wire RS232 serial port, where U5 is a MAX232,
+ICL232, SP232 or similar. Unused CH340 signal lines may be left floating. For the CH340C/N/K/E/X/B,
+X4, C21 and C22 are not required.</p>
+
+<h3>7.3 USB to RS232 serial port, simplified version</h3>
+<p>This figure also shows a USB to 3-wire RS232 serial port. The circuit is functionally the same as
+section 7.2, except that the RS232 output signal amplitude is slightly lower. The CH340's R232 pin is
+high, enabling the auxiliary RS232 function, so only a diode, transistor, resistor and capacitor are
+needed in place of the dedicated level-translation circuit U5 of section 7.2, giving a lower hardware
+cost.</p>
+
+<h3>7.4 USB to RS485 serial port</h3>
+<p>The TNOW pin can be used to control an RS485 transceiver's DE (active-high transmit enable) and RE#
+(active-low receive enable) pins.</p>
+
+<h3>7.5 USB infrared adapter</h3>
+<p>The figure shows a USB infrared adapter built from the CH340R USB-to-IrDA chip and infrared
+transceiver U14 (ZHX1810, HSDL3000 or similar). Resistor R13 reduces the effect of the large infrared
+transmit current on other circuitry, and may be omitted where requirements are modest. Current-limiting
+resistor R14 should be adjusted according to the recommended value from the manufacturer of the
+infrared transceiver actually used.</p>
+
+<h3>7.6 Connecting an MCU serial port, common supply</h3>
+<p>The figure is a reference circuit in which an MCU connects to the CH340 over a TTL serial port for
+USB communication, with a common supply. The product is self-powered; VCC may be 5 V or 3.3 V (with V3
+shorted to VCC when VCC is 3.3 V), and the USB bus supply VBUS is not used at all — although the MCU
+can detect whether VBUS is present through an I/O pin and a series resistor if required. Because the
+CH340 and the MCU share the same VCC, there is no possibility of back-feed between two supplies through
+the I/O pins.</p>
+<p>Unused CH340 signal lines may be left floating. For the CH340C/N/K/E/X/B, X6, C17 and C18 are not
+required.</p>
+
+<h3>7.7 Connecting an MCU, separate supplies, bidirectional back-feed protection</h3>
+<p>The figure is a reference circuit for dual-supply operation, with the MCU connecting to the CH340
+over a TTL serial port. The CH340 is powered from the USB bus (VBUS) and the MCU from a separate supply
+VDD, which may be 5 V, 3.3 V or even 2.5 V or 1.8 V.</p>
+<p>The MCU's RXD pin should have its internal pull-up enabled; if it has none, an external 2 kΩ–22 kΩ
+pull-up to the MCU's VDD is recommended.</p>
+<p><strong>Preventing outward back-feed when the CH340 is powered but the MCU is not.</strong> Diodes D6
+and D7 and NMOS transistor Q5 prevent the CH340 from back-feeding current into an unpowered MCU through
+the internal diodes on the MCU's RXD or TXD pins. The D7 connection to RTS/BOOT0# is optional. D6
+addresses the case where the CH340's TXD high level back-feeds the MCU through the internal diode on
+the MCU's RXD. D7 addresses the case where the CH340's RTS high level back-feeds the MCU through the
+internal diode on the MCU's BOOT pin. Q5 addresses the case where the CH340's internal RXD pull-up
+current back-feeds the MCU through the internal diode on the MCU's TXD.</p>
+<p><strong>Preventing inward back-feed when the CH340 is unpowered but the MCU is powered.</strong> The
+I/O of the CH340K, <strong>the CH340X</strong>, and CH340C and CH340N parts with batch codes beginning
+with 4 all block inward back-feed automatically, so no back-feed current is produced when the CH340 is
+unpowered and the MCU is powered. Combined with D6, D7 and Q5 preventing outward back-feed into an
+unpowered MCU, the circuit achieves complete bidirectional back-feed protection.</p>
+<p>For other batch codes or part numbers, an additional inward-protection circuit is required. This is
+usually an NMOS transistor in series with a Schottky diode, blocking back-feed in both directions. For
+example, place a Schottky diode in series with the drain of Q5 with its anode to the CH340's RXD, and
+insert an NMOS transistor between D6 and the CH340 with its drain to D6 and its gate to the CH340's VCC.</p>
+<p>If a particular case is known not to occur, the corresponding NMOS transistor or diode may be
+omitted. For example, if the MCU's I/O supports back-feed blocking or is 5 V tolerant, or if the MCU
+has a permanent supply of its own, there is no concern about the CH340 back-feeding the MCU, and D6, D7
+and Q5 may all be omitted and shorted out.</p>
+<p>For diodes, low-power Schottky types such as the BAS70, BAT54 or B0520 are preferred. For NMOS
+transistors, low-power, low-capacitance types such as the 2SK3018 or 1012 are preferred.</p>
+<p>In general, powering the CH340 and the MCU from separate supplies is not recommended. If it is
+genuinely necessary, the CH340K may be used, or the CH343, which has a VIO supply pin supporting
+independent I/O supply.</p>
+
+<h3>7.8 Connecting an MCU, separate supplies, inward back-feed protection</h3>
+<p>The figure is a reference circuit for dual-supply operation in which the MCU connects to a CH340K
+over a TTL serial port. The CH340K is powered from the USB bus (VBUS on VCC) and the MCU from a separate
+supply VDD, which may be 5 V, 3.3 V or even 2.5 V or 1.8 V. The exposed pad of the CH340K package is an
+optional GND pin; connect it to GND or leave it floating according to what suits the PCB routing.</p>
+<p>The CH340K's TXD, RTS# and RXD pins contain internal diodes that block inward back-feed (as shown in
+the figure), together with internal weak pull-ups of about 75 kΩ that maintain the default or idle high
+level (not shown). This provides low-level drive and weak high-level drive while reducing back-feed
+when the CH340K and MCU are on independent supplies. The CH340K completely prevents the MCU's supply
+from back-feeding an unpowered CH340K, and reduces back-feed from the CH340K's supply into an unpowered
+MCU to no more than 150 µA.</p>
+<p><strong>The CH340X, and CH340C and CH340N parts with batch codes beginning with 4, likewise
+completely prevent the MCU's supply from back-feeding an unpowered CH340</strong>, so the CH340 does not
+waste the MCU's supply current after USB power is removed.</p>
+<p>To completely prevent the CH340K's supply from back-feeding an unpowered MCU, add the NMOS transistor
+and diodes shown in the section 7.7 figure.</p>
+<p>For baud rates above 120 kbps, enabling the MCU's internal pull-up on its RX pin, or adding an
+external 2 kΩ–22 kΩ pull-up, is recommended — or use another USB-to-serial chip with a VIO pin
+supporting independent I/O supply.</p>
+<p>The CH340K's DTR# pin is an ordinary push-pull output and its CTS# pin an ordinary input with an
+internal pull-up. Neither pin has internal diodes and neither has back-feed protection, so they are
+generally not used to connect to an MCU.</p>
+<p>DTR# can be used to control a power switch feeding VDD from VCC. Four power-control options are
+shown in the figure. The T4 and Q1 options (Q1 should be an N-MOSFET with a low Vth) are simplified
+schemes: the VDD output is about VCC−0.8 V and the current does not exceed 200 mA. The T6 and Q3 options
+are complete schemes. D10 in the figure prevents VDD from feeding back into VCC and is optional.</p>
+
+<h3>7.9 One-key USB download for an MCU</h3>
+<p>The figure is a reference circuit for multi-mode one-key MCU download over USB-to-serial, requiring
+no manual setting or manual reset.</p>
+<p><strong>Applicable MCU type:</strong> the MCU must itself support one-key serial download, with NRST
+as an active-low reset input and BOOT0 selecting the application program when low and the bootloader
+when high — for example the STM32F103.</p>
+<p>The figure uses the <strong>CH340X</strong>. The 4.7 kΩ pull-down may be anywhere in the range
+3–5.6 kΩ, and doubles as the MCU's BOOT0 pull-down. For CH340C parts with a batch code beginning with 4
+and last three digits greater than B40, OUT# with an external pull-down can be used as a second DTR#
+connected to BOOT0.</p>
+<p><strong>Note:</strong> for other MCUs whose BOOT mode polarity is reversed, the DTR# of a CH340C/G
+can be used directly (defaults high), or the DTR# of a CH340X with a resistor between pins 6 and 5
+(push-pull DTR enhanced mode, defaults high).</p>
+<p><strong>MCU normal operating state:</strong> the pull-down resistor puts the CH340X into open-drain
+DTR enhanced mode, pin 6 switches to DTR#, DTR# does not drive by default, BOOT0 stays low, RTS#
+defaults high, and the MCU runs the application program normally.</p>
+<p><strong>One-key download:</strong> the host download utility opens the serial port, sets DTR# high,
+sets RTS# low and then high, and the MCU enters the bootloader. After download completes it sets DTR#
+low, sets RTS# low and then high, and the MCU runs the application normally; DTR# is left unchanged
+until the serial port is closed. <em>Note that the MODEM data state is inverted relative to the pin
+level.</em></p>
+<p><strong>Common supply:</strong> the CH340X uses the same 5 V or 3.3 V supply as the MCU. The
+disadvantage is that the CH340X consumes tens of microamps of sleep current.</p>
+<p><strong>Independent supply:</strong> the CH340X uses the USB VBUS supply and consumes no MCU supply
+current at all. When the CH340X itself is unpowered it has essentially no effect on the MCU's I/O, but
+the case of some MCUs being back-fed when USB is powered and the MCU is not must be avoided. To
+completely prevent the CH340's supply from back-feeding an unpowered MCU, add the NMOS transistor and
+diodes shown in the section 7.7 figure.</p>
+<p>If the NRST pin also needs to support a manual reset, place a 1–2 kΩ resistor, or a diode with its
+anode to NRST, in series between RTS# and NRST.</p>
+
+</body></html>
