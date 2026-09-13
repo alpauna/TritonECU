@@ -195,13 +195,52 @@ tOC       = 2.2 µF × 1.35 V / 55 µA = 54 ms        15× margin ✓
 inrush, and 54 ms still clears 3.63 ms by 15×. Q1's worst case improves:
 `14 V × 4.09 A = 57 W` for 54 ms = 3.1 J, ΔTj ≈ 20 °C on the IRF540NS.
 
-### Specify the shunt properly
+### Specify the shunt properly — and power is not what sizes it
 
-| | |
+```
+running, 13.8 V, 0.33 A          1.2 mW
+cold crank, real load, 0.9 A     8.9 mW
+2 A out at the 4.4 V floor       113 mW    ← realistic worst case, and transient
+at the 4.09 A current limit      184 mW    ← absolute ceiling, 54 ms before shutdown
+auto-retry average (4.3 % duty)    8 mW
+```
+
+**1 W is ~5× the absolute peak and ~800× the continuous figure — keep it
+anyway.** The power rating is not the binding spec here. Three other things are:
+
+| | Why |
 |---|---|
-| Tolerance | **1 %** — it sets the current limit directly |
-| TCR | **≤ 100 ppm/°C** — it also sets the INA238's accuracy |
-| Power | 184 mW at the 4.09 A limit → **0.25 W minimum**, 2512 is typical |
+| **Tolerance 1 %** | it sets the current limit *directly* |
+| **TCR ≤ 100 ppm/°C**, prefer ≤ 50 | it sets the INA238's battery-current accuracy too |
+| **Kelvin routability** | 2512 leaves room to bring both sense pairs off the inner pad edges; 4-terminal parts start at 2512 |
+
+TCR is the one worth spending on. A thick-film 1206 at 200 ppm/°C drifts
+**3.3 %** over −40 to +125 °C, and that error lands in the reported battery
+current as well as the trip point. A metal-element 2512 at 15–50 ppm/°C drifts
+0.25–0.8 %.
+
+Self-heating favours the larger part slightly as well: at the 184 mW ceiling a
+2512 rises 5–9 °C against 15–22 °C for a 1206, which with the TCR above is a
+further 0.07 % versus 0.2 %. Small, but it points the same way.
+
+**So the 1 W part is already the right choice, for reasons other than its
+wattage.**
+
+### If 11 mΩ is awkward to source, 10 mΩ is fine
+
+11 mΩ is E96 and the selection in good tolerance and TCR is thinner. The
+datasheet's own worked example picks **10 mΩ** for a 4 A target:
+
+| R<sub>SNS</sub> | I<sub>LIM(min)</sub> | I<sub>LIM(typ)</sub> | Q1 short-circuit |
+|---|---|---|---|
+| 10 mΩ | 4.50 A | 5.00 A | 63 W |
+| **11 mΩ** | **4.09 A** | **4.55 A** | **57 W** |
+| 12 mΩ | 3.75 A | 4.17 A | 53 W |
+
+All three clear the 3.2 A needed at the 4.4 V floor, and all three are
+comfortable for the IRF540NS. **ADCRANGE = 0 is required at any of them** — the
+narrow range saturates below the limit in every case.
+
 | Terminals | **4-terminal (Kelvin) if available** — see layout below |
 
 ### INA238: ADCRANGE = 0
