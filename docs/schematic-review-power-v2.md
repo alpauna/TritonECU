@@ -178,3 +178,81 @@ The symbol shows PGND1 on pin 5 and PGND2 on pin 9. The datasheet assigns
 | 8 | TLV62085: check L1 = 500 nH against TI's recommendation | medium |
 | 9 | One SMDJ43A is enough | low |
 | 10 | Confirm PGND pins 6 and 10 connected | low |
+
+---
+
+# Before the BOM and layout
+
+## R<sub>SNS</sub> = 11 mΩ — what moves and what does not
+
+```
+ILIM(min) = 45 mV / 11 mΩ = 4.09 A        (was 5.6 A at 8 mΩ)
+inrush    = 1236 µF × 12 V / 4.09 A = 3.63 ms
+tOC       = 2.2 µF × 1.35 V / 55 µA = 54 ms        15× margin ✓
+```
+
+**C7 stays at 2.2 µF** — the timer was sized by the 400 ms load dump, not by
+inrush, and 54 ms still clears 3.63 ms by 15×. Q1's worst case improves:
+`14 V × 4.09 A = 57 W` for 54 ms = 3.1 J, ΔTj ≈ 20 °C on the IRF540NS.
+
+### Specify the shunt properly
+
+| | |
+|---|---|
+| Tolerance | **1 %** — it sets the current limit directly |
+| TCR | **≤ 100 ppm/°C** — it also sets the INA238's accuracy |
+| Power | 184 mW at the 4.09 A limit → **0.25 W minimum**, 2512 is typical |
+| Terminals | **4-terminal (Kelvin) if available** — see layout below |
+
+### INA238: ADCRANGE = 0
+
+```
+ADCRANGE = 1   ±40.96 mV  →  ±3.72 A at 11 mΩ    saturates BELOW the 4.09 A limit ✗
+ADCRANGE = 0  ±163.84 mV  →  ±14.9 A             0.45 mA/LSB                      ✓
+```
+
+A firmware constant, not a schematic change — but it has to be right for the
+FLT# disambiguation in [`always-on-domain.md`](always-on-domain.md), which
+distinguishes an overcurrent fault from an overvoltage warning by reading
+whether the current is at the limit.
+
+## Three layout items that are hard to fix later
+
+### 1. Kelvin the shunt — it is sensed twice
+
+**Both** the LTC4364 (SENSE/OUT) and the INA238 (IN+/IN−) measure across the
+same 11 mΩ. At the 4 A limit, **1 mΩ of trace error is 4 mV against a 45 mV
+threshold — 9 % of the current limit**, and a direct error in the battery
+current reading.
+
+Route both sense pairs from the **inner edges of the shunt pads**, symmetric,
+each pair kept together. Do not tap them off the current-carrying copper.
+
+### 2. Copper under Q1 is a specified requirement, not a preference
+
+From the auto-retry analysis: a persistent short averages **2.5 W** in Q1 at a
+4.3 % duty cycle that cannot be tuned away, because it is fixed by the ratio of
+the TMR charge and discharge currents.
+
+```
+required   RθJA ≤ (175 − 85) / 2.5 = 36 °C/W
+D2Pak on minimum pad          40 °C/W   →  Tj = 185 °C  ✗
+D2Pak on ~1 in² of 2 oz Cu    25–30     →  Tj ≈ 147 °C  ✓
+```
+
+### 3. The COMP node is small and high-impedance
+
+C23 is **3.3 pF** and board stray is 2–5 pF — the same order. R20 is **78.7 kΩ**
+sitting beside a 2.1 MHz switching node. Keep R20/C22/C23 tight to the pin and
+away from LX1/LX2.
+
+## BOM cautions
+
+- **C7 must be X7R or C0G, never tantalum or electrolytic.** TMR charges at
+  5 µA; tantalum leakage is specified in microamps.
+- **The 560 µF input electrolytics must stay electrolytic.** Their ESR is the
+  input filter's damping — a low-ESR polymer "upgrade" raises Q from 1.7 to
+  about 14. See [`power-supply.md`](power-supply.md).
+- **4 × 22 µF output: check DC bias derating.** The compensation assumes ~66 µF
+  effective from 88 µF nominal; a 6.3 V part at 5 V bias would fall well short.
+- **One SMDJ43A is enough** — two in parallel do not share.
