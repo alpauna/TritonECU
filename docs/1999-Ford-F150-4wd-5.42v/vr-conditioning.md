@@ -101,7 +101,7 @@ Mode C is a plain comparator and throws away the reason for using this part.
 | 13 | ZERO_EN | **GND** — note it is internally pulled up to VCC through 10 kΩ, so it must be actively pulled low |
 | 1 | INT_THRS1 | GND |
 | 8 | INT_THRS2 | GND |
-| 3 | BIAS1 | **GND** — required in A2; the internal reference is used instead |
+| 3 | BIAS1 | **GND** — confirmed by datasheet **Figure 3, "Operating Mode A2"**, which shows BIAS tied straight to ground. The general pin description ("connect to an external resistor-divider") applies to Modes A1/B/C only |
 | 6 | BIAS2 | GND |
 | 2 | EXT1 | leave unconnected |
 | 7 | EXT2 | leave unconnected |
@@ -140,10 +140,33 @@ current when the sensor voltage exceeds VCC and turns on the internal ESD
 diodes. A VR sensor at engine speed swings far above 5 V, so this is a
 guaranteed condition on this application, not an edge case.
 
-Add a **filter capacitor across the op-amp inputs** to limit input bandwidth —
-rusEFI use 1 nF, which with 10 kΩ puts the corner near 16 kHz. Note the series
-resistors also lower the input amplifier's gain, so they interact with
-threshold behaviour and should not be changed casually.
+Add a **filter capacitor across the op-amp inputs** to limit input bandwidth.
+
+**Get the corner right: it is differential, not single-ended.** With a series
+resistor in *each* leg and the capacitor between them, the time constant is
+`(R1 + R2) · C`, so 10 kΩ legs with 1 nF is **8 kHz, not the 16 kHz** an earlier
+revision of this document claimed.
+
+That matters, because a 36-1 wheel at 6000 rpm is **3.6 kHz** — only 2.2×
+below an 8 kHz corner, and the group delay lands in the timing:
+
+```
+group delay = τ / (1 + (f/f_c)²)
+
+10 kΩ + 1 nF     τ = 20 µs    f_c =  8.0 kHz  →  16.6 µs at 6000 rpm = 0.60 crank°
+ 5 kΩ + 470 pF   τ = 4.7 µs   f_c = 33.9 kHz  →   4.65 µs            = 0.17 crank°
+```
+
+**The board is built with 5 kΩ and 470 pF** — 0.17° is small enough to ignore
+rather than compensate, which is why it was chosen over 10 kΩ/1 nF. The cost is
+13 dB less attenuation at 1 MHz (29 dB against 42 dB), so if the crank signal
+proves noisy on the engine, this is the first term to revisit.
+
+Note the series resistors also lower the input amplifier's gain — but under
+**Mode A2's adaptive threshold that corrects itself**, since the threshold
+tracks ⅓ of the previous peak whatever the gain is. The datasheet's warning to
+"account for it when setting the trigger threshold" applies to the fixed-threshold
+modes.
 
 #### Package these for voltage, not for power
 
@@ -171,6 +194,15 @@ against a 100 V sensor peak.
 **Better: split each leg into two resistors in series** — 2 × 4.7 kΩ or 2 × 5 kΩ
 in 0805. That doubles the working-voltage headroom to 300 V, halves the voltage
 stress and the pulse energy in each part, and costs one extra footprint per leg.
+
+**As built: one 5 kΩ 0805 per leg.** The binding spec turns out to be the
+datasheet's absolute maximum — `Current into IN+, IN−: ±40 mA` — and 5 kΩ gives
+18.9 mA at a 100 V peak. The **0805's 150 V rating runs out first, at about
+155 V of VR peak**; the current limit is not reached until ~205 V.
+
+So the board is good to ~150 V of sensor output. **That number has never been
+measured on this engine** — do it during M3 bring-up, and add the second 5 kΩ
+per leg only if it goes higher.
 
 This is very likely what rusEFI did: their VR board BOM lists **ten 5 kΩ
 resistors**, and four input legs at two apiece accounts for eight of them. Two

@@ -213,3 +213,43 @@ the pins open to match how EXT is handled.
 whatever you set it to, so the 150 V question is a vehicle question, not a bench
 one. Build it, drive 36-1 into it, and confirm the decoder against
 `test_crank`'s 10 native tests running on real edges instead of synthetic ones.
+
+
+---
+
+# Both items closed — 2026-09-13
+
+## 10 nF fitted
+
+```
+C2, C7   GRM033R71C103KE14D   10 nF   0201
+C3, C8   CC0402KRX7R7BB104   100 nF   0402
+C4, C9   CL10B105KO8NNNC       1 µF   0603
+```
+
+Exactly the trio the datasheet asks for, and **in ascending package size** —
+which is the right order, since the 0201 has the lowest ESL and is the part that
+has to sit closest to the pins.
+
+## BIAS grounded is correct — and the design doc already said so
+
+Datasheet **Figure 3, "MAX9924/MAX9926 Operating Mode A2"** shows **BIAS tied
+straight to ground**, alongside ZERO_EN, INT_THRS and GND, with EXT left
+unconnected. The board matches it exactly.
+
+The general pin description — *"connect to an external resistor-divider and
+bypass to ground with a 0.1 µF and 10 µF capacitor"* — describes **Modes A1, B
+and C**, which is also what the "Bias Reference" section says: *"In Modes A1, B,
+and C, a well-decoupled external resistor-divider generates a VCC/2 signal."*
+
+[`vr-conditioning.md`](1999-Ford-F150-4wd-5.42v/vr-conditioning.md) had this
+right already — *"BIAS1: GND — required in A2"* — and the review second-guessed
+it against the general pin description instead of the mode-specific text. The
+figure reference is now recorded in that doc so it cannot be re-litigated.
+
+## The board is complete
+
+Nothing outstanding. The one open question is a **measurement, not a change**:
+the VR peak on this engine, which decides whether 5 kΩ in 0805 (good to ~150 V)
+needs the second resistor per leg. That is a vehicle question and M3 is a bench
+exercise, so it does not gate anything now.
