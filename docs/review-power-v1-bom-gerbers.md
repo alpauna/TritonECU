@@ -611,3 +611,59 @@ deliberate trade rather than an oversight.
 1206 is 3.2 × 1.6 mm against 0805's 2.0 × 1.25 mm, so the four output caps need
 re-placing and re-routing. Keep them tight to the MAX25239's OUT pins (12, 13)
 — the output loop is part of what the compensation assumes.
+
+## Add 100 nF 0402 at the OUT pins — not 4.7 or 10 µF
+
+Worth adding, because moving to 1206 created a gap that 0805 did not have.
+
+### The 1206 bank is inductive at the switching frequency
+
+```
+22 µF nominal → ~15 µF effective at 5 V bias
+1206 ESL      ≈ 1.2 nH        (0805 ≈ 0.7 nH, 0402 ≈ 0.5 nH)
+
+SRF = 1/(2π√(1.2 nH × 15 µF)) = 1.19 MHz
+```
+
+**That is below the 2.1 MHz fundamental.** Above SRF a capacitor is an inductor,
+so the output bank is inductive exactly where the converter switches — 15.8 mΩ
+per part, about 4 mΩ for four.
+
+For *ripple* that barely matters: 0.34 A rms × 4 mΩ = 1.4 mV. What it does
+matter for is the **nanosecond edges**, where `V = L·di/dt` and 0.3 nH of bank
+ESL against a 2 A transition in 10 ns is a **60 mV spike**.
+
+The input side does not have this problem — C24/C25 are 4.7 µF 0603, whose SRF
+lands around 4.3 MHz, comfortably above 2.1 MHz. **The asymmetry is the whole
+argument.**
+
+### Why not 4.7 µF or 10 µF — anti-resonance
+
+A small capacitor in parallel with a large one resonates against the large one's
+ESL, and impedance *peaks* at that frequency:
+
+```
+f = 1/(2π√(L_bank × C_small))       L_bank ≈ 0.3 nH (four 1206s in parallel)
+
+C_small = 10 µF  (≈3.5 µF biased)   →  4.9 MHz
+C_small = 4.7 µF (≈2 µF biased)     →  6.5 MHz     ← 3rd harmonic is 6.3 MHz
+C_small = 100 nF                    →   29 MHz     ← clear of the comb
+```
+
+**4.7 µF lands the impedance peak essentially on the third harmonic.** 100 nF
+puts it an octave and a half above anything the converter produces strongly.
+
+The small part also has to be the one with low ESL to be worth fitting — a
+0402's 0.5 nH against the 1206's 1.2 nH is the point, and a 10 µF 0402 is a
+dense part with worse ESL and heavy bias derating anyway.
+
+### What to fit
+
+**One 100 nF 0402 at each OUT pin (12 and 13)**, each with its own ground via,
+kept in the tightest loop available. Two beats one — it halves the loop area
+rather than the capacitance.
+
+**This is a refinement, not a correction.** The datasheet's own application
+circuit is 4 × 22 µF with nothing smaller, and everything downstream of this
+rail either does not care (the TLV62085 is a switcher) or has its own ferrite
+and local decoupling (the ADC daughterboard). Do not let it hold up the board.
