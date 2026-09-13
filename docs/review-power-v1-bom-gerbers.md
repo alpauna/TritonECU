@@ -702,3 +702,69 @@ decoupling.
 
 **Nothing to change.** The compromise forced by the tight placement was absorbed
 by routing +5V as copper rather than track, which is the right trade.
+
+---
+
+# Closeout — L1, L2 and the TVS
+
+## L2 — CYA0650-2R2M, confirmed with margin
+
+```
+                     spec          needed
+inductance     2.20 µH ±20 %       2.2 µH        ✓
+Isat                 10.0 A        ≥ 4.3 A       ✓  2.3×
+Irms (heat)           9.5 A        3.6 A peak    ✓
+DCR            11.2 mΩ typ / 12.5 max   →  130 mW at the 3.4 A boost corner
+dimensions     7.2 × 6.6 × 5.0 mm   footprint IND-SMD_L7.2-W6.6  ✓ matches
+core           metal dust — soft saturation
+```
+
+**±20 % tolerance is fine.** At the 1.76 µH end ripple rises 25 % (0.69 → 0.86 A);
+at 2.64 µH the RHP zero falls from 255 to 213 kHz, making the 51 kHz crossover
+f<sub>ZRHP</sub>/4.2 rather than /5 — a couple of degrees of phase margin.
+
+Note the BOM calls it `CYA0650-2.2UH` where the datasheet calls it
+`CYA0650-2R2M`; same part, distributor naming.
+
+**5.0 mm height** is the second-tallest item after the 560 µF cans at 10 mm.
+
+## L1 — RETRACTED, 500 nH is a TI-recommended value
+
+My concern about 94 % ripple was a rule of thumb applied where the datasheet has
+an explicit answer. TI's own recommended-inductor table for the TLV62085:
+
+| Inductance | Current | Size | Part |
+|---|---|---|---|
+| **0.47 µH** | 6.6 A | 4 × 4 × 1.5 | Coilcraft XFL4015-471 |
+| **0.47 µH** | 4.7 A | 3.2 × 2.5 × 1.2 | TOKO DFE322512-R47N |
+| 1 µH | 5.1 A | 4 × 4 × 2 | Coilcraft XFL4020-102 |
+
+**Two of the three recommendations are 0.47 µH**, and `CR4015-R50N` is 500 nH in
+the same 4 × 4 package as the first entry. The ripple really is ~0.94 A pk-pk —
+`3.3 × (1 − 3.3/5)/(500 nH × 2.4 MHz)` — but **high ripple is normal for
+DCS-Control**, which is a fixed-on-time architecture rather than fixed-frequency
+PWM. TI designed the part around it.
+
+`I_L,MAX = 1 + 0.94/2 = 1.47 A`, so **[verify]** the CR4015-R50N's Isat is
+comfortably above that — a 4 × 4 mm 500 nH part is typically 5–10 A.
+
+The rest of the TLV62085 section also matches TI's guidance: 22 µF typical
+output (C15/C16 are 2 × 22 µF) and 10 µF input (C21/C22).
+
+## TVS — one SMDJ43A
+
+Closed. 3000 W is enough on its own, and a single part removes the sharing
+assumption that made two of them less than 2× anyway.
+
+---
+
+# Everything is closed
+
+No board or BOM changes outstanding. Two things remain that are not board
+changes:
+
+- **Windowpane paste aperture on Q2's tab** — a stencil edit or an instruction
+  to the assembler, to avoid voiding under the thermal path.
+- **The 1206 DC-bias figure is an estimate**, since the loop cannot be measured
+  in circuit with FB tied to VCC. If ripple or transient response looks wrong at
+  bring-up, start there.
