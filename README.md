@@ -64,13 +64,18 @@ again. See [`docs/roadmap.md`](docs/roadmap.md).
 ## Hardware
 
 Design is frozen — [`docs/v1-scope.md`](docs/v1-scope.md) is the build list.
+The **power schematic is drawn and reviewed**:
+[`docs/schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 
 | Block | Part |
 |---|---|
 | MCU | STM32F767ZI (Nucleo-144 now, raw chip later) |
 | Input protection | LTC4364-2 — reverse polarity, load dump, overcurrent, brownout holdup |
-| Main supply | LM5155-Q1 SEPIC, 6.0 V / 3 A at 2.2 MHz |
-| Analog in | AD7606, 8 ch, 16-bit, simultaneous, ±10 V |
+| 5 V rail | MAX25239AFFA buck-boost, 2.1 MHz, spread spectrum |
+| 3.3 V rail | TLV62085 buck from 5 V, 2.4 MHz |
+| ADC reference | MAX6070AAUT25, 2.5 V, gated for sleep |
+| Battery sense | INA238 on the LTC4364's own shunt |
+| Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V |
 | Crank / cam / OSS | 2 × MAX9926, Mode A2 |
 | Ignition | 8 × ISL9V3040 ignition IGBT + 74HCT541 |
 | Injection | 8 × ZXMS6005DGQ IntelliFET |
@@ -81,9 +86,25 @@ Design is frozen — [`docs/v1-scope.md`](docs/v1-scope.md) is the build list.
 - **No Wi-Fi.** An always-on radio on an engine controller is a remote attack
   surface with a path to code execution via OTA. Ethernet needs physical
   access. [`docs/platform-decision.md`](docs/platform-decision.md)
-- **2.2 MHz switching** to clear the AM broadcast band — a 400 kHz converter
-  puts harmonics at 1.2 and 1.6 MHz, inside it.
-  [`docs/power-supply.md`](docs/power-supply.md)
+- **2.1 MHz switching** to clear the AM broadcast band — a 400 kHz converter
+  puts harmonics at 1.2 and 1.6 MHz, inside it. The MAX25239's `A` and `B`
+  suffixes are 2100 kHz and 400 kHz respectively, and the board was nearly
+  built with the wrong one.
+  [`docs/always-on-domain.md`](docs/always-on-domain.md)
+- **The MCU never fully powers down.** It sleeps on an always-on 3.3 V rail at
+  ~3 µA and brings the rest up on demand, which removes the graceful-shutdown
+  problem, replaces KAPWR and makes supply-fault latching implementable in
+  firmware. Parked drain is ~950 µA, about 1 % of the battery per month.
+  [`docs/always-on-domain.md`](docs/always-on-domain.md)
+- **The ADC lives on a daughterboard.** Not for proximity — that is a placement
+  problem — but for analog ground plane control on a board that low-side
+  switches eight ignition coils, and so the front end can be respun without the
+  carrier. [`docs/adc-daughterboard.md`](docs/adc-daughterboard.md)
+- **The SEPIC was retired.** An integrated buck-boost deletes the external FET,
+  the Schottky, both inductors and the coupling-cap bank, and adds spread
+  spectrum the controller design never had.
+  [`docs/power-supply.md`](docs/power-supply.md) keeps the input-chain analysis
+  and marks the rest superseded.
 - **Clamp both loads, dissipate neither.** A coil's flyback *is* the spark
   (400 V clamp); an injector's is waste but a plain diode makes it close
   slowly and over-fuel at idle (60–70 V clamp).
