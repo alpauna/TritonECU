@@ -412,3 +412,76 @@ Usual practice for a pad this size is a **windowpane pattern** — an array of
 smaller apertures at 50–80 % total coverage. Worth asking the assembler for, or
 editing in the stencil file. **Not a board change**, and not needed at all if
 the part is hand-soldered with a preform or drag-soldered.
+
+---
+
+# ⚠ BLOCKING — the shunt datasheet describes a jumper, not a 10 mΩ resistor
+
+`FRM252WJR010TN` was flagged earlier only for its `J` tolerance code. The
+datasheet raises something worse.
+
+## The series is sub-milliohm by definition
+
+Four independent statements in the same document:
+
+```
+Title            "FRM-Jumper Series — Zero milli-ohm (Jumper) Metal alloy Chip Resistor"
+                 "FRM-0mΩ系列合金电阻"
+
+Electrical       Type    Power   Max Loading Current   Resistance (mΩ)
+characteristics  2512    2 W          100.0 A              < 0.20
+
+Every performance spec (overload, soldering heat, thermal shock, …):
+                 "0603: ≤0.3 mΩ   Others: ≤0.2 mΩ"
+
+Part-number key  "R000 = Below 0.2 mΩ"
+```
+
+**There is also no TCR specification anywhere in the datasheet** — which makes
+sense for a jumper and is disqualifying for a current-sense element.
+
+## What the part number decodes to
+
+```
+F    R          M       25     2W    J       R010    T          N
+FOJAN Resistor  Metal   2512   2 W   ±5 %    ?       7" reel    NiCu
+```
+
+**2 W and a NiCu alloy element are both good news** — better than the 1 W
+thick-film worry from the earlier review. But `J = ±5 %` is confirmed, and
+`R010` sits in a series whose own key only defines `R000` as "below 0.2 mΩ".
+
+## If it is a jumper, the LTC4364 loses its current limit entirely
+
+```
+current limit   45 mV / 0.2 mΩ   =  225 A        → never trips
+inrush          1236 µF charged with no limit    → uncontrolled every key-on
+overcurrent     the fault timer never starts     → no shutdown, no FLT#
+INA238          0.33 A × 0.2 mΩ = 66 µV = 13 LSB → battery current unreadable
+```
+
+The LTC4364's entire overcurrent function, the inrush control, the fault timer
+and the battery-current measurement all rest on this one resistor being 10 mΩ.
+
+## Resolve before ordering
+
+Either this datasheet is for the wrong series, or the part is not 10 mΩ. The
+LCSC listing (C7420034) and the BOM both say 10 mΩ, so the conflict is real and
+cheap to settle:
+
+- **Measure one with a 4-wire meter** — 10 mΩ and 0.2 mΩ are not close.
+- Or **switch to a part whose own datasheet states the value**, which also
+  fixes the tolerance and TCR questions in one move.
+
+### Replacement specification
+
+| | |
+|---|---|
+| Value | **10 mΩ** |
+| Tolerance | **1 %** — it sets the current-limit trip point directly |
+| TCR | **≤ 50 ppm/°C** — it also sets the INA238's accuracy |
+| Power | ≥ 1 W (203 mW at the limit; the 2512 footprint is already there) |
+| Construction | **metal element**, 4-terminal preferred |
+
+Vishay WSL2512, Susumu KRL2512, Bourns CRE/CRF and Panasonic ERJ-M1W are all
+stocked classes that meet this and drop into the existing 2512 land.
