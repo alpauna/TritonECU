@@ -543,3 +543,71 @@ leaves only the 0.83 % drift. But that is a production step per board, and the
 **Take the F variant if it is stocked.** If only the J is available, fit it and
 calibrate `SHUNT_CAL` at bring-up — the part is otherwise entirely right, which
 is the thing that was in doubt.
+
+---
+
+# Output caps resolved — HGC1206R7226K160NSPJ
+
+Decoded from the manufacturer's ordering key:
+
+```
+HGC | 1206 | R7 | 226 | K | 160 | N | S | P | J
+      3216   X7R  22µF ±10% 16V  Cu/Ni/Sn  tape  1.6mm  7"
+```
+
+**X7R, −55 to +125 °C** — which was the thing to protect. Moving to 16 V in
+0805 would have meant X5R at +85 °C, and this avoids that by going up a case
+size instead.
+
+## It fixes both variables
+
+| | Old | **New** |
+|---|---|---|
+| Case | 0805 | **1206** — thicker/more dielectric layers, lower field |
+| Rating | 10 V (50 % bias at 5 V) | **16 V** (31 % bias) |
+| Dielectric | +125 °C class | **X7R, +125 °C** ✓ |
+| Estimated effective, 4 × 22 µF | 36–44 µF | **57–66 µF** |
+
+The design assumption was **66 µF**, so this lands on it rather than 40 % short.
+Crossover returns to about 51 kHz and f<sub>ZRHP</sub>/5 as designed.
+
+**±10 % tolerance is irrelevant here** — the loop moves ~7° of phase margin
+across a 2× capacitance range, so a ±10 % part is noise against DC bias.
+
+## Three things to know
+
+### Height goes from ~0.9 mm to 1.6 mm
+
+Thickness code **P = 1.6 mm**, against roughly 0.85–1.0 mm for a 22 µF 0805.
+Check it against the enclosure and anything that stacks over that area.
+
+### Standard termination on a 1206, in a vehicle
+
+The part is **`N` = Cu/Ni/Sn**. The same series offers **`C` = Cu/Resin/Ni/Sn**,
+a soft termination.
+
+**1206 is more flex-crack prone than 0805** simply because it is longer, and
+this board lives somewhere that vibrates. The datasheet's bending test is the
+standard 1 mm deflection for 5 s; soft-termination parts tolerate substantially
+more. Either take the `C` variant, or keep these four away from board edges,
+mounting holes and connector insertion zones when re-placing them.
+
+### The datasheet has no DC bias curve
+
+It is a generic approval sheet covering 0201–1210 and 4–63 V, with no per-part
+bias data — so **the 57–66 µF figure above is a rule of thumb, not a
+specification.**
+
+That matters more than usual here because **the loop cannot be measured in
+circuit** — FB is tied to VCC for the fixed 5 V option, so there is no injection
+point. Worth asking the supplier for the bias curve, or measuring one part at
+5 V bias on an LCR meter that supports it.
+
+Also not AEC-Q200 — consistent with the TLV62085 and the MAX6070 variant, and a
+deliberate trade rather than an oversight.
+
+### And it is a re-layout of that area
+
+1206 is 3.2 × 1.6 mm against 0805's 2.0 × 1.25 mm, so the four output caps need
+re-placing and re-routing. Keep them tight to the MAX25239's OUT pins (12, 13)
+— the output loop is part of what the compensation assumes.
