@@ -144,19 +144,29 @@ V<sub>IL</sub> of 0.99 V.
 millivolts instead of a diode drop, it is rated 100 V against the BS170's 60 V,
 the footprint is the same SOT-23-3, and it **deletes a BOM line**.
 
-## 5. [verify] MAX25239 footprint pad count
+## 5. ~~[verify]~~ RETRACTED — the MAX25239 footprint is correct
 
 ```
 U10   MAX25239AFFA/VY+   footprint "FC2QFN-20_L4.3-W4.3-P0.40-TL_MAX25240AFFD-VY"
 ```
 
-The datasheet package is **22-pin** FC2QFN (pins 1–22, with PGND1 = 5, 6 and
-PGND2 = 9, 10). The footprint name says **20**. The 4.3 × 4.3 mm body and
-0.40 mm pitch are right, so this may only be a naming artefact — but **a wrong
-pad count on a flip-chip QFN is unrecoverable**, so count the pads before
-ordering.
+**Checked against the actual pad geometry — it is right, and my concern was
+wrong.** The 20 pads are not two missing pins. **PGND1 (5, 6) and PGND2 (9, 10)
+are each merged into one large pad:**
 
-Confirm PGND pins **6 and 10** are connected, not just 5 and 9.
+```
+pin 5  (−2.298, +1.630)  GND   pad 1.31 × 1.56 mm   ← covers bumps 5 and 6
+pin 9  (−2.298, −1.630)  GND   pad 1.31 × 1.56 mm   ← covers bumps 9 and 10
+everything else                pad 0.25–0.96 mm wide
+```
+
+Merging adjacent same-net bumps under one pad is correct QFN practice, and the
+wide pads sit in the same rows and vertical extents as their neighbours with
+0.26 mm of clearance. Every net assignment also checks out: BST1/BST2, SUP ×2,
+LX1/LX2 to L2, OUT ×2, EN ← ENOUT, FB ← M_VCC (the fixed 5 V option), COMP,
+SPS, SYNC, PGOOD → 5_GOOD, AGND.
+
+**Nothing to change, and PGND 6 and 10 are connected by virtue of the merge.**
 
 ## 6. [verify] C2/C3 must be aluminium electrolytic, not polymer
 
@@ -194,3 +204,51 @@ about 1.7 to 14. See [`power-supply.md`](power-supply.md).
 | — | Verify Kelvin sense geometry in the editor | medium |
 | 7 | One SMDJ43A; L1/L2 saturation and value; TLV62085 divider | low |
 | ✓ | COMP placement, sense-device proximity, polarity | **good as drawn** |
+
+
+---
+
+# Revision check — 2026-09-13, `_V_1` export
+
+## Fixed
+
+| | |
+|---|---|
+| **Q3 and Q4 are both BSS123** | ✓ and it deleted a BOM line |
+| **InnerLayer2 is poured** — 2999 mm² where it had 0 filled regions | ✓ |
+
+## Retracted
+
+**The MAX25239 footprint** — see §5. 20 pads is correct because two PGND pairs
+are merged. My finding was wrong.
+
+## Still as drawn
+
+Routing and placement are unchanged between exports (top-layer draws 4543 →
+4530, vias 97 → 97, R1/U1/U8 pad coordinates identical), so these are as before:
+
+- **R1 = FRM252WJR010TN.** If the `J` is ±5 %, it wants replacing.
+- **C9–C12 are 10 V parts on the 5 V rail.** Not blocking — ~59° of estimated
+  phase margin — but 16 V or 25 V returns it to the design assumption.
+- **D1, D2 are still two SMDJ43A.**
+- **L1 500 nH / L2 2.2 µH** unchanged.
+
+### ⚠ Pouring Inner2 does not help Q2 without vias
+
+```
+Q2 tab (B+)                       (13.93, 32.92)
+top-layer B+ region               214.6 mm²   unchanged
+InnerLayer2 region under the tab  2971.6 mm²  new
+vias within 8 mm of the tab       0           unchanged
+```
+
+**The two halves of that recommendation only work together.** With no stitching,
+the Inner2 pour is separated from the tab by prepreg and conducts almost nothing
+— and if that pour is GND rather than B+, vias alone would not help either; it
+needs a **B+ island on Inner2 under Q2**, stitched with 6–9 vias.
+
+Alternatively **treat the firmware retry limit as the fix** — which was the
+primary recommendation, and which the hardware already supports through
+Q3/U_SHDN. Capping retries at 3 bounds the exposure at 3 × 54 ms rather than
+indefinitely, and 0.33 in² is comfortable for that. **Pick one; the current
+state has neither.**
