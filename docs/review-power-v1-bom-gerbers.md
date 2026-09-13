@@ -188,8 +188,26 @@ Outline Number         21-100399
 Land Pattern Number    90-100137     ← this is the document to check
 ```
 
-Worth the ten minutes purely because a flip-chip QFN is unrecoverable if the
-land pattern is wrong. The geometry checks out; the land pattern proves it.
+**CLOSED 2026-09-13** — the package drawing settles it without needing the land
+pattern document. `MAX25239AFF` shows **PGND1 (5, 6) and PGND2 (9, 10) as single
+stepped lands carrying two pin numbers each**, while **SUP (2, 3) and OUT
+(12, 13) are separate pads**. That is exactly the footprint's pattern.
+
+Geometry agrees:
+
+```
+pin 5 land   1.31 × 1.56 mm    5× the width of its 0.25 mm neighbours
+pin 9 land   1.31 × 1.56 mm
+outer extent from the package centre:
+   +X edge (16–21)   2.20 mm
+   +Y / −Y edges     2.42 mm
+   pins 5, 9         2.30 / 2.31 mm      ← same band, not outliers
+pad field    4.61 × 4.84 mm on a 4.25 × 4.25 body   (0.18–0.30 mm overhang)
+```
+
+Pin 5's land spans X −2.95 to −1.64, which straddles where bumps 5 and 6 sit
+along that edge. The footprint is correct as drawn — **no need to chase land
+pattern 90-100137.**
 
 ### Incidental: the MAX25239's own thermals are comfortable
 
