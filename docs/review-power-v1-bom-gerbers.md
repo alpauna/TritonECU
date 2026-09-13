@@ -485,3 +485,61 @@ cheap to settle:
 
 Vishay WSL2512, Susumu KRL2512, Bourns CRE/CRF and Panasonic ERJ-M1W are all
 stocked classes that meet this and drop into the existing 2512 land.
+
+---
+
+# Shunt resolved — FPM series is the right part
+
+`FPM253WJR010TM` replaces `FRM252WJR010TN`. The FPM datasheet is a genuine
+current-sense part and answers every question the FRM one raised.
+
+| | FRM (jumper series) | **FPM** |
+|---|---|---|
+| Series purpose | "Zero milli-ohm (Jumper)" | **"Low Resistance High Power Alloy Resistor"**, current detection |
+| 2512 resistance range | < 0.2 mΩ | **1–100 mΩ** — 10 mΩ is in range ✓ |
+| **T.C.R.** | **not specified** | **±50 ppm/°C** |
+| Tolerances offered | ±5 % only | **±0.5 %, ±1 %, ±2 %, ±5 %** |
+| Alloy | NiCu | **CuMn (manganin)** — the classic shunt alloy |
+| Power at 70 °C | 2 W | **3 W** |
+| Rated / overload current | — | **38 A / 86 A** |
+| Operating temperature | — | **−55 °C to +170 °C** |
+| Qualification | — | **AEC-Q200 compliant** |
+| Inductance | — | **low inductance** stated |
+
+**AEC-Q200 matters beyond this part**: it makes the shunt one of the few
+automotive-qualified items in the rail chain, alongside the LTC4364 and the
+MAX25239.
+
+The datasheet also has a **"Resistance measurement point"** section, which is
+exactly the Kelvin-probe guidance the layout item needs.
+
+## One change: `J` → `F`
+
+```
+FPM253W J R010TM   ←  ±5 %   (chosen)
+FPM253W F R010TM   ←  ±1 %   (available, and the datasheet's own example
+                              part number is FPM253W F R005TM)
+```
+
+The tolerance table lists ±0.5 %, ±1 %, ±2 % and ±5 % for this size and value,
+so the 1 % part is a stocked option rather than a special.
+
+### What ±5 % actually costs
+
+```
+current limit   4.5 A ± 5 %  =  4.28 – 4.73 A          tolerable on its own
+INA238          ±5 % gain error on every current reading
+TCR drift       ±50 ppm/°C × 165 °C  =  ±0.83 %        not calibratable
+
+±1 % part  →  ~1.8 % worst case
+±5 % part  →  ~5.8 % worst case
+```
+
+**±5 % is recoverable in firmware** — the INA238 has a `SHUNT_CAL` register
+exactly for this, so a per-board calibration removes the initial error and
+leaves only the 0.83 % drift. But that is a production step per board, and the
+1 % part costs pennies more.
+
+**Take the F variant if it is stocked.** If only the J is available, fit it and
+calibrate `SHUNT_CAL` at bring-up — the part is otherwise entirely right, which
+is the thing that was in doubt.
