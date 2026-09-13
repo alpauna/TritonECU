@@ -124,3 +124,92 @@ doing neither is not.
 | 2 | **Add 10 nF + 1 µF** at each MAX9926 VCC, 10 nF closest | high |
 | 3 | BIAS1/BIAS2: replace the short to GND with 0.1 µF, or leave open | verify |
 | 4 | Decide: compensate the 0.60° filter delay in firmware, or fit 470 pF | decision |
+
+---
+
+# Revision — 2026-09-13
+
+## Fixed
+
+| | |
+|---|---|
+| Input legs → **0805** (`ARG05DTC5001`, Viking) | ✓ the blocking item |
+| **1 µF added** to each VCC (C3, C7) | ✓ |
+| Filter caps → **470 pF, 0805, C0G, 200 V** | ✓ good part — C0G is stable and low-loss, and 200 V is generous |
+
+## The resistance halved as well — defensible, with a limit
+
+The recommendation was **2 × 5 kΩ in series per leg** = 10 kΩ at 300 V. What was
+fitted is **one 5 kΩ per leg** = 5 kΩ at 150 V. Both numbers moved.
+
+**Electrically it is fine.** The binding spec is the datasheet's absolute
+maximum, `Current into IN+, IN−: ±40 mA`:
+
+```
+VR peak   current through 5 kΩ     voltage across the 0805
+ 100 V         18.9 mA                    94 V     ✓
+ 150 V         28.9 mA                   144 V     ← 0805's 150 V rating reached
+ 200 V         38.9 mA                   194 V     ✗ (current still inside ±40 mA)
+```
+
+**The resistor's voltage rating runs out before the pin current does** — at
+about **155 V of VR peak**. So 5 kΩ in 0805 is good to ~150 V, which covers a
+100 V sensor with 1.5× margin.
+
+Lower series resistance also **raises the input gain**, which helps cranking
+sensitivity — and the datasheet's warning that *"the series resistors lower the
+gain… and should be accounted for when setting the trigger threshold"* costs
+nothing here, because Mode A2's adaptive threshold tracks it automatically.
+
+**So: acceptable, with one thing to do.** The VR peak on this engine has never
+been measured. **Measure it during M3 bring-up** — a scope on the crank sensor
+at whatever rpm the bench can reach, extrapolated. If it stays under ~140 V, the
+board is right as built. If it goes higher, add the second 5 kΩ per leg.
+
+## The filter moved a long way — know where it landed
+
+Both R and C changed, so the corner moved four-fold:
+
+```
+was   2 × 10 kΩ + 1 nF     τ = 20 µs    f_c =  8.0 kHz
+now   2 ×  5 kΩ + 470 pF   τ = 4.7 µs   f_c = 33.9 kHz
+```
+
+| | was | **now** |
+|---|---|---|
+| Group delay at 6000 rpm | 16.6 µs | **4.65 µs** |
+| …in crank degrees | 0.60° | **0.17°** |
+| …at 600 rpm cranking | 0.07° | 0.017° |
+| Attenuation at 1 MHz | 42 dB | **29 dB** |
+
+**0.17° is small enough to ignore** rather than compensate, which is the right
+outcome. The cost is 13 dB less rejection of ignition-coil noise — the
+differential input's CMRR does most of that work anyway, but it is now the term
+to look at first if the crank signal proves noisy on the engine.
+
+## Still open
+
+### 10 nF is missing from the VCC bypass
+
+```
+fitted:    100 nF (C2, C6)  +  1 µF (C3, C7)
+datasheet: 10 nF  +  0.1 µF  +  1 µF,  "with the 10 nF placed closest"
+```
+
+Two of the three values. The 10 nF is the one the datasheet specifically says to
+place nearest the pins, and the reason it is prescriptive at all is the
+**internal charge pump** in the front-end amplifier, which draws current in
+pulses. Cheap to add.
+
+### BIAS1 and BIAS2 are still tied to GND
+
+Unchanged — both share the GND net with INT_THRS1/2. See §3 above: replacing the
+short with **0.1 µF to GND** satisfies both readings of the datasheet, or leave
+the pins open to match how EXT is handled.
+
+## Where this leaves M3
+
+**Nothing here blocks bench bring-up.** On a signal generator the VR peak is
+whatever you set it to, so the 150 V question is a vehicle question, not a bench
+one. Build it, drive 36-1 into it, and confirm the decoder against
+`test_crank`'s 10 native tests running on real edges instead of synthetic ones.
