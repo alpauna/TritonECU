@@ -37,6 +37,7 @@ lives on `main`.
 | **M4** Cam sync | ◐ | logic proven — 6 native tests |
 | **M5** Spark output | ◐ | scheduler proven — 12 native tests |
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
+| **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -64,17 +65,24 @@ again. See [`docs/roadmap.md`](docs/roadmap.md).
 ## Hardware
 
 Design is frozen — [`docs/v1-scope.md`](docs/v1-scope.md) is the build list.
-The **power schematic is drawn and reviewed**:
+
+**The power board is finished.** Schematic, BOM and Gerbers are all reviewed
+with no outstanding board or BOM changes — 76.58 × 46.74 mm, 4 layer, in
+[`docs/Schematics/`](docs/Schematics/). The review is
+[`docs/review-power-v1-bom-gerbers.md`](docs/review-power-v1-bom-gerbers.md),
+which was measured out of the copper polygons and the flying-probe netlist
+rather than read off a render. The earlier schematic-only pass is
 [`docs/schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 
 | Block | Part |
 |---|---|
 | MCU | STM32F767ZI (Nucleo-144 now, raw chip later) |
 | Input protection | LTC4364-2 — reverse polarity, load dump, overcurrent, brownout holdup |
-| 5 V rail | MAX25239AFFA buck-boost, 2.1 MHz, spread spectrum |
-| 3.3 V rail | TLV62085 buck from 5 V, 2.4 MHz |
+| Pass element | IRF540NS (D2Pak) on HGATE — planar, published SOA, 20 tented vias into 1.14 in² of B+ |
+| 5 V rail | MAX25239AFF**A** buck-boost, 2.1 MHz, spread spectrum, 2.2 µH |
+| 3.3 V rail | TLV62085 buck from 5 V, 2.4 MHz, 500 nH |
 | ADC reference | MAX6070AAUT25, 2.5 V, gated for sleep |
-| Battery sense | INA238 on the LTC4364's own shunt |
+| Battery sense | INA238 on the LTC4364's own 10 mΩ / 1 % / 50 ppm shunt |
 | Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V |
 | Crank / cam / OSS | 2 × MAX9926, Mode A2 |
 | Ignition | 8 × ISL9V3040 ignition IGBT + 74HCT541 |
@@ -109,6 +117,11 @@ The **power schematic is drawn and reviewed**:
   (400 V clamp); an injector's is waste but a plain diode makes it close
   slowly and over-fuel at idle (60–70 V clamp).
   [`docs/output-drivers.md`](docs/output-drivers.md)
+- **The shunt is sensed twice and sets two things.** The LTC4364's current
+  limit and the INA238's battery-current reading both come off one 10 mΩ
+  resistor, so its tolerance and TCR are the accuracy of both — which is why it
+  is a 1 %, ±50 ppm/°C, AEC-Q200 metal-element part in 2512 rather than
+  whatever was cheapest.
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
