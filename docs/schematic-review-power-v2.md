@@ -226,7 +226,7 @@ further 0.07 % versus 0.2 %. Small, but it points the same way.
 **So the 1 W part is already the right choice, for reasons other than its
 wattage.**
 
-### If 11 mΩ is awkward to source, 10 mΩ is fine
+### DECIDED 2026-09-13: 10 mΩ, 1 W, 2512
 
 11 mΩ is E96 and the selection in good tolerance and TCR is thinner. The
 datasheet's own worked example picks **10 mΩ** for a 4 A target:
@@ -240,6 +240,23 @@ datasheet's own worked example picks **10 mΩ** for a 4 A target:
 All three clear the 3.2 A needed at the 4.4 V floor, and all three are
 comfortable for the IRF540NS. **ADCRANGE = 0 is required at any of them** — the
 narrow range saturates below the limit in every case.
+
+**Settled on 10 mΩ**, the datasheet's own value, moved from 1206 to **2512** for
+Kelvin routing. Everything downstream holds:
+
+```
+ILIM(min)          45 mV / 10 mΩ            =  4.50 A
+inrush             1236 µF × 12 V / 4.50 A  =  3.3 ms   vs 54 ms timer   ✓
+C7                 unchanged at 2.2 µF                                    ✓
+Q1 short-circuit   14 V × 4.50 A = 63 W for 54 ms = 3.4 J → ΔTj ≈ 22 °C   ✓
+shunt dissipation  10 mΩ × 4.50² = 203 mW on a 1 W 2512, ~20 % of rating  ✓
+INA238 ADCRANGE=0  ±163.84 mV / 10 mΩ = ±16.4 A, 0.50 mA/LSB              ✓
+```
+
+The 1206 → 2512 move is the right call for a second reason beyond routing room:
+**thick-film 1206 shunts are typically 200 ppm/°C**, which would have put 3.3 %
+of drift into both the trip point and the reported battery current over the
+temperature range.
 
 | Terminals | **4-terminal (Kelvin) if available** — see layout below |
 
