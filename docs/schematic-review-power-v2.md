@@ -20,7 +20,7 @@ reviewed the 2026-09-08 single sheet.
 | Output bank **4 × 22 µF** | ✓ |
 | MCU shutdown via BSS123 pulling SHDN# low | ✓ the retry-latch path |
 
-## 1. BLOCKING — U11 is the 400 kHz variant
+## 1. ~~BLOCKING~~ RESOLVED 2026-09-13 — U11 was the 400 kHz variant
 
 ```
 U11 = MAX25239AFFB/VY+
@@ -53,19 +53,19 @@ at  400 kHz, 13.8 V in   3.62 A pk-pk
 at  400 kHz,   27 V in   4.63 A pk-pk
 ```
 
-**Change U11 to MAX25239AFFA/VY+.** The 400 kHz part would need ~4.7 µH — the
+**Fixed: U11 is now MAX25239AFFA/VY+.** ✓ The 400 kHz part would need ~4.7 µH — the
 datasheet's own 400 kHz application value — and would still be in the AM band.
 Everything else on the sheet (L2, the output bank, the compensation) is already
 sized for 2.1 MHz.
 
-## 2. BLOCKING — R19 is 78.7 Ω, should be 78.7 kΩ
+## 2. ~~BLOCKING~~ RESOLVED 2026-09-13 — R19 was 78.7 Ω
 
 ```
 R19 = 78.7 Ω        drawn
 Rc  = 78.7 kΩ       calculated
 ```
 
-A factor of **1000**. With 78.7 Ω the error amplifier has essentially no gain at
+**Fixed: R19 is now 78.7 kΩ.** ✓ It was a factor of **1000** out. With 78.7 Ω the error amplifier has essentially no gain at
 crossover and the zero sits at `1/(2π·78.7·2.2 nF)` = **919 kHz** instead of
 919 Hz — above the intended crossover rather than a decade below the power-stage
 pole.
@@ -164,12 +164,14 @@ The symbol shows PGND1 on pin 5 and PGND2 on pin 9. The datasheet assigns
 
 ## Summary
 
-| # | Change | Severity |
-|---|---|---|
-| 1 | **U11 → MAX25239AFF*A*/VY+** (2100 kHz) | **blocking** |
-| 2 | **R19 → 78.7 kΩ** | **blocking** |
-| 3 | **Remove ENOUT from U8**, or level-shift it | **blocking** |
-| 4 | C7 → 2.2 µF X7R/C0G 16 V | high |
+**POWER2 revised 2026-09-13; POWER1 is unchanged from the reviewed version.**
+
+| # | Sheet | Change | Status |
+|---|---|---|---|
+| 1 | POWER2 | U11 → MAX25239AFF*A*/VY+ (2100 kHz) | **✓ fixed** |
+| 2 | POWER2 | R19 → 78.7 kΩ | **✓ fixed** |
+| 3 | **POWER1** | **Remove ENOUT from U8**, or level-shift it | **open — blocking** |
+| 4 | **POWER1** | C7 → 2.2 µF X7R/C0G 16 V | **open — high** |
 | 5 | Confirm R<sub>SNS</sub> 8 mΩ is intentional (5.6 A limit) | medium |
 | 6 | Fixed FB loses the loop-injection point | medium |
 | 7 | TLV62085: check FB leakage vs 4.9 µA, and feedforward cap | medium |
