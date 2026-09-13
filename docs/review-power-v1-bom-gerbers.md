@@ -667,3 +667,38 @@ rather than the capacitance.
 circuit is 4 × 22 µF with nothing smaller, and everything downstream of this
 rail either does not care (the TLV62085 is a switcher) or has its own ferrite
 and local decoupling (the ADC daughterboard). Do not let it hold up the board.
+
+### Placement checked — the pour makes the distances acceptable
+
+The output caps could not all sit close to the MAX25239, but **+5V is routed as
+a 38 mm² top-layer pour**, not as traces — and every one of them is inside it:
+
+```
+U10 pin 12, pin 13, C9, C10, C11, C12, C13, C14   all in one 38 mm² TOP region
+                                                   over the Inner1 ground plane
+```
+
+That is the difference between acceptable and not. A thin trace over a plane is
+roughly 0.7 nH/mm; a ~3 mm wide pour is closer to 0.1–0.2 nH/mm. Across the
+12 mm span this is **~1–3 nH instead of ~8–9 nH.**
+
+| | Distance from nearest OUT pin | |
+|---|---|---|
+| **C9**, 0603 HF | **1.83 mm** | ✓ this is the one that catches the ns edges |
+| C10, 0603 HF | 4.08 mm | contributes less at HF, harmless |
+| C11–C14, 1206 bulk | 7.5 – 11.9 mm | ~2–3 nH on the pour → ~8 mΩ for four at 2.1 MHz → 2.7 mV |
+
+**C9 at 1.83 mm is doing the job the small cap was added for.** On a pour that
+is a few tenths of a nanohenry, which is the same order as the 0603's own ESL —
+so nothing is being wasted by the distance.
+
+0603 rather than 0402 costs about 0.1–0.2 nH of ESL. Immaterial next to the
+spreading inductance either way.
+
+**TLV62085 input decoupling is also well placed** — C18 (0402) at 1.59 mm and
+C22 at 2.17 mm from U9 pin 7. Note the 5 V reaches it through the inner and
+bottom layers rather than the top pour, which is fine given that local
+decoupling.
+
+**Nothing to change.** The compromise forced by the tight placement was absorbed
+by routing +5V as copper rather than track, which is the right trade.
