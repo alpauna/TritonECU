@@ -168,6 +168,41 @@ SPS, SYNC, PGOOD → 5_GOOD, AGND.
 
 **Nothing to change, and PGND 6 and 10 are connected by virtue of the merge.**
 
+The datasheet backs this up — it groups exactly those pairs as single functional
+nodes:
+
+```
+pins  2, 3   SUP      pins  5, 6   PGND1
+pins 12, 13  OUT      pins  9, 10  PGND2
+```
+
+So merging 5+6 and 9+10 under one land each is consistent with the part's own
+pin grouping. (SUP and OUT were left as separate pads, which is a choice rather
+than an inconsistency.)
+
+**The definitive reference, if you want certainty before ordering:**
+
+```
+Package Code           F224A4FY+1
+Outline Number         21-100399
+Land Pattern Number    90-100137     ← this is the document to check
+```
+
+Worth the ten minutes purely because a flip-chip QFN is unrecoverable if the
+land pattern is wrong. The geometry checks out; the land pattern proves it.
+
+### Incidental: the MAX25239's own thermals are comfortable
+
+```
+θJA   33.3 °C/W   4-layer JEDEC board
+      22.4 °C/W   4-layer EV kit board
+θJCb   6.4 °C/W
+```
+
+At 5 W out and ~92 % efficiency the loss is about 0.43 W, so roughly a **14 °C
+rise** on a JEDEC 4-layer board. No action needed — noted because it is the one
+thermal number on this sheet that was never checked.
+
 ## 6. [verify] C2/C3 must be aluminium electrolytic, not polymer
 
 ```
