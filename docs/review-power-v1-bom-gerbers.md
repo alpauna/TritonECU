@@ -305,3 +305,51 @@ primary recommendation, and which the hardware already supports through
 Q3/U_SHDN. Capping retries at 3 bounds the exposure at 3 × 54 ms rather than
 indefinitely, and 0.33 in² is comfortable for that. **Pick one; the current
 state has neither.**
+
+---
+
+# Gerber revision 2 — the vias landed on the wrong FET
+
+Diffed against the previous export: **6 vias added, 2 removed** (97 → 101).
+
+```
+( 30.99,  9.78)  0.70 mm from Q1_8   net IN+
+( 30.99, 10.54)  0.72 mm from Q1_7   net IN+
+( 30.99, 11.30)  0.76 mm from Q1_6   net IN+
+( 30.99, 11.94)  0.76 mm from Q1_5   net IN+
+( 33.37, 15.21)  1.78 mm from R1_1   net IN+
+( 51.00, 18.49)  1.97 mm from C21_2
+```
+
+Four of them stitch **Q1's drain**. Q2's tab still has **zero vias within 8 mm**,
+and its top-layer B+ copper is unchanged at 214.6 mm².
+
+## The two FETs do opposite jobs
+
+| | | Dissipation |
+|---|---|---|
+| **Q1** | YJQ40G10A, DFN-8, **DGATE** ideal-diode FET | fully on or fully off, **never linear** → `0.33² × 15 mΩ` = **1.6 mW** |
+| **Q2** | IRF540NS, TO-263, **HGATE** pass element | **runs in linear mode** during clamping and current limit → **2.74 W** average under auto-retry |
+
+**Q1 has no thermal problem to solve.** Q2 is the one that heats, and it is at
+the far left of the board:
+
+```
+Q1 drain pads   (31.68,  9.7–11.6)   ← where the vias went
+Q2 tab (B+)     (13.93, 32.92)       ← where they were needed
+```
+
+The four new vias are harmless — spreading IN+ current is fine — so there is
+nothing to undo. But the thermal item is still open.
+
+## Still the same two options
+
+1. **A B+ island on Inner2 under Q2, stitched with 6–9 vias through the tab.**
+   Inner2 is already poured and already carries routing (2391 draws), so it is a
+   matter of carving the island rather than finding a layer.
+2. **Commit to the firmware retry limit instead** — Q3/U_SHDN exists for it,
+   the always-on MCU survives to run it, and capping at 3 retries bounds the
+   exposure at 3 × 54 ms rather than indefinitely.
+
+Either closes it. Option 2 costs no board area and was always the primary
+recommendation; option 1 is belt and braces.
