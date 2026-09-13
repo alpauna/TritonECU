@@ -353,3 +353,62 @@ nothing to undo. But the thermal item is still open.
 
 Either closes it. Option 2 costs no board area and was always the primary
 recommendation; option 1 is belt and braces.
+
+---
+
+# Gerber revision 3 — Q2 thermal CLOSED
+
+```
+vias 101 → 121;  20 of them inside Q2's tab pad (8.40 × 10.57 mm)
+
+B+ copper containing the tab:
+   TOP   214.6 mm²    unchanged
+   IN2   366.2 mm²    new island, bbox 7.9–22.2 × 13.8–39.5
+   BOT   156.2 mm²    new island, bbox 8.6–20.6 × 26.2–39.2
+                      ----------
+   total 737.0 mm²  =  1.14 in²
+```
+
+**And Inner1's ground plane is untouched at 3516 mm²** — the islands were carved
+on Inner2 and Bottom, so no slot was cut in the main ground plane. That was the
+part that needed care and it was done right.
+
+## Thermal estimate
+
+```
+via array   20 × 0.3 mm through 1.6 mm FR4, 25 µm plating
+            157 °C/W each  →  7.84 °C/W in parallel
+RθJC        1.15 °C/W
+spreading   1.14 in² over three layers
+
+estimated RθJA ≈ 25–30 °C/W        (was 40–50)
+requirement    ≤ 33 °C/W
+
+Tj = 85 + 2.74 × 28 = 162 °C   against a 175 °C limit   ✓
+```
+
+**The finding is closed on copper alone** — the firmware retry limit is now
+belt-and-braces rather than load-bearing, though it remains worth having for
+diagnostics and for bounding the fault.
+
+## Via tenting is right
+
+**Bottom soldermask has zero openings over the tab area**, so the 20 vias are
+tented. That matters: untented via-in-pad wicks solder through during reflow and
+starves the joint, which would have undermined the thermal path just built.
+
+## One build note: the tab paste aperture is a single opening
+
+```
+top paste over the tab:  1 aperture, ~100 % coverage of 88.8 mm²
+```
+
+Standard default, and the solder volume is fine — a 0.12 mm stencil gives
+roughly a 0.06 mm bondline. The risk is **voiding**: one large aperture gives
+flux volatiles nowhere to escape, and voids under the tab would partly undo the
+1.14 in² of copper.
+
+Usual practice for a pad this size is a **windowpane pattern** — an array of
+smaller apertures at 50–80 % total coverage. Worth asking the assembler for, or
+editing in the stencil file. **Not a board change**, and not needed at all if
+the part is hand-soldered with a preform or drag-soldered.
