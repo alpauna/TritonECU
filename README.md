@@ -33,11 +33,12 @@ lives on `main`.
 | **M0** Board bring-up | ✅ | 216 MHz, 2 MB flash, verified from the chip's own ID registers |
 | **M1** Storage + config | ✅ | SD on SPI4, JSON config, persists across resets |
 | **M2** Analog front end | ✅ | AD7606 reading known signals within tolerance |
-| **M3** Crank sync | ◐ | decode logic proven — 10 native tests; needs a MAX9926 |
+| **M3** Crank sync | ◐ | decode logic proven — 10 native tests; **VR board designed**, awaiting build |
 | **M4** Cam sync | ◐ | logic proven — 6 native tests |
 | **M5** Spark output | ◐ | scheduler proven — 12 native tests |
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
+| **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **ready to fab** |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -66,13 +67,20 @@ again. See [`docs/roadmap.md`](docs/roadmap.md).
 
 Design is frozen — [`docs/v1-scope.md`](docs/v1-scope.md) is the build list.
 
-**The power board is finished.** Schematic, BOM and Gerbers are all reviewed
-with no outstanding board or BOM changes — 76.58 × 46.74 mm, 4 layer, in
-[`docs/Schematics/`](docs/Schematics/). The review is
-[`docs/review-power-v1-bom-gerbers.md`](docs/review-power-v1-bom-gerbers.md),
-which was measured out of the copper polygons and the flying-probe netlist
-rather than read off a render. The earlier schematic-only pass is
-[`docs/schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
+**Two boards are finished.** Schematics, BOMs and Gerbers are all version
+controlled in [`docs/Schematics/`](docs/Schematics/) — the fab outputs, not just
+pictures of them.
+
+| Board | Size | Review |
+|---|---|---|
+| **Power V1** | 76.58 × 46.74 mm, 4 layer | [`review-power-v1-bom-gerbers.md`](docs/review-power-v1-bom-gerbers.md) |
+| **VR V1** | 35.43 × 33.91 mm, 2 layer | [`review-vr-v1.md`](docs/review-vr-v1.md) |
+
+Both reviews were **measured out of the Gerbers** — copper polygon areas, via
+positions, pad geometry and the flying-probe netlist — rather than read off a
+render. That is how the MAX25239 footprint, Q2's thermal path and the output-cap
+pour were actually checked. The earlier schematic-only pass on the power board
+is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 
 | Block | Part |
 |---|---|
@@ -84,7 +92,7 @@ rather than read off a render. The earlier schematic-only pass is
 | ADC reference | MAX6070AAUT25, 2.5 V, gated for sleep |
 | Battery sense | INA238 on the LTC4364's own 10 mΩ / 1 % / 50 ppm shunt |
 | Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V |
-| Crank / cam / OSS | 2 × MAX9926, Mode A2 |
+| Crank / cam / OSS | 2 × MAX9926 Mode A2 — 4 channels, adaptive threshold + zero crossing |
 | Ignition | 8 × ISL9V3040 ignition IGBT + 74HCT541 |
 | Injection | 8 × ZXMS6005DGQ IntelliFET |
 | Connector | EEC-V 104-pin |
@@ -155,6 +163,8 @@ firmware/ecu/
   test/         native unit tests
 hardware/       pin budget and supply calculators
 docs/           design documents and vehicle schematics
+  Schematics/   board schematics, BOMs and Gerbers — fab-ready
+  Datasheets/   every part datasheet the decisions were made against
 tools/          USB permission setup
 ```
 
