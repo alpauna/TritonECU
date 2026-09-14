@@ -468,9 +468,24 @@ One LQFP-64 footprint now accepts:
 buy whatever is available and cheapest that week. That is genuine supply
 resilience at zero cost, which is the best kind there is.
 
-For this build the sensible default is now **ADS8588H** — the ECU does not need
-its speed, but at the same pinout it brings the best input clamp of the set, and
-input robustness is the spec that actually earns its keep on a harness.
+### Settled: ADS8588H in production, AD7606BSTZ on the bench
+
+| | part | why |
+|---|---|---|
+| **Production** | **ADS8588H** | 9 kV input clamp — the best of the set, on pins wired to a 104-pin harness. 500 kSPS and +125 °C come free at the same pinout |
+| **Bench** | **Tokmas AD7606BSTZ** | already in hand and already verified working. 200 kSPS and +85 °C are irrelevant on a bench |
+
+**This costs nothing to maintain**, which is the point of having done the pin
+verification. The footprint is identical, the serial interface is identical, and
+the driver does not change — so development continues on the part already on the
+desk while production gets the better clamp.
+
+Two things to carry into the first production build:
+
+- **[VERIFY] `REF_SELECT` polarity** between the two, as flagged above. The
+  ADS8588H selects the internal reference on logic **high**.
+- **Do not chase throughput.** The ADS8588H's 500 kSPS changes nothing here —
+  utilisation stays near 1 %. It was chosen for the clamp.
 
 **[VERIFY] before first populate:** `REF_SELECT` polarity. The ADS8588S is
 explicit — logic **high** selects the internal reference. Confirm the AD7606 uses

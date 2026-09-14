@@ -95,7 +95,8 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 | 3.3 V rail | TLV62085 buck from 5 V, 2.4 MHz, 500 nH |
 | ADC reference | MAX6070AAUT25, 2.5 V, gated for sleep |
 | Battery sense | INA238 on the LTC4364's own 10 mΩ / 1 % / 50 ppm shunt |
-| Analog in | 8 ch, 16-bit, simultaneous, ±10 V — one LQFP-64 takes **AD7606 / B / C, ADS8588S / H**: five parts, two vendors |
+| Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, **9 kV input clamp**, −40…+125 °C |
+| Analog in *(bench)* | **Tokmas AD7606BSTZ** — same LQFP-64 footprint, 200 kSPS, already in hand |
 | Crank / cam / OSS | 2 × MAX9926 Mode A2 — 4 channels, adaptive threshold + zero crossing |
 | Knock | TLV9064-Q1 differential charge amp + own 2.5 V ref — [schematic](docs/Schematics/knock-front-end-schematic.md) |
 | Barometric | **KP497** (Infineon) on I²C/SPI, AEC-Q100 −40…+105 °C, 3.3 V always-on rail — **requires a vented enclosure** |
@@ -200,6 +201,13 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   housing properly. **The vent goes on the cabin side** — the box straddles the
   firewall, and its connector face lives under-hood in the spray.
   [`docs/enclosure.md`](docs/enclosure.md)
+- **One ADC footprint, five parts, two vendors.** AD7606 / B / C and ADS8588S / H
+  are pin-for-pin in the same LQFP-64 — verified pin by pin, not assumed. So the
+  part is a **populate-time choice, not a layout one**: **ADS8588H in production**
+  for its 9 kV input clamp on harness-connected pins, and the **Tokmas
+  AD7606BSTZ already on the bench** for development. *(The ADS9324 is not in this
+  set — 16 channels, VQFN, and a 1.8 V rail this board does not have.)*
+  [`docs/adc-front-end.md`](docs/adc-front-end.md)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
