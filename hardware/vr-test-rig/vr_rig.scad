@@ -16,6 +16,10 @@ wheel_thk       =   5.0;  // MEASURE: wheel thickness
 wheel_bore      =  24.0;  // wheel centre bore — 24 mm, keyed
 key_w           =   8.0;  // MEASURE: keyway width  (DIN 6885 for 24 mm is 8 mm)
 key_d           =   3.3;  // MEASURE: keyway depth into the bore
+key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
+                          // 0 on this wheel: the keyway is inline with the gap.
+                          // The index flute on the flange OD is cut at this angle,
+                          // so the flute always points at the gap.
 sensor_dia      =  19.0;  // MEASURE: VR sensor barrel diameter (Ford CKP)
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
@@ -155,6 +159,12 @@ module wheel_hub() {
         // wheel retention — bolts through the flange into the wheel, if it has holes
         for (a = [60:120:359]) rotate([0,0,a])
             translate([wheel_bore/2 + 4, 0, -1]) cylinder(d = 4.4, h = 12);
+        // INDEX FLUTE on the flange OD, at key_to_gap from the key. Once the wheel
+        // is on, the teeth all look alike and the gap is hard to find by eye. This
+        // flute points at it, so the assembled rig has a visible angular zero to
+        // set the stepper's home position against.
+        rotate([0, 0, key_to_gap])
+            translate([wh_flange/2, 0, -1]) cylinder(d = 3, h = 12);
     }
 }
 

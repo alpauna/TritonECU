@@ -383,18 +383,68 @@ it, and it returns to *the same angle*. On a rig whose entire purpose is
 comparing decoded position against commanded position, that is the difference
 between a datum and a guess.
 
-### Measure the keyway-to-gap angle once, and write it down
+### On this wheel the keyway is inline with the gap — the offset is zero
 
-The angle between the keyway and the **missing tooth** is fixed by the wheel's
-manufacture. Measure it once.
+No protractor needed. `key_to_gap = 0`, and the hub cuts its index flute at that
+angle, so the flute on the flange OD points at the missing tooth. Once the wheel
+is bolted on the teeth all look alike; the flute is how you find the gap by eye.
 
-With the stepper's known step count and that one number, the rig knows **exactly
-where the gap is at any commanded position** — so the decoder can be checked on
-*absolute* position, not merely on whether it counts teeth correctly and finds
-*a* gap.
+The stepper drives the crank shaft 1:1, so steps map straight to crank degrees —
+1.8°/step full, 0.1125° at 16× microstep. Home the stepper with the flute at the
+sensor and **every commanded step count is a known crank angle**. The decoder can
+then be checked on *absolute* position, not merely on whether it counts teeth and
+finds *a* gap. That is the strongest test this rig can perform.
 
-That is the strongest test this rig can perform, and it costs one measurement
-with a protractor.
+---
+
+## The rig's zero is NOT the engine's zero — do not let this constant leak
+
+The wheel is made with the gap at TDC #1 because that is the convenient
+convention for a wheel sold to be configured. **The Ford 36-1 wheel on the truck
+is under no such obligation**, and the factory CKP sensor sits where the block
+casting put it, not where the convention would like it.
+
+So there are really two numbers, and only one of them is zero:
+
+| | gap → TDC #1 |
+|---|---|
+| This rig | **0°**, by construction |
+| The 5.4L on the truck | **fixed, non-zero, and unmeasured** |
+
+A decoder tuned on the bench until it reports the right angle, then moved to the
+engine with that constant baked in, fires the plugs wrong by exactly the offset.
+Spark at the wrong angle is not a debugging inconvenience — it is detonation, and
+on a 5.4L it is pistons.
+
+**So the offset is an explicit named constant, not an implicit zero.** Something
+like `CKP_GAP_TO_TDC_DEG`, set to 0 for the rig and to the measured figure for the
+truck, selected by build target. If the decoder ever computes an angle without
+going through it, that is the bug.
+
+### Measuring it on the truck, independent of any electronics
+
+Do not trust a mark, and do not infer it from the old PCM's behaviour. Establish
+TDC mechanically:
+
+1. Pull #1 plug, fit a **piston stop**, and bring the crank up gently by hand
+   until it touches. Mark the damper against a fixed pointer.
+2. Rotate the other way until it touches again. Mark again.
+3. **True TDC is exactly halfway between the two marks** — this cancels the error
+   in where the stop happens to sit, which is why it beats a single mark.
+4. With the damper at true TDC, scope the CKP and rotate to find where the gap
+   falls. The angle between them is the constant.
+
+The piston-stop bisection is the whole point: the stop's position does not need to
+be known or repeatable, because it appears identically in both marks and
+subtracts out.
+
+### The cam sets which revolution, and it is also phase-referenced now
+
+The cam runs 2:1, one revolution per two of the crank, so the CMP pulse is what
+distinguishes compression from exhaust — the crank alone cannot. With the keyway
+as a hard datum the M8 lobe's phase can be **set deliberately rather than
+discovered**: put it well away from the gap so the sync window is unambiguous, and
+record the angle here once it is set.
 
 ## Print it bore-axis vertical
 
