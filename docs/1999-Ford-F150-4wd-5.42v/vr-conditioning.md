@@ -69,42 +69,93 @@ proven" than their discrete attempt — worth reading before designing one.
 
 ## Why not the LM1815
 
-The LM1815 is the obvious alternative — it is *the* classic VR adaptive sense
-amplifier, it is what MegaSquirt uses (and what the OSS note above refers to),
-and two decades of DIY EFI documentation exist for it. It is a reasonable part.
-It is not the right part here, for four reasons in descending order of weight.
+The LM1815 is the obvious alternative — *the* classic VR adaptive sense amplifier,
+what MegaSquirt uses (and what the OSS note above refers to). Assessed against
+the TI datasheet, **SNOSBU8F, September 2000, revised March 2013**.
 
-**It is single-ended, and the CKP is not.** This is the real argument. The
-crankshaft sensor is a floating two-wire coil, and the LM1815 takes a
-current-mode input referred to its own ground — so one side of that coil gets
-tied to ground and whatever noise sits between sensor ground and board ground
-arrives as signal. The MAX9926's differential input rejects it. In a bay
-containing a 40 kV ignition system, **common-mode rejection is the entire reason
-to prefer one part over another**, and it is the one thing the LM1815 structurally
-cannot offer.
+### Correction to an earlier claim in this file
 
-**One channel per package, against two.** Three VR channels means three LM1815s
-and three sets of arming and timing components, versus two MAX9926s with the
-fourth channel spare.
+An earlier revision of this section called the LM1815 "believed obsolete or
+NRND." **That was unfounded.** TI publishes it as **PRODUCTION DATA** with a 2013
+revision and a live product folder. Confirm the lifecycle state before committing
+to it, as with any part — but it was wrong to put obsolescence on the list of
+reasons against it, and it is removed.
 
-**It is not automotive-qualified.** The MAX9926 is AEC-Q100. The LM1815 predates
-that framework entirely.
+### Where the LM1815 is genuinely better: it triggers on true zero crossing
 
-**Availability.** The LM1815 is a National Semiconductor part from the late
-1980s. It is believed obsolete or NRND at TI — **verify before designing it in**,
-because a part you cannot buy in five years is a poor foundation for something
-meant to outlive the PCM it replaces.
+This is a real advantage and the earlier note understated it.
 
-### What the LM1815 is genuinely better at
+The LM1815 **arms** on an adaptive threshold (80 % of the peak stored on the pin 7
+detector) and then **triggers on the negative-going zero crossing** — specified at
+**0 mV typical, ±25 mV worst case**. Arming is amplitude-dependent; the timing
+edge is not.
 
-DIP packaging and a breadboard. If the MAX9926 boards had not already been
-fabricated and a channel needed debugging on a bench tonight, an LM1815 in a
-socket would be the faster path to a scope trace. That is a prototyping
-convenience, not a design argument.
+That matters for a timing application in a way a fixed fraction of peak does not:
 
-**Decision: stay with the MAX9926.** The boards exist, the differential input is
-the correct answer for a floating coil in this environment, and nothing about the
-LM1815 would recover the cost of the change.
+- **Zero crossing is the true tooth reference.** A VR sensor outputs dΦ/dt, so it
+  crosses zero exactly when the tooth is centred on the pole. No calibration
+  constant, no waveform-shape dependence.
+- **It is immune to tooth-to-tooth amplitude change.** A part that triggers at a
+  fraction of the *previous* peak fires early when the current tooth is stronger
+  than the last one. That is precisely what happens under acceleration — and
+  cranking, where the engine surges between compression strokes, is nothing but
+  acceleration and deceleration. A zero-crossing trigger has no such term.
+
+### And where it bites back, from the same datasheet
+
+> *"If the input signal amplitude falls faster than the voltage stored on the peak
+> detector capacitor there may be a loss of output signal until the capacitor
+> voltage has decayed to an appropriate level."*
+
+**Missed teeth under rapid deceleration** — the arming threshold is stranded high
+while the signal collapses. That is the *other* half of every compression stroke.
+So the trade is real in both directions: exact timing when it fires, against a
+dropout mode a fraction-of-peak trigger degrades through more gracefully.
+
+### The decisive reason is still the input topology
+
+**"Ground Referenced Input"** — the datasheet's own feature list. The LM1815 takes
+a current-mode input referred to its own ground, so one side of the CKP's floating
+two-wire coil gets tied down, and whatever sits between sensor ground and board
+ground arrives as signal. The MAX9926's differential input rejects it.
+
+In a bay containing a 40 kV ignition system, **common-mode rejection is the whole
+reason to prefer one part over another**, and it is the one thing the LM1815
+structurally cannot offer.
+
+### Other differences worth recording
+
+| | LM1815 | MAX9926 |
+|---|---|---|
+| Channels per package | 1 (14-SOIC/PDIP) | 2 |
+| Input | ground referenced | differential |
+| Supply | 2–12 V (**12 V abs max**) | 5 V |
+| Input current abs max | **±30 mA** | ±40 mA |
+| Design input current | 3 mA → `Rext(min) = Vpeak/3mA` | — |
+| Minimum signal | 150 mV p-p | — |
+| Automotive qual | none | AEC-Q100 |
+
+Note the series resistor sizing is **tighter**, not looser: at 3 mA design current
+a 150 V peak wants ~50 kΩ, against the 5 kΩ used here.
+
+Three VR channels means **three LM1815s** and three sets of arming and peak-detect
+components, against two MAX9926s with the fourth channel spare.
+
+### [VERIFY] The MAX9926's trigger mechanism
+
+The MAX9926 datasheet is **not in this repo**, so the comparison above rests on
+this file's earlier note that Mode A2 triggers at ⅓ of the previous peak. **If the
+MAX9926 also arms adaptively and triggers on zero crossing, the timing advantage
+above disappears entirely.** Worth confirming, because it decides whether the
+decoder needs a calibration term for trigger-point offset at all.
+
+### Decision
+
+**Stay with the MAX9926.** The boards are fabricated, the differential input is
+the correct answer for a floating coil in this environment, and the channel count
+halves the part count. The LM1815's zero-crossing timing is the better mechanism
+on paper, but not by enough to rebuild around — and its dropout-under-deceleration
+mode lands in the same regime that makes cranking hard.
 
 ## Configuration — use Mode A2
 
