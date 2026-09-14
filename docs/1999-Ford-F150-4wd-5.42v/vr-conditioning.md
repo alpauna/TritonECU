@@ -67,6 +67,45 @@ proven" than their discrete attempt — worth reading before designing one.
 
 ---
 
+## Why not the LM1815
+
+The LM1815 is the obvious alternative — it is *the* classic VR adaptive sense
+amplifier, it is what MegaSquirt uses (and what the OSS note above refers to),
+and two decades of DIY EFI documentation exist for it. It is a reasonable part.
+It is not the right part here, for four reasons in descending order of weight.
+
+**It is single-ended, and the CKP is not.** This is the real argument. The
+crankshaft sensor is a floating two-wire coil, and the LM1815 takes a
+current-mode input referred to its own ground — so one side of that coil gets
+tied to ground and whatever noise sits between sensor ground and board ground
+arrives as signal. The MAX9926's differential input rejects it. In a bay
+containing a 40 kV ignition system, **common-mode rejection is the entire reason
+to prefer one part over another**, and it is the one thing the LM1815 structurally
+cannot offer.
+
+**One channel per package, against two.** Three VR channels means three LM1815s
+and three sets of arming and timing components, versus two MAX9926s with the
+fourth channel spare.
+
+**It is not automotive-qualified.** The MAX9926 is AEC-Q100. The LM1815 predates
+that framework entirely.
+
+**Availability.** The LM1815 is a National Semiconductor part from the late
+1980s. It is believed obsolete or NRND at TI — **verify before designing it in**,
+because a part you cannot buy in five years is a poor foundation for something
+meant to outlive the PCM it replaces.
+
+### What the LM1815 is genuinely better at
+
+DIP packaging and a breadboard. If the MAX9926 boards had not already been
+fabricated and a channel needed debugging on a bench tonight, an LM1815 in a
+socket would be the faster path to a scope trace. That is a prototyping
+convenience, not a design argument.
+
+**Decision: stay with the MAX9926.** The boards exist, the differential input is
+the correct answer for a floating coil in this environment, and nothing about the
+LM1815 would recover the cost of the change.
+
 ## Configuration — use Mode A2
 
 The MAX9926 has four operating modes, selected by strapping two kinds of pin.
