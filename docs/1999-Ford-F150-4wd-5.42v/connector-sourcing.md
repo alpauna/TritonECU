@@ -438,3 +438,74 @@ manufacture rather than one drawn from measurements.
 
 The sourcing problem at the top of this document. The remaining risk is a single
 mechanical check — **the key** — and it costs nothing to do now.
+
+---
+
+# ★ The controlled drawing — TE 770750-1
+
+`ENG_CD_770750_C.pdf` is Tyco/TE **customer drawing C-770750, rev C (26 AUG
+2009)**: *"SLEEVE ASSEMBLY, WIRE CONNECTOR FEMALE"*, part number **770750-1**.
+
+This is the **board-side connector**, and having the controlled drawing changes
+two things at once.
+
+## It may be buyable new
+
+A TE part number on a drawing revised in 2009 is not a discontinued Ford service
+item — it is a catalogue part. **Check TE, DigiKey and Mouser for 770750-1
+before committing to the salvage path.**
+
+If it is orderable, the whole sourcing problem at the top of this document
+disappears, and the Ranger donor becomes a useful spare and fit-check rather
+than the only supply.
+
+## It contains the complete PCB footprint
+
+The drawing carries a **RECOMMENDED P.C. BOARD LAYOUT** with full dimensions and
+tolerances. **Draw the footprint from this, not from measuring the donor.**
+
+| | |
+|---|---|
+| Positions | **104**, as **4 rows × 26** — matching the "TERMINAL, 26 PLC" callouts |
+| Pin holes | **Ø1.40 ±0.05**, 104 places |
+| Mounting holes | **Ø3.60 ±0.05**, **110.00 mm** apart, positional tol Ø0.10 Ⓜ F Ⓜ |
+| Centre hole | Ø3.70 |
+| Pitch callouts | **3.40 TYP** and **1.70 TYP** |
+| Row offsets | 6.00 / 3.05 / 0 / 2.85 / 5.20 from the datum |
+| Housing | **PBT** |
+| Weight | 85 g |
+
+**Transcribe those from the PDF at full zoom, not from this table** — the values
+above were read off a 150 dpi render and are here to show what the drawing
+contains, not to be used as the source. The tolerances matter: Ø0.10 Ⓜ
+positional on the mounting holes is tight enough that a footprint drawn by eye
+will not seat.
+
+Worth checking against the **rusEFI 104-pin template** as a cross-reference. Two
+independent sources agreeing is worth more than either alone.
+
+## It confirms the terminals are solder tails
+
+The cross-section shows four rows of right-angle terminals running down into the
+board, with a retainer. That settles the earlier point: **the donor's pins are
+PCB solder tails and must not be cut**, and they are a different thing entirely
+from the E6DZ crimp barrels.
+
+## Two specs worth chasing
+
+The title block references:
+
+```
+Product Spec       108-1715
+Application Spec   114-6054
+```
+
+**114-6054 is the one to find.** TE application specifications carry the terminal
+part numbers, wire gauge ranges, plating options, **crimp tooling and extraction
+tool part numbers** — which is every open question from the sections above,
+answered by the manufacturer rather than inferred.
+
+That includes the gold-versus-tin plating question: the socket contact
+cross-referenced for this family, **TE 776235-1**, is listed as *gold* — so the
+factory terminals in the truck's connector are very likely gold, and tin
+replacements would be the mismatch to avoid.
