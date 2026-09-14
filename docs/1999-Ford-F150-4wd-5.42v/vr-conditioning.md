@@ -206,6 +206,48 @@ data, pointless before it.
 
 Mode C is a plain comparator and throws away the reason for using this part.
 
+### Mode B is the upgrade path, and it needs a DAC — not yet
+
+Table 1 also offers **Mode B**: `ZERO_EN = VCC`, `INT_THRS = GND` → zero crossing
+**enabled**, adaptive peak threshold **disabled**, bias **external**. The
+datasheet's own words:
+
+> *"In Mode B … an external threshold voltage is applied at EXT allowing
+> application-specific adaptive algorithms to be implemented in firmware."*
+
+That keeps the zero-crossing trigger — the part that makes timing amplitude-
+independent — while handing the **arming** threshold to software. It is a real
+capability, and it addresses the one weakness Mode A2 has.
+
+**Mode A2 arms reactively**, at 33 % of the *previous* peak. Cranking is where
+that is worst, because the engine surges and collapses across every compression
+stroke, so the previous tooth is a poor predictor of the next. Firmware that
+already knows crank position and instantaneous speed could set the threshold
+**predictively**, per tooth.
+
+The bandwidth is not a problem. At 6000 rpm a 36-1 wheel delivers a tooth every
+**278 µs**, and a 24-bit SPI write at 10 MHz takes **2.4 µs**.
+
+**The candidate part is the [DAC70508](../Datasheets/dac70508-datasheet.pdf)** —
+8 channels of 14-bit against 4 VR channels, SPI to 50 MHz, −40 to +125 °C,
+internal 2.5 V/5 ppm reference, 3 × 3 mm, with CRC on the interface.
+
+### Why not now
+
+- **VR V1 cannot do it.** The board is strapped for Mode A2 with EXT
+  unconnected. Mode B is a respin, not a firmware change.
+- **Mode B also needs external bias.** A2's internal 2.46 V reference goes away,
+  so each channel gains a divider and its filtering — more parts, more variables,
+  which is exactly what Mode A2 was chosen to avoid.
+- **The problem may not exist.** Mode A2 tolerates a **3:1** amplitude collapse
+  between teeth. Whether cranking on this engine actually exceeds that is
+  measurable, not arguable.
+
+**The trigger for revisiting this is specific:** if the rig or the truck shows
+**missed teeth or lost sync during cranking** that trace to arming rather than to
+signal amplitude, Mode B plus a DAC is the answer. Until then it is a solution
+without a demonstrated problem, and the rig exists precisely to find out.
+
 ### Strapping for Mode A2
 
 | Pin | Name | Connect to |
