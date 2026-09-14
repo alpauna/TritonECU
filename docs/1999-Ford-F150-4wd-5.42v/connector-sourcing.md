@@ -509,3 +509,59 @@ That includes the gold-versus-tin plating question: the socket contact
 cross-referenced for this family, **TE 776235-1**, is listed as *gold* — so the
 factory terminals in the truck's connector are very likely gold, and tin
 replacements would be the mismatch to avoid.
+
+## 770750-1 is EOL — what that does and does not change
+
+**Does not change:** the drawing. Geometry, tolerances and the recommended PCB
+layout are properties of the part, not its availability. **The footprint is still
+drawn from C-770750**, and the donor connector matches it.
+
+**Does change:** salvage is now the supply, not a fallback. The Ranger donor was
+the right purchase.
+
+### Buy spare donors now
+
+Dead EEC-V PCMs are currently **cheap and plentiful, and will never be more so**.
+That curve only goes one way, and this project may want a connector again years
+from now — for a second board, a replacement, or a bench harness.
+
+**Two or three donors is cheap insurance** against a problem that gets steadily
+harder to solve. Buy on shell and pin condition as before; the electronics remain
+irrelevant.
+
+### Get a desoldering gun before the first extraction
+
+The other half of the answer. A 104-pin through-hole part is **not a one-shot
+operation** with the right tool — a desoldering gun makes it routine, maybe an
+hour, repeatable across board revisions.
+
+With braid and an iron it is a slow, hot, marginal job that risks the shell's
+retention posts, and that is where an irreplaceable part gets damaged.
+
+**Tool plus spares turns connector scarcity from an architectural constraint into
+a consumable one.**
+
+### Why *not* to move the connector onto its own interface board
+
+The tempting answer to a scarce, hard-to-move part is to isolate it — solder it
+once to a small board and link that to the main board, the way
+[`carrier-board.md`](../carrier-board.md) isolates the MCU and
+[`adc-daughterboard.md`](../adc-daughterboard.md) isolates the analog front end.
+
+**That pattern is right for those and wrong for this.**
+
+Both of those isolate a handful of signals. This would put **104 additional
+contact pairs in series with every circuit in the vehicle** — injectors, coils,
+crank sensor, power — inside something that vibrates and heat-cycles for years.
+Every one of them is a new intermittent that did not have to exist, and
+intermittents in this harness are the fault class the whole project is least able
+to diagnose.
+
+The scarce part is better solved by **stockpiling donors and owning the right
+tool** than by adding 104 connections to the reliability budget.
+
+### Still worth ten minutes
+
+Check whether TE lists a **successor or cross-reference** for 770750-1, and
+whether the family had a **second source** — Ford rarely single-sourced a
+connector used across an entire ECU generation.
