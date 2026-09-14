@@ -90,3 +90,70 @@ ground, and that FEPS exists. The **pin numbers** in it do not apply here.
 
 **[CONFIRM]** VREF and SIGRTN against the flat numbering instead: the
 MegaSquirt sheet puts VREF at pin 90 and SGND at pin 91.
+
+---
+
+# Sensor-side connectors — CKP and CMP
+
+**Ordered: Motorcraft `3U2Z145411SMA`** — "Camshaft Crankshaft Position Sensor
+Connector", supplied as a pigtail.
+
+**One part number covering both sensors is itself a useful fact.** It means CKP
+and CMP use the same 2-cavity connector, which confirms what
+[`vr-conditioning.md`](vr-conditioning.md) records: **both are two-wire VR
+sensors.**
+
+## "Single-ended" CMP does not mean one wire
+
+[`eec-v-pinout.md`](eec-v-pinout.md) shows pin 85 as a lone "CMP+" (DK GRN) with
+no matching CMP−, which is what made CMP look single-ended. It is not — the
+sensor still has two wires. The second one lands on the PCM's **shared sensor
+ground** instead of a dedicated CMP− pin.
+
+That is a compromise the factory made to save a PCM pin, and **there is no
+reason to inherit it.**
+
+| | Factory | **TritonECU** |
+|---|---|---|
+| CKP+ (DK BLU) | pin 21 | **VR1+** |
+| CKP− (GRY) | pin 22 | **VR1−** |
+| CMP signal (DK GRN) | pin 85 | **VR2+** |
+| CMP return | tied to shared SGND | **VR2−** — its own leg |
+
+**Route the CMP return wire to VR2−, not to board ground.** The MAX9926's
+differential input then does its job on *both* channels, and the CMP channel
+stops sharing an IR-drop path with every other sensor return. It costs nothing —
+the wire is already in the harness, it just terminates somewhere better.
+
+There is no conflict if that wire also reaches ground elsewhere: VR2− sits behind
+5 kΩ into a high-impedance differential input.
+
+## Quantity
+
+**Order three**, not one:
+
+| | |
+|---|---|
+| CKP, vehicle | 1 |
+| CMP, vehicle | 1 |
+| **Bench rig** | **1** — so the rig's sensor plugs in rather than being cut into |
+
+The third is the one that is easy to forget and annoying to be without: with a
+pigtail on the rig, the same VR board harness moves between bench and truck
+unmodified, and nothing gets spliced twice.
+
+## Identify the cavities before crimping
+
+The pigtail arrives with short untagged tails. **Which cavity is which is not
+guessable** — check continuity against the sensor, or against the vehicle
+harness colours recorded in [`eec-v-pinout.md`](eec-v-pinout.md):
+
+```
+CKP+  DK BLU      CKP−  GRY       CMP  DK GRN
+```
+
+Polarity is worth getting right but is not fatal if swapped: the MAX9926 is
+differential and Mode A2 triggers on the zero crossing, so an inversion moves
+which edge the decoder should use rather than breaking detection. Easier to fix
+in the harness than in firmware, though — so confirm it on the rig, where the
+shaft position is known.
