@@ -141,21 +141,43 @@ a 150 V peak wants ~50 kΩ, against the 5 kΩ used here.
 Three VR channels means **three LM1815s** and three sets of arming and peak-detect
 components, against two MAX9926s with the fourth channel spare.
 
-### [VERIFY] The MAX9926's trigger mechanism
+### RESOLVED — the timing advantage does not exist
 
-The MAX9926 datasheet is **not in this repo**, so the comparison above rests on
-this file's earlier note that Mode A2 triggers at ⅓ of the previous peak. **If the
-MAX9926 also arms adaptively and triggers on zero crossing, the timing advantage
-above disappears entirely.** Worth confirming, because it decides whether the
-decoder needs a calibration term for trigger-point offset at all.
+The MAX9926 datasheet (now in the repo) settles it. **Table 1, Mode A2:
+ZERO_EN = GND, INT_THRS = GND → Zero Crossing ENABLED, Adaptive Peak Threshold
+ENABLED.**
+
+The two parts use **the same architecture**: arm on an adaptive fraction of the
+previous peak, then trigger on the zero crossing. The 33 % figure is the *arming*
+threshold, not the trigger point — see the correction below. And on the numbers
+the MAX9926 is the tighter of the two:
+
+| | LM1815 | MAX9926 |
+|---|--:|--:|
+| Zero-crossing threshold | ±25 mV | **−6.5 / +10 mV** |
+| Propagation delay | — | **50 ns** (zero-crossing path) |
+| Adaptive arming threshold | **80 % of peak** | **33 % of peak** |
+
+### The arming threshold is where the MAX9926 pulls decisively ahead
+
+The LM1815 arms at **80 %** of the previous peak; the MAX9926 at **33 %**. So a
+tooth must reach 80 % of its predecessor to be seen by the LM1815, against 33 %
+for the MAX9926.
+
+**The MAX9926 tolerates a 3:1 amplitude collapse between teeth. The LM1815
+tolerates 1.25:1.** That is the dropout mode quoted above, quantified — and
+cranking, where the engine slows hard against each compression stroke, is exactly
+where amplitude collapses tooth to tooth. The MAX9926 also backs it with an
+explicit 85 ms watchdog that resets the threshold, where the LM1815 relies on an
+RC decay at pin 7.
 
 ### Decision
 
-**Stay with the MAX9926.** The boards are fabricated, the differential input is
-the correct answer for a floating coil in this environment, and the channel count
-halves the part count. The LM1815's zero-crossing timing is the better mechanism
-on paper, but not by enough to rebuild around — and its dropout-under-deceleration
-mode lands in the same regime that makes cranking hard.
+**Stay with the MAX9926**, and now on the merits rather than on sunk cost. It
+matches the LM1815's zero-crossing timing, beats it on zero-crossing threshold
+and on arming margin where cranking actually lives, adds a differential input the
+LM1815 structurally cannot offer, and puts two channels in a package. The boards
+being already fabricated is now the *least* of the reasons.
 
 ## Configuration — use Mode A2
 
@@ -252,11 +274,12 @@ rather than compensate, which is why it was chosen over 10 kΩ/1 nF. The cost is
 13 dB less attenuation at 1 MHz (29 dB against 42 dB), so if the crank signal
 proves noisy on the engine, this is the first term to revisit.
 
-Note the series resistors also lower the input amplifier's gain — but under
-**Mode A2's adaptive threshold that corrects itself**, since the threshold
-tracks ⅓ of the previous peak whatever the gain is. The datasheet's warning to
-"account for it when setting the trigger threshold" applies to the fixed-threshold
-modes.
+Note the series resistors also lower the input amplifier's gain — but in Mode A2
+**that cannot affect timing at all**. The arming threshold tracks 33 % of the
+previous peak whatever the gain is, and the output edge comes from the zero
+crossing, which gain cannot move: scaling a waveform does not shift where it
+crosses zero. The datasheet's warning to "account for it when setting the trigger
+threshold" applies to the fixed-threshold modes.
 
 #### Package these for voltage, not for power
 
@@ -314,9 +337,13 @@ the decoder should trigger on.
 
 Two mechanisms, and both matter for cranking:
 
-- The threshold is set to **1/3 of the previous cycle's peak**, recomputed
-  cycle by cycle. That is what tracks the signal from a few hundred millivolts
-  at cranking to tens of volts at speed without any fixed level to get wrong.
+- **The 1/3 figure is the ARMING threshold, not the trigger point.** This file
+  previously implied the comparator switched at 1/3 of peak. It does not. Mode A2
+  enables *both* blocks: the input must first rise past **33 % of the previous
+  cycle's peak** to arm, and the output edge is then produced by the
+  **zero-crossing detector** at **−6.5 / +10 mV**. Adaptive arming is what tracks
+  a signal from a few hundred millivolts at cranking to tens of volts at speed;
+  the zero crossing is what makes the *timing* independent of amplitude.
 - If the input stays below the threshold for more than **85 ms**, an internal
   watchdog drops the threshold to its minimum, so recognition recovers after an
   intermittent connection. At 200 rpm cranking a 36-1 tooth arrives every

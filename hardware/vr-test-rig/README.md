@@ -430,75 +430,27 @@ angle, so the count has to start from a named tooth.
 A VR sensor outputs dΦ/dt, so flux peaks — and the output crosses zero — when a
 tooth is **centred on the pole piece**, not when its edge arrives.
 
-Mode A2 does not switch at that zero crossing either; it switches at ⅓ of the
-previous peak. **That is precisely why Mode A2 is the right choice for a timing
-application**: the threshold scales with amplitude, and since amplitude scales
-with speed, the switch point stays at a near-constant *angle* across the rpm
-range. A fixed threshold would drift in angle as amplitude grew, which reads as
-timing that wanders with rpm.
+Mode A2 switches at exactly that zero crossing. Table 1 of the MAX9924–MAX9927
+datasheet: **ZERO_EN = GND, INT_THRS = GND → zero crossing enabled, adaptive peak
+threshold enabled.** Both blocks are live. The adaptive threshold (33 % of the
+previous peak) only decides *whether* the channel arms; the edge itself comes from
+the zero-crossing detector at **−6.5 / +10 mV**.
 
-Near-constant is not constant, and MAX9926 propagation delay is a fixed time,
-which becomes an angle proportional to rpm (1 µs is 0.036° at 6000 rpm). Both are
-small, both are real, and **the rig can measure both directly** — sweep rpm and
-compare the COUT edge against the commanded step count.
+**So the trigger point is the tooth centre, and nothing moves it.** Not amplitude,
+not rpm, not acceleration — scaling a waveform cannot shift where it crosses zero.
+There is no amplitude-dependent timing term to calibrate out.
 
-### The cam sets which revolution, and it is also phase-referenced now
+*(An earlier revision of this file claimed Mode A2 switched at ⅓ of peak and that
+the rig would need to characterise the resulting offset against rpm. That was
+wrong — the 33 % is the arming threshold, and there is no such offset.)*
 
-The cam runs 2:1, one revolution per two of the crank, so the CMP pulse is what
-distinguishes compression from exhaust — the crank alone cannot. With the keyway
-as a hard datum the M8 lobe's phase can be **set deliberately rather than
-discovered**: put it well away from the gap so the sync window is unambiguous, and
-record the angle here once it is set.
+Propagation delay is **50 ns** on the zero-crossing path. At 6000 rpm that is
+**0.0018°** — three orders of magnitude below anything that matters, and below
+what the rig could measure. It needs no sweep and no correction.
 
-## Print it bore-axis vertical
-
-**Concentricity between the 24 mm spigot and the 8 mm bore is wheel runout, and
-runout is air-gap modulation.**
-
-Printed with the axis vertical, both diameters are formed by the same X-Y motion
-on every layer — concentric to printer X-Y accuracy, around ±0.05 mm. Printed on
-its side, one diameter becomes a stack of layers and the other does not.
-
-At ±0.05 mm on a 1 mm gap that is 5 % amplitude modulation once per revolution,
-which **Mode A2's adaptive threshold is built to track** — and which a real
-engine has anyway. Printed sideways it would be several times worse.
-
-## Gears clamp to the shaft, not to the hub — the wheel forces it
-
-The hub carried a bolt circle for the crank gear. **That is gone**, because the
-geometry does not allow it.
-
-At module 2 the centre distance is `m(z1+z2)/2 = 60 mm`. The crank wheel is
-**150 mm across — a 75 mm radius**. So the crank wheel sweeps *past the cam
-shaft's axis* by 15 mm. It is not a matter of the gears clashing; **the wheel
-would hit the cam shaft itself.**
-
-No gear ratio fixes this. Any sane module puts the centre distance under 75 mm,
-so the wheel always oversails the cam shaft. **Axial separation is inherent to
-the design, not a detail to tidy up**, and the cam shaft has to be short enough
-to end before the wheel's plane:
-
-```
-crank shaft   [motor]-[coupling]-[brg]-[crank gear]-[brg]--------[WHEEL]
-cam shaft                        [brg]-[cam gear ]-[brg]-[cam target]
-                                       <- gears mesh here ->      ^
-                                                                  |
-                                  cam shaft must END before this plane
-```
-
-So both gears are separate parts on their own split-clamp bosses with 8 mm bores,
-free to slide to whatever station the layout needs. `base_l` went 200 → 260 mm to
-give the gear station room.
-
-Both shafts sit at the **same height**, 60 mm apart horizontally — which means
-all four bearing blocks are the identical part, unmodified.
-
-## Set `wheel_bore`, `key_w` and `key_d` from the real wheel
-
-Defaults are 24.0 / 8.0 / 3.3 mm — the DIN 6885 sizes for a 24 mm shaft. **Check
-them against what actually arrives**; aftermarket wheels are not obliged to be
-standard, and a key that does not fit is a reprint rather than a redesign.
-
+What the rig should still measure is **amplitude against rpm**, because that
+decides whether the 5 kΩ series resistors are right and whether the ±40 mA input
+limit is approached. That is a signal-integrity question, not a timing one.
 
 ---
 
