@@ -39,17 +39,17 @@ cam_bolt        =   8.0;  // M8 shank — this is the face the sensor sees, head
 cam_head_af     =  13.0;  // M8 hex across flats, for the captive pocket
 cam_head_thk    =   5.5;  // M8 head height
 /* Counterweight, cancelling the M8 trigger bolt's ~480 g.mm.
-   The pocket is a slip fit on 14 mm brass rod, deliberately DEEPER than needed:
+   The pocket is a slip fit on 13 mm brass rod, deliberately DEEPER than needed:
    you balance by cutting the rod to length, not by trusting this arithmetic.
-   Expect roughly 15 mm of rod — the printed boss is itself 4.8 g at r 19.5 and
+   Expect roughly 18 mm of rod — the printed boss is itself 4.5 g at r 19.5 and
    already does about a fifth of the job.
-   Capacity is 29 g brass / 39 g lead, so either material reaches balance.
+   Capacity is 25 g brass / 34 g lead, so either material reaches balance.
    The fill must be NON-FERROUS: the boss reaches r 29.7 against a 30 mm rim, so
    it passes the sensor every revolution and steel would be a second VR trigger. */
 cw_r            =  19.5;  // pocket centre radius
-cw_dia          =  14.4;  // slip fit on 14 mm rod stock — CUT THE ROD TO BALANCE
+cw_dia          =  13.4;  // slip fit on 13 mm rod stock — CUT THE ROD TO BALANCE
 cw_depth        =  21.0;  // deeper than needed, so there is length to trim
-cw_boss          = 20.4;  // spans r 9.3..29.7, inside the 30 mm rim
+cw_boss         =  19.4;  // spans r 9.8..29.2, inside the 30 mm rim
 cw_h            =  23.0;
 cam_gear_teeth  =  40;    // 2 : 1 against crank_gear_teeth
 crank_gear_teeth=  20;

@@ -86,7 +86,7 @@ after absolute position.
 | 4 | Shaft collar | 8 mm bore, clamp type, for axial location |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
-| 1 | **Brass rod, 14 mm dia × 25 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
+| 1 | **Brass rod, 13 mm dia × 20 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
 | 1 | M3 × 6 grub screw | traps the counterweight |
 | — | M4 × 12/16/20 socket cap, M4 nuts | clamps, feet, sensor mounts |
 | — | M3 × 8 socket cap ×4 | NEMA 17 face |
@@ -146,9 +146,14 @@ came for. `cam_target` now carries a counterweight boss 180° from the bolt.
 
 ### Brass or lead — both reach balance, so take brass
 
-The pocket is **14.4 mm bore × 21 mm deep**, a slip fit on **14 mm rod stock**.
-Capacity is **29 g of brass or 39 g of lead**, and the job needs about 20 g — so
+The pocket is **13.4 mm bore × 21 mm deep**, a slip fit on **13 mm rod stock**.
+Capacity is **25 g of brass or 34 g of lead**, and the job needs about 20 g — so
 either material gets there and the choice is free on that count.
+
+**The bore follows the rod, not the other way round.** A printed pocket is a
+one-line parameter; bought stock is bought. If you would rather use 14 mm rod,
+change `cw_dia` to 14.4 and `cw_boss` to 20.4 and reprint — that is the whole
+change.
 
 **Take brass.** Rod stock cuts to length with a hacksaw, handles like any other
 metal, and needs no precautions. Lead works and is denser, but the density buys
@@ -171,16 +176,24 @@ Too many unknowns feed that sum — your actual bolt and nut mass, print infill,
 filament density. **Balance it on knife edges and cut the rod until it sits
 still.** That takes five minutes and beats any calculation, including this one.
 
-Rod length by diameter, if you already have stock:
+Rod length by diameter, if you have other stock:
 
-| rod dia | length for the full 480 g.mm |
-|--:|--:|
-| 12 mm | 25.6 mm |
-| 1/2 in | 22.9 mm |
-| **14 mm** | **18.8 mm** |
-| 16 mm | 14.4 mm |
+| rod dia | rod alone | with the boss's 88 g·mm |
+|--:|--:|--:|
+| 12 mm | 25.6 mm | ~21 mm |
+| **13 mm** | **21.6 mm** | **~18 mm** |
+| 14 mm | 18.8 mm | ~15 mm |
+| 16 mm | 14.4 mm | ~12 mm |
 
-*(those are rod-alone figures — subtract the boss's own 93 g·mm, hence ~15 mm)*
+### Spare brass is not wasted
+
+A 20 mm offcut of the size you do not use makes the best **air-gap gauge** you
+could ask for. Brass is non-magnetic, so you can set the gap with the sensor
+powered and the channel live — a steel feeler gauge sitting in the gap changes
+the very magnetic circuit you are trying to set.
+
+Face the offcut flat, or slice it to a known thickness, and it becomes a
+go/no-go for the 1 mm gap that does not perturb the measurement.
 
 ### The counterweight must not be ferrous
 
