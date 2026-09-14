@@ -374,3 +374,67 @@ Keeping the factory connector means the original PCM plugs back in and the truck
 drives — while the prototype ECU is on the bench for rework. On a vehicle that
 has to keep running, that fallback is the strongest argument for solving the
 connector problem rather than cutting past it.
+
+---
+
+# Resolved: donor connector from a Ranger EEC-V
+
+**Bought a damaged Ranger EEC-V as a connector donor.** The 104-pin shell was
+used across the EEC-V generation, so a Ranger unit is expected to carry the same
+connector as the F-150 one.
+
+**The pinout being different does not matter.** What is being reused is the shell
+and the pin field; the application's circuit assignment lives in the harness and
+in [`eec-v-pinout.md`](eec-v-pinout.md), not in the plastic.
+
+## ⚠ Check the polarising key before anything else
+
+**Ford varies the keying between applications specifically so a PCM from one
+vehicle cannot be plugged into another.** Same shell, different key.
+
+**Offer the donor connector up to the F-150 harness connector before spending any
+effort on it.** If the keys differ it will not mate, and that is worth knowing on
+day one rather than after the connector has been desoldered and a PCB footprint
+built around it.
+
+If they do differ, the keys can usually be removed — but understand what that
+gives up: the feature exists to stop the wrong ECU being fitted, and removing it
+makes that mistake possible for whoever works on the truck later. Note it on the
+unit if you do.
+
+## Do not cut the pins off
+
+The donor's pins are **solder tails**, made to go through a PCB. That is exactly
+what this project needs, and it is **not** what the E6DZ terminals are — those
+are crimp barrels for a wire-terminated connector.
+
+The two do not combine. **Keep the donor's pins; they are the whole point of the
+donor.**
+
+The E6DZ/E7EB terminals remain useful for their own job: repinning the truck's
+harness-side connector, including the CMP-return move above.
+
+## Getting it off the donor board
+
+| | |
+|---|---|
+| **Desolder in place** | 104 pins. A desoldering gun makes this about an hour; hot air and braid will take considerably longer and risks lifting the shell's retention posts |
+| **Cut the donor PCB around it** | Faster and lower risk to the connector. Leaves a stub of the original board attached, which can then be desoldered pin-by-pin off a small piece, or in a hurry wired to directly |
+
+**The connector is the part being preserved, not the donor board** — so bias every
+decision toward protecting the shell and pins, and treat the PCB as scrap.
+
+## Then: measure the pattern and build the footprint
+
+The pin pattern has to become a PCB footprint. Measure it from the donor
+directly rather than trusting a published drawing — row spacing, pitch, and the
+positions of any mechanical retention posts.
+
+Worth comparing against the **rusEFI 104-pin PCB template** noted earlier in this
+project: if it matches the donor, that is a footprint already proven in
+manufacture rather than one drawn from measurements.
+
+## What this closes
+
+The sourcing problem at the top of this document. The remaining risk is a single
+mechanical check — **the key** — and it costs nothing to do now.
