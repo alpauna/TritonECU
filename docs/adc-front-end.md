@@ -411,11 +411,66 @@ AD7606B already reaches it. The value is elsewhere:
 - **7 kV ESD specified on the inputs**, which is the right direction for
   something wired to a 104-pin harness.
 
-### Decision: do not choose — the footprint already takes both
+### The ADS8588H too — and it is the better of the two
 
-Since it is pin-for-pin, this is a **populate-time decision, not a layout one**.
-Draw the board once and buy whichever is available and cheaper. That is genuine
-supply resilience at zero cost, which is the best kind.
+Same check, same result. **ADS8588H is pin-identical**: CONVSTA 9, CONVSTB 10,
+FRSTDATA 15, REFSEL 34, REGCAP2 39, AGND 40, in **LQFP-64, 10 × 10 mm**. And it
+improves on the S in two places that matter:
+
+| | ADS8588S | **ADS8588H** |
+|---|--:|--:|
+| Throughput | 200 kSPS | **500 kSPS** |
+| Input ESD clamp | 7 kV | **9 kV** |
+| Operating temp | −40…+125 °C | −40…+125 °C |
+
+The extra throughput is irrelevant to the ECU at ~1 % utilisation, but **9 kV of
+input clamp is not** — these pins run to a 104-pin harness in a vehicle.
+
+### The ADS9324 is NOT a drop-in — it is a different part
+
+It was suggested as "same pinout." **It is not**, and the difference is
+structural rather than a pin or two:
+
+| | AD7606 / ADS8588x | **ADS9324** |
+|---|---|---|
+| Channels | 8 | **16**, differential pairs (AIN1P/AIN1M …) |
+| Package | **LQFP-64, 10 × 10 mm** | **VQFN-64, 8 × 8 mm** |
+| Analog supply | 5 V | **5 V *and* 1.8 V** |
+| Digital I/O | 2.3–5 V | 1.8–3.3 V |
+| Signal names | REFIN/REFOUT, BUSY | REFIO, REFCAP, DRDY/ALARM |
+
+Sixty-four pins on both is a coincidence of count, not of arrangement. Different
+package *type*, different body size, twice the channels, and **an AVDD_1V8 rail
+this board does not generate**. Designing the footprint expecting it to drop in
+would not be a rework — it would be a new board.
+
+**It is genuinely interesting for the scope board though**: 16 channels at
+1 MSPS, ±12.5 V differential with ±12.5 V common mode, selectable 25 kHz/325 kHz
+analog bandwidth, and open-wire detection that drives floating inputs to near-zero
+code. That is a data-acquisition part, and the scope board is a data-acquisition
+project. Just not this footprint. *(Datasheet is December 2025 — check
+availability.)*
+
+### Decision: do not choose — the footprint already takes four parts
+
+Since they are pin-for-pin, this is a **populate-time decision, not a layout one**.
+One LQFP-64 footprint now accepts:
+
+| Part | Vendor | Throughput | Temp |
+|---|---|--:|---|
+| AD7606 | ADI | 200 kSPS | −40…+85 °C |
+| AD7606B | ADI | 800 kSPS | −40…+125 °C |
+| AD7606C-16/18 | ADI | 1 MSPS | −40…+125 °C |
+| **ADS8588S** | **TI** | 200 kSPS | −40…+125 °C |
+| **ADS8588H** | **TI** | 500 kSPS | −40…+125 °C |
+
+**Five parts, two vendors, 200 kSPS to 1 MSPS, on one layout.** Draw it once and
+buy whatever is available and cheapest that week. That is genuine supply
+resilience at zero cost, which is the best kind there is.
+
+For this build the sensible default is now **ADS8588H** — the ECU does not need
+its speed, but at the same pinout it brings the best input clamp of the set, and
+input robustness is the spec that actually earns its keep on a harness.
 
 **[VERIFY] before first populate:** `REF_SELECT` polarity. The ADS8588S is
 explicit — logic **high** selects the internal reference. Confirm the AD7606 uses
