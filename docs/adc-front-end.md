@@ -354,6 +354,74 @@ for knowing what was actually bought — and for deciding whether the same
 supplier is worth using again for the scope's C-series part, where the
 difference is the whole point.
 
+### The ADS8588S is a verified pin-for-pin second source
+
+TI's **ADS8588S** was checked against the Tokmas AD7606-class datasheet on file,
+pin by pin across all 64. **They are identical** — the only differences are
+naming:
+
+| Pin | AD7606 | ADS8588S |
+|---|---|---|
+| 3, 4, 5 | OS0, OS1, OS2 | same |
+| 6 | PAR/SER/BYTE SEL | same |
+| 7, 8 | STBY, RANGE | same |
+| **9, 10** | **CONVSTA, CONVSTB** | **same** |
+| 11–15 | RESET, RD/SCLK, CS, BUSY, FRSTDATA | same |
+| 16–22 | DB[6:0] | same |
+| 23 | DVDD | same |
+| 24, 25 | DB7/DOUTA, DB8/DOUTB | same |
+| 27–33 | DB[13:9], DB14/HBEN, DB15/BYTE SEL | same |
+| 34 | REF_SELECT | REFSEL *(name only)* |
+| 36, 39 | REGCAP1, REGCAP2 | same |
+| 42–46 | REFIN/REFOUT, REFGND, REFCAPA/B | same |
+| 49–64 | V1…V8 + V*GND | AIN_1P…AIN_8P + AIN_*GND *(name only)* |
+
+**Note pins 9 and 10 are CONVSTA/CONVSTB**, matching the original AD7606 rather
+than the AD7606C's CONVST/WR. So the shorting advice below applies unchanged and
+the WR hazard does not arise at all.
+
+### What it adds
+
+| | AD7606 (200 kSPS) | ADS8588S |
+|---|---|---|
+| Resolution / channels | 16-bit, 8 simultaneous | same |
+| Throughput | 200 kSPS | 200 kSPS |
+| Input | ±10 V / ±5 V, 1 MΩ | same |
+| Internal reference | 2.5 V | 2.5 V, 7.5 ppm/°C |
+| Package | LQFP-64, 10 × 10 mm | same |
+| **Operating temp** | **−40 to +85 °C** | **−40 to +125 °C** |
+| Input ESD | clamp | clamp + **7 kV** |
+| Vendor | ADI (and clones) | **TI** |
+
+It is **not** a substitute for the AD7606B on throughput — both are 200 kSPS —
+but the throughput analysis above puts utilisation near 1 %, so that is not a
+axis that matters here.
+
+### Why this is worth having: it is not about temperature
+
+The ECU is **cabin-mounted**, so +125 °C buys nothing today, and the genuine
+AD7606B already reaches it. The value is elsewhere:
+
+- **Second source from a different vendor.** For a controller meant to outlive
+  the PCM it replaces, having ADI *and* TI able to supply the centre of the
+  analog front end is worth more than any spec on the list.
+- **It sidesteps the `AD7606BSTZ` naming trap entirely.** TI's part number means
+  one thing. No grade-letter collision, and none of the re-marking exposure ADI
+  themselves warn about on footprint-identical parts.
+- **7 kV ESD specified on the inputs**, which is the right direction for
+  something wired to a 104-pin harness.
+
+### Decision: do not choose — the footprint already takes both
+
+Since it is pin-for-pin, this is a **populate-time decision, not a layout one**.
+Draw the board once and buy whichever is available and cheaper. That is genuine
+supply resilience at zero cost, which is the best kind.
+
+**[VERIFY] before first populate:** `REF_SELECT` polarity. The ADS8588S is
+explicit — logic **high** selects the internal reference. Confirm the AD7606 uses
+the same sense before assuming a strap serves both parts, because getting it
+backwards powers down the reference rather than failing loudly.
+
 ### One footprint, but not identical pin functions
 
 All three generations are **LQFP-64 and footprint-compatible**, so one PCB

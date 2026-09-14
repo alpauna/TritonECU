@@ -95,7 +95,7 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 | 3.3 V rail | TLV62085 buck from 5 V, 2.4 MHz, 500 nH |
 | ADC reference | MAX6070AAUT25, 2.5 V, gated for sleep |
 | Battery sense | INA238 on the LTC4364's own 10 mΩ / 1 % / 50 ppm shunt |
-| Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V |
+| Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V — **TI ADS8588S is pin-for-pin**, second source |
 | Crank / cam / OSS | 2 × MAX9926 Mode A2 — 4 channels, adaptive threshold + zero crossing |
 | Knock | TLV9064-Q1 differential charge amp + own 2.5 V ref — [schematic](docs/Schematics/knock-front-end-schematic.md) |
 | Barometric | **KP497** (Infineon) on I²C/SPI, AEC-Q100 −40…+105 °C, 3.3 V always-on rail — **requires a vented enclosure** |
