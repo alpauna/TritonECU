@@ -40,6 +40,7 @@ lives on `main`.
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
 | **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
 | **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md) |
+| **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
@@ -172,8 +173,21 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   two-wire floating piezo (pins 57, 32) into a single-ended knock IC would ground
   one leg and inject sensor-ground noise straight into a microvolt signal. A
   differential charge amp is needed either way, so it is the part to build — and
-  it defers the IC-versus-DSP choice rather than forcing it.
+  it defers the IC-versus-DSP choice rather than forcing it. One TLV9064-Q1 quad
+  holds the lot: two charge amps, a difference stage and a VMID buffer.
   [`docs/knock-front-end.md`](docs/knock-front-end.md)
+- **Charge mode, because the harness moves.** Read a piezo as a *voltage* and the
+  cable capacitance divides the signal down — 100 pF of loom against a 1 nF
+  sensor is a 10 % error that **changes if the harness is rerouted**. Read as
+  *charge*, both terminals sit at a virtual ground, the cable sees no swing, and
+  sensitivity stops depending on how the loom was dressed. The feedback caps then
+  *are* the calibration (`Q/Cf`), which is why they are C0G and not X7R.
+- **Analog blocks get their own references.** The knock front end has a 2.5 V
+  reference separate from the ADC's. It does not save an amplifier though: the
+  difference stage's reference leg is one arm of a resistor bridge, and CMRR
+  depends on that bridge staying balanced, so it still wants a buffer between the
+  reference and `R8` rather than the reference's own output impedance in series
+  with one arm.
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
