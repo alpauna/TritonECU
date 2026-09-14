@@ -22,6 +22,9 @@ Read as **charge**, both sensor terminals are held at a virtual ground, so the
 cable capacitance never sees a voltage swing and contributes nothing. Sensitivity
 stops depending on how the loom was dressed.
 
+**Schematic:** [`Schematics/knock-front-end-schematic.md`](Schematics/knock-front-end-schematic.md)
+— net list, BOM and layout notes, ready to transcribe.
+
 ## Topology — and it fills a quad exactly
 
 ```
@@ -40,10 +43,16 @@ stops depending on how the loom was dressed.
 |---|---|
 | **A1, A2** | charge amps, one per leg. Charge leaves one terminal and enters the other, so the outputs are equal and opposite |
 | **A3** | difference amplifier, `2Q/Cf`, plus the anti-alias pole |
-| **A4** | buffers the existing 2.5 V reference to VMID — do not load the ADC reference directly |
+| **A4** | buffers a **dedicated 2.5 V reference** for this block to VMID — the ADC's reference is left alone |
 
 **So yes to a quad — but it is already full.** The knock chain wants exactly four
 amplifiers, and the fourth is not spare.
+
+**A dedicated reference does not free A4 up.** It removes the loading concern, but
+the buffer was never only about loading: `A3`'s reference leg is one arm of a
+resistor bridge, and **CMRR depends on that bridge staying balanced**. Driving
+`R8` from the reference IC directly puts the reference's output impedance in
+series with that arm and unbalances it. The buffer stays.
 
 ## Do not share the package with other inputs
 
