@@ -288,3 +288,89 @@ there is a no-start with no stored code.
 Look at what is already in the cavity before crimping its replacement. If the
 factory terminal is gold and the new one is tin, source the matching plating
 rather than accepting the mix.
+
+---
+
+# Could the board-side connector be printed?
+
+Worth asking, since the male terminals are now in hand and the only supply of the
+real thing is salvaged PCMs of unknown condition. Short answer: **harder than it
+looks, and the failure modes are the bad kind.** But the sourcing problem has an
+easier solution that is being missed.
+
+## Why printing the housing is hard
+
+### The material that is thermally right is dimensionally the worst
+
+| Filament | Shrinkage | Over a ~100 mm body | Service temp |
+|---|---|---|---|
+| PLA | ~0.3 % | 0.3 mm | **~60 °C — out** |
+| PETG | ~0.4 % | 0.4 mm | ~80 °C |
+| ABS | 0.5–0.8 % | 0.5–0.8 mm | ~100 °C |
+| **Nylon** (what Ford uses) | **1–2 %** | **1–2 mm** | ~180 °C ✓ |
+
+Terminal-to-cavity clearance is on the order of **±0.1 mm**. Every option
+overshoots it across the length of the part, and the one with the right
+temperature rating overshoots by an order of magnitude — while also being
+hygroscopic, warp-prone and the hardest filament to print well.
+
+Scale compensation can claw back the systematic part. It cannot fix
+**repeatability**, and FDM does not hold ±0.1 mm across 100 mm reliably.
+
+### Retention ledges land on layer lines
+
+The primary lock tang catches a small ledge inside the cavity. On an FDM part
+that ledge is a layer boundary — inconsistent, and weak in exactly the direction
+the tang loads it.
+
+**A terminal that backs out under vibration is an intermittent**, which is the
+fault class this project can least afford on a crank sensor.
+
+### 104 terminals is a structural load
+
+At roughly 1–2 N of insertion force each, mating is **100–200 N** through a
+layered part, plus whatever the latch carries in separation. Printed parts split
+along layers under exactly that kind of load.
+
+## The reframe: you do not need a working PCM
+
+**You need intact plastic and straight pins. The electronics are irrelevant.**
+
+A PCM that is water-damaged, has burnt output drivers, or was pulled as a
+core is **perfectly good as a connector donor** — and those are the cheap ones
+nobody wants. "Not always in good shape" describes the circuitry, which does not
+matter here.
+
+Buy on condition of the **connector shell and pin field**, not the unit. That
+widens supply enormously and drops the price.
+
+## Where printing genuinely helps: a soldering fixture
+
+Not the connector — a **jig that holds a salvaged pin field in register while it
+is soldered to the PCB.**
+
+That plays to FDM's strengths instead of its weaknesses: it only has to be
+accurate *locally*, it carries no service load, it never sees engine-bay
+temperature, and if it is 0.3 mm out over its length it simply gets reprinted.
+
+## Before committing either way: print a six-cavity coupon
+
+If the printed housing is still tempting, **do not start at 104 cavities.**
+Print a short strip at the real pitch and try mating it with the corresponding
+corner of the harness connector.
+
+One small print answers the only question that matters — whether the tolerance
+stack is achievable at all — before any effort goes into the full part.
+
+## The option worth naming: do not use the factory connector
+
+Terminating the harness into **AMPSEAL, Deutsch DT/DTM or Molex MX150** solves
+sourcing permanently: new parts, sealed, proper tooling, sensible circuit counts.
+The v1 build list is nowhere near 104 circuits — coils, injectors, the sensor
+set, power and comms land closer to 50–60.
+
+**What it costs is reversibility, and that is worth more than it sounds.**
+Keeping the factory connector means the original PCM plugs back in and the truck
+drives — while the prototype ECU is on the bench for rework. On a vehicle that
+has to keep running, that fallback is the strongest argument for solving the
+connector problem rather than cutting past it.
