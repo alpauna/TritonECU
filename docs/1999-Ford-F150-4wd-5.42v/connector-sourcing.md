@@ -230,3 +230,61 @@ on it next, including the person who modified it.
 to, wire colour, and why. The wire colours are already in that table, which makes
 it the natural place: a future reader can then diff what is in the truck against
 what Ford shipped.
+
+## Terminal part numbers
+
+| Part | |
+|---|---|
+| **E7EB-14487-AA** | **female** — harness side |
+| **E6DZ-14487-AA** | **male** — PCM/board side |
+| `33088-0009` | **[confirm]** what this cross-references to — kit, assortment, or another vendor's number |
+
+**The female is the one repinning needs.** The PCM presents a male header and the
+harness carries the sockets, so every terminal pulled and moved in the truck's
+connector is an E7EB.
+
+**The male is more interesting than it looks.** It is the terminal for the
+*mating* side — which is the unsolved problem at the top of this document. If the
+board-side 104-pin connector ends up being built rather than bought, E6DZ is what
+populates it.
+
+## ⚠ The wedge comes out first
+
+"Wedgelock" is a **secondary lock**: a separate wedge that seats over the
+terminals once they are in, and blocks the primary lock tangs from flexing.
+
+**Nothing extracts while the wedge is seated.** Forcing it damages the tangs, the
+cavity, or both — and a damaged cavity does not reliably retain a terminal
+afterwards, which is an intermittent that only appears under vibration.
+
+On a 1999 part, **expect the wedge to be brittle.** Twenty-five years of underhood
+heat cycling makes the nylon far less forgiving than it was. Work it out
+evenly rather than levering one corner, and warm it gently if it resists.
+
+## Validate the crimper before touching the truck
+
+The way to check a crimper you are not certain about, without a microsection:
+
+**Crimp a scrap terminal onto the gauge you intend to use, and pull it.** A sound
+crimp on 20 AWG holds on the order of 15–20 lbf. If the wire slides out of the
+barrel with hand force, the die is wrong or the barrel is oversized for the wire
+— and no amount of care in the harness fixes that.
+
+Do this once, on the bench, before the first real terminal. It costs one
+terminal and settles the question that would otherwise surface as a fault six
+months later.
+
+## Check the plating matches
+
+Ford used **gold-plated terminals on some low-level signal circuits** and tin
+elsewhere. Mixing the two in one mating pair sets up galvanic dissimilarity, and
+under vibration that becomes **fretting corrosion** — an intermittent open, not
+merely a resistance rise.
+
+That matters most exactly where this project is sensitive: **a VR sensor at
+cranking is producing a few hundred millivolts**, and an intermittent contact
+there is a no-start with no stored code.
+
+Look at what is already in the cavity before crimping its replacement. If the
+factory terminal is gold and the new one is tin, source the matching plating
+rather than accepting the mix.
