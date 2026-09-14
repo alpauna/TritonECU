@@ -565,3 +565,79 @@ tool** than by adding 104 connections to the reliability budget.
 Check whether TE lists a **successor or cross-reference** for 770750-1, and
 whether the family had a **second source** — Ford rarely single-sourced a
 connector used across an entire ECU generation.
+
+---
+
+# RETRACTED: the CMP repin is not needed
+
+**Design principle, decided:** keep the factory harness unmodified. Everything is
+referenced the way we want it **inside the ECU**, not by moving wires.
+
+That is the right call, and it makes the earlier repinning recommendation
+unnecessary.
+
+## Both VR channels already arrive at the connector
+
+| | Cavity | Wire | |
+|---|---|---|---|
+| **CKP+** | **21** | DK BLU | dedicated pair — nothing to decide |
+| **CKP−** | **22** | GRY | |
+| **CMP signal** | **85** | DK GRN | |
+| **CMP return** | **91** — SGND / Sensor Ground | GRY/RED | shared, but **present at the connector** |
+
+**That is the whole answer.** The CMP return was never missing — it lands in the
+shared sensor-ground cavity instead of a dedicated CMP− pin. The wire is at the
+connector either way.
+
+So:
+
+```
+VR1+ ← pin 21      VR2+ ← pin 85
+VR1− ← pin 22      VR2− ← pin 91
+```
+
+**No terminal moves.** Pin 91 feeds both the board's sensor-ground star *and*
+VR2− — they do not conflict, because VR2− is a high-impedance input behind 5 kΩ.
+
+## What is given up, and why it does not matter
+
+A dedicated return would also reject IR drop between the CMP sensor and wherever
+its return joins the sensor-ground network. Sharing means it does not.
+
+**That drop is sub-millivolt.** The sensors on that network draw a few
+milliamps through tens of milliohms. A VR sensor at cranking produces **hundreds
+of millivolts**. The error is three orders of magnitude below the signal, and the
+differential input still rejects the large common-mode offset between the engine
+and the ECU — which is the part that actually matters.
+
+## The principle worth keeping
+
+**The board defines what every cavity connects to.** Almost any "this should be
+referenced differently" question is therefore a **PCB routing decision, not a
+harness modification** — and the PCB is the thing that can be revised, while the
+harness is the thing that has to still be diagnosable in ten years with a Ford
+wiring diagram.
+
+### Extend it: preserve the factory ground splits
+
+Ford runs **two separate sensor grounds** into this connector:
+
+| | Cavity | Wire |
+|---|---|---|
+| MAF Return / Sensor Ground | **36** | TAN/LT BLU |
+| SGND / Sensor Ground | **91** | GRY/RED |
+
+**They were separated deliberately** — the MAF draws far more current than the
+small three-wire sensors, and sharing a return would put its drop into every
+other reading.
+
+**Keep them as separate nets on the board**, joined only at the star point. The
+temptation is to merge them because both say "sensor ground"; doing so undoes a
+factory decision for no gain.
+
+## The terminals are still worth having
+
+Repinning tooling stays useful for **repair, not modification** — a corroded
+terminal, a damaged lock tang, a wire that needs replacing. Restoring a circuit
+to factory condition is entirely consistent with leaving the harness otherwise
+untouched.
