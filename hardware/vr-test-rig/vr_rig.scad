@@ -13,7 +13,9 @@ $fn = 64;
    --------------------------------------------------------------------------- */
 wheel_od        = 150.0;  // MEASURE: trigger wheel outside diameter
 wheel_thk       =   5.0;  // MEASURE: wheel thickness
-wheel_bore      =  25.4;  // MEASURE: wheel centre bore
+wheel_bore      =  24.0;  // wheel centre bore — 24 mm, keyed
+key_w           =   8.0;  // MEASURE: keyway width  (DIN 6885 for 24 mm is 8 mm)
+key_d           =   3.3;  // MEASURE: keyway depth into the bore
 sensor_dia      =  19.0;  // MEASURE: VR sensor barrel diameter (Ford CKP)
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
@@ -125,6 +127,38 @@ module hub() {
 }
 
 /* ===========================================================================
+   WHEEL HUB — 24 mm keyed spigot to 8 mm shaft, with a gear mounting face.
+   Print BORE AXIS VERTICAL: both diameters are then formed by the same X-Y
+   motion on every layer, so they are concentric to printer X-Y accuracy rather
+   than to layer stacking. Concentricity here is wheel runout, which is air-gap
+   modulation.
+   =========================================================================== */
+wh_flange = wheel_bore + 22;
+wh_spig_l = wheel_thk + 3;
+module wheel_hub() {
+    difference() {
+        union() {
+            cylinder(d = wh_flange, h = 10);                    // flange + gear face
+            translate([0,0,10]) cylinder(d = wheel_bore - clr, h = wh_spig_l);
+            // integral key — same material, formed in X-Y with the spigot
+            translate([0,0,10])
+                translate([wheel_bore/2 - key_d, -key_w/2 + clr/2, 0])
+                    cube([key_d, key_w - clr, wh_spig_l]);
+        }
+        translate([0,0,-1]) cylinder(d = shaft_dia + clr, h = 40);   // shaft bore
+        translate([-0.9, -wh_flange, 3]) cube([1.8, wh_flange, 40]); // clamp slit
+        translate([-wh_flange/2 - 1, 0, 6]) rotate([0,90,0]) cylinder(d = 4.4, h = wh_flange + 2);
+        translate([ 1.5, 0, 6]) rotate([0,90,0]) cylinder(d = 7.6, h = wh_flange, $fn = 6);
+        // gear bolt circle — 3 x M4
+        for (a = [0:120:359]) rotate([0,0,a])
+            translate([wh_flange/2 - 6, 0, -1]) cylinder(d = 4.4, h = 12);
+        // wheel retention — bolts through the flange into the wheel, if it has holes
+        for (a = [60:120:359]) rotate([0,0,a])
+            translate([wheel_bore/2 + 4, 0, -1]) cylinder(d = 4.4, h = 12);
+    }
+}
+
+/* ===========================================================================
    CAM TARGET HUB — printed disc, one steel insert, adjustable phase.
    The clamp is deliberately separate from the insert so the phase can be
    swept without disturbing the lobe.
@@ -209,6 +243,7 @@ module base() {
 if      (part == "bearing_block") bearing_block();
 else if (part == "motor_mount")   motor_mount();
 else if (part == "hub")           hub();
+else if (part == "wheel_hub")     wheel_hub();
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
 else if (part == "base")          base();

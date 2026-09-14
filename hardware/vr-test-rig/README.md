@@ -355,3 +355,73 @@ becomes two**, and it will look exactly like a decoder fault.
 
 Brass or aluminium if you balance it at all. At these speeds the imbalance does
 not need correcting.
+
+
+---
+
+# The wheel is 24 mm keyed — hub, and what the keyway is really for
+
+A 24 mm bore is a **shaft size, not a bearing size** — common bearing IDs step
+8, 10, 12, 15, 17, 20, **25**. So the wheel does not go on its own bearings; it
+goes on an adapter.
+
+`wheel_hub()` does that: **24 mm keyed spigot → 8 mm clamped bore**, with a bolt
+circle on the flange so the 20T crank gear mounts to the same part.
+
+## The keyway is an angular datum, not a torque path
+
+The torque is trivial. Accelerating a 0.7 kg wheel to 1200 rpm in two seconds is
+
+```
+T = Iα = 1.94e-3 × 62.8 = 0.12 N·m      →  10 N at the 12 mm bore radius
+```
+
+A printed key carries that without thinking about it.
+
+**What the keyway actually buys is repeatability.** Remove the wheel and refit
+it, and it returns to *the same angle*. On a rig whose entire purpose is
+comparing decoded position against commanded position, that is the difference
+between a datum and a guess.
+
+### Measure the keyway-to-gap angle once, and write it down
+
+The angle between the keyway and the **missing tooth** is fixed by the wheel's
+manufacture. Measure it once.
+
+With the stepper's known step count and that one number, the rig knows **exactly
+where the gap is at any commanded position** — so the decoder can be checked on
+*absolute* position, not merely on whether it counts teeth correctly and finds
+*a* gap.
+
+That is the strongest test this rig can perform, and it costs one measurement
+with a protractor.
+
+## Print it bore-axis vertical
+
+**Concentricity between the 24 mm spigot and the 8 mm bore is wheel runout, and
+runout is air-gap modulation.**
+
+Printed with the axis vertical, both diameters are formed by the same X-Y motion
+on every layer — concentric to printer X-Y accuracy, around ±0.05 mm. Printed on
+its side, one diameter becomes a stack of layers and the other does not.
+
+At ±0.05 mm on a 1 mm gap that is 5 % amplitude modulation once per revolution,
+which **Mode A2's adaptive threshold is built to track** — and which a real
+engine has anyway. Printed sideways it would be several times worse.
+
+## Gear on the hub, or gear on the shaft?
+
+The flange carries a 3 × M4 bolt circle, so the crank gear can mount directly to
+the hub — one rigid assembly, no separate alignment.
+
+**The alternative is a gear clamped to the shaft separately**, which gives axial
+freedom. That matters here: at a 30 mm gear centre distance the cam shaft passes
+through the plane of a 150 mm crank wheel, so the gear and the wheel must sit at
+**different stations along the shaft**. Either arrangement works — just place the
+gear away from the wheel, not beside it.
+
+## Set `wheel_bore`, `key_w` and `key_d` from the real wheel
+
+Defaults are 24.0 / 8.0 / 3.3 mm — the DIN 6885 sizes for a 24 mm shaft. **Check
+them against what actually arrives**; aftermarket wheels are not obliged to be
+standard, and a key that does not fit is a reprint rather than a redesign.
