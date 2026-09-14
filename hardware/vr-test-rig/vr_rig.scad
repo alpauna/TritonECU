@@ -75,14 +75,37 @@ clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
 
-plate_w         = 240.0;  // a cut board, not a print — see README
+plate_w         = 240.0;
+
+/* --- spine rods: the base's stiffness comes from these, not from the plate ---
+   Two full-length steel rods in ribs under the plate. Offset from the neutral
+   axis they act as a beam's flanges: EI goes 20.5 -> 826 N.m^2, FORTY times.
+   The offset is what does it, not the diameter — a 5 mm rod in a rib beats a
+   10 mm rod buried in the plate (30x vs 11x), because a rod on the neutral axis
+   can only contribute its own I while an offset one contributes A*d^2.
+   They also bridge the wheel slot, which is the plate's weakest section, and
+   span the print seam so the split needs no separate dowels. */
+rod_d           =   8.0;
+rod_y           =  58.0;  // clear of the slot (+-36.6) and of every foot bolt
+rib_w           =  18.0;
+rib_h           =  22.0;  // 2 mm shallower than the feet, so it never touches down
+
+/* --- printing the base in two pieces ---------------------------------------
+   At 280 x 240 it fits a 300 mm bed, but it is a ~20 h print with real warp
+   risk. Splitting at x = -60 gives 80 + 200 mm pieces (the 1/4 + 3/4 split) and
+   the seam lands in the ONLY empty span, between the motor and the first
+   bearing — where the flexible coupling already absorbs misalignment. A seam
+   under the gear mesh or between the crank bearings would sit exactly where
+   alignment matters. */
+base_split      = false;  // informational; render part "base_a" / "base_b"
+x_seam          = -60;
 
 /* --- derived --------------------------------------------------------------- */
 /* Shaft height. It was wheel_od/2 + 12 = 87, which lifted the wheel clear of the
    base entirely and left the wheel slot doing nothing. Dropping the shaft so the
    wheel runs THROUGH the slot shortens the printed uprights, and upright tip
    stiffness goes as 1/h^3 -- 87 -> 60 is 2.4x on its own, for free. */
-foot_h   =  18;                      // leg height under the base
+foot_h   =  24;                      // leg height under the base
 shaft_h  =  60;                      // shaft centreline above the base top
 blk_w    = brg_od + 2*wall;
 /* Axial thickness of the upright. THIS is the rig's soft spot, not the shaft:
@@ -106,8 +129,8 @@ x_gear   =  70;   // boss 50..70 — clears the block at 48
    the plate wider. */
 cam_y    = -gear_module*(crank_gear_teeth + cam_gear_teeth)/2;  // -60 mm centres
 x_cbrg1  =  30;   // same station as x_brg2 but 60 mm over in Y — they miss
-x_cbrg2  =  95;
-x_camtgt = 112;
+x_camtgt =  88;   // 72..88
+x_cbrg2  = 110;   // upright 92..128
 /* Sensor mount stations. The mount body is 31 mm across, so its centre has to
    clear the wheel RIM by half of that plus margin — at wheel_od/2 + 10 the
    mount straddled the wheel plane and its body intersected the disc. */
@@ -365,16 +388,14 @@ module sensor_mount() {
 /* ===========================================================================
    BASE — long enough for motor, two bearings, wheel, sensor
    =========================================================================== */
-base_l = 320;   // motor mount at -120 through the cam sensor at +138
-/* The plate is 320 x 240 — past any hobby printer, and that is fine, because a
-   printed plate was never the right answer for a rig that vibrates. Cut it from
-   12 mm plywood or MDF: stiffer than PETG, several times heavier (which damps
-   rather than rings), and a saw does not care about bed size.
-
-   So this module is a DRILLING TEMPLATE as much as a part. The old 10 mm M4 grid
-   is gone — at this size it was 660 holes, minutes of CGAL time, to give mounting
-   points nothing uses. Holes are now at the stations that actually carry
-   something, which is what you would mark out anyway. */
+base_l = 280;   // motor mount at -128 through the cam brg2 foot at +136
+/* 280 x 240, which prints whole on a 300 mm bed (or as base_a + base_b). The
+   plate itself is a floppy sheet — the stiffness comes from the two spine rods
+   in ribs underneath. Plywood remains a fine substitute; this module doubles as
+   its drilling template.
+   The old 10 mm M4 grid is gone: at this plate size it was 660 holes and minutes
+   of CGAL time for mounting points nothing used. Holes now sit only at stations
+   that carry something, which is what you would mark out by hand anyway. */
 module base() {
     sb = sensor_dia + 2*wall + 4;
     difference() {
@@ -383,7 +404,13 @@ module base() {
             for (x = [-1,1], y = [-1,1])
                 translate([x*(base_l/2 - 14), y*(plate_w/2 - 14), -base_t/2 - foot_h])
                     cylinder(d = 22, h = foot_h + 1);
+            for (y = [-1,1])                                   // spine ribs
+                translate([0, y*rod_y, -base_t/2 - rib_h/2])
+                    cube([base_l, rib_w, rib_h], center = true);
         }
+        for (y = [-1,1])                                       // rod bores
+            translate([0, y*rod_y, -base_t/2 - rib_h/2]) rotate([0,90,0])
+                cylinder(d = rod_d + 0.3, h = base_l + 2, center = true, $fn = fit_fn);
         // wheel slot, sized to the actual dip
         if (slot_y > 0)
             translate([x_wheel, 0, 0])
@@ -405,8 +432,19 @@ module base() {
     }
 }
 
+/* Split for printing: the spine rods run through both pieces and splice them. */
+module base_half(lo, hi) {
+    intersection() {
+        base();
+        translate([(lo + hi)/2, 0, 0])
+            cube([hi - lo, plate_w + 20, 200], center = true);
+    }
+}
+
 /* =========================================================================== */
 if      (part == "bearing_block") bearing_block();
+else if (part == "base_a")        base_half(-base_l/2 - 1, x_seam);
+else if (part == "base_b")        base_half(x_seam, base_l/2 + 1);
 else if (part == "motor_mount")   motor_mount();
 else if (part == "hub")           hub();
 else if (part == "wheel_hub")     wheel_hub();
@@ -429,5 +467,5 @@ else {
     color("tan")         translate([x_camtgt, cam_y, base_t + shaft_h]) rotate([0,-90,0]) cam_target();
     color("red")         translate([x_wheel,  y_ck,  base_t]) sensor_mount();
     color("red")         translate([x_camtgt, y_cmp, base_t]) rotate([0,0,180]) sensor_mount();
-    echo(str("plate ", base_l, " x ", plate_w, " mm — see README, this is plywood territory"));
+    echo(str("plate ", base_l, " x ", plate_w, " mm — prints whole on a 300 bed, or as base_a + base_b"));
 }

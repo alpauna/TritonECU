@@ -84,7 +84,7 @@ after absolute position.
 | 1 | Shaft, cam | **12 mm h6 ground steel, 150 mm** |
 | 4 | Bearing | **6001-2RS (12 × 28 × 8)** — two shafts, two each |
 | 4 | Shaft collar | **12 mm** bore, clamp type, axial location |
-| 1 | Base board | **12 mm plywood or MDF, 320 × 240** — see below |
+| 2 | **Steel rod, 8 mm × 280 mm** | **base spine** — plain mild steel, no precision needed |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
 | 1 | **Brass rod, 13 mm dia × 20 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
@@ -105,7 +105,7 @@ not a redesign.
 
 | Qty | Part | Orientation |
 |--:|---|---|
-| — | ~~`base`~~ | **cut from board instead** — the module is the drilling template |
+| 1 | `base` *(or `base_a` + `base_b`)* | flat — 280 × 240 fits a 300 bed whole |
 | 4 | `bearing_block` | on its back — two shafts, two each |
 | 1 | `motor_mount` | on its back |
 | 1 | `wheel_hub` | **bore axis vertical** (concentricity = runout = air gap) |
@@ -168,25 +168,60 @@ rotating radial load had nothing but bolt preload resisting sideways rock.
 **The wheel is now straddled between its bearings** rather than hung outboard,
 which takes the cantilever out of the stiffest remaining path.
 
-### The base is a board now
+### The base: two spine rods do the work
 
-At 320 × 240 the plate is past any hobby printer, and that is the right outcome:
-**a printed plate was never sensible for a rig whose job is to vibrate as little
-as possible.** Cut it from 12 mm plywood or MDF — stiffer than PETG, several
-times heavier so it damps rather than rings, and a saw does not care about bed
-size.
+The plate shrank to **280 × 240** — the 320 was over-generous, since the parts
+only span 264 mm. That fits a 300 mm bed whole.
 
-`base()` is therefore a **drilling template** as much as a part. The old 10 mm M4
-grid is gone: at this plate size it was 660 holes and minutes of render time to
-provide mounting points nothing used. Holes now sit only at stations that carry
-something — which is what you would mark out by hand anyway.
+An 8 mm PETG sheet is still a floppy thing. **Two full-length 8 mm steel rods,
+carried in ribs under the plate, take it from `EI` 20.5 to 826 N·m² — forty
+times.**
+
+**The offset is what does it, not the diameter.** A rod lying on the neutral axis
+can only contribute its own `I`; moved off it, the *section* does the work
+through `A·d²`:
+
+| rod | buried in the plate | in a rib, 15 mm down |
+|--:|--:|--:|
+| 5 mm | 33 N·m² (1.6×) | **613 (30×)** |
+| 6 mm | 46 (2.2×) | 691 (34×) |
+| **8 mm** | 101 (4.9×) | **826 (40×)** |
+| 10 mm | 217 (10.6×) | 987 (48×) |
+
+A **5 mm rod in a rib beats a 10 mm rod buried in the plate.** Position dominates
+size, and it is not close.
+
+The rods sit at **y = ±58** — clear of the wheel slot (±36.6) and 9 mm from the
+nearest cam-block bolt, with the −58 rod running directly beneath the cam shaft.
+They also **bridge the wheel slot**, which is the plate's weakest section.
+
+### Splitting it for printing
+
+280 × 240 fits a 300 bed, but it is a ~20 h print with real warp risk. `base_a`
+and `base_b` split it at **x = −60** into **80 + 200 mm** pieces — the ¼ + ¾ split.
+
+**The seam location is the whole trick.** x = −60 is the only empty span on the
+board, between the motor and the first bearing, where the flexible coupling
+already absorbs misalignment by design. A seam under the gear mesh, or between
+the crank bearings, would sit exactly where alignment matters.
+
+**And the spine rods span the seam**, so it needs no separate dowels — continuous
+steel through both halves is a far better splice than short pins at the joint.
+Epoxy the rods in and the two pieces become one board.
+
+*(A dowel through the plate itself was the original thought, but the plate is
+only 8 mm thick — an 8 mm rod does not fit inside it. The ribs are what create
+somewhere to put them, and the offset they give is what makes them worth having.)*
 
 ### Layout
 
 ```
-        x = -95      -30       0       30        70          95     112
-crank   [motor]---[brg]----[WHEEL]---[brg]----[20T gear]
-cam                        (y = -60)  [brg]---[40T gear]---[brg]--[target]
+        x = -95     -30      0      30        70        88       110
+crank   [motor]--[brg]---[WHEEL]--[brg]-----[20T gear]
+cam                       (y=-60)  [brg]----[40T gear]--[target]--[brg]
+spine   ================ 8 mm rod at y = +58 ==================
+        ================ 8 mm rod at y = -58 ==================
+seam            | x = -60, between motor and first bearing
 ```
 
 Stations are spaced against real part extents, not by eye: a bearing block's

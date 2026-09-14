@@ -8,6 +8,6 @@ render() {
     printf '%-15s %8s B\n' "$1" "$(stat -c%s "stl/$1.stl" 2>/dev/null || echo FAIL)"
 }
 export -f render
-printf '%s\n' base bearing_block motor_mount wheel_hub \
+printf "%s\n" base base_a base_b bearing_block motor_mount wheel_hub \
               crank_gear cam_gear cam_target sensor_mount \
   | xargs -P "$(nproc)" -I{} bash -c 'render {}'
