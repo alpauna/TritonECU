@@ -342,29 +342,67 @@ channel on the truck:
 - The sensor is **piezoelectric**: a high-impedance charge source producing a
   small, fast, broadband signal. It is not a slow 0–5 V sensor and cannot share
   the general sensor path.
-- Knock on a 5.4L (3.55 in bore) rings in roughly the **6–8 kHz** region.
-  **[CONFIRM]** the exact window by logging real knock rather than trusting a
-  bore-diameter estimate.
+- Knock on a 5.4L rings at roughly **5–6.5 kHz**. The first circumferential
+  chamber mode is `f = 1.841·c/(π·B)`; with the 2V's 90.2 mm bore that gives
+  5.20 kHz at c = 800 m/s, 5.85 at 900, 6.50 at 1000. **[CONFIRM]** by logging
+  real knock — the speed of sound in the burnt charge is the loose term, not the
+  bore.
 - Detection is **windowed**: sample only during each cylinder's combustion
   event, and compare against a rolling background noise floor that rises with
   rpm. A fixed threshold produces false positives at high rpm and misses knock
   at low rpm.
 
-Two implementation routes:
+### The front end is common to both routes — build it first
 
-1. **Dedicated knock IC** (TPIC8101 / HIP9011 class) — SPI-programmable
-   bandpass, gain and integrator; hands back a single integrated magnitude per
-   window. Proven, low MCU load, less tunable.
-2. **Sample raw and do the DSP on the P4** — the AD7606C-16 is fast enough
-   (8 kHz needs well under its per-channel rate) and the P4 is a 360 MHz
-   dual-core with headroom on core 0. Gives a full FFT per window, per
-   cylinder, and lets the detection strategy be tuned in software rather than
-   in hardware. More work, far better diagnostics.
+**The knock sensor on this truck is a two-wire differential piezo** (pins 57 and
+32). Dedicated knock ICs of the HIP9011 / TPIC8101 class present **single-ended,
+ground-referenced inputs**. That is the same shape of mismatch the MAX9926 solved
+for the VR channels: ground one leg of a floating source and every millivolt
+between sensor ground and board ground arrives as signal — on a charge-source
+sensor looking for microvolts of ringing, in a bay with eight coils firing.
 
-Given the P4 and the ADC are already in the design, route 2 is the more
-interesting one and costs one ADC channel plus a charge amp. It also fits the
-existing web UI: knock spectra per cylinder would be genuinely useful on the
-tuning page.
+So a **differential charge amplifier is required either way**, and it is the part
+worth designing first. Doing so **defers the IC-versus-DSP decision** rather than
+forcing it now.
+
+### Two implementation routes
+
+1. **Dedicated knock IC** — HIP9011AB or TPIC8101. SPI-programmable bandpass
+   (HIP9011: **1.22–19.98 kHz**, so 6 kHz sits mid-range with room either side),
+   programmable gain and integrator time constant; hands back one integrated
+   magnitude per window. Needs an external clock, and its filter and gain steps
+   are referred to it. Two channels, of which this truck uses one.
+
+   **The window gating is free here.** The IC's integrate/hold input wants a
+   crank-angle window, and this ECU already knows crank angle precisely — 36-1
+   decode triggering on zero crossing, with no calibration offset. The decoder
+   that exists for spark timing hands the knock IC its window directly.
+
+2. **Sample raw and do the DSP on the STM32F767.** Route the charge amp to one of
+   the **MCU's own ADC** inputs — not the AD7606B, which is the slow
+   simultaneous-sampling path for the sensor set and should not be tied up at
+   100 kSPS. The F767's internal ADC reaches 2.4 MSPS, so 100 kSPS with a proper
+   anti-alias filter is untroubled.
+
+   The load is trivial. A 30° window is **83 samples at 6000 rpm** and 500 at
+   1000 rpm; a Goertzel is about one multiply-accumulate per sample per bin, so
+   the whole window resolves in **under a microsecond** on a 216 MHz Cortex-M7
+   with DSP extensions. Gives per-cylinder spectra rather than a single
+   magnitude, multiple bands to separate knock from mechanical noise, and a
+   detection strategy tunable in software.
+
+**Recommendation:** route 2 is the better engineering answer and the one the
+industry took, and on this MCU the DSP cost is genuinely negligible. Route 1 is
+the faster path to something working. Since **both need the same differential
+charge amp**, build that, bring up route 2 in software, and keep the HIP9011
+footprint as the fallback if the DSP proves troublesome.
+
+**[VERIFY] before committing to route 1:** the HIP9011AB's lifecycle status at
+Renesas, and whether its inputs are in fact single-ended — this file asserts that
+from general knowledge of the part class, without its datasheet in the repo. *(An
+earlier revision of the VR notes asserted obsolescence for the LM1815 on the same
+kind of recollection and was wrong; the datasheet showed PRODUCTION DATA. Not
+repeating that here.)*
 
 ### Two more outputs that were missing
 
