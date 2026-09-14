@@ -77,27 +77,98 @@ keeping water out.
 pressure equals external pressure regardless of how hot the box gets. Temperature
 only decides what the sensor must be *rated* for.
 
-## Part selection
+## Part: Infineon KP497 (KP497XTMA1)
+
+**Datasheet:** [`Datasheets/infineon-kp497-datasheet-en.pdf`](Datasheets/infineon-kp497-datasheet-en.pdf)
+— Rev 1.01, 2025-12-04.
+
+This settles the temperature question that was the open item above.
 
 | | |
 |---|---|
-| **[VERIFY] first** | the ECU's mounting location and its ambient temperature |
-| ≤ 85 °C | **BMP390** (Bosch) or **DPS368** (Infineon) class — I²C/SPI, few-pascal resolution, ~2 × 2 mm |
-| under-hood hot | needs an automotive-grade part; **MPXAZ6115A** (NXP) is the classic −40 to +125 °C option, but it is **analog** and would cost an ADC channel — displacing something slow onto the MCU's own ADC |
+| Range | **20–250 kPa** absolute |
+| Accuracy | **±2 kPa** absolute, **±1 kPa** on differences |
+| Temperature | **−40 to +105 °C** |
+| Humidity | **0–100 % RH** |
+| Qualification | **AEC-Q100 Grade 1**, ISO 26262 SEooC to **ASIL A** |
+| Interface | I²C or 3-pin SPI |
+| Supply | **2.5–3.6 V** |
+| Autonomous current | **5.1 µA** at 300 ms intervals, 44 µA at 50 ms |
+| Extras | z-axis accelerometer ±100 g, 3 kB NVM |
+| Package | PG-DSOSP-14-84 |
 
-Most precision digital barometers stop at +85 °C, so the mounting location
-decides the part. Confirm the rating against the datasheet rather than the
-marketing table.
+### Why it fits this board specifically
 
-**Do not use its temperature output as ambient or IAT.** It sits next to warm
-electronics inside a box. It reads the board, not the air. The truck already has
-a real IAT sensor.
+**It is a 3.3 V part, so it belongs on the always-on rail.** VDD tops out at
+3.6 V — this is not a 5 V device. That places it alongside the sleeping MCU on
+the always-on domain, where its **5.1 µA autonomous draw is 0.5 % of the ~950 µA
+sleep budget**. It can keep tracking ambient while the truck is parked, so
+barometric pressure is already known at key-on rather than acquired after it.
+
+**−40 to +105 °C and AEC-Q100 Grade 1** removes the mounting-location dependency
+entirely. The BMP390/DPS368 class stops at +85 °C and would have forced a decision
+about where the box lives; this does not.
+
+### The trade: it is coarse for a barometer, and that is fine here
+
+±2 kPa is **25× worse than a consumer barometer** like the BMP390. In useful
+units:
+
+| error | altitude equivalent | density error |
+|--:|--:|--:|
+| ±2 kPa absolute | ±166 m (**±546 ft**) | **2.0 %** |
+| ±1 kPa on differences | ±83 m (±273 ft) | 1.0 % |
+
+**The reason is the range.** Barometric pressure of interest spans 67–104 kPa —
+only **16 % of this part's 20–250 kPa full scale**. It is a MAP-range sensor being
+used as a barometer, and the accuracy follows from that.
+
+**2 % density error is inside spark calibration margin**, and fuelling does not
+use it at all on a MAF truck. So the coarseness costs nothing for the actual job.
+It would be useless as an altimeter, which is not the job.
+
+### The wide range is an asset, not just a compromise
+
+250 kPa is **36 psia — 21.6 psi of boost**. The same part number, and the same
+driver code, would serve as a **MAP sensor** if a manifold reference is ever
+plumbed in. That is a genuine option kept open for the price of nothing.
+
+### The accelerometer is not a gimmick
+
+±100 g on z, 0.0625 g/LSB, ±2 g error. The real use is **rough-road detection to
+suppress the misfire monitor** — OBD-II misfire diagnostics have to be inhibited
+on rough roads because driveline shock reads as crank-speed irregularity, and the
+usual workaround is inferring it from wheel-speed variance. A real accelerometer
+measures it directly.
+
+**[VERIFY]** the accelerometer's sampling bandwidth against the datasheet before
+counting on that — rough-road content is a few Hz to tens of Hz, and the
+autonomous-mode intervals quoted are 10 ms and slower.
+
+It is **not** a knock sensor. Nowhere near the bandwidth, and the knock channel is
+already designed.
+
+### Two limits worth writing down
+
+**The NVM is good for 100 write cycles per block.** 3 kB sounds like somewhere to
+log, and it is not — it is for configuration and provisioning. Logging belongs on
+the SD card.
+
+**Configuration writes need −20 to +90 °C.** Narrower than the operating range, so
+any field reconfiguration has to happen when the box is not hot.
+
+**[VERIFY] availability.** The datasheet is Rev 1.01 dated December 2025, so this
+is a new part. Check stock and lifecycle before committing the footprint — being
+new is a different sourcing risk from being old, but it is still a risk.
 
 ## Recommendation
 
-**Put the footprint down now, populate later.** Two pads on an existing bus and a
-2 × 2 mm land cost nothing at layout time and are impossible to add afterwards.
+**Put the footprint down now, populate later.** A 14-pin SOP and two pads on an
+existing bus cost little at layout time and are impossible to add afterwards.
 Leave it DNP if the calibration never uses it.
+
+**And vent the enclosure regardless of part choice.** No sensor fixes a sealed
+box — see above. That decision belongs to the housing, not the BOM.
 
 It is **not needed to run** — the engine will start, idle and drive without it,
 which is the standing test for whether something belongs in the current scope. It
