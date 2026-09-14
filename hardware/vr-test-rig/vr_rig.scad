@@ -2,7 +2,8 @@
 // Printed parts only. The toothed wheel itself MUST be steel (see README.md).
 //
 //   render one part at a time:  part = "bearing_block" | "motor_mount"
-//                                      | "hub" | "cam_target" | "sensor_mount"
+//                                      | "wheel_hub" | "cam_target" | "sensor_mount"
+//                                      | "crank_gear" | "cam_gear"
 //                                      | "base" | "assembly"
 
 part = "assembly";
@@ -30,7 +31,11 @@ cam_head_af     =  13.0;  // M8 hex across flats, for the captive pocket
 cam_head_thk    =   5.5;  // M8 head height
 cam_gear_teeth  =  40;    // 2 : 1 against crank_gear_teeth
 crank_gear_teeth=  20;
-gear_module     =   1.0;  // centre distance = module*(20+40)/2 = 30 mm
+gear_module     =   2.0;  // centre distance = module*(20+40)/2 = 60 mm.
+                          // NOT module 1: a 0.4 mm nozzle cannot render a
+                          // 1.57 mm pitch-circle tooth accurately. See README.
+gear_pa         =  20;    // pressure angle
+gear_w          =  10;    // face width
 
 /* --- stock parts, change only if you buy different ones -------------------- */
 shaft_dia       =   8.0;  // 8 mm ground steel rod
@@ -153,9 +158,6 @@ module wheel_hub() {
         translate([-0.9, -wh_flange, 3]) cube([1.8, wh_flange, 40]); // clamp slit
         translate([-wh_flange/2 - 1, 0, 6]) rotate([0,90,0]) cylinder(d = 4.4, h = wh_flange + 2);
         translate([ 1.5, 0, 6]) rotate([0,90,0]) cylinder(d = 7.6, h = wh_flange, $fn = 6);
-        // gear bolt circle — 3 x M4
-        for (a = [0:120:359]) rotate([0,0,a])
-            translate([wh_flange/2 - 6, 0, -1]) cylinder(d = 4.4, h = 12);
         // wheel retention — bolts through the flange into the wheel, if it has holes
         for (a = [60:120:359]) rotate([0,0,a])
             translate([wheel_bore/2 + 4, 0, -1]) cylinder(d = 4.4, h = 12);
@@ -196,6 +198,63 @@ module cam_target() {
 }
 
 /* ===========================================================================
+   INVOLUTE SPUR GEAR — self contained, no library.
+
+   Involute geometry: at radius r the flank sits at polar angle inv(acos(rb/r)),
+   where inv(a) = tan(a) - a is the involute function. Offsetting so the flank
+   crosses the pitch circle at half a tooth thickness (90/z degrees) puts the
+   tooth symmetric about 0.
+
+   Below the base circle the involute does not exist, so the flank runs radially
+   from rb down to the root. For z < 41 at 20 degrees PA the root is inside the
+   base circle, which is the case for both gears here.
+   =========================================================================== */
+function inv_deg(a) = (tan(a) - a*PI/180) * 180/PI;
+
+module gear_blank(m, z, w) {
+    rp = m*z/2;                 // pitch
+    rb = rp*cos(gear_pa);       // base
+    ra = rp + m;                // addendum (tip)
+    rf = rp - 1.25*m;           // dedendum (root)
+    r0 = max(rb, rf);
+    half = 90/z;                // half tooth angle at the pitch circle
+    n  = 10;
+    fl = [for (i = [0:n])
+             let(r = r0 + (ra - r0)*i/n,
+                 a = inv_deg(acos(rb/r)) - inv_deg(gear_pa) - half)
+             [r*cos(a), r*sin(a)]];
+    a0 = inv_deg(acos(rb/r0)) - inv_deg(gear_pa) - half;
+    linear_extrude(w) union() {
+        circle(r = rf, $fn = 180);
+        for (i = [0:z-1]) rotate([0, 0, i*360/z])
+            polygon(concat(
+                [[rf*cos(a0), rf*sin(a0)]],
+                fl,
+                [for (j = [n:-1:0]) [fl[j][0], -fl[j][1]]],
+                [[rf*cos(a0), -rf*sin(a0)]]));
+    }
+}
+
+/* Gear on its own split-clamp boss. The slit stops at the gear face so it never
+   cuts a tooth — the boss does the gripping, the gear body is along for the
+   ride. Print TEETH FLAT ON THE BED for the same reason the hub prints bore-up:
+   the profile is then an X-Y path, not a layer stack. */
+module spur_gear(z) {
+    rf = gear_module*z/2 - 1.25*gear_module;
+    hb = min(2*rf - 8, 30);
+    difference() {
+        union() {
+            gear_blank(gear_module, z, gear_w);
+            cylinder(d = hb, h = gear_w + 10);
+        }
+        translate([0, 0, -1]) cylinder(d = shaft_dia + clr, h = gear_w + 20);
+        translate([-0.9, -hb, gear_w]) cube([1.8, hb, 12]);
+        translate([-hb/2 - 1, 0, gear_w + 5]) rotate([0,90,0]) cylinder(d = 4.4, h = hb + 2);
+        translate([ 1.5, 0, gear_w + 5]) rotate([0,90,0]) cylinder(d = 7.6, h = hb, $fn = 6);
+    }
+}
+
+/* ===========================================================================
    SENSOR MOUNT — the only precision part. Slotted for air-gap adjustment.
    =========================================================================== */
 module sensor_mount() {
@@ -230,7 +289,8 @@ module sensor_mount() {
 /* ===========================================================================
    BASE — long enough for motor, two bearings, wheel, sensor
    =========================================================================== */
-base_l = 200;
+base_l = 260;   // lengthened for the gear station: the cam shaft needs an axial
+                // station of its own, clear of the 150 mm wheel. See README.
 module base() {
     difference() {
         union() {
@@ -254,6 +314,8 @@ if      (part == "bearing_block") bearing_block();
 else if (part == "motor_mount")   motor_mount();
 else if (part == "hub")           hub();
 else if (part == "wheel_hub")     wheel_hub();
+else if (part == "crank_gear")    spur_gear(crank_gear_teeth);
+else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
 else if (part == "base")          base();

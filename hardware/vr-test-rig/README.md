@@ -463,16 +463,35 @@ At ±0.05 mm on a 1 mm gap that is 5 % amplitude modulation once per revolution,
 which **Mode A2's adaptive threshold is built to track** — and which a real
 engine has anyway. Printed sideways it would be several times worse.
 
-## Gear on the hub, or gear on the shaft?
+## Gears clamp to the shaft, not to the hub — the wheel forces it
 
-The flange carries a 3 × M4 bolt circle, so the crank gear can mount directly to
-the hub — one rigid assembly, no separate alignment.
+The hub carried a bolt circle for the crank gear. **That is gone**, because the
+geometry does not allow it.
 
-**The alternative is a gear clamped to the shaft separately**, which gives axial
-freedom. That matters here: at a 30 mm gear centre distance the cam shaft passes
-through the plane of a 150 mm crank wheel, so the gear and the wheel must sit at
-**different stations along the shaft**. Either arrangement works — just place the
-gear away from the wheel, not beside it.
+At module 2 the centre distance is `m(z1+z2)/2 = 60 mm`. The crank wheel is
+**150 mm across — a 75 mm radius**. So the crank wheel sweeps *past the cam
+shaft's axis* by 15 mm. It is not a matter of the gears clashing; **the wheel
+would hit the cam shaft itself.**
+
+No gear ratio fixes this. Any sane module puts the centre distance under 75 mm,
+so the wheel always oversails the cam shaft. **Axial separation is inherent to
+the design, not a detail to tidy up**, and the cam shaft has to be short enough
+to end before the wheel's plane:
+
+```
+crank shaft   [motor]-[coupling]-[brg]-[crank gear]-[brg]--------[WHEEL]
+cam shaft                        [brg]-[cam gear ]-[brg]-[cam target]
+                                       <- gears mesh here ->      ^
+                                                                  |
+                                  cam shaft must END before this plane
+```
+
+So both gears are separate parts on their own split-clamp bosses with 8 mm bores,
+free to slide to whatever station the layout needs. `base_l` went 200 → 260 mm to
+give the gear station room.
+
+Both shafts sit at the **same height**, 60 mm apart horizontally — which means
+all four bearing blocks are the identical part, unmodified.
 
 ## Set `wheel_bore`, `key_w` and `key_d` from the real wheel
 
@@ -508,7 +527,8 @@ out of a loop:
 
 ```sh
 cd hardware/vr-test-rig
-for p in base bearing_block motor_mount wheel_hub cam_target sensor_mount; do
+for p in base bearing_block motor_mount wheel_hub \
+         crank_gear cam_gear cam_target sensor_mount; do
     openscad -o "stl/$p.stl" -D "part=\"$p\"" vr_rig.scad
 done
 ```
@@ -517,17 +537,30 @@ Note the quoting: `part` is a *string*, so the inner quotes have to survive the
 shell. `-D part=wheel_hub` without them passes an undefined variable and renders
 the assembly instead — silently, which is the annoying part.
 
-Print quantities: **2 × bearing_block**, **2 × sensor_mount** (crank and cam),
-1 each of the rest. `hub` is the superseded 25.4 mm plain-bore version, kept only
+Print quantities: **4 × bearing_block** (two shafts), **2 × sensor_mount** (crank
+and cam), 1 each of the rest — see [BOM.md](BOM.md). `hub` is the superseded 25.4 mm plain-bore version, kept only
 for reference — **`wheel_hub` is the one that fits the wheel you bought.**
 
-## Not yet modelled: the gears themselves
+## The gears
 
-`crank_gear_teeth`, `cam_gear_teeth` and `gear_module` are declared and the hub
-carries the bolt circle, but **no module generates the gear teeth**. Involute
-profiles need either a library (BOSL2's `spur_gear()`, or Greiner's
-`gears.scad`) or bought gears.
+`spur_gear(z)` generates real involute teeth — no library, no bought gears
+needed to start. `part = "crank_gear"` and `"cam_gear"`.
 
-Buying them is defensible here — a 20T and 40T module-1 pair is a few dollars,
-comes in steel or POM, and removes tooth-form accuracy from the list of things
-the rig could be wrong about.
+The involute is built from `inv(a) = tan(a) - a`: at radius `r` the flank sits at
+polar angle `inv(acos(rb/r))`, offset so it crosses the pitch circle at half a
+tooth thickness. Below the base circle the involute does not exist, so the flank
+runs radially to the root — correct here because at 20° PA the root is inside the
+base circle for any `z < 41`, and both gears qualify.
+
+Checked before committing: **20T clears the undercut limit** (17.1 teeth at 20°
+PA, so no profile shift needed), and tip thickness is **1.39 mm on the 20T,
+1.52 mm on the 40T** — teeth, not knife edges.
+
+The split clamp's slit **stops at the gear face** so it never cuts through a
+tooth; the boss grips the shaft and the gear body just goes along.
+
+Print **teeth flat on the bed**, for the same reason the hub prints bore-up: the
+profile is then an X-Y path rather than a layer stack.
+
+See [BOM.md](BOM.md) for why module 2 and not module 1, and for the printed-now,
+steel-later path.
