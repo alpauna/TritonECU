@@ -535,7 +535,8 @@ shell. `-D part=wheel_hub` without them passes an undefined variable and renders
 the assembly instead — silently, which is the annoying part.
 
 Print quantities: **4 × bearing_block** (two shafts), **2 × sensor_mount** (crank
-and cam), 1 each of the rest — see [BOM.md](BOM.md). `hub` is the superseded 25.4 mm plain-bore version, kept only
+and cam), 1 each of the rest. **`base` is not printed** — it is a 320 × 240 board,
+and the module is its drilling template. See [BOM.md](BOM.md). `hub` is the superseded 25.4 mm plain-bore version, kept only
 for reference — **`wheel_hub` is the one that fits the wheel you bought.**
 
 ## The gears

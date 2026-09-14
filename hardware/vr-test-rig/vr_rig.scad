@@ -60,10 +60,10 @@ gear_pa         =  20;    // pressure angle
 gear_w          =  10;    // face width
 
 /* --- stock parts, change only if you buy different ones -------------------- */
-shaft_dia       =   8.0;  // 8 mm ground steel rod
-brg_od          =  22.0;  // 608ZZ
-brg_id          =   8.0;
-brg_w           =   7.0;
+shaft_dia       =  12.0;  // 12 mm ground steel, h6
+brg_od          =  28.0;  // 6001-2RS  (12 x 28 x 8)
+brg_id          =  12.0;
+brg_w           =   8.0;
 nema            =  42.3;  // NEMA 17 body
 nema_bolt       =  31.0;  // bolt circle (square pattern)
 nema_boss       =  22.0;
@@ -74,13 +74,54 @@ brg_press       =  -0.05; // bearing OD interference; loosen toward +0.10 if it 
 clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
-plate_w         = 100.0;
+
+plate_w         = 240.0;  // a cut board, not a print — see README
 
 /* --- derived --------------------------------------------------------------- */
-shaft_h  = wheel_od/2 + 12;          // shaft centreline above the base top
+/* Shaft height. It was wheel_od/2 + 12 = 87, which lifted the wheel clear of the
+   base entirely and left the wheel slot doing nothing. Dropping the shaft so the
+   wheel runs THROUGH the slot shortens the printed uprights, and upright tip
+   stiffness goes as 1/h^3 -- 87 -> 60 is 2.4x on its own, for free. */
+foot_h   =  18;                      // leg height under the base
+shaft_h  =  60;                      // shaft centreline above the base top
 blk_w    = brg_od + 2*wall;
+/* Axial thickness of the upright. THIS is the rig's soft spot, not the shaft:
+   at 16 mm the bracket was EI 24.6 N.m^2, below even the old 8 mm shaft and 8x
+   below a 12 mm one. Stiffness goes as t^3, so 16 -> 24 is another 3.4x. */
+blk_t    = max(brg_w + 2*wall, 24);
+foot_y   =  34;                      // two bolt rows, not a single hinge line
 blk_h    = shaft_h + brg_od/2 + wall;
-gap_slot = 14;                       // sensor air-gap adjustment travel
+gap_slot =  14;                      // sensor air-gap adjustment travel
+
+/* --- stations along the shafts (base is centred on the origin) -------------- */
+/* Spaced against real part extents, not by eye. A bearing block's upright runs
+   +-18 mm about its station and its foot +-26, so the gear boss (20 mm long)
+   has to start beyond 48 or it lands inside the block. */
+x_motor  = -95;
+x_brg1   = -30;   // upright -48 .. -12
+x_wheel  =   0;   // wheel STRADDLED between the bearings, not overhung
+x_brg2   =  30;   // upright  12 ..  48
+x_gear   =  70;   // boss 50..70 — clears the block at 48
+/* Cam shaft on the NEGATIVE side, so it and the crank sensor do not both push
+   the plate wider. */
+cam_y    = -gear_module*(crank_gear_teeth + cam_gear_teeth)/2;  // -60 mm centres
+x_cbrg1  =  30;   // same station as x_brg2 but 60 mm over in Y — they miss
+x_cbrg2  =  95;
+x_camtgt = 112;
+/* Sensor mount stations. The mount body is 31 mm across, so its centre has to
+   clear the wheel RIM by half of that plus margin — at wheel_od/2 + 10 the
+   mount straddled the wheel plane and its body intersected the disc. */
+y_ck     = wheel_od/2 + sensor_dia/2 + 2*wall + 6;      // 95
+y_cmp    = cam_y + cam_target_od/2 + sensor_dia/2 + 2*wall + 6;
+
+/* How far the wheel dips below the base top, and how wide the slot must be to
+   let it. The old slot was cut wheel_od + 10 = 160 wide on a plate 100 wide --
+   it severed the base in two. */
+wheel_dip = wheel_od/2 - shaft_h;
+slot_y    = (shaft_h + base_t < wheel_od/2)
+            ? 2*sqrt(pow(wheel_od/2, 2) - pow(shaft_h + base_t, 2)) + 10 : 0;
+echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
+         " mm, ", foot_h + base_t - wheel_dip, " mm to ground; slot ", slot_y, " mm"));
 
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through
@@ -88,25 +129,23 @@ gap_slot = 14;                       // sensor air-gap adjustment travel
 module bearing_block() {
     difference() {
         union() {
-            // upright
-            translate([-blk_w/2, -brg_w/2 - wall, 0]) cube([blk_w, brg_w + 2*wall, blk_h]);
-            // foot
-            translate([-blk_w/2 - 8, -brg_w/2 - wall, 0]) cube([blk_w + 16, brg_w + 2*wall, base_t]);
-            // gussets — a printed upright this tall WILL flex without them
+            translate([-blk_w/2, -blk_t/2, 0]) cube([blk_w, blk_t, blk_h]);
+            translate([-blk_w/2 - 8, -foot_y/2, 0]) cube([blk_w + 16, foot_y, base_t]);
             for (s = [-1, 1]) scale([s,1,1])
-                translate([blk_w/2, -brg_w/2 - wall, 0])
+                translate([blk_w/2, -blk_t/2, 0])
                     rotate([90,0,90]) linear_extrude(wall)
                         polygon([[0,0],[14,0],[0,blk_h*0.6]]);
         }
-        // bearing pocket, through
-        translate([0, -brg_w/2 - wall - 1, shaft_h])
-            rotate([-90,0,0]) cylinder(d = brg_od + brg_press, h = brg_w + 2*wall + 2, $fn = fit_fn);
-        // shaft relief either side so the bearing seats on its outer race only
-        translate([0, -brg_w/2 - wall - 2, shaft_h])
-            rotate([-90,0,0]) cylinder(d = brg_od - 4, h = brg_w + 2*wall + 4);
-        // M4 feet
-        for (x = [-blk_w/2 - 4, blk_w/2 + 4])
-            translate([x, 0, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+        // Bearing pocket, BLIND with a shoulder — a 24 mm deep bore would let an
+        // 8 mm wide bearing wander. The shoulder lands on the outer race only.
+        translate([0, -blk_t/2 - 1, shaft_h]) rotate([-90,0,0])
+            cylinder(d = brg_od + brg_press, h = brg_w + 1, $fn = fit_fn);
+        translate([0, -blk_t/2 - 2, shaft_h]) rotate([-90,0,0])
+            cylinder(d = brg_od - 4, h = blk_t + 4, $fn = fit_fn);
+        // FOUR M4 feet. Two bolts on the centreline is a hinge: the rotating
+        // radial load has nothing but bolt preload resisting sideways rock.
+        for (x = [-blk_w/2 - 4, blk_w/2 + 4], y = [-11, 11])
+            translate([x, y, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
     }
 }
 
@@ -326,23 +365,43 @@ module sensor_mount() {
 /* ===========================================================================
    BASE — long enough for motor, two bearings, wheel, sensor
    =========================================================================== */
-base_l = 260;   // lengthened for the gear station: the cam shaft needs an axial
-                // station of its own, clear of the 150 mm wheel. See README.
+base_l = 320;   // motor mount at -120 through the cam sensor at +138
+/* The plate is 320 x 240 — past any hobby printer, and that is fine, because a
+   printed plate was never the right answer for a rig that vibrates. Cut it from
+   12 mm plywood or MDF: stiffer than PETG, several times heavier (which damps
+   rather than rings), and a saw does not care about bed size.
+
+   So this module is a DRILLING TEMPLATE as much as a part. The old 10 mm M4 grid
+   is gone — at this size it was 660 holes, minutes of CGAL time, to give mounting
+   points nothing uses. Holes are now at the stations that actually carry
+   something, which is what you would mark out anyway. */
 module base() {
+    sb = sensor_dia + 2*wall + 4;
     difference() {
         union() {
             cube([base_l, plate_w, base_t], center = true);
-            for (x = [-1,1], y = [-1,1])                       // feet, lift the wheel clear
-                translate([x*(base_l/2 - 14), y*(plate_w/2 - 14), -base_t/2 - 18])
-                    cylinder(d = 22, h = 18 + 1);
+            for (x = [-1,1], y = [-1,1])
+                translate([x*(base_l/2 - 14), y*(plate_w/2 - 14), -base_t/2 - foot_h])
+                    cylinder(d = 22, h = foot_h + 1);
         }
-        // wheel slot — the lower half of the wheel passes through
-        translate([base_l/2 - 74, 0, 0])
-            cube([wheel_thk + 6, wheel_od + 10, base_t + 2], center = true);
-        // M4 grid, 10 mm pitch, for positioning everything
-        for (x = [-base_l/2 + 15 : 10 : base_l/2 - 15])
-            for (y = [-plate_w/2 + 15 : 10 : plate_w/2 - 15])
-                translate([x, y, -base_t/2 - 1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+        // wheel slot, sized to the actual dip
+        if (slot_y > 0)
+            translate([x_wheel, 0, 0])
+                cube([wheel_thk + 6, slot_y, base_t + 2], center = true);
+        // four bearing blocks, four bolts each
+        for (st = [[x_brg1, 0], [x_brg2, 0], [x_cbrg1, cam_y], [x_cbrg2, cam_y]])
+            for (dx = [-1,1], dy = [-1,1])
+                translate([st[0] + dx*(blk_w/2 + 4), st[1] + dy*11, -base_t/2 - 1])
+                    cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+        // motor mount
+        for (dx = [-1,1])
+            translate([x_motor + dx*(nema/2 + wall + 4), 3, -base_t/2 - 1])
+                cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+        // two sensor mounts — the mount's own feet are slotted for air gap
+        for (st = [[x_wheel, y_ck], [x_camtgt, y_cmp]])
+            for (dx = [-1,1])
+                translate([st[0] + dx*(sb/2 + 5), st[1], -base_t/2 - 1])
+                    cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
     }
 }
 
@@ -358,11 +417,17 @@ else if (part == "sensor_mount")  sensor_mount();
 else if (part == "base")          base();
 else {
     // rough assembly preview — check clearances, do not print
-    color("silver") translate([0,0,base_t/2]) base();
-    color("lightblue") translate([-70, 0, base_t]) rotate([0,0,0]) motor_mount();
-    color("lightgreen") for (x = [-20, 20]) translate([x, 0, base_t]) bearing_block();
-    color("orange") translate([26, 0, base_t]) rotate([0,-90,0]) hub();
-    color("gray") translate([26, 0, base_t + shaft_h]) rotate([0,90,0])
-        cylinder(d = wheel_od, h = wheel_thk, center = true);
-    color("red") translate([26, wheel_od/2 + 10, base_t]) sensor_mount();
+    color("silver")      translate([0,0,base_t/2]) base();
+    color("lightblue")   translate([x_motor, 0, base_t]) motor_mount();
+    color("lightgreen")  for (x = [x_brg1, x_brg2]) translate([x, 0, base_t]) bearing_block();
+    color("lightgreen")  for (x = [x_cbrg1, x_cbrg2]) translate([x, cam_y, base_t]) bearing_block();
+    color("orange")      translate([x_wheel - 9, 0, base_t + shaft_h]) rotate([0,90,0]) wheel_hub();
+    color("gray")        translate([x_wheel, 0, base_t + shaft_h]) rotate([0,90,0])
+                             cylinder(d = wheel_od, h = wheel_thk, center = true, $fn = 120);
+    color("gold")        translate([x_gear, 0, base_t + shaft_h]) rotate([0,-90,0]) spur_gear(crank_gear_teeth);
+    color("gold")        translate([x_gear, cam_y, base_t + shaft_h]) rotate([0,-90,0]) spur_gear(cam_gear_teeth);
+    color("tan")         translate([x_camtgt, cam_y, base_t + shaft_h]) rotate([0,-90,0]) cam_target();
+    color("red")         translate([x_wheel,  y_ck,  base_t]) sensor_mount();
+    color("red")         translate([x_camtgt, y_cmp, base_t]) rotate([0,0,180]) sensor_mount();
+    echo(str("plate ", base_l, " x ", plate_w, " mm — see README, this is plywood territory"));
 }

@@ -26,7 +26,7 @@ more than usual here.
 | 1 | **Driver** | `DM542` / `DM542T` — 20–50 V, to 4.2 A, step/dir, selectable microstep | 20 |
 | 1 | **PSU** | **36 V** 3 A (100 W) — see below, 24 V is the marginal choice | 20 |
 | 1 | **Step generator** | Raspberry Pi Pico (RP2040) | 4 |
-| 1 | Coupling, 5 → 8 mm | aluminium jaw/spider, D19 L25 | 6 |
+| 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
 ### Why this motor, and why 36 V rather than 24 V
 
@@ -80,10 +80,11 @@ after absolute position.
 
 | Qty | Item | Spec |
 |--:|---|---|
-| 1 | Shaft, crank | 8 mm h6 ground steel, 250 mm |
-| 1 | Shaft, cam | 8 mm h6 ground steel, 150 mm |
-| 4 | Bearing | 608ZZ (8 × 22 × 7) — two shafts, two each |
-| 4 | Shaft collar | 8 mm bore, clamp type, for axial location |
+| 1 | Shaft, crank | **12 mm h6 ground steel, 200 mm** |
+| 1 | Shaft, cam | **12 mm h6 ground steel, 150 mm** |
+| 4 | Bearing | **6001-2RS (12 × 28 × 8)** — two shafts, two each |
+| 4 | Shaft collar | **12 mm** bore, clamp type, axial location |
+| 1 | Base board | **12 mm plywood or MDF, 320 × 240** — see below |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
 | 1 | **Brass rod, 13 mm dia × 20 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
@@ -104,8 +105,8 @@ not a redesign.
 
 | Qty | Part | Orientation |
 |--:|---|---|
-| 1 | `base` | flat |
-| 4 | `bearing_block` | on its back — **two shafts now, not one** |
+| — | ~~`base`~~ | **cut from board instead** — the module is the drilling template |
+| 4 | `bearing_block` | on its back — two shafts, two each |
 | 1 | `motor_mount` | on its back |
 | 1 | `wheel_hub` | **bore axis vertical** (concentricity = runout = air gap) |
 | 1 | `crank_gear` | **teeth flat on the bed** |
@@ -130,6 +131,68 @@ widths**, and 4.5 mm whole depth. The teeth come out as teeth.
 The geometry is deliberately standard — **module 2, 20° pressure angle, 20T and
 40T, 60 mm centres** — so if printed gears do disappoint, a bought steel or POM
 pair drops straight in with no change to the rig.
+
+---
+
+## Going bigger: 12 mm shafts, and what was actually limiting things
+
+The shaft went 8 → 12 mm, which is **5.1× the bending stiffness** — `EI` goes as
+`d⁴`, so 50 % more diameter is five times the shaft.
+
+**But the shaft was never the soft part.** Measuring the printed bearing upright
+against it:
+
+```
+                             EI          tip stiffness
+ 8 mm steel shaft          40.2 N.m^2
+12 mm steel shaft         203.6 N.m^2
+upright, 105 tall x 16     24.6 N.m^2      63.7 kN/m     <- softer than the shaft
+upright,  78 tall x 24     82.9 N.m^2     524.4 kN/m
+```
+
+The bracket was **below even the 8 mm shaft**, and eight times below a 12 mm one.
+Stiffening the shaft alone would have moved almost nothing. Three changes, all
+free:
+
+**The uprights got shorter.** `shaft_h` was `wheel_od/2 + 12` = 87 mm, which
+lifted the wheel clear of the base and left the wheel slot doing nothing at all.
+Dropping to 60 runs the wheel *through* the slot as intended, and tip stiffness
+goes as `1/h³` — **2.4× for nothing but a number**.
+
+**And thicker**, 16 → 24 mm axially. That axis is the one the bearing load bends,
+and stiffness goes as `t³`: another **3.4×**. Together, **8.2× on the bracket.**
+
+**Four foot bolts, not two.** Two bolts on the centreline is a hinge — the
+rotating radial load had nothing but bolt preload resisting sideways rock.
+
+**The wheel is now straddled between its bearings** rather than hung outboard,
+which takes the cantilever out of the stiffest remaining path.
+
+### The base is a board now
+
+At 320 × 240 the plate is past any hobby printer, and that is the right outcome:
+**a printed plate was never sensible for a rig whose job is to vibrate as little
+as possible.** Cut it from 12 mm plywood or MDF — stiffer than PETG, several
+times heavier so it damps rather than rings, and a saw does not care about bed
+size.
+
+`base()` is therefore a **drilling template** as much as a part. The old 10 mm M4
+grid is gone: at this plate size it was 660 holes and minutes of render time to
+provide mounting points nothing used. Holes now sit only at stations that carry
+something — which is what you would mark out by hand anyway.
+
+### Layout
+
+```
+        x = -95      -30       0       30        70          95     112
+crank   [motor]---[brg]----[WHEEL]---[brg]----[20T gear]
+cam                        (y = -60)  [brg]---[40T gear]---[brg]--[target]
+```
+
+Stations are spaced against real part extents, not by eye: a bearing block's
+upright runs ±18 mm about its station and its foot ±26, so the gear boss has to
+start beyond x = 48 or it lands **inside** the block. The cam shaft sits on the
+negative side so it and the crank sensor do not both push the board wider.
 
 ---
 
