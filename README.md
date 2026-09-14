@@ -42,7 +42,7 @@ lives on `main`.
 | **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md) |
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
-| **Enclosure** | ◐ | location confirmed — **cabin, behind the glovebox**; must be vented, [`enclosure.md`](docs/enclosure.md) |
+| **Enclosure** | ◐ | **cabin, behind the glovebox**, connector face through the firewall — vent on the cabin side, [`enclosure.md`](docs/enclosure.md) |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -197,7 +197,9 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   past its own seals** — every heat cycle pushes air out, every cool-down draws it
   and whatever is near the seal back in. A vent membrane gives that breathing a
   deliberate path; the correct pressure reading is a side effect of doing the
-  housing properly. [`docs/enclosure.md`](docs/enclosure.md)
+  housing properly. **The vent goes on the cabin side** — the box straddles the
+  firewall, and its connector face lives under-hood in the spray.
+  [`docs/enclosure.md`](docs/enclosure.md)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.

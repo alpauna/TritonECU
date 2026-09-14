@@ -60,12 +60,39 @@ Confirmed by the owner. That settles several things at once.
 | **Barometric** | never constrained; the KP497 reaches 105 °C |
 | Everything else | cabin ambient, not under-hood |
 
-### The vent gets an easy life
+### The box straddles the firewall — one end is under-hood
 
-Behind a glovebox there is **no ram air and nothing a pressure washer reaches**,
-so the siting concern above is satisfied by the location itself. Fit the membrane
-anyway — the moisture-pumping argument does not depend on where the box is, and
-cabin humidity still cycles.
+**The 104-pin connector is accessed from the engine bay.** The housing sits in the
+cabin but its connector face passes through the firewall, so the harness plugs in
+from under the hood. That is how the OEM PCM does it, and it is why the factory
+gets mild cabin air for the electronics without needing a bulkhead connector.
+
+It means the enclosure has **two environments, not one**:
+
+| | cabin side | connector face |
+|---|---|---|
+| Temperature | cabin ambient | under-hood |
+| Water | none | spray, salt, washing |
+| Pressure | cabin | engine bay |
+
+**So the vent goes on the CABIN side.** This corrects the assumption above that
+the location alone settles vent siting — it does not. A membrane on the connector
+face would sit in exactly the ram air, spray and pressure-wash path the siting
+rule exists to avoid. On the cabin side it is sheltered by the glovebox and sees
+nothing worse than a footwell.
+
+Fit the membrane regardless of side — the moisture-pumping argument does not
+depend on location, and cabin humidity still cycles.
+
+### The firewall seal is now a pressure boundary too
+
+It was already the water barrier. With a barometric sensor inside, **a leak at
+that seal also lets engine-bay pressure into the box** — and the bay runs a few
+hundred pascals away from the cabin at speed. Same order as the blower effect
+below, small against ±2 kPa, and **speed-correlated again**.
+
+The seal earns its keep twice over: water out, and one pressure domain rather
+than an average of two.
 
 ### But a cabin is not quite at ambient pressure
 
@@ -90,6 +117,10 @@ slowly-filtered value, which it is anyway.
 ~2.7 W into board copper, and that analysis assumed air that carries heat away.
 A closed cavity raises local ambient above cabin temperature.
 
+**And the connector face is a heat path in, not out.** 104 terminals and their
+copper run straight to a harness in the engine bay, so the pin field conducts both
+ways rather than only away.
+
 **[CHECK]** junction temperature against *measured* in-cavity ambient once the
 enclosure exists, not against cabin air temperature. The fix, if needed, is
 housing-side — a metal case bonded to the board's thermal copper, which the
@@ -97,7 +128,8 @@ no-wireless decision already permits.
 
 ## Other constraints already implied by the board
 
-- **The EEC-V 104-pin connector** sets the mating face and its orientation. The
+- **The EEC-V 104-pin connector** sets the mating face and its orientation, and
+  that face is the **firewall penetration** — so it carries the gasket, and the
   donor shell dictates the opening, not the other way round.
   [`1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](1999-Ford-F150-4wd-5.42v/connector-sourcing.md)
 - **Q2 dissipates ~2.7 W** into 1.14 in² of board copper. Whatever the housing is,
