@@ -223,3 +223,47 @@ your decoder survives it should not be discovered in the truck.
 M3 *and* M4 on one fixture, with the mechanical relationship the engine actually
 has. The VR board has four channels; crank and cam use two, leaving room to add
 an OSS target on the same shaft later for the transmission work.
+
+
+---
+
+# Bench notes for when the sensors arrive
+
+## Measure both coils first
+
+Before anything is wired, **measure resistance across each sensor's two pins**
+and write it down.
+
+- It confirms VR rather than Hall — a coil reads a few hundred ohms to ~2 kΩ.
+- It is the **source impedance in series with the VR board's 5 kΩ legs**, which
+  sets how much signal actually reaches the MAX9926.
+
+Mode A2's adaptive threshold absorbs the gain effect either way, but the number
+is worth having when a reading later looks wrong.
+
+## Label them now, not later
+
+CKP and CMP use the **same two-cavity connector**, which is convenient for wiring
+and a trap on a bench. Once both are off the desk and into the rig they are
+indistinguishable at a glance.
+
+Mark the sensors and both pigtails **before** the first one gets plugged in.
+
+## Two sensor mounts, independently adjustable
+
+Print `sensor_mount()` twice. The crank and cam air gaps are separate
+experiments and their specs may differ — each mount bolts to the base on its own
+slots, so they can be set and swept independently.
+
+## The measurement that closes an open hardware question
+
+With a real sensor on a driven wheel, **measure VR peak voltage against rpm**.
+
+That answers the one item left open on the VR board: whether 5 kΩ in 0805 — good
+to about **150 V of sensor output** — needs the second resistor per leg before
+the board goes in the truck. See
+[`../../docs/review-vr-v1.md`](../../docs/review-vr-v1.md).
+
+Extrapolate from whatever speed the rig reaches to 6000 rpm; VR output scales
+with tooth speed, so a measurement at 1200 rpm scales to a defensible estimate
+for redline.

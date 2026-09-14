@@ -171,6 +171,18 @@ connector from these numbers alone.
    returning on sensor ground. **[CONFIRM]** — it decides whether CMP needs a
    conditioner channel or connects almost directly.
 
+   **Effectively resolved 2026-09-14: CMP is VR.** The sensor-side connector is
+   the *same two-cavity part* as CKP — Motorcraft `3U2Z145411SMA` covers both.
+   **A three-wire Hall cannot fit in two cavities**, and the same connector
+   serves CKP, which is unambiguously VR on pins 21/22. The lone "CMP+" at pin 85
+   reflects the PCM sharing sensor ground rather than the sensor having one wire.
+
+   **Confirm it in thirty seconds when the sensor arrives:** measure resistance
+   across the two pins. A VR coil reads **a few hundred ohms to about 2 kΩ**; a
+   Hall device does not present a sensible resistance. **Record the value** — it
+   is the sensor's source impedance, which sits in series with the VR board's
+   5 kΩ legs.
+
 2. **Only one VREF pin appears here.** Pin 90 (BRN/WHT) is the only VREF, but
    the Ford power-pin sheet lists **two** (A-20 and C-20). Either the second is
    unused on this application, or this sheet only records what the MegaSquirt
