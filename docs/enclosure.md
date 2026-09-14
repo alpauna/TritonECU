@@ -47,19 +47,53 @@ directly.
 
 ---
 
-## [CONFIRM] Where the ECU lives — still open, and it now decides two things
+## RESOLVED — the ECU lives in the cabin, behind the glovebox
 
-The OEM PCM on this truck sits in the **cabin**, which is the strong hint. It has
-not been confirmed, and it settles:
+Upper right-hand side, behind the glovebox, matching the OEM PCM location.
+Confirmed by the owner. That settles several things at once.
 
-| | if cabin | if under-hood |
-|---|---|---|
-| **ADC choice** | the 200 kSPS part (−40…+85 °C) is fine | **ruled out** — needs the AD7606B/C at −40…+125 °C. [`adc-front-end.md`](adc-front-end.md) |
-| **Barometric** | no constraint | fine either way — KP497 is −40…+105 °C |
-| Vent siting | sheltered by default | must dodge ram air and washing |
+### The temperature constraint lifts
 
-**Confirm the mounting location before committing to a housing.** It is the one
-input that changes part selection rather than just packaging.
+| | |
+|---|---|
+| **ADC** | the 200 kSPS option (−40…+85 °C) is **no longer ruled out**. The AD7606B already specified reaches 125 °C and is a populate-different-part change either way, so there is no reason to move — but the constraint is gone. [`adc-front-end.md`](adc-front-end.md) |
+| **Barometric** | never constrained; the KP497 reaches 105 °C |
+| Everything else | cabin ambient, not under-hood |
+
+### The vent gets an easy life
+
+Behind a glovebox there is **no ram air and nothing a pressure washer reaches**,
+so the siting concern above is satisfied by the location itself. Fit the membrane
+anyway — the moisture-pumping argument does not depend on where the box is, and
+cabin humidity still cycles.
+
+### But a cabin is not quite at ambient pressure
+
+Worth knowing before a log gets misread:
+
+- **The blower pressurises the cabin.** Cars carry pressure-relief vents
+  specifically to limit this; the residual is on the order of **100–250 Pa** with
+  the blower high. Against the KP497's **±2 kPa** that is roughly a tenth of the
+  accuracy — negligible in magnitude, but **correlated with fan speed**, which is
+  the kind of error that looks deliberate in a plot.
+- **Door slams spike it.** A door closing in a near-sealed cabin is a real
+  transient, which is what those relief vents exist to bleed. Harmless to a part
+  rated 250 kPa, but a 1 Hz barometric sample can catch one. **Filter or reject
+  outliers** rather than trusting a single reading.
+
+Neither changes the part choice. Both argue for treating barometric pressure as a
+slowly-filtered value, which it is anyway.
+
+### Thermal deserves a second look, though
+
+**Behind a glovebox is a confined space with poor convection.** Q2 dissipates
+~2.7 W into board copper, and that analysis assumed air that carries heat away.
+A closed cavity raises local ambient above cabin temperature.
+
+**[CHECK]** junction temperature against *measured* in-cavity ambient once the
+enclosure exists, not against cabin air temperature. The fix, if needed, is
+housing-side — a metal case bonded to the board's thermal copper, which the
+no-wireless decision already permits.
 
 ## Other constraints already implied by the board
 

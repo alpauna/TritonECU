@@ -42,6 +42,7 @@ lives on `main`.
 | **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md) |
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
+| **Enclosure** | ◐ | location confirmed — **cabin, behind the glovebox**; must be vented, [`enclosure.md`](docs/enclosure.md) |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
