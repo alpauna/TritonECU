@@ -168,6 +168,12 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   change; printed plastic is magnetically identical to air. The bench rig is
   printed, the 36-1 wheel is steel, and the cam target is a printed disc with one
   steel bolt. [`hardware/vr-test-rig/`](hardware/vr-test-rig/)
+- **The knock sensor is differential, and that decides its front end.** A
+  two-wire floating piezo (pins 57, 32) into a single-ended knock IC would ground
+  one leg and inject sensor-ground noise straight into a microvolt signal. A
+  differential charge amp is needed either way, so it is the part to build — and
+  it defers the IC-versus-DSP choice rather than forcing it.
+  [`docs/knock-front-end.md`](docs/knock-front-end.md)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
