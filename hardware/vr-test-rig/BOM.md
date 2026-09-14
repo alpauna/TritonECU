@@ -86,7 +86,7 @@ after absolute position.
 | 4 | Shaft collar | 8 mm bore, clamp type, for axial location |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
-| 1 | **Brass rod, 13 mm × 20 mm** *(or lead sinker)* | counterweight — see below |
+| 1 | **Brass rod, 14 mm dia × 25 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
 | 1 | M3 × 6 grub screw | traps the counterweight |
 | — | M4 × 12/16/20 socket cap, M4 nuts | clamps, feet, sensor mounts |
 | — | M3 × 8 socket cap ×4 | NEMA 17 face |
@@ -144,19 +144,43 @@ gap, and air gap is the measurement the rig exists to make.** VR output amplitud
 is strongly gap-dependent, so an unbalanced target corrupts exactly the data you
 came for. `cam_target` now carries a counterweight boss 180° from the bolt.
 
-### Brass or lead — both work, and the pocket is sized for brass
+### Brass or lead — both reach balance, so take brass
 
-| | density | needed at r 19.5 | fits the pocket? |
-|---|--:|--:|---|
-| **Brass** | 8.50 | 24.6 g | **fills it exactly** — 24.9 g, 101 % |
-| Lead | 11.34 | 24.6 g | 74 % full, 33 g if packed |
-| ~~Steel~~ | 7.85 | — | **no — see below** |
+The pocket is **14.4 mm bore × 21 mm deep**, a slip fit on **14 mm rod stock**.
+Capacity is **29 g of brass or 39 g of lead**, and the job needs about 20 g — so
+either material gets there and the choice is free on that count.
 
-**Brass is the better default** and the pocket is sized for it, so a 13 mm rod
-offcut packs it solid. Lead then becomes an *option* rather than a requirement:
-same balance at three-quarters full. If you use lead, a sinker or split shot
-dropped in is fine — **do not melt or file it**, which is where lead actually
-becomes a hazard rather than a dense metal in a sealed pocket.
+**Take brass.** Rod stock cuts to length with a hacksaw, handles like any other
+metal, and needs no precautions. Lead works and is denser, but the density buys
+nothing here because the pocket is already big enough; if you do use it, drop in
+a sinker or shot and **do not melt or file it** — that is where lead becomes a
+hazard rather than an inert lump in a sealed pocket.
+
+### Cut the rod to length — do not trust the arithmetic
+
+The pocket is deliberately **deeper than needed**. Expect roughly **15 mm of
+14 mm rod**, but treat that as a starting point:
+
+```
+bolt imbalance to cancel          480 g.mm
+  printed boss itself, 4.8 g       93 g.mm   (a fifth of the job, free)
+  brass rod, ~15 mm                387 g.mm
+```
+
+Too many unknowns feed that sum — your actual bolt and nut mass, print infill,
+filament density. **Balance it on knife edges and cut the rod until it sits
+still.** That takes five minutes and beats any calculation, including this one.
+
+Rod length by diameter, if you already have stock:
+
+| rod dia | length for the full 480 g.mm |
+|--:|--:|
+| 12 mm | 25.6 mm |
+| 1/2 in | 22.9 mm |
+| **14 mm** | **18.8 mm** |
+| 16 mm | 14.4 mm |
+
+*(those are rod-alone figures — subtract the boss's own 93 g·mm, hence ~15 mm)*
 
 ### The counterweight must not be ferrous
 

@@ -38,16 +38,19 @@ cam_target_od   =  60.0;  // printed disc; only the insert needs to be steel
 cam_bolt        =   8.0;  // M8 shank — this is the face the sensor sees, head inward
 cam_head_af     =  13.0;  // M8 hex across flats, for the captive pocket
 cam_head_thk    =   5.5;  // M8 head height
-/* Counterweight. Sized so BRASS fills it exactly (24.9 g at r 19.5 = 485 g.mm,
-   cancelling the M8 bolt's 480). Lead is then optional rather than required —
-   it reaches the same balance at 74 % full. The material must be NON-FERROUS:
-   the boss reaches the rim, so a steel weight would be a second VR trigger and
-   the cam channel would read two pulses per revolution. */
+/* Counterweight, cancelling the M8 trigger bolt's ~480 g.mm.
+   The pocket is a slip fit on 14 mm brass rod, deliberately DEEPER than needed:
+   you balance by cutting the rod to length, not by trusting this arithmetic.
+   Expect roughly 15 mm of rod — the printed boss is itself 4.8 g at r 19.5 and
+   already does about a fifth of the job.
+   Capacity is 29 g brass / 39 g lead, so either material reaches balance.
+   The fill must be NON-FERROUS: the boss reaches r 29.7 against a 30 mm rim, so
+   it passes the sensor every revolution and steel would be a second VR trigger. */
 cw_r            =  19.5;  // pocket centre radius
-cw_dia          =  14.0;
-cw_depth        =  19.0;
-cw_boss         =  19.0;  // boss OD — spans r 10..29, inside the 30 mm rim
-cw_h            =  21.0;
+cw_dia          =  14.4;  // slip fit on 14 mm rod stock — CUT THE ROD TO BALANCE
+cw_depth        =  21.0;  // deeper than needed, so there is length to trim
+cw_boss          = 20.4;  // spans r 9.3..29.7, inside the 30 mm rim
+cw_h            =  23.0;
 cam_gear_teeth  =  40;    // 2 : 1 against crank_gear_teeth
 crank_gear_teeth=  20;
 gear_module     =   2.0;  // centre distance = module*(20+40)/2 = 60 mm.

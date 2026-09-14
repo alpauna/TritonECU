@@ -1,3 +1,6 @@
 .pio
 .vscode
 secrets.ini
+
+# Large downloaded binaries — GitHub rejects >100 MB
+*.AppImage
