@@ -141,3 +141,85 @@ plane of the wheel while it spins, and fit a guard before running it unattended.
 3. **Minimum rpm at which sync holds**, and how the 85 ms watchdog behaves when
    it does not.
 4. **Missing-tooth detection** against commanded position, not against itself.
+
+---
+
+# Add the cam channel — and drive it with gears
+
+**Yes, include CMP.** Not as a convenience: the crank/cam *relationship* is the
+thing that cannot be tested any other way.
+
+## Why the cam has to be on the same rig
+
+Crank sync tells you where you are **within a revolution**. Cam sync tells you
+**which revolution** — compression or exhaust for a given cylinder. On a 4-stroke
+the cam turns at half crank speed, and everything sequential depends on that
+relationship being right.
+
+**Two signal generators cannot test this.** They can each produce a correct
+waveform, but not one that is *mechanically phase-locked* to the other with real
+jitter and real drift. A rig with a 2:1 gear pair produces exactly what the
+engine produces, including the imperfections.
+
+[`sensors-to-run.md`](../../docs/1999-Ford-F150-4wd-5.42v/sensors-to-run.md)
+already records that with coil-on-plug and sequential injection **CMP is
+mandatory, not optional**. Building the rig crank-only means building it twice.
+
+It also unlocks the failure modes that only exist with both present:
+
+- cam signal lost mid-run, and whether sync recovers or limps
+- **cam pulse landing on or near the missing tooth** — the nastiest case, and
+  one you can only find by sweeping the phase
+- sync-loss and re-sync behaviour from an arbitrary starting position
+
+## Gears, yes — but the reason is compliance, not slip
+
+**A properly tensioned GT2 toothed belt does not actually slip.** The slippage
+instinct applies to friction drives. What a belt *does* have is **compliance**,
+and under the torque ripple of a microstepping motor that shows up as **phase
+jitter between crank and cam** — which is precisely the quantity being measured.
+
+**Gears are the right call**, and their usual drawback does not apply here:
+backlash matters at reversals, and this rig only ever turns one way, so it is
+taken up once and stays taken up.
+
+```
+crank gear  20T          cam gear  40T          exactly 2:1
+module 1 → 30 mm centre distance
+```
+
+**Printed spur gears are fine.** The load is two spinning discs. Tooth-to-tooth
+error on a printed gear is well under a degree, against a cam-phase accuracy
+requirement of perhaps ±5 crank degrees for correct stroke decisions.
+
+### Layout note
+
+At a 30 mm centre distance the cam shaft passes through the plane of a 150 mm
+crank wheel. **Separate them axially** — gears meshing at one end, the two
+targets on different stations along their shafts. Parallel shafts, two bearing
+pairs, one motor on the crank shaft.
+
+## The cam target is much easier than the crank wheel
+
+CMP produces **one pulse per cam revolution** — a single feature, not 35.
+
+So while the crank wheel must be a bought steel 36-1, the **cam target can be a
+printed disc carrying one steel insert**: a bolt head, a dowel pin, a cut tab.
+Only that one feature has to be ferromagnetic.
+
+**That halves the bought-parts problem.** One steel wheel, not two.
+
+## Make the cam phase adjustable — this is the point of the rig
+
+Mount the cam target on a **hub that can be loosened, rotated and re-clamped.**
+
+Fixed phase proves the decoder works at one relationship. **Adjustable phase lets
+you sweep it**, which is how you find the case where the cam pulse coincides with
+the missing tooth — a real engine has exactly one such relationship, and whether
+your decoder survives it should not be discovered in the truck.
+
+## What this makes the rig
+
+M3 *and* M4 on one fixture, with the mechanical relationship the engine actually
+has. The VR board has four channels; crank and cam use two, leaving room to add
+an OSS target on the same shaft later for the transmission work.

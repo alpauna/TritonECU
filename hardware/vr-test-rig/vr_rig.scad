@@ -2,7 +2,8 @@
 // Printed parts only. The toothed wheel itself MUST be steel (see README.md).
 //
 //   render one part at a time:  part = "bearing_block" | "motor_mount"
-//                                      | "hub" | "sensor_mount" | "base" | "assembly"
+//                                      | "hub" | "cam_target" | "sensor_mount"
+//                                      | "base" | "assembly"
 
 part = "assembly";
 $fn = 64;
@@ -15,6 +16,13 @@ wheel_thk       =   5.0;  // MEASURE: wheel thickness
 wheel_bore      =  25.4;  // MEASURE: wheel centre bore
 sensor_dia      =  19.0;  // MEASURE: VR sensor barrel diameter (Ford CKP)
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
+
+/* --- cam channel (CMP) — 2:1 gear driven, see README ----------------------- */
+cam_target_od   =  60.0;  // printed disc; only the insert needs to be steel
+cam_insert_dia  =   6.0;  // steel dowel or bolt head forming the single lobe
+cam_gear_teeth  =  40;    // 2 : 1 against crank_gear_teeth
+crank_gear_teeth=  20;
+gear_module     =   1.0;  // centre distance = module*(20+40)/2 = 30 mm
 
 /* --- stock parts, change only if you buy different ones -------------------- */
 shaft_dia       =   8.0;  // 8 mm ground steel rod
@@ -115,6 +123,28 @@ module hub() {
 }
 
 /* ===========================================================================
+   CAM TARGET HUB — printed disc, one steel insert, adjustable phase.
+   The clamp is deliberately separate from the insert so the phase can be
+   swept without disturbing the lobe.
+   =========================================================================== */
+module cam_target() {
+    difference() {
+        union() {
+            cylinder(d = cam_target_od, h = 5);
+            cylinder(d = hub_od, h = 16);
+        }
+        translate([0,0,-1]) cylinder(d = shaft_dia + clr, h = 40);
+        // steel insert, press fit, at the rim — this is the only magnetic feature
+        translate([cam_target_od/2 - cam_insert_dia, 0, -1])
+            cylinder(d = cam_insert_dia - 0.05, h = 7);
+        // split clamp, same pattern as hub()
+        translate([-0.9, -hub_od, 6]) cube([1.8, hub_od, 40]);
+        translate([-hub_od/2 - 1, 0, 11]) rotate([0,90,0]) cylinder(d = 4.4, h = hub_od + 2);
+        translate([ 1.5, 0, 11]) rotate([0,90,0]) cylinder(d = 7.6, h = hub_od, $fn = 6);
+    }
+}
+
+/* ===========================================================================
    SENSOR MOUNT — the only precision part. Slotted for air-gap adjustment.
    =========================================================================== */
 module sensor_mount() {
@@ -172,6 +202,7 @@ module base() {
 if      (part == "bearing_block") bearing_block();
 else if (part == "motor_mount")   motor_mount();
 else if (part == "hub")           hub();
+else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
 else if (part == "base")          base();
 else {
