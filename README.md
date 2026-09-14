@@ -33,12 +33,14 @@ lives on `main`.
 | **M0** Board bring-up | ✅ | 216 MHz, 2 MB flash, verified from the chip's own ID registers |
 | **M1** Storage + config | ✅ | SD on SPI4, JSON config, persists across resets |
 | **M2** Analog front end | ✅ | AD7606 reading known signals within tolerance |
-| **M3** Crank sync | ◐ | decode logic proven — 10 native tests; **VR board designed**, awaiting build |
-| **M4** Cam sync | ◐ | logic proven — 6 native tests |
+| **M3** Crank sync | ◐ | decode logic proven — 10 native tests; **VR board on order**, CKP sensor + pigtail ordered |
+| **M4** Cam sync | ◐ | logic proven — 6 native tests; **CMP sensor + pigtail ordered** — same connector as CKP |
 | **M5** Spark output | ◐ | scheduler proven — 12 native tests |
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
-| **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **ready to fab** |
+| **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
+| **VR test rig** | ◐ | designed — gear-driven 36-1 + cam, parametric OpenSCAD |
+| **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -130,6 +132,16 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   resistor, so its tolerance and TCR are the accuracy of both — which is why it
   is a 1 %, ±50 ppm/°C, AEC-Q200 metal-element part in 2512 rather than
   whatever was cheapest.
+- **Leave the factory harness alone.** Every "this should be referenced
+  differently" question is answered by **PCB routing, not by moving wires** — the
+  board defines what each of the 104 cavities connects to. An unmodified harness
+  stays diagnosable by anyone with a Ford wiring diagram, and the PCB is the half
+  that can be revised.
+  [`docs/1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](docs/1999-Ford-F150-4wd-5.42v/connector-sourcing.md)
+- **A printed trigger wheel produces nothing.** A VR sensor works on reluctance
+  change; printed plastic is magnetically identical to air. The bench rig is
+  printed, the 36-1 wheel is steel, and the cam target is a printed disc with one
+  steel bolt. [`hardware/vr-test-rig/`](hardware/vr-test-rig/)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.
@@ -162,6 +174,7 @@ firmware/ecu/
   src/esp32/    ESP32-P4 platform layer (earlier target, still builds)
   test/         native unit tests
 hardware/       pin budget and supply calculators
+  vr-test-rig/  parametric OpenSCAD for the 36-1 + cam bench rig
 docs/           design documents and vehicle schematics
   Schematics/   board schematics, BOMs and Gerbers — fab-ready
   Datasheets/   every part datasheet the decisions were made against
