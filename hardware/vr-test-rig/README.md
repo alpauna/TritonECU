@@ -267,3 +267,63 @@ the board goes in the truck. See
 Extrapolate from whatever speed the rig reaches to 6000 rpm; VR output scales
 with tooth speed, so a measurement at 1200 rpm scales to a defensible estimate
 for redline.
+
+
+---
+
+# The cam trigger bolt — two things to get right
+
+A bolt is the right idea. Two adjustments before drilling.
+
+## M8 is wider than the sensor pole
+
+A VR sensor's pole piece is roughly **5–8 mm**. A feature much wider than the
+pole does not give a stronger pulse — it gives **two**.
+
+The output is `-N·dΦ/dt`. A feature about the width of the pole produces one
+bipolar swing with a single zero crossing at its centre. A **wide** feature
+produces a positive pulse as the leading edge arrives, a **flat region with no
+output** while it fully covers the pole, then a negative pulse as the trailing
+edge leaves — and Mode A2 arms on each peak and triggers on each crossing.
+
+```
+M8 hex head    13.0 mm across flats   ← roughly 2× the pole
+M6 hex head    10.0 mm
+M5 hex head     8.0 mm                ← closest match
+```
+
+**Use M6 or M5.** Two edges per cam revolution is survivable — a real engine's
+cam target is often a large vane and the decoder just picks one edge
+consistently — but one clean pulse is simpler to reason about on a bench where
+you are trying to prove the decoder, not work around it.
+
+## Check the bolt is actually magnetic
+
+**A2 and A4 stainless is austenitic and non-magnetic** — the same trap as the
+trigger wheel. Plain, zinc-plated or black-oxide steel is fine.
+
+**Touch a magnet to it before fitting.** Thirty seconds, and the failure mode
+otherwise is a cam channel that produces nothing while everything looks correct.
+
+## Mount it radially, in the rim
+
+Thread it **radially into the rim with the head facing outward**, not axially
+into the face. Two reasons:
+
+- The crank sensor looks radially at the wheel's teeth. A radial cam bolt means
+  **both sensor mounts are the same part in the same orientation.**
+- **Threading the bolt in or out trims the cam air gap** directly, independently
+  of the sensor mount.
+
+Retain it with a locknut or thread-lock. The loads are trivial — a 5 g bolt at
+30 mm radius and 600 rpm cam speed is about **0.6 N** — but a fastener working
+loose in a spinning disc is not worth the risk for the cost of a nut.
+
+## If you balance it, use a non-ferrous counterweight
+
+The obvious fix for the imbalance is an identical bolt opposite. **Do not** — it
+is also steel, and the sensor will see it. **One pulse per cam revolution
+becomes two**, and it will look exactly like a decoder fault.
+
+Brass or aluminium if you balance it at all. At these speeds the imbalance does
+not need correcting.
