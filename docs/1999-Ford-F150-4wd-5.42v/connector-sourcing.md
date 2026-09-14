@@ -157,3 +157,76 @@ differential and Mode A2 triggers on the zero crossing, so an inversion moves
 which edge the decoder should use rather than breaking detection. Easier to fix
 in the harness than in firmware, though — so confirm it on the rig, where the
 shaft position is known.
+
+---
+
+# Repinning the 104-pin connector
+
+Terminals ordered, so cavities can be changed or added.
+
+## There are four spare cavities already
+
+[`eec-v-pinout.md`](eec-v-pinout.md) records these as **"Not used"** on this
+application — they belong to the 4-sensor HO2S configuration a two-bank truck
+does not have:
+
+| Cavity | Factory function on other applications |
+|---|---|
+| **35** | RR HO2S signal |
+| **61** | LR HO2S signal |
+| **95** | RR HO2S heater |
+| **96** | LR HO2S heater |
+
+**⚠ Verify each is physically empty before counting on it.** That table was built
+partly from a MegaSquirt pinout reference, and "not used on this application" in
+a document is not the same as "no terminal in this connector". Trim levels
+differ. Look in the cavity.
+
+## First use: give CMP its own return
+
+The change recommended above — **CMP return to VR2− instead of shared SGND** —
+needs no new wire. The wire already runs from the sensor to the connector; it
+just lands in a shared sensor-ground cavity.
+
+**Pull that terminal and move it to one of the spares.** Same wire, same length,
+different hole. That is the entire job, and it converts CMP from a compromised
+single-ended channel into a proper differential pair.
+
+## The crimp tool matters more than the terminals
+
+This is the part that is easy to get wrong and expensive to diagnose.
+
+**A generic crimper produces a joint that passes a tug test and fails months
+later**, under vibration and thermal cycling. On a crank or cam sensor that
+presents as an **intermittent no-start that comes and goes with temperature** —
+the single worst fault class to chase, because it is absent whenever you are
+looking for it.
+
+Get the correct die for Ford micro terminals, and:
+
+- **Match the wire gauge to the terminal's barrel.** Undersized wire in an
+  oversized barrel crimps to a joint that is mechanically loose however good the
+  tool is.
+- **Get the terminal removal pick as well**, not just the terminals. Levering a
+  terminal out with a screwdriver deforms the lock tang, and it will not retain
+  afterwards — the terminal backs out under vibration, which looks exactly like
+  a broken wire.
+
+## Crimp, do not solder
+
+Soldering a harness joint creates a stiffness discontinuity: the wire goes from
+flexible to rigid at the edge of the solder wick, and that is where it
+work-hardens and cracks. A properly crimped terminal has no such transition.
+
+This is why automotive harnesses are crimped everywhere and soldered almost
+nowhere, and a rig that will live on an engine is not the place to break with it.
+
+## Record every repin
+
+A modified harness that matches no factory diagram is a trap for whoever works
+on it next, including the person who modified it.
+
+**Log changes in [`eec-v-pinout.md`](eec-v-pinout.md)** — cavity moved from, moved
+to, wire colour, and why. The wire colours are already in that table, which makes
+it the natural place: a future reader can then diff what is in the truck against
+what Ford shipped.
