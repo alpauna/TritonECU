@@ -39,7 +39,7 @@ lives on `main`.
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
 | **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
-| **VR test rig** | ◐ | designed — gear-driven 36-1 + cam, parametric OpenSCAD |
+| **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
@@ -138,6 +138,32 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   stays diagnosable by anyone with a Ford wiring diagram, and the PCB is the half
   that can be revised.
   [`docs/1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](docs/1999-Ford-F150-4wd-5.42v/connector-sourcing.md)
+- **The VR trigger point needs no calibration term.** MAX9926 Mode A2 arms on
+  33 % of the previous peak but *triggers* on the zero crossing
+  (−6.5 / +10 mV) — which is the tooth centre, because a VR sensor outputs
+  dΦ/dt. Amplitude, rpm and acceleration cannot move it; scaling a waveform does
+  not shift where it crosses zero. Propagation delay is 50 ns, or 0.0018° at
+  6000 rpm. This repo previously had it wrong in three places, claiming the
+  comparator switched at ⅓ of peak and that the offset would need characterising.
+  [`docs/1999-Ford-F150-4wd-5.42v/vr-conditioning.md`](docs/1999-Ford-F150-4wd-5.42v/vr-conditioning.md)
+- **MAX9926 over the LM1815, on arming margin.** Both arm adaptively and trigger
+  on zero crossing, so timing is a wash. The LM1815 arms at **80 %** of the
+  previous peak against the MAX9926's **33 %** — tolerating a 1.25:1 amplitude
+  collapse between teeth where the MAX9926 tolerates **3:1**. Cranking, slowing
+  hard against each compression stroke, is exactly where that collapse happens.
+  The differential input the single-ended LM1815 cannot offer settles the rest.
+- **Keyway to missing tooth is zero, on the rig and on the truck.** The bench
+  wheel's keyway lines up with the gap, and the 5.4L was timed to the same datum,
+  so `CKP_GAP_TO_TDC_DEG = 0` for both. It stays a *named* constant rather than a
+  vanished zero — the rig's absolute angle is then the engine's absolute angle,
+  which makes the rig a timing calibration bench rather than a functional check.
+  [`hardware/vr-test-rig/README.md`](hardware/vr-test-rig/README.md)
+- **Stiffness comes from section, not from material.** Two 8 mm rods in ribs
+  under the rig's base take it from `EI` 20.5 to 826 N·m² — 40× — because the
+  offset contributes `A·d²`. A 5 mm rod in a rib beats a 10 mm rod buried in the
+  plate. The same arithmetic found the real soft spot: the printed bearing
+  bracket was less stiff than the shaft it was holding.
+  [`hardware/vr-test-rig/BOM.md`](hardware/vr-test-rig/BOM.md)
 - **A printed trigger wheel produces nothing.** A VR sensor works on reluctance
   change; printed plastic is magnetically identical to air. The bench rig is
   printed, the 36-1 wheel is steel, and the cam target is a printed disc with one
