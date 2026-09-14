@@ -275,7 +275,38 @@ for redline.
 
 A bolt is the right idea. Two adjustments before drilling.
 
-## M8 is wider than the sensor pole
+## Captive head plus a nut is right — but point the head inward
+
+**The captive arrangement is the correct call.** A hex pocket puts the plastic in
+**compression between head and nut** instead of relying on threads cut into
+printed plastic, and the pocket gives anti-rotation for free.
+
+**Flip which end faces the sensor, though.** Two independent reasons point the
+same way:
+
+**Mechanically, the head belongs on the inside.** Centripetal force pushes the
+bolt *outward*. With the head in an inner pocket it bears against that load and
+**cannot pull through** — the retention is geometric rather than relying on the
+nut. A head on the outside means the nut is the only thing holding it in.
+
+**Magnetically, it halves the feature width:**
+
+```
+M8 hex head, outward    13.0 mm across flats   ← ~2× the sensor pole
+M8 shank end, outward    8.0 mm                ← matches a 5–8 mm pole
+```
+
+So: **head in a hex pocket on the inside, shank protruding outward, nut on the
+inside as a jam nut.** Nothing steel on the outside except the 8 mm shank end
+— which is exactly the feature you want.
+
+**Keep the outside clear of other steel.** A nut or washer on the sensor side
+adds a second, wider feature right where the measurement happens.
+
+Air gap is then set by protrusion — bolt length and washers under the head give
+the coarse setting, and the sensor mount's slots do the rest.
+
+## Why width matters at all
 
 A VR sensor's pole piece is roughly **5–8 mm**. A feature much wider than the
 pole does not give a stronger pulse — it gives **two**.
@@ -286,16 +317,13 @@ produces a positive pulse as the leading edge arrives, a **flat region with no
 output** while it fully covers the pole, then a negative pulse as the trailing
 edge leaves — and Mode A2 arms on each peak and triggers on each crossing.
 
-```
-M8 hex head    13.0 mm across flats   ← roughly 2× the pole
-M6 hex head    10.0 mm
-M5 hex head     8.0 mm                ← closest match
-```
+**M8 is fine once the shank faces out** — the 8 mm end lands right in the pole's
+range. It is only the 13 mm head that would have given two edges.
 
-**Use M6 or M5.** Two edges per cam revolution is survivable — a real engine's
-cam target is often a large vane and the decoder just picks one edge
-consistently — but one clean pulse is simpler to reason about on a bench where
-you are trying to prove the decoder, not work around it.
+Two edges per revolution is survivable in any case: a real engine's cam target
+is often a large vane and the decoder picks one edge consistently. But one clean
+pulse is simpler to reason about on a bench where the decoder is what you are
+trying to prove, not work around.
 
 ## Check the bolt is actually magnetic
 

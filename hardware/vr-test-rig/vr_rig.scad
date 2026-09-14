@@ -19,8 +19,9 @@ sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rota
 
 /* --- cam channel (CMP) — 2:1 gear driven, see README ----------------------- */
 cam_target_od   =  60.0;  // printed disc; only the insert needs to be steel
-cam_bolt        =   6.0;  // M6 — see README: M8 is wider than the sensor pole
-cam_tap_dia     =   5.0;  // tap straight into plastic, or open out for a heat-set insert
+cam_bolt        =   8.0;  // M8 shank — this is the face the sensor sees, head inward
+cam_head_af     =  13.0;  // M8 hex across flats, for the captive pocket
+cam_head_thk    =   5.5;  // M8 head height
 cam_gear_teeth  =  40;    // 2 : 1 against crank_gear_teeth
 crank_gear_teeth=  20;
 gear_module     =   1.0;  // centre distance = module*(20+40)/2 = 30 mm
@@ -135,13 +136,14 @@ module cam_target() {
             cylinder(d = hub_od, h = 16);
         }
         translate([0,0,-1]) cylinder(d = shaft_dia + clr, h = 40);
-        // RADIAL bolt hole in the rim — head faces outward, same orientation as
-        // the crank teeth, so both sensor mounts are identical. Threading the
-        // bolt in or out also trims the cam air gap.
+        // RADIAL bolt, HEAD INWARD. Centripetal load pushes the bolt outward, so
+        // the head bears against the pocket and cannot pull through. The feature
+        // presented to the sensor is then the 8 mm shank end, not the 13 mm head.
         translate([0, 0, 2.5]) rotate([0,90,0])
-            cylinder(d = cam_tap_dia, h = cam_target_od/2 + 1);
-        // flat seat for the head / locknut face
-        translate([cam_target_od/2 - 3, -cam_bolt, 0]) cube([4, 2*cam_bolt, 5]);
+            cylinder(d = cam_bolt + 0.4, h = cam_target_od/2 + 1);   // shank clearance
+        // hex pocket for the head — anti-rotation, and the load-bearing face
+        translate([hub_od/2 - 1, 0, 2.5]) rotate([0,90,0])
+            cylinder(d = cam_head_af / cos(30), h = cam_head_thk, $fn = 6);
         // split clamp, same pattern as hub()
         translate([-0.9, -hub_od, 6]) cube([1.8, hub_od, 40]);
         translate([-hub_od/2 - 1, 0, 11]) rotate([0,90,0]) cylinder(d = 4.4, h = hub_od + 2);
