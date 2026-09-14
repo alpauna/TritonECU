@@ -479,3 +479,55 @@ gear away from the wheel, not beside it.
 Defaults are 24.0 / 8.0 / 3.3 mm — the DIN 6885 sizes for a 24 mm shaft. **Check
 them against what actually arrives**; aftermarket wheels are not obliged to be
 standard, and a key that does not fit is a reprint rather than a redesign.
+
+
+---
+
+# Rendering the model
+
+`vr_rig.scad` is plain OpenSCAD — no libraries, and nothing newer than 2015-era
+language features, so the distro package is sufficient.
+
+```sh
+sudo apt install openscad          # Mint 22.3 ships 2021.01, which is fine here
+```
+
+The Flathub build (`flatpak install flathub org.openscad.OpenSCAD`) is newer if
+you want it, but this file asks nothing of it.
+
+## GUI
+
+Open the file, then **Design → Preview (F5)** to look at it and **Render (F6)**
+before exporting. Edit `part =` at the top to choose what is shown; `"assembly"`
+is a clearance check, not something to print.
+
+## Batch — every printable part to STL
+
+`-D` overrides the `part` variable from the command line, so the whole set falls
+out of a loop:
+
+```sh
+cd hardware/vr-test-rig
+for p in base bearing_block motor_mount wheel_hub cam_target sensor_mount; do
+    openscad -o "stl/$p.stl" -D "part=\"$p\"" vr_rig.scad
+done
+```
+
+Note the quoting: `part` is a *string*, so the inner quotes have to survive the
+shell. `-D part=wheel_hub` without them passes an undefined variable and renders
+the assembly instead — silently, which is the annoying part.
+
+Print quantities: **2 × bearing_block**, **2 × sensor_mount** (crank and cam),
+1 each of the rest. `hub` is the superseded 25.4 mm plain-bore version, kept only
+for reference — **`wheel_hub` is the one that fits the wheel you bought.**
+
+## Not yet modelled: the gears themselves
+
+`crank_gear_teeth`, `cam_gear_teeth` and `gear_module` are declared and the hub
+carries the bolt circle, but **no module generates the gear teeth**. Involute
+profiles need either a library (BOSL2's `spur_gear()`, or Greiner's
+`gears.scad`) or bought gears.
+
+Buying them is defensible here — a 20T and 40T module-1 pair is a few dollars,
+comes in steel or POM, and removes tooth-form accuracy from the list of things
+the rig could be wrong about.
