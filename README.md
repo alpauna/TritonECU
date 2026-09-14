@@ -96,6 +96,8 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 | Battery sense | INA238 on the LTC4364's own 10 mΩ / 1 % / 50 ppm shunt |
 | Analog in | AD7606B, 8 ch, 16-bit, simultaneous, ±10 V |
 | Crank / cam / OSS | 2 × MAX9926 Mode A2 — 4 channels, adaptive threshold + zero crossing |
+| Knock | TLV9064-Q1 differential charge amp + own 2.5 V ref — [schematic](docs/Schematics/knock-front-end-schematic.md) |
+| Barometric | **KP497** (Infineon) on I²C/SPI, AEC-Q100 −40…+105 °C, 3.3 V always-on rail — **requires a vented enclosure** |
 | Ignition | 8 × ISL9V3040 ignition IGBT + 74HCT541 |
 | Injection | 8 × ZXMS6005DGQ IntelliFET |
 | Connector | EEC-V 104-pin |
@@ -188,6 +190,13 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   depends on that bridge staying balanced, so it still wants a buffer between the
   reference and `R8` rather than the reference's own output impedance in series
   with one arm.
+- **The enclosure must be vented, and not only for the barometer.** A sealed box
+  tracks its own temperature rather than the weather, so the barometric sensor
+  would be useless in one. But a sealed automotive housing also **pumps moisture
+  past its own seals** — every heat cycle pushes air out, every cool-down draws it
+  and whatever is near the seal back in. A vent membrane gives that breathing a
+  deliberate path; the correct pressure reading is a side effect of doing the
+  housing properly. [`docs/enclosure.md`](docs/enclosure.md)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.

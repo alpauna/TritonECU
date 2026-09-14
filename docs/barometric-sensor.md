@@ -168,7 +168,11 @@ existing bus cost little at layout time and are impossible to add afterwards.
 Leave it DNP if the calibration never uses it.
 
 **And vent the enclosure regardless of part choice.** No sensor fixes a sealed
-box — see above. That decision belongs to the housing, not the BOM.
+box. That requirement is now recorded against the housing itself in
+[`enclosure.md`](enclosure.md), along with the note that venting is better
+practice anyway — a sealed box pumps moisture past its own seals — and that the
+vent should be sited out of ram air, which biases the reading by 0.43 kPa at
+60 mph.
 
 It is **not needed to run** — the engine will start, idle and drive without it,
 which is the standing test for whether something belongs in the current scope. It
