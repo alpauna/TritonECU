@@ -397,46 +397,50 @@ finds *a* gap. That is the strongest test this rig can perform.
 
 ---
 
-## The rig's zero is NOT the engine's zero — do not let this constant leak
+## The truck measures the same — so the rig is a calibration bench
 
-The wheel is made with the gap at TDC #1 because that is the convenient
-convention for a wheel sold to be configured. **The Ford 36-1 wheel on the truck
-is under no such obligation**, and the factory CKP sensor sits where the block
-casting put it, not where the convention would like it.
+Measured on the engine: the factory 5.4L puts the gap at TDC #1 as well. Rig and
+truck share one datum, so `CKP_GAP_TO_TDC_DEG = 0` for both.
 
-So there are really two numbers, and only one of them is zero:
+It stays a **named constant rather than a disappeared zero** — not out of caution
+about the measurement, but because the decoder needs somewhere to put the sensor
+and conditioner offsets below, and they are not zero.
 
-| | gap → TDC #1 |
-|---|---|
-| This rig | **0°**, by construction |
-| The 5.4L on the truck | **fixed, non-zero, and unmeasured** |
+What this buys is bigger than skipping a calibration step. Because the rig's
+absolute angle now *is* the engine's absolute angle, anything measured on the
+bench transfers directly. **The rig stops being a functional check and becomes
+the instrument that calibrates the truck's timing**, with no engine running.
 
-A decoder tuned on the bench until it reports the right angle, then moved to the
-engine with that constant baked in, fires the plugs wrong by exactly the offset.
-Spark at the wrong angle is not a debugging inconvenience — it is detonation, and
-on a 5.4L it is pistons.
+### Still to pin down: which edge of the gap
 
-**So the offset is an explicit named constant, not an implicit zero.** Something
-like `CKP_GAP_TO_TDC_DEG`, set to 0 for the rig and to the measured figure for the
-truck, selected by build target. If the decoder ever computes an angle without
-going through it, that is the bug.
+A 36-1 wheel has 10° tooth pitch, so the missing tooth leaves a **20° span**
+between the tooth before it and the tooth after. "The gap is at TDC" is therefore
+ambiguous by up to 20° until the convention is stated:
 
-### Measuring it on the truck, independent of any electronics
+- centre of the gap, or
+- last tooth before it, or
+- first tooth after it
 
-Do not trust a mark, and do not infer it from the old PCM's behaviour. Establish
-TDC mechanically:
+Worth writing down which one the measurement used, since the decoder never fires
+on the gap anyway — it *syncs* on the gap and then counts teeth to the spark
+angle, so the count has to start from a named tooth.
 
-1. Pull #1 plug, fit a **piston stop**, and bring the crank up gently by hand
-   until it touches. Mark the damper against a fixed pointer.
-2. Rotate the other way until it touches again. Mark again.
-3. **True TDC is exactly halfway between the two marks** — this cancels the error
-   in where the stop happens to sit, which is why it beats a single mark.
-4. With the damper at true TDC, scope the CKP and rotate to find where the gap
-   falls. The angle between them is the constant.
+### The conditioner's switch point is not the tooth edge
 
-The piston-stop bisection is the whole point: the stop's position does not need to
-be known or repeatable, because it appears identically in both marks and
-subtracts out.
+A VR sensor outputs dΦ/dt, so flux peaks — and the output crosses zero — when a
+tooth is **centred on the pole piece**, not when its edge arrives.
+
+Mode A2 does not switch at that zero crossing either; it switches at ⅓ of the
+previous peak. **That is precisely why Mode A2 is the right choice for a timing
+application**: the threshold scales with amplitude, and since amplitude scales
+with speed, the switch point stays at a near-constant *angle* across the rpm
+range. A fixed threshold would drift in angle as amplitude grew, which reads as
+timing that wanders with rpm.
+
+Near-constant is not constant, and MAX9926 propagation delay is a fixed time,
+which becomes an angle proportional to rpm (1 µs is 0.036° at 6000 rpm). Both are
+small, both are real, and **the rig can measure both directly** — sweep rpm and
+compare the COUT edge against the commanded step count.
 
 ### The cam sets which revolution, and it is also phase-referenced now
 
