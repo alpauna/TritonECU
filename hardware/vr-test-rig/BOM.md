@@ -86,6 +86,8 @@ after absolute position.
 | 4 | Shaft collar | 8 mm bore, clamp type, for axial location |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
+| 1 | **Brass rod, 13 mm × 20 mm** *(or lead sinker)* | counterweight — see below |
+| 1 | M3 × 6 grub screw | traps the counterweight |
 | — | M4 × 12/16/20 socket cap, M4 nuts | clamps, feet, sensor mounts |
 | — | M3 × 8 socket cap ×4 | NEMA 17 face |
 | 1 | Parallel key, **8 × 7 × 20 steel** *(optional)* | see below |
@@ -128,6 +130,57 @@ widths**, and 4.5 mm whole depth. The teeth come out as teeth.
 The geometry is deliberately standard — **module 2, 20° pressure angle, 20T and
 40T, 60 mm centres** — so if printed gears do disappoint, a bought steel or POM
 pair drops straight in with no change to the rig.
+
+---
+
+## Balancing the cam trigger — brass or lead
+
+The M8 bolt is a lump of steel bolted to one side of a spinning disc. **About
+19 g at a 25 mm radius, so 480 g·mm of imbalance**, which at 1200 rpm crank
+(600 cam) is **1.9 N rotating**.
+
+That is not a structural worry. It matters because **vibration modulates the air
+gap, and air gap is the measurement the rig exists to make.** VR output amplitude
+is strongly gap-dependent, so an unbalanced target corrupts exactly the data you
+came for. `cam_target` now carries a counterweight boss 180° from the bolt.
+
+### Brass or lead — both work, and the pocket is sized for brass
+
+| | density | needed at r 19.5 | fits the pocket? |
+|---|--:|--:|---|
+| **Brass** | 8.50 | 24.6 g | **fills it exactly** — 24.9 g, 101 % |
+| Lead | 11.34 | 24.6 g | 74 % full, 33 g if packed |
+| ~~Steel~~ | 7.85 | — | **no — see below** |
+
+**Brass is the better default** and the pocket is sized for it, so a 13 mm rod
+offcut packs it solid. Lead then becomes an *option* rather than a requirement:
+same balance at three-quarters full. If you use lead, a sinker or split shot
+dropped in is fine — **do not melt or file it**, which is where lead actually
+becomes a hazard rather than a dense metal in a sealed pocket.
+
+### The counterweight must not be ferrous
+
+The boss reaches r = 29 mm against a 30 mm rim, so it passes the sensor on every
+revolution. **A steel counterweight would be a second VR trigger**, and the cam
+channel would read two pulses per turn — destroying the one thing the cam is
+there to do, which is tell compression from exhaust.
+
+Brass and lead are both non-ferromagnetic and invisible to the sensor. That is
+the real reason the choice is between those two, and not a free pick.
+
+### You do not need it perfect
+
+Residual force scales *linearly* with residual imbalance:
+
+```
+unbalanced      480 g.mm   1.89 N
+80 % corrected   96 g.mm   0.38 N
+```
+
+So getting most of the way there gets most of the benefit. **Static balance is
+enough** — the target is a thin disc, so there is no meaningful couple to chase.
+Rest the cam shaft on two level edges and add weight until it stops rolling to a
+preferred position.
 
 ---
 

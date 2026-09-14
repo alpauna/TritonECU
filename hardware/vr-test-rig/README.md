@@ -522,15 +522,12 @@ is a clearance check, not something to print.
 
 ## Batch — every printable part to STL
 
-`-D` overrides the `part` variable from the command line, so the whole set falls
-out of a loop:
+`render.sh` does the lot — `-D` overrides the `part` variable per invocation and
+`xargs -P` spreads them across cores (`base` is the slow one at ~25 s):
 
 ```sh
 cd hardware/vr-test-rig
-for p in base bearing_block motor_mount wheel_hub \
-         crank_gear cam_gear cam_target sensor_mount; do
-    openscad -o "stl/$p.stl" -D "part=\"$p\"" vr_rig.scad
-done
+./render.sh        # all 8 parts, binary STL, one per core
 ```
 
 Note the quoting: `part` is a *string*, so the inner quotes have to survive the
@@ -564,3 +561,49 @@ profile is then an X-Y path rather than a layer stack.
 
 See [BOM.md](BOM.md) for why module 2 and not module 1, and for the printed-now,
 steel-later path.
+
+
+---
+
+# Rendered and checked
+
+All eight parts export clean on OpenSCAD 2021.01 — no warnings, no errors — and
+the gear geometry was verified against the numbers rather than eyeballed:
+
+```
+crank_gear   tip radius 22.000 mm   20 teeth   18.000 deg pitch
+cam_gear     tip radius 42.000 mm   40 teeth    9.000 deg pitch
+```
+
+Bounding boxes match design intent to 0.02 mm, and `cam_target` was checked to
+confirm the counterweight boss stays inside the 30 mm rim — it must never
+protrude toward the sensor across a 1 mm air gap.
+
+## Two things that check caught
+
+**The key was not a key.** It spanned `wheel_bore/2 - key_d` to `wheel_bore/2`,
+which is *inside* the spigot — it stood proud by 0.13 mm and would have engaged
+nothing. The key has to run outward from the spigot surface into the slot cut in
+the wheel's bore. Now 3.33 mm proud, as a DIN 6885 key on a 24 mm bore should be.
+
+**`Volumes: 2` is not a fault.** Every split-clamp part reports it. CGAL counts
+the unbounded outer volume alongside the solid, so a healthy single body reports
+two. Confirmed by walking the mesh: one connected component. Worth knowing before
+it sends you hunting for a stray fragment.
+
+## Tessellation is deliberate, not default
+
+`$fn = 64` everywhere cost minutes — the base's 192-hole M4 grid alone is 12 288
+facets of subtraction. Chord error is `r(1 - cos(180/n))`, so a 4.4 mm clearance
+hole at `$fn = 16` is off by 0.04 mm, under what the printer resolves. The
+facets are now spent only where a fit depends on them:
+
+| | | |
+|---|--:|---|
+| `hole_fn` | 16 | M3/M4 clearance |
+| `$fn` | 32 | general |
+| `fit_fn` | 64 | bearing pocket, shaft and sensor bores |
+| `root_fn` | 120 | gear root circle |
+
+`base` went from over two minutes to 26 s, with nothing given up that a 0.4 mm
+nozzle could reproduce.
