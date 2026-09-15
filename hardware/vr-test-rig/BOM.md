@@ -211,15 +211,41 @@ only candidates for the cam counterweight.
 instead of cutting will glaze the surface and stop progressing. Which is why the
 base is sized around the rod rather than the other way round.
 
-### Splitting it for printing — now the default
+### One piece or two — a 320 mm bed makes it a choice again
 
-The base is **300 × 240**, sized so a **300 mm rod is used uncut**. That is past
-a 300 mm bed for a one-piece print, so `base_a` and `base_b` split it at
-**x = −60** into **90 + 210 mm** pieces — the ¼ + ¾ split, both comfortable
-prints with room for a brim.
+The base is **300 × 240**, sized so a **300 mm rod is used uncut**.
 
-*(If a one-piece base is preferred, set `base_l = 280` and cut 20 mm off each rod.
-That is the trade: one seam, or cutting stainless twice.)*
+On a **320 mm bed that leaves 10 mm clear each side**, so the one-piece `base`
+becomes printable. Take it if it will run — a seam that does not exist needs no
+argument. **[CHECK] the printer's *usable* area first**: nominal bed size and
+printable area often differ by bed clips, a purge line, or a nozzle that cannot
+reach the far corner.
+
+`base_a` + `base_b` stay available and are not a downgrade: they split at
+**x = −60** into **90 + 210 mm**, the seam lands in the only empty span on the
+board where the flexible coupling already absorbs misalignment, and the spine
+rods run through both halves as the splice. If a 300 mm flat part lifts a corner
+— which is where warp bites on a big plate — that is the fallback, not a defeat.
+
+### Print the base LIGHT — the spine makes infill almost irrelevant
+
+A printed plate is a sandwich: solid skins carry the bending, sparse core carries
+shear. So infill matters less than volume fraction suggests even before the rods
+are added — and **once the spine is in, it barely matters at all**:
+
+| infill | plate alone | with spine | gain |
+|--:|--:|--:|--:|
+| **10 %** | 12.7 N·m² | **568** | 45× |
+| 20 % | 13.6 | 597 | 44× |
+| 40 % | 15.3 | 655 | 43× |
+| 100 % | 20.5 | 819 | 40× |
+
+**10 % infill keeps 69 % of what a solid plate gives** — and that 69 % is still
+**45× a bare plate at the same infill**. On a 300 × 240 part that is many hours
+and a few hundred grams saved for stiffness nobody will miss.
+
+This is the spine earning its keep twice: it was added to make the plate stiff,
+and the consequence is that the plate no longer has to be.
 
 **The seam location is the whole trick.** x = −60 is the only empty span on the
 board, between the motor and the first bearing, where the flexible coupling
