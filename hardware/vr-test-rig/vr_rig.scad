@@ -388,7 +388,8 @@ module sensor_mount() {
 /* ===========================================================================
    BASE — long enough for motor, two bearings, wheel, sensor
    =========================================================================== */
-base_l = 280;   // motor mount at -128 through the cam brg2 foot at +136
+base_l = 300;   // parts span -128..+136; sized to a 300 mm rod bought whole, so
+                // the spine needs no cutting. Print as base_a + base_b.
 /* 280 x 240, which prints whole on a 300 mm bed (or as base_a + base_b). The
    plate itself is a floppy sheet — the stiffness comes from the two spine rods
    in ribs underneath. Plywood remains a fine substitute; this module doubles as

@@ -84,7 +84,7 @@ after absolute position.
 | 1 | Shaft, cam | **12 mm h6 ground steel, 150 mm** |
 | 4 | Bearing | **6001-2RS (12 × 28 × 8)** — two shafts, two each |
 | 4 | Shaft collar | **12 mm** bore, clamp type, axial location |
-| 2 | **Steel rod, 8 mm × 280 mm** | **base spine** — plain mild steel, no precision needed |
+| 2 | **Rod, 8 mm × 300 mm, 304 stainless** | **base spine** — no precision needed; the base is sized to use it uncut |
 | 1 | Bolt, M8 × 25 | the cam trigger lobe, head inward |
 | 1 | Nut, M8 | + washer |
 | 1 | **Brass rod, 13 mm dia × 20 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
@@ -195,10 +195,31 @@ The rods sit at **y = ±58** — clear of the wheel slot (±36.6) and 9 mm from 
 nearest cam-block bolt, with the −58 rod running directly beneath the cam shaft.
 They also **bridge the wheel slot**, which is the plate's weakest section.
 
-### Splitting it for printing
+### 304 stainless is a good choice here, and not only on price
 
-280 × 240 fits a 300 bed, but it is a ~20 h print with real warp risk. `base_a`
-and `base_b` split it at **x = −60** into **80 + 200 mm** pieces — the ¼ + ¾ split.
+**Stiffness is unchanged for practical purposes.** 304's modulus is 193 GPa
+against mild steel's 200, so the spine gives **819 N·m² instead of 826** — still
+40× the bare plate. A 4 % difference on a bench rig is noise.
+
+**And 304 is austenitic, so it is non-magnetic.** That removes a question rather
+than answering one: a ferromagnetic rod running the length of the base, 58 mm off
+the shaft centreline, would at least invite asking whether it perturbs the VR
+magnetic circuits. It does not arise. Same property that made brass and lead the
+only candidates for the cam counterweight.
+
+**Cutting it is the part to avoid** — 304 work-hardens, so a hacksaw that rubs
+instead of cutting will glaze the surface and stop progressing. Which is why the
+base is sized around the rod rather than the other way round.
+
+### Splitting it for printing — now the default
+
+The base is **300 × 240**, sized so a **300 mm rod is used uncut**. That is past
+a 300 mm bed for a one-piece print, so `base_a` and `base_b` split it at
+**x = −60** into **90 + 210 mm** pieces — the ¼ + ¾ split, both comfortable
+prints with room for a brim.
+
+*(If a one-piece base is preferred, set `base_l = 280` and cut 20 mm off each rod.
+That is the trade: one seam, or cutting stainless twice.)*
 
 **The seam location is the whole trick.** x = −60 is the only empty span on the
 board, between the motor and the first bearing, where the flexible coupling
@@ -207,7 +228,8 @@ the crank bearings, would sit exactly where alignment matters.
 
 **And the spine rods span the seam**, so it needs no separate dowels — continuous
 steel through both halves is a far better splice than short pins at the joint.
-Epoxy the rods in and the two pieces become one board.
+Epoxy the rods in and the two pieces become one board. At 300 mm they run the
+full length with nothing to trim.
 
 *(A dowel through the plate itself was the original thought, but the plate is
 only 8 mm thick — an 8 mm rod does not fit inside it. The ribs are what create
