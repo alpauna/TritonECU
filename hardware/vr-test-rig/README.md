@@ -486,6 +486,13 @@ Note the quoting: `part` is a *string*, so the inner quotes have to survive the
 shell. `-D part=wheel_hub` without them passes an undefined variable and renders
 the assembly instead — silently, which is the annoying part.
 
+**The committed STLs churn on every render.** OpenSCAD 2021.01 is not
+byte-deterministic — rendering the same unchanged file twice produces different
+files. So a git diff on `stl/` means nothing, and "are these current?" cannot be
+answered by hash. **`vr_rig.scad` is the source of truth**; the STLs are a
+convenience so the parts can be printed without installing OpenSCAD. Re-run
+`render.sh` after any change and do not read anything into the diff.
+
 Print quantities: **4 × bearing_block** (two shafts), **2 × sensor_mount** (crank
 and cam), 1 each of the rest. **`base` is not printed** — it is a 320 × 240 board,
 and the module is its drilling template. See [BOM.md](BOM.md). `hub` is the superseded 25.4 mm plain-bore version, kept only
@@ -560,3 +567,41 @@ facets are now spent only where a fit depends on them:
 
 `base` went from over two minutes to 26 s, with nothing given up that a 0.4 mm
 nozzle could reproduce.
+
+
+---
+
+# Before the parts arrive
+
+Four things, none of which need a single bought component.
+
+## 1. Print it — this is the long pole
+
+Twelve pieces from eight files. Orientation matters more than usual on two of
+them (`wheel_hub` bore-axis vertical, gears teeth-flat) — see the table above.
+
+## 2. Order the rest of the BOM
+
+The wheel and both sensors are ordered. Everything in
+[BOM.md](BOM.md) under **Drive** and **Shafts, bearings, hardware** is not.
+
+## 3. Write the step generator
+
+RP2040 PIO, and it can be written and tested with a logic analyser before any of
+the rig exists. **The valuable part is not constant-speed stepping** — it is a
+programmed *cranking* profile, with the engine slowing against each compression
+stroke and surging after it. A rig that only spins smoothly never tests the
+regime where sync acquisition actually fails.
+
+## 4. Settle two things the drawings leave open
+
+**Wheel axial retention.** The hub locates the wheel and the key drives it, but
+**nothing holds it on** unless the wheel has bolt holes. `wheel_hub` carries 3 ×
+M4 on a 32 mm bolt circle for exactly this. Many 36-1 wheels come drilled to bolt
+to a damper; **[CHECK] on arrival**, and if it is undrilled, drill three — they
+sit at r = 16 mm against teeth at r = 75, so nothing structural is touched.
+
+**Cam lobe phase.** With the keyway as a datum the M8 lobe's angle can be *set*
+rather than discovered. Put it well away from the crank gap so the sync window is
+unambiguous, then **record the angle here** — it becomes a known constant the
+decoder can be tested against, exactly like the gap-to-TDC zero.
