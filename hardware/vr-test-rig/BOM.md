@@ -230,6 +230,29 @@ of error.
 so a GPIO high is an active pulse. Account for it in the PIO program or wire the
 active edge accordingly.
 
+#### Not the 4-channel bidirectional level shifter modules
+
+The common **BSS138 + 10 kΩ** boards (the NXP AN10441 I²C design) **cannot drive
+these inputs**, and the reason is structural rather than marginal:
+
+| | |
+|---|--:|
+| That module's HIGH state is driven by | a **10 kΩ pull-up**, nothing else |
+| So it can supply | **0.38 mA** |
+| The DM542 opto needs | **14 mA** |
+| | **37× short** |
+
+The rising edge is just as bad — an RC through 10 kΩ gives **0.5–1 µs** against
+the discrete FET's 11 ns, on a 15.6 µs step period.
+
+**And the BSS138 on the module cannot be repurposed**, tempting as it looks: in
+that circuit the gate is tied to the LV *supply*, not to a GPIO. It is a passive
+bidirectional translator, not a switch you control.
+
+Those boards are correct for what they are for — I²C, UART or SPI to a 5 V device,
+where both ends are open-drain and the currents are microamps. They are simply
+not current drivers, and an optocoupler is a current load.
+
 *(A `74HCT125` or `74HCT541` at 5 V does the same job as one chip instead of nine
 discretes — its 2.0 V input threshold accepts 3.3 V, and it sources into a
 common-cathode wiring. Either is fine. The FETs win on availability and on
