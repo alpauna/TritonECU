@@ -839,19 +839,30 @@ off.
 block standing proud of the back. Both tails lie **flush, in the flange's own
 plane**.
 
-**The tails leave in different directions.** The cam's runs **straight out
-opposite the ear, on the barrel's centreline**. The crank's is **one straight leg
-at 90° to the ear** — the *"L" is the ear and that leg together*, not a leg that
-bends again. An intermediate version added a second leg off the first, which was
-a misreading, and had it pointing 180° the wrong way besides.
+**The two connectors are nothing alike**, which took a couple of passes:
+
+- **Crank** — **one straight leg at 90° to the ear**, lying flush in the flange's
+  plane. The *"L" is the ear and that leg together*, not a leg that bends again.
+  An intermediate version added a second leg off the first and pointed it 180°
+  the wrong way.
+- **Cam** — **no side tail at all.** Its connector is a **14 mm socket on the
+  flange's back face, coaxial with the barrel and pointing 180° away from it**.
 
 | | CKP | CMP |
 |---|--:|--:|
-| Envelope | 45.7 × 42.0 × 63.0 | 68.9 × 19.0 × 44.1 |
+| Envelope | 45.7 × 42.0 × 63.0 | 36.4 × 19.0 × 58.1 |
+| Z span | −6 … 57 | **−20 … 38.1** |
 
-On the crank model the ear runs out to +32.5 in X and the tail to +32.5 in Y, so
-the L is square and symmetric about the barrel — which is a useful thing to check
-by eye against the real one.
+On the crank the ear reaches +32.5 in X and the tail +32.5 in Y, so the L is
+square and symmetric about the barrel — an easy thing to check by eye.
+
+### The cam socket points away from the mount, which is lucky
+
+It protrudes 14 mm behind the flange face, and the flange seats on the mount's
+**outboard** face. Since the socket runs opposite the barrel, it heads *away* from
+the plate into free air — so **no relief is needed**. Had it pointed the other way
+it would have fouled the mount and wanted a through-hole, which is exactly the
+sort of thing a check model is for.
 
 Print flange-down, no supports needed. The barrel's O-ring groove and tapered tip
 are cosmetic, included only so the shape reads correctly in the hand.

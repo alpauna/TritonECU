@@ -445,10 +445,14 @@ sensor_back_cmp = 3.0;
    has anything projecting behind it.
    The crank's is a SINGLE straight leg leaving at 90 deg to the ear: the "L" is
    the ear and that leg together, not a leg that itself bends.
-   The cam's runs straight out opposite the ear, on the barrel's centreline.
-   Lengths are eyeballed; the shape is what matters for recognising it. */
+   The cam has NO side tail. Its connector is a socket on the flange's back face,
+   coaxial with the barrel and pointing 180 deg away from it.
+   Leg and socket lengths are measured; the socket's cross-section is eyeballed. */
 sensor_tail_w   = 13.0;  // GUESS
 sensor_tail_l1  = 26.0;  // GUESS
+sensor_socket_l = 14.0;  // cam socket, out the back of the flange
+sensor_socket_w = 18.0;  // GUESS
+sensor_socket_d = 12.0;  // GUESS
 
 module vr_sensor(barrel_len, flange_reach, bolt_off, back_ext, ell) {
     tip_r = sensor_flange_wide/2;
@@ -475,15 +479,19 @@ module vr_sensor(barrel_len, flange_reach, bolt_off, back_ext, ell) {
                         circle(d = sensor_tail_w, $fn = 32);
                         translate([0, sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
                     }
-                } else {
-                    /* Cam: straight out opposite the ear, on the barrel centreline. */
-                    hull() {
-                        circle(d = sensor_tail_w, $fn = 32);
-                        translate([-(sensor_dia/2 + back_ext + sensor_tail_l1), 0])
-                            circle(d = sensor_tail_w, $fn = 32);
-                    }
                 }
+                /* Cam has no side tail at all — its connector is the socket
+                   below, coaxial with the barrel. */
             }
+            /* Cam: connector socket on the flange's back face, pointing 180 deg
+               from the barrel. */
+            if (!ell)
+                translate([0, 0, -sensor_flange_t - sensor_socket_l])
+                    linear_extrude(sensor_socket_l)
+                        hull() for (sx = [-1,1], sy = [-1,1])
+                            translate([sx*(sensor_socket_w/2 - 2.5),
+                                       sy*(sensor_socket_d/2 - 2.5)])
+                                circle(r = 2.5, $fn = 24);
         }
         translate([bolt_off, 0, -sensor_flange_t - 1])
             cylinder(d = sensor_flange_bolt, h = sensor_flange_t + 2, $fn = 32);
