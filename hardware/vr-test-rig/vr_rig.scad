@@ -65,7 +65,10 @@ sensor_flange_bolt =  8.0;  // M8 through the flange eyelet
    past it on both — so the pad is sized from the reach, not from the bolt. */
 sensor_flange_wide = 19.0;
 sensor_flange_ext  = 25.4 + 14.3/2;   // 32.55 — barrel axis -> ear tip, the larger
-sensor_barrel_len  = 30.0;  // MEASURE: flange face -> sensing tip
+/* Flange face -> sensing tip. These are the figures first recorded as "body
+   length"; they are in fact the barrel, which is what positions the mount. */
+sensor_barrel_ckp  = 57.0;
+sensor_barrel_cmp  = 38.1;
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
 /* --- cam channel (CMP) — 2:1 gear driven, see README ----------------------- */
@@ -110,7 +113,14 @@ clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
 
-plate_w         = 280.0;  /* set by the crank sensor station — see y_ck */
+/* The plate is ASYMMETRIC in Y, and has to be. A 57 mm crank barrel puts that
+   sensor's outboard edge near +152, which a symmetric plate would answer with
+   334 mm — past a 320 bed. The -Y side only needs 105 (the cam gear reaches
+   -102), so shifting the plate rather than growing it fits comfortably. */
+plate_y_lo      = -105.0;
+plate_y_hi      =  157.0;
+plate_w         = plate_y_hi - plate_y_lo;
+plate_yc        = (plate_y_hi + plate_y_lo)/2;
 
 /* --- spine rods: the base's stiffness comes from these, not from the plate ---
    Two full-length steel rods in ribs under the plate. Offset from the neutral
@@ -184,9 +194,13 @@ x_cbrg2  = 110;   // upright 92..128
    The slotted feet then absorb however far sensor_barrel_len turns out to be
    from the guess above. */
 air_gap  = 1.0;
-sm_plate = 10;                       // sensor_mount plate thickness
-y_ck     = wheel_od/2 + air_gap + sensor_barrel_len - sm_plate/2;
-y_cmp    = cam_y + cam_target_od/2 + air_gap + sensor_barrel_len - sm_plate/2;
+/* Boss length, not plate thickness. At 10 mm a 57 mm barrel would hang 47 mm
+   into free air off a single thin plate; on the engine that barrel sits in a
+   deep bore. 30 mm supports over half of it and costs only plastic — and it
+   pulls the mount 10 mm inboard, which the plate width is grateful for. */
+sm_plate = 30;
+y_ck     = wheel_od/2 + air_gap + sensor_barrel_ckp - sm_plate/2;
+y_cmp    = cam_y + cam_target_od/2 + air_gap + sensor_barrel_cmp - sm_plate/2;
 
 /* How far the wheel dips below the base top, and how wide the slot must be to
    let it. The old slot was cut wheel_od + 10 = 160 wide on a plate 100 wide --
@@ -463,9 +477,9 @@ module base() {
     sb = sensor_dia + 2*wall + 4;
     difference() {
         union() {
-            cube([base_l, plate_w, base_t], center = true);
+            translate([0, plate_yc, 0]) cube([base_l, plate_w, base_t], center = true);
             for (x = [-1,1], y = [-1,1])
-                translate([x*(base_l/2 - 14), y*(plate_w/2 - 14), -base_t/2 - foot_h])
+                translate([x*(base_l/2 - 14), plate_yc + y*(plate_w/2 - 14), -base_t/2 - foot_h])
                     cylinder(d = 22, h = foot_h + 1);
             for (y = [-1,1])                                   // spine ribs
                 translate([0, y*rod_y, -base_t/2 - rib_h/2])
@@ -530,5 +544,6 @@ else {
     color("tan")         translate([x_camtgt, cam_y, base_t + shaft_h]) rotate([0,-90,0]) cam_target();
     color("red")         translate([x_wheel,  y_ck,  base_t]) sensor_mount();
     color("red")         translate([x_camtgt, y_cmp, base_t]) rotate([0,0,180]) sensor_mount();
-    echo(str("plate ", base_l, " x ", plate_w, " mm — prints whole on a 300 bed, or as base_a + base_b"));
+    echo(str("plate ", base_l, " x ", plate_w, " mm, Y ", plate_y_lo, "..", plate_y_hi,
+         " — needs a bed of at least ", max(base_l, plate_w), " mm"));
 }

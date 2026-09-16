@@ -757,11 +757,29 @@ sensor were resting on its *barrel*, a 32.55 mm tip would read **1.563″**. The
 different zero, not a different flange. Worth stating because it looks like a
 9 mm error until you ask what the tape was measuring from.
 
-**Still wanted: flange face → sensing tip.** It is the one that sets the sensor
-station and through it the plate width — at a 20 mm barrel the plate could be
-259 mm; at 40 mm it needs 299. It currently assumes **30 mm**, giving 280. The
-bolt diameter is assumed M6 clearance and matters far less, because the hole is
-slotted anyway.
+### Flange face → sensing tip: 57 mm and 38.1 mm
+
+Those were recorded first as "body length". They are the **barrel**, which is what
+positions the mount — and 57 mm is nearly twice the 30 that was assumed.
+
+**Two things follow, and neither is cosmetic.**
+
+**The boss went 10 → 30 mm.** At 10 mm a 57 mm barrel would hang **47 mm into
+free air** off a single thin plate. On the engine that barrel sits in a deep bore;
+on a rig it has nothing. A 30 mm boss supports over half of it, costs only
+plastic, and pulls the mount 10 mm inboard — which the plate width is grateful
+for.
+
+**The plate had to become asymmetric.** A 57 mm barrel puts the crank sensor's
+outboard edge near **+152 mm**. A symmetric plate answers that with **334 mm**,
+past a 320 bed. But the −Y side only needs 105 (the cam gear reaches −102), so:
+
+```
+        Y from -105 to +157   =  262 mm
+```
+
+**Shifting the plate rather than growing it** keeps the whole rig on a 320 bed —
+300 × 262. Symmetry was costing 72 mm for nothing.
 
 ## 5. Settle two things the drawings leave open
 
