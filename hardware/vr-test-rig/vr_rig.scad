@@ -21,11 +21,19 @@ root_fn  = 120;  // gear root circle
 /* ---------------------------------------------------------------------------
    MEASURE THESE THREE before printing — everything else follows from them
    --------------------------------------------------------------------------- */
-wheel_od        = 150.0;  // MEASURE: trigger wheel outside diameter
+/* MEASURE ALL FOUR on the wheel itself. The values below come from measuring
+   the product photo (Dorman 917-060), which fixes their RATIOS but not their
+   absolute size — see README. The photo is square-on, so the ratios are sound:
+       bore / OD        = 0.253
+       keyway width     = 15 % of bore diameter
+       keyway depth     = 19 % of bore radius
+   "150 mm OD with a 24 mm bore" is ratio 0.160 and cannot both be true. */
+wheel_od        =  95.0;  // MEASURE — 95 is what a 24 mm bore implies
 wheel_thk       =   5.0;  // MEASURE: wheel thickness
-wheel_bore      =  24.0;  // wheel centre bore — 24 mm, keyed
-key_w           =   8.0;  // MEASURE: keyway width  (DIN 6885 for 24 mm is 8 mm)
-key_d           =   3.3;  // MEASURE: keyway depth into the bore
+wheel_bore      =  24.0;  // MEASURE: centre bore
+key_w           =   3.6;  // MEASURE: keyway width — NOT the DIN 8 mm for a
+                          // 24 mm shaft. This wheel's slot is far narrower.
+key_d           =   2.3;  // MEASURE: keyway depth out from the bore
 key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
                           // 0 on this wheel: the keyway is inline with the gap.
                           // The index flute on the flange OD is cut at this angle,
@@ -143,6 +151,12 @@ y_cmp    = cam_y + cam_target_od/2 + sensor_dia/2 + 2*wall + 6;
 wheel_dip = wheel_od/2 - shaft_h;
 slot_y    = (shaft_h + base_t < wheel_od/2)
             ? 2*sqrt(pow(wheel_od/2, 2) - pow(shaft_h + base_t, 2)) + 10 : 0;
+/* Cross-check against the photo, so a typo in the measured numbers is caught
+   before anything is printed rather than after. */
+echo(str("wheel bore/OD = ", wheel_bore/wheel_od,
+         (abs(wheel_bore/wheel_od - 0.253) > 0.02)
+           ? "  <-- DISAGREES with the photo's 0.253, check the measurements"
+           : "  (photo: 0.253, consistent)"));
 echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
          " mm, ", foot_h + base_t - wheel_dip, " mm to ground; slot ", slot_y, " mm"));
 

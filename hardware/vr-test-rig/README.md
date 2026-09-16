@@ -595,13 +595,71 @@ programmed *cranking* profile, with the engine slowing against each compression
 stroke and surging after it. A rig that only spins smoothly never tests the
 regime where sync acquisition actually fails.
 
-## 4. Settle two things the drawings leave open
+## 4. Measure the wheel BEFORE printing the base or brackets
 
-**Wheel axial retention.** The hub locates the wheel and the key drives it, but
-**nothing holds it on** unless the wheel has bolt holes. `wheel_hub` carries 3 ×
-M4 on a 32 mm bolt circle for exactly this. Many 36-1 wheels come drilled to bolt
-to a damper; **[CHECK] on arrival**, and if it is undrilled, drill three — they
-sit at r = 16 mm against teeth at r = 75, so nothing structural is touched.
+The product photo (Dorman **917-060**, square-on so the ratios are trustworthy)
+was measured, and it settles two things and unsettles a third.
+
+### Confirmed: it is genuinely 36-1, and the keyway is on the gap
+
+| | |
+|---|---|
+| Tooth pitch | **10.00°** → 36 positions |
+| One wide space | **2.00× pitch** — the missing tooth |
+| Missing tooth at | 102.7° |
+| **Keyway at** | **105.0°** |
+| **Apart** | **2.3°** — inside the measurement's own precision |
+
+**So the datum holds.** The keyway really is on the missing tooth, which is what
+makes `CKP_GAP_TO_TDC_DEG = 0` and the whole absolute-position method work.
+
+It is also **already drilled** — four holes are visible. Wheel retention is
+answered; the hub's bolt circle just has to match whatever they actually are.
+
+### Corrected: the keyway is NOT a DIN 8 mm key
+
+The slot measures **15 % of the bore diameter** wide and 19 % of the bore radius
+deep. At a 24 mm bore that is **≈3.6 × 2.3 mm** — less than half the DIN 6885
+8 × 3.3 this file previously assumed for a 24 mm shaft.
+
+**A printed 8 mm key would simply not have entered the slot.** `key_w` and
+`key_d` now carry the photo-derived figures, still marked MEASURE.
+
+### Unsettled: the diameter
+
+**bore / OD = 0.253**, measured square-on. "150 mm OD with a 24 mm bore" is
+**0.160** — those cannot both be true:
+
+| if | then |
+|---|---|
+| bore is 24 mm | **OD ≈ 95 mm** |
+| OD is 150 mm | **bore ≈ 38 mm** |
+
+`wheel_od` is set to 95 as the value a 24 mm bore implies, and the SCAD now
+echoes the ratio and complains if the measured numbers disagree with the photo —
+so a typo is caught before a print, not after.
+
+### What that means for print order
+
+`wheel_od` cascades: it sets the base slot, the crank sensor station, and the
+shaft height that every upright and mount is cut to. At 95 mm the wheel clears
+the base entirely and **the slot vanishes to zero** — which also means
+`shaft_h = 60` is taller than needed, and a shorter upright is a stiffer one.
+
+| safe to print now | wait for the wheel |
+|---|---|
+| `crank_gear`, `cam_gear` | `base` / `base_a` / `base_b` — slot |
+| `cam_target` | `wheel_hub` — bore and keyway |
+| | `bearing_block`, `sensor_mount`, `motor_mount` — all cut to `shaft_h` |
+
+Print the gears and the cam target while the wheel is in transit. They depend on
+nothing that is still in doubt.
+
+## 5. Settle two things the drawings leave open
+
+**Wheel axial retention — answered.** The photo shows the wheel is **already
+drilled**, four holes. The hub's bolt circle needs matching to them (count,
+diameter and radius), which is a parameter, not a redesign.
 
 **Cam lobe phase.** With the keyway as a datum the M8 lobe's angle can be *set*
 rather than discovered. Put it well away from the crank gap so the sync window is
