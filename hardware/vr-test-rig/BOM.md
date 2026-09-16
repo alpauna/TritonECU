@@ -27,7 +27,8 @@ more than usual here.
 | 1 | **PSU** | **36 V** — 360 W brick in hand (Aclorol 36 V 10 A). 24 V is the marginal choice, see below | 20 |
 | 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
 | 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
-| 1 | **Step generator** | Raspberry Pi Pico (RP2040) | 4 |
+| 1 | **Step generator** | Raspberry Pi Pico (RP2040) — **3.3 V logic, needs the buffer below** | 4 |
+| 1 | **Level buffer** | **74HCT125** or 74HCT541, run at 5 V — see below | 1 |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
 ### Verified against the 17HS19-2004S1 drawing
@@ -172,6 +173,58 @@ figure is a tenth of a degree, not a hundredth. Still comfortably better than th
 free: the missing tooth passes once per revolution, so if the decoder's gap
 detection and the commanded step count ever disagree, steps were lost. Wire that
 comparison in from the start rather than trusting the count.
+
+### The Pico is 3.3 V and the DM542 wants 5 V — buffer it
+
+The driver's terminals are marked **PUL+ / DIR+ / ENA+ (5V–24V)**. Those inputs
+are **optoisolated**, with an internal series resistor sized for 5 V:
+
+| drive | opto current |
+|---|--:|
+| 5 V (design point) | **14 mA** ✓ |
+| 3.3 V direct from the Pico | **7.8 mA** — marginal |
+
+It would probably *work*. That is the problem — **marginal opto drive degrades
+edge timing**, and on this rig the step edge *is* the angular datum. An opto run
+at half its design current turns on slowly and its delay varies with temperature,
+which converts directly into position error at exactly the moment the rig is
+supposed to be the trustworthy reference.
+
+**Use a `74HCT125` (quad buffer) or `74HCT541` at 5 V.** The HCT family's input
+threshold is 2.0 V, so a 3.3 V GPIO drives it reliably, and its 5 V output drives
+the opto at full current. This is the same reason the ECU uses a 74HCT541 on the
+ignition outputs.
+
+**Wire common-cathode:** `PUL− / DIR− / ENA−` to ground, and drive `PUL+ / DIR+ /
+ENA+` from the buffer. The Pico's `VBUS` supplies the 5 V.
+
+*(Do not wire common-anode with 5 V on the `+` terminals and the Pico sinking on
+the `−` side. That puts 5 V through the opto into a 3.3 V GPIO, and back-feeds the
+Pico whenever it is unpowered.)*
+
+### Microstepping is capped by pulse rate, not by resolution
+
+The driver takes **pulses/rev** directly rather than a multiplier, and at
+**1200 rpm = 20 rev/s** the input frequency is simply `20 × pulses/rev`:
+
+| pulse/rev | at 1200 rpm | resolution | |
+|--:|--:|--:|---|
+| 1600 | 32 kHz | 0.225° | |
+| **3200** | **64 kHz** | **0.1125°** | **the sweet spot** |
+| 6400 | 128 kHz | 0.056° | |
+| 8000 | 160 kHz | 0.045° | near the limit |
+| 12800 | 256 kHz | 0.028° | **exceeds ~200 kHz** |
+| 25600 | 512 kHz | 0.014° | exceeds |
+
+**[CHECK] the driver's maximum input frequency** — 200 kHz is typical for this
+class, and at 20 rev/s that caps pulses/rev at **10 000**.
+
+Chasing finer microstepping past 3200 buys nothing anyway: the motor's *inherent*
+accuracy is ±5 % of a full step, **±0.09°**, so 0.1125° already sits at the point
+where resolution stops being the limit.
+
+**Set SW4 off** (half current at standstill) so the motor is not heating at full
+current between runs.
 
 ### The Pico is not a placeholder
 
