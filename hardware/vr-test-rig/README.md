@@ -732,11 +732,30 @@ pad had to be sized from the reach rather than inferred from the bolt:
 | CKP | 21.15 | 32.55 | 11.4 mm |
 | CMP | 19.85 | 26.25 | 6.4 mm |
 
-**[CHECK] the CMP figures against the part.** A 19 mm wide rounded tip implies a
-9.5 mm radius, which would put its centre 16.75 mm from the barrel axis — but the
-bolt measures 19.85, *outboard* of that, leaving only ~2.4 mm of material beyond
-an M8. Possible with a steel eyelet, but it is the one number of the set that
-does not sit comfortably with the others.
+### The crank figures cross-check; the cam's still do not
+
+A later measurement gave **6 mm from the bolt hole's outer edge to the flange's
+outer radius**. That is an independent route to the same number, and on the crank
+sensor it lands:
+
+| | bolt centre | tip via the 6 mm rule | tip as stated | differ |
+|---|--:|--:|--:|--:|
+| **CKP** | 21.15 | 31.15 | 32.55 | **1.4 mm** |
+| CMP | 19.85 | 29.85 | 26.25 | **3.6 mm** |
+
+So the crank ear is confirmed from two directions and the pad (sized to 32.55)
+covers it. **The cam's numbers still disagree with themselves**, in the same
+direction as the tip-radius check above — its stated reach is shorter than its own
+bolt position implies. Worth one more look, though it changes nothing: the pad is
+sized to the larger ear and the bolt slot spans both.
+
+### A tape reading with a different datum is not a contradiction
+
+The flange top measured **1.875″** against a tape standing on the bench. If the
+sensor were resting on its *barrel*, a 32.55 mm tip would read **1.563″**. The
+7.9 mm difference is the connector stalk holding it up off the table — a
+different zero, not a different flange. Worth stating because it looks like a
+9 mm error until you ask what the tape was measuring from.
 
 **Still wanted: flange face → sensing tip.** It is the one that sets the sensor
 station and through it the plate width — at a 20 mm barrel the plate could be
