@@ -51,6 +51,35 @@ is why the driver is a DM542 (50 V capable) rather than a 2 A stepstick.
 Low winding inductance matters for the same reason. **If substituting a motor,
 choose on inductance, not holding torque.**
 
+### Considered and rejected: NEMA 23, 2.4 N·m, 4.0 A
+
+Bigger is not better here, because **torque is not the binding axis**. The rig
+needs 82 mN·m; the NEMA 17 already supplies **7×** that. A 2.4 N·m NEMA 23 supplies
+**29×** — more of something already in surplus.
+
+**The figure of merit is `I × L`, not torque.** To reach setpoint inside a 250 µs
+step at 36 V, a motor needs `I × L ≤ 9.0 mA·H`:
+
+| | I × L | rise time |
+|---|--:|--:|
+| **17HS19** (2.0 A, 2.8 mH) | 5.6 | **156 µs** ✓ |
+| NEMA 23 at 4.0 A | needs **L ≤ 2.25 mH** | — |
+
+A 2.4 N·m NEMA 23 typically runs **2.5–3.8 mH**, so it is marginal at best and
+more likely too slow — **worse at the speed the rig cares about**, in exchange for
+torque it does not need. Doubling the current doubles the rise time for the same
+inductance, and bigger frames rarely compensate enough.
+
+Three practical costs on top:
+
+- **The coupling is wrong.** 8 mm shaft against the 5 → 12 mm coupling ordered.
+- **The mount is a redesign** — 57.15 mm frame, 47.14 mm M5 bolt circle, 38.1 mm
+  boss, against 42.3 / 31 / 22.
+- **The 82 mm body overhangs the base by 31 mm.**
+
+**If a NEMA 23 is wanted anyway, ask the vendor for inductance** and check
+`I × L ≤ 9.0 mA·H` before anything else. That single number decides it.
+
 ### A 360 W supply is fine — but fuse it
 
 The stepper draws about **2.2 A worst case** (two phases at 2 A into ~1.4 Ω is
