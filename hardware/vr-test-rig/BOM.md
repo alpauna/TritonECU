@@ -24,7 +24,9 @@ more than usual here.
 |--:|---|---|--:|
 | 1 | **Stepper, NEMA 17 48 mm** | `17HS19-2004S1` — 2.0 A/phase, 0.59 N·m, **2.8 mH**, 5 mm shaft | 15 |
 | 1 | **Driver** | `DM542` / `DM542T` — 20–50 V, to 4.2 A, step/dir, selectable microstep | 20 |
-| 1 | **PSU** | **36 V** 3 A (100 W) — see below, 24 V is the marginal choice | 20 |
+| 1 | **PSU** | **36 V** — 360 W brick in hand (Aclorol 36 V 10 A). 24 V is the marginal choice, see below | 20 |
+| 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
+| 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
 | 1 | **Step generator** | Raspberry Pi Pico (RP2040) | 4 |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
@@ -48,6 +50,49 @@ is why the driver is a DM542 (50 V capable) rather than a 2 A stepstick.
 
 Low winding inductance matters for the same reason. **If substituting a motor,
 choose on inductance, not holding torque.**
+
+### A 360 W supply is fine — but fuse it
+
+The stepper draws about **2.2 A worst case** (two phases at 2 A into ~1.4 Ω is
+11 W at standstill; call it 60–80 W with driver losses at speed). A 10 A supply is
+therefore roughly **4× the load**, which is harmless in itself — a supply delivers
+what is drawn, not what it is rated for.
+
+**The risk is what it delivers into a fault.** 36 V × 10 A is **360 W** into a
+pinched wire or a failed driver, on a bench rig made largely of printed plastic.
+Nothing in the load needs more than ~2.2 A, so **a 4 A slow-blow fuse in the
+supply lead** protects the wiring at 1.8× the real draw. Slow-blow because the
+driver's input capacitance draws an inrush spike at power-on.
+
+### Ramp the decelerations — capacitance cannot fix a hard stop
+
+A decelerating stepper pushes energy back at the supply, and **a switching supply
+cannot sink current**, so it lands in whatever capacitance is on the bus. The
+wheel carries **15.4 J at 1200 rpm**, and the arithmetic is unkind:
+
+| bulk cap | bus voltage if 20 % of 15 J returns |
+|--:|--:|
+| 470 µF | 120 V |
+| 1000 µF | 86 V |
+| 2200 µF | 64 V |
+
+Against the **DM542's 50 V maximum**, none of those work. **Capacitance is not the
+answer — the ramp is:**
+
+| deceleration | power returned |
+|--:|--:|
+| 0.2 s | 77 W |
+| 1 s | 15 W |
+| **3 s** | **5 W** |
+
+At a 3-second ramp only ~5 W comes back, which the driver's own losses absorb
+without the bus noticing. **The rig has no reason to stop quickly**, so this costs
+nothing — but it is a property of the *step generator firmware*, not of the
+hardware, and it has to be written in deliberately.
+
+The 1000 µF is still worth fitting as bulk near the driver's V+ — standard
+practice for stepper supplies, and it handles the residue. It is insurance, not
+the mitigation.
 
 ### Why a stepper at all, and the one failure it hides
 

@@ -588,7 +588,9 @@ The wheel and both sensors are ordered. Everything in
 ## 3. Write the step generator
 
 RP2040 PIO, and it can be written and tested with a logic analyser before any of
-the rig exists. **The valuable part is not constant-speed stepping** — it is a
+the rig exists. **Deceleration ramps are a firmware requirement, not a nicety** —
+see [BOM.md](BOM.md): the wheel's 15 J has nowhere to go on a switching supply,
+and no practical bulk capacitor absorbs a hard stop. **The valuable part is not constant-speed stepping** — it is a
 programmed *cranking* profile, with the engine slowing against each compression
 stroke and surging after it. A rig that only spins smoothly never tests the
 regime where sync acquisition actually fails.
