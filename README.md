@@ -39,7 +39,8 @@ lives on `main`.
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
 | **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
-| **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md) |
+| **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md). Parts ordered bar the stepper |
+| **2N7002 driver board** | ✅ | 3.3 V → DM542 opto inputs, reviewed clean from Gerbers — [`hardware/2N7002 Driver/`](hardware/2N7002%20Driver/) |
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 | **Enclosure** | ◐ | **cabin, behind the glovebox**, connector face through the firewall — vent on the cabin side, [`enclosure.md`](docs/enclosure.md) |
@@ -208,6 +209,12 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   AD7606BSTZ already on the bench** for development. *(The ADS9324 is not in this
   set — 16 channels, VQFN, and a 1.8 V rail this board does not have.)*
   [`docs/adc-front-end.md`](docs/adc-front-end.md)
+- **A "level shifter" is not a current driver.** The DM542's step inputs are
+  optocouplers wanting **14 mA**; a BSS138 + 10 kΩ bidirectional module supplies
+  **0.38 mA**, and an IRF520 module is not logic-level at all — its gate threshold
+  spans 2–4 V against a 3.3 V drive, so it works warm and fails cold. The answer
+  is a logic-level FET *sinking* the input, with a gate pulldown so nothing moves
+  while the Pico boots. [`hardware/2N7002 Driver/`](hardware/2N7002%20Driver/)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.

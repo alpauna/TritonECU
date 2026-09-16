@@ -28,9 +28,7 @@ more than usual here.
 | 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
 | 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
 | 1 | **Step generator** | Raspberry Pi Pico (RP2040) — **3.3 V logic, needs the buffer below** | 4 |
-| 3 | **N-FET, 2N7002 or BSS138** | sinks the DM542 opto inputs — see below | 1 |
-| 3 | Resistor, 10 kΩ | **gate pulldowns — not optional** | — |
-| 3 | Resistor, 220 Ω | gate series | — |
+| 3 | **2N7002 driver board** | purpose-built, [`hardware/2N7002 Driver/`](../2N7002%20Driver/) — 10.9 × 17.1 mm, M2 mount | 2 |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
 ### Verified against the 17HS19-2004S1 drawing
@@ -192,12 +190,42 @@ at half its design current turns on slowly and its delay varies with temperature
 which converts directly into position error at exactly the moment the rig is
 supposed to be the trustworthy reference.
 
-#### Small N-FETs sinking the inputs — the standard way
+#### The 2N7002 driver board — built for this
 
-Tie **`PUL+ / DIR+ / ENA+` to +5 V** (from the Pico's `VBUS`) and put a
-logic-level N-FET on each **`−`** terminal, source to ground, gate from a GPIO.
-This is how CNC breakout boards have always driven these inputs, and it is
-comfortable in every direction:
+[`hardware/2N7002 Driver/`](../2N7002%20Driver/) is a single-channel module doing
+exactly this job: **10.9 × 17.1 mm**, M2 mounting holes, two 2.54 mm headers.
+**Three are needed** — `PUL`, `DIR`, `ENA` — though `ENA` may be left off, since
+the DM542 enables when that input is open.
+
+Verified against its Gerbers rather than its schematic:
+
+```
+IN    -> H1_2, R1_1              220R into the gate
+$1N1  -> R1_2, R2_2, Q1_1        gate node, with the 10k pulldown
+GND   -> H1_1, H2_1, R2_1, Q1_2  source grounded
+LOAD  -> H2_2, Q1_3              drain, open
+```
+
+2N7002 in SOT-23 is pin 1 = G, 2 = S, 3 = D, so that is correct throughout, and
+**the 10 kΩ gate pulldown is present** — which is the part that matters, since it
+holds the gate defined while the Pico's GPIOs are high-impedance during boot.
+
+**Wiring:** `H1` takes GND and the GPIO from the Pico; `H2`'s `LOAD` pin goes to
+the DM542's **`PUL−`**; the DM542's **`PUL+` goes to +5 V** (the Pico's `VBUS`)
+separately. `H2`'s GND pin is not used for that connection.
+
+**Keep `PUL+` at 5 V.** The driver accepts 5–24 V, but its internal resistor is
+sized for 5 V — at 24 V it would draw 84 mA and need external series resistance.
+Nothing here wants more than 5 V.
+
+Margins are comfortable: **60 V and 115 mA** on the 2N7002 against **5 V and
+14 mA**.
+
+#### The topology, and why it works
+
+Tie **`PUL+ / DIR+ / ENA+` to +5 V** and put a logic-level N-FET on each **`−`**
+terminal, source to ground, gate from a GPIO. This is how CNC breakout boards have
+always driven these inputs, and it is comfortable in every direction:
 
 ```
   +5V ──┬── PUL+   DIR+   ENA+
