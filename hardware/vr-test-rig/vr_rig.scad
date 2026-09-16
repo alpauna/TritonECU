@@ -41,7 +41,12 @@ key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
                           // 0 on this wheel: the keyway is inline with the gap.
                           // The index flute on the flange OD is cut at this angle,
                           // so the flute always points at the gap.
-sensor_dia      =  19.0;  // MEASURE: VR sensor barrel diameter (Ford CKP)
+/* Both sensors share a 14.3 mm barrel; only their lengths differ (CKP 57 mm,
+   CMP 38.1 mm). The mount is a through-bore clamp, so ONE part serves both —
+   the sensor simply sits further in or out. */
+sensor_dia      =  14.3;  // barrel diameter, both sensors
+sensor_ckp_len  =  57.0;  // body length, crank
+sensor_cmp_len  =  38.1;  // body length, cam
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
 /* --- cam channel (CMP) — 2:1 gear driven, see README ----------------------- */

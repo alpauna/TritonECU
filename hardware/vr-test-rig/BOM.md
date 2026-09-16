@@ -404,7 +404,7 @@ not a redesign.
 | 1 | `crank_gear` | **teeth flat on the bed** |
 | 1 | `cam_gear` | **teeth flat on the bed** |
 | 1 | `cam_target` | bore axis vertical |
-| 2 | `sensor_mount` | upright — crank and cam |
+| 2 | `sensor_mount` | upright — **one part serves both sensors** |
 
 ~500 g **PETG or ABS, not PLA.** Under-hood parts are not the reason; the reason
 is that a PLA clamp creeps under load and lets 694 g of steel walk off a shaft.
