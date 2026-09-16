@@ -28,12 +28,16 @@ root_fn  = 120;  // gear root circle
        keyway width     = 15 % of bore diameter
        keyway depth     = 19 % of bore radius
    "150 mm OD with a 24 mm bore" is ratio 0.160 and cannot both be true. */
-wheel_od        =  95.0;  // MEASURE — 95 is what a 24 mm bore implies
+/* NEITHER of these has been measured on the part — both started as guesses.
+   What IS measured is the ratio, so any self-consistent pairing works and one
+   caliper reading fixes the rest. 150/38 is the pairing chosen because this
+   wheel mounts on a crankshaft nose: 24 mm is far too small for a Ford modular
+   snout, 38 mm is an ordinary one, and 38 / 0.253 = 150. */
+wheel_od        = 150.0;  // MEASURE: the one to reach for first — it cascades
 wheel_thk       =   5.0;  // MEASURE: wheel thickness
-wheel_bore      =  24.0;  // MEASURE: centre bore
-key_w           =   3.6;  // MEASURE: keyway width — NOT the DIN 8 mm for a
-                          // 24 mm shaft. This wheel's slot is far narrower.
-key_d           =   2.3;  // MEASURE: keyway depth out from the bore
+wheel_bore      =  38.0;  // MEASURE: centre bore
+key_w           =   5.7;  // MEASURE: keyway width = 15 % of bore diameter
+key_d           =   3.6;  // MEASURE: keyway depth  = 19 % of bore radius
 key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
                           // 0 on this wheel: the keyway is inline with the gap.
                           // The index flute on the flange OD is cut at this angle,

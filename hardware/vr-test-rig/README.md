@@ -625,26 +625,43 @@ deep. At a 24 mm bore that is **≈3.6 × 2.3 mm** — less than half the DIN 68
 **A printed 8 mm key would simply not have entered the slot.** `key_w` and
 `key_d` now carry the photo-derived figures, still marked MEASURE.
 
-### Unsettled: the diameter
+### Unsettled: the absolute size — neither number was ever measured
 
-**bore / OD = 0.253**, measured square-on. "150 mm OD with a 24 mm bore" is
-**0.160** — those cannot both be true:
+Both the 150 mm OD and the 24 mm bore started as guesses, and **bore / OD = 0.253**
+says they cannot both be right (24/150 is 0.160). But the ratio *is* solid, so any
+self-consistent pairing is admissible and **one caliper reading fixes everything
+else**:
 
-| if | then |
-|---|---|
-| bore is 24 mm | **OD ≈ 95 mm** |
-| OD is 150 mm | **bore ≈ 38 mm** |
+| OD | bore | keyway |
+|--:|--:|--:|
+| 95 mm | 24.0 | 3.6 × 2.3 |
+| 130 mm | 32.9 | 4.9 × 3.1 |
+| **150 mm** | **38.0** | **5.7 × 3.6** |
+| 160 mm | 40.5 | 6.1 × 3.8 |
 
-`wheel_od` is set to 95 as the value a 24 mm bore implies, and the SCAD now
-echoes the ratio and complains if the measured numbers disagree with the photo —
-so a typo is caught before a print, not after.
+**150 / 38 is the pairing to bet on, for a physical reason rather than a
+numerical one.** This wheel mounts on a **crankshaft nose** and carries four bolt
+holes. A 24 mm bore is far too small for a Ford modular snout; 38 mm is an
+entirely ordinary one — and 38 / 0.253 lands on 150.
+
+So the SCAD now carries 150 / 38, which also happens to be what it was built
+around before any of this. It echoes the ratio on every render and complains if
+the measured numbers disagree with the photo, so a typo is caught before a print
+rather than after.
+
+**Measure the OD first.** It is the largest feature, so the easiest to measure
+accurately, and it is the one that cascades. The bore then follows as a
+cross-check at 0.253 × OD.
 
 ### What that means for print order
 
 `wheel_od` cascades: it sets the base slot, the crank sensor station, and the
-shaft height that every upright and mount is cut to. At 95 mm the wheel clears
-the base entirely and **the slot vanishes to zero** — which also means
-`shaft_h = 60` is taller than needed, and a shorter upright is a stiffer one.
+shaft height every upright and mount is cut to. At 150 mm the wheel dips 15 mm
+through a 73 mm slot, which is the geometry everything was designed around. At
+95 mm it would clear the base entirely, **the slot would vanish to zero**, and
+`shaft_h = 60` would be taller than necessary — a shorter upright being a stiffer
+one. The difference is a reprint of four part types, so it is worth ten seconds
+with calipers first.
 
 | safe to print now | wait for the wheel |
 |---|---|
