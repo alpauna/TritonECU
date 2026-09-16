@@ -442,12 +442,13 @@ sensor_flange_t = 6.0;   // MEASURE: flange plate thickness
 sensor_back_ckp = 6.0;
 sensor_back_cmp = 3.0;
 /* Connector tails lie FLUSH with the flange, in its own plane — neither sensor
-   has anything projecting behind it. The crank's is an L turning 90 deg from the
-   ear; the cam's runs straight out opposite the ear, on the barrel's centreline.
+   has anything projecting behind it.
+   The crank's is a SINGLE straight leg leaving at 90 deg to the ear: the "L" is
+   the ear and that leg together, not a leg that itself bends.
+   The cam's runs straight out opposite the ear, on the barrel's centreline.
    Lengths are eyeballed; the shape is what matters for recognising it. */
 sensor_tail_w   = 13.0;  // GUESS
 sensor_tail_l1  = 26.0;  // GUESS
-sensor_tail_l2  = 22.0;  // GUESS — the L's second leg, crank only
 
 module vr_sensor(barrel_len, flange_reach, bolt_off, back_ext, ell) {
     tip_r = sensor_flange_wide/2;
@@ -468,14 +469,11 @@ module vr_sensor(barrel_len, flange_reach, bolt_off, back_ext, ell) {
                 }
                 /* Connector tail, in the flange's own plane. */
                 if (ell) {
-                    /* Crank: an L, leaving at 90 deg to the ear. */
+                    /* Crank: one straight leg at 90 deg to the ear. Together with
+                       the ear it makes the L — the leg itself does not bend. */
                     hull() {
                         circle(d = sensor_tail_w, $fn = 32);
-                        translate([0, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
-                    }
-                    hull() {
-                        translate([0, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
-                        translate([-sensor_tail_l2, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
+                        translate([0, sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
                     }
                 } else {
                     /* Cam: straight out opposite the ear, on the barrel centreline. */
