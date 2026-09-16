@@ -436,32 +436,59 @@ module spur_gear(z) {
    are eyeballed from photographs and marked below.
    =========================================================================== */
 sensor_flange_t = 6.0;   // MEASURE: flange plate thickness
-sensor_conn_l   = 38.0;  // GUESS: connector arm length
-sensor_conn_w   = 14.0;  // GUESS
-sensor_conn_h   = 18.0;  // GUESS
+/* The flange does not stop at the barrel — it carries on past it with the same
+   radius as the tip end. Measured from the barrel's outer surface to the
+   flange's outermost edge on that far side: */
+sensor_back_ckp = 6.0;
+sensor_back_cmp = 3.0;
+/* Connector tails lie FLUSH with the flange, in its own plane — neither sensor
+   has anything projecting behind it. The crank's is an L turning 90 deg from the
+   ear; the cam's runs straight out opposite the ear, on the barrel's centreline.
+   Lengths are eyeballed; the shape is what matters for recognising it. */
+sensor_tail_w   = 13.0;  // GUESS
+sensor_tail_l1  = 26.0;  // GUESS
+sensor_tail_l2  = 22.0;  // GUESS — the L's second leg, crank only
 
-module vr_sensor(barrel_len, flange_reach, bolt_off) {
+module vr_sensor(barrel_len, flange_reach, bolt_off, back_ext, ell) {
     tip_r = sensor_flange_wide/2;
     difference() {
         union() {
-            /* Barrel, tip rounded. Flange face is z = 0, tip at z = barrel_len. */
+            /* Barrel. Flange face is z = 0, tip at z = barrel_len. */
             cylinder(d = sensor_dia, h = barrel_len - tip_r/2);
             translate([0, 0, barrel_len - tip_r/2 - 1])
                 cylinder(d1 = sensor_dia, d2 = sensor_dia - 3, h = tip_r/2 + 1);
-            /* Flange: a paddle from the barrel out to the tip radius. */
-            translate([0, 0, -sensor_flange_t]) linear_extrude(sensor_flange_t)
+
+            translate([0, 0, -sensor_flange_t]) linear_extrude(sensor_flange_t) {
+                /* Flange: rounded at BOTH ends, not just the bolt end. It runs
+                   past the barrel by back_ext on the far side. */
                 hull() {
-                    circle(d = sensor_dia + 6, $fn = 48);
+                    translate([-(sensor_dia/2 + back_ext - tip_r), 0])
+                        circle(r = tip_r, $fn = 48);
                     translate([flange_reach - tip_r, 0]) circle(r = tip_r, $fn = 48);
                 }
-            /* Connector arm, opposite the ear. Shape is approximate. */
-            translate([-sensor_conn_l, -sensor_conn_w/2, -sensor_flange_t])
-                cube([sensor_conn_l, sensor_conn_w, sensor_conn_h]);
+                /* Connector tail, in the flange's own plane. */
+                if (ell) {
+                    /* Crank: an L, leaving at 90 deg to the ear. */
+                    hull() {
+                        circle(d = sensor_tail_w, $fn = 32);
+                        translate([0, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
+                    }
+                    hull() {
+                        translate([0, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
+                        translate([-sensor_tail_l2, -sensor_tail_l1]) circle(d = sensor_tail_w, $fn = 32);
+                    }
+                } else {
+                    /* Cam: straight out opposite the ear, on the barrel centreline. */
+                    hull() {
+                        circle(d = sensor_tail_w, $fn = 32);
+                        translate([-(sensor_dia/2 + back_ext + sensor_tail_l1), 0])
+                            circle(d = sensor_tail_w, $fn = 32);
+                    }
+                }
+            }
         }
-        /* Bolt hole */
         translate([bolt_off, 0, -sensor_flange_t - 1])
             cylinder(d = sensor_flange_bolt, h = sensor_flange_t + 2, $fn = 32);
-        /* O-ring groove, where the barrel meets the flange */
         translate([0, 0, 6]) rotate_extrude($fn = 64)
             translate([sensor_dia/2, 0]) circle(d = 2.4, $fn = 24);
     }
@@ -572,8 +599,10 @@ else if (part == "crank_gear")    spur_gear(crank_gear_teeth);
 else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
-else if (part == "sensor_ckp")    vr_sensor(sensor_barrel_ckp, 25.4 + sensor_dia/2, sensor_flange_ckp);
-else if (part == "sensor_cmp")    vr_sensor(sensor_barrel_cmp, 19.1 + sensor_dia/2, sensor_flange_cmp);
+else if (part == "sensor_ckp")    vr_sensor(sensor_barrel_ckp, 25.4 + sensor_dia/2,
+                                            sensor_flange_ckp, sensor_back_ckp, true);
+else if (part == "sensor_cmp")    vr_sensor(sensor_barrel_cmp, 19.1 + sensor_dia/2,
+                                            sensor_flange_cmp, sensor_back_cmp, false);
 else if (part == "base")          base();
 else {
     // rough assembly preview — check clearances, do not print

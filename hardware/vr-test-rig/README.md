@@ -820,9 +820,32 @@ numbers. It is a 20 g print that tests every dimension in this file at once:
    plate width. Wrong here and the base reprints.
 2. **Flange reach and bolt position.** Wrong here and only `sensor_mount`
    reprints.
-3. Flange thickness and the connector arm — **these are guesses**, marked as such
-   in the file. They affect nothing structural; the connector is there so the
-   thing looks like a sensor when held next to one.
+3. Flange thickness and the connector tails — **these are guesses**, marked as
+   such in the file. They affect nothing structural; the tail is there so the
+   thing reads as a sensor when held next to one.
+
+### Corrected before the first print, from a look at the render
+
+Three errors, caught by comparing the model to the real part on screen rather
+than in the hand — which is the cheaper end of the same idea:
+
+**The flange does not stop at the barrel.** It carries on past it with the same
+radius as the bolt end, so the paddle is rounded at *both* ends. Measured from
+the barrel's outer surface to the flange's far edge: **6 mm on the crank, 3 mm on
+the cam.** The first model hulled from a circle *at* the barrel, which cut that
+off.
+
+**Nothing projects behind the flange face.** The first model had a connector
+block standing proud of the back. Both tails lie **flush, in the flange's own
+plane**.
+
+**The tails leave in different directions.** The crank's is an **L**, turning 90°
+from the ear. The cam's runs **straight out opposite the ear, on the barrel's
+centreline**. The first model had both pointing the same way, and the wrong way.
+
+| | CKP | CMP |
+|---|--:|--:|
+| Envelope, corrected | 61.0 × 42.0 × 63.0 | 68.9 × 19.0 × 44.1 |
 
 Print flange-down, no supports needed. The barrel's O-ring groove and tapered tip
 are cosmetic, included only so the shape reads correctly in the hand.
