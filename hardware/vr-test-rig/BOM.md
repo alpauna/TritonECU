@@ -57,18 +57,31 @@ Bigger is not better here, because **torque is not the binding axis**. The rig
 needs 82 mN·m; the NEMA 17 already supplies **7×** that. A 2.4 N·m NEMA 23 supplies
 **29×** — more of something already in surplus.
 
-**The figure of merit is `I × L`, not torque.** To reach setpoint inside a 250 µs
-step at 36 V, a motor needs `I × L ≤ 9.0 mA·H`:
+**The figure of merit is `I × L`, not torque.** Current has to reach setpoint
+within one step period, so top speed is `rate = V / (I × L)` — and **doubling the
+current halves the top speed for the same inductance.**
 
-| | I × L | rise time |
+Candidate specs given: 2.4 N·m holding, **4.0 A/phase, 0.65 Ω**, 1.8°, 8 mm shaft,
+24–48 V. Inductance was not quoted, and it is the only number that matters:
+
+| motor | I × L | top speed |
 |---|--:|--:|
-| **17HS19** (2.0 A, 2.8 mH) | 5.6 | **156 µs** ✓ |
-| NEMA 23 at 4.0 A | needs **L ≤ 2.25 mH** | — |
+| **17HS19** — 2.0 A, 2.8 mH | 5.6 mA·H | **1929 rpm** |
+| NEMA 23 — 4.0 A, 2.0 mH | 8.0 | 1350 rpm |
+| NEMA 23 — 4.0 A, 2.5 mH | 10.0 | 1080 rpm ✗ |
+| NEMA 23 — 4.0 A, 3.0 mH | 12.0 | 900 rpm ✗ |
+| NEMA 23 — 4.0 A, 3.5 mH | 14.0 | 771 rpm ✗ |
 
-A 2.4 N·m NEMA 23 typically runs **2.5–3.8 mH**, so it is marginal at best and
-more likely too slow — **worse at the speed the rig cares about**, in exchange for
-torque it does not need. Doubling the current doubles the rise time for the same
-inductance, and bigger frames rarely compensate enough.
+Against a **1200 rpm** target, the NEMA 23 clears it only if **L ≤ 2.25 mH**. This
+class typically runs 2.5–3.8 mH, which lands at **900–1080 rpm** — short of the
+target, while the NEMA 17 reaches 1929 and keeps 60 % headroom.
+
+*(The linear rise model holds for both: `I × R` is 2.8 V and 2.6 V against a 36 V
+supply, so resistance is not the limit — inductance is.)*
+
+It would still be **usable**, since 900 rpm covers cranking at 200 and idle at
+700, which is where sync acquisition actually fails. It would just have no margin
+above idle, in exchange for torque that was already 7× surplus.
 
 Three practical costs on top:
 
@@ -76,6 +89,8 @@ Three practical costs on top:
 - **The mount is a redesign** — 57.15 mm frame, 47.14 mm M5 bolt circle, 38.1 mm
   boss, against 42.3 / 31 / 22.
 - **The 82 mm body overhangs the base by 31 mm.**
+- **4.0 A is 95 % of the DM542's 4.2 A ceiling**, against 48 % for the NEMA 17.
+  No headroom for a driver that also has to survive a stall.
 
 **If a NEMA 23 is wanted anyway, ask the vendor for inductance** and check
 `I × L ≤ 9.0 mA·H` before anything else. That single number decides it.
