@@ -59,6 +59,12 @@ sensor_cmp_len  =  38.1;  // body length, cam
 sensor_flange_ckp  = 14.0 + 14.3/2;   // 21.15 — barrel axis -> bolt centre
 sensor_flange_cmp  = 12.7 + 14.3/2;   // 19.85
 sensor_flange_bolt =  8.0;  // M8 through the flange eyelet
+/* The ear itself, which the seating pad has to cover: 19 mm wide on both, with a
+   rounded tip rather than a square end. Reach, from the barrel's edge: CKP
+   25.4 mm, CMP 19.1 mm. The bolt is NOT centred on the tip radius — the ear runs
+   past it on both — so the pad is sized from the reach, not from the bolt. */
+sensor_flange_wide = 19.0;
+sensor_flange_ext  = 25.4 + 14.3/2;   // 32.55 — barrel axis -> ear tip, the larger
 sensor_barrel_len  = 30.0;  // MEASURE: flange face -> sensing tip
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
@@ -409,19 +415,21 @@ module spur_gear(z) {
    =========================================================================== */
 module sensor_mount() {
     body    = sensor_dia + 2*wall + 4;
+    pw      = max(body, sensor_flange_wide + 2*wall);   /* pad wide enough for the ear */
     plate_t = sm_plate;
     /* The ear is offset straight UP from the barrel, which keeps the mount
        narrow in X. The sensor turns freely in its bore, so the direction is
        ours to choose — pick the one that does not widen the base. */
-    top     = shaft_h + sensor_flange_ckp + sensor_flange_bolt/2 + wall + 3;
+    /* Tall enough to seat the whole ear, not merely to reach its bolt. */
+    top     = shaft_h + sensor_flange_ext + wall + 3;
     footy   = gap_slot + 2*wall + 8;
     difference() {
         union() {
-            translate([-body/2, -plate_t/2, 0]) cube([body, plate_t, top]);
-            translate([-body/2 - 10, -footy/2, 0]) cube([body + 20, footy, base_t]);
+            translate([-pw/2, -plate_t/2, 0]) cube([pw, plate_t, top]);
+            translate([-pw/2 - 10, -footy/2, 0]) cube([pw + 20, footy, base_t]);
             for (sgn = [-1, 1]) scale([1, sgn, 1])
-                translate([-body/2, plate_t/2, 0]) rotate([90,0,0])
-                    linear_extrude(wall) polygon([[0,0],[body, 0],[0, top*0.55]]);
+                translate([-pw/2, plate_t/2, 0]) rotate([90,0,0])
+                    linear_extrude(wall) polygon([[0,0],[pw, 0],[0, top*0.55]]);
         }
         /* Barrel bore, through, along the sensor axis */
         translate([0, -plate_t, shaft_h]) rotate([-90,0,0])
@@ -433,7 +441,7 @@ module sensor_mount() {
                 cylinder(d = sensor_flange_bolt + 0.5, h = 3*plate_t, $fn = hole_fn);
         /* SLOTTED feet — with the barrel depth fixed by the flange, this is the
            only air-gap adjustment there is. */
-        for (x = [-body/2 - 5, body/2 + 5])
+        for (x = [-pw/2 - 5, pw/2 + 5])
             hull() for (y = [-gap_slot/2, gap_slot/2])
                 translate([x, y, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
     }

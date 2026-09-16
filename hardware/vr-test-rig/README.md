@@ -715,7 +715,28 @@ spans 19.85 to 21.15 with room either side, and takes an **M8**.
 
 The ear is offset straight *up* from the barrel in the model. The sensor turns
 freely in its bore, so that direction is ours to pick, and up keeps the mount
-narrow in X rather than widening the base: **46.3 × 46.0 × 92.2 mm**.
+narrow in X rather than widening the base.
+
+### The pad is sized from the ear, not from its bolt
+
+Both ears are **19 mm wide with a rounded tip**, and reach **25.4 mm (CKP)** and
+**19.1 mm (CMP)** past the barrel's edge — so 32.55 and 26.25 mm from its axis.
+The seating pad is sized to the larger, which makes the mount **47.0 × 46.0 ×
+99.6 mm**.
+
+**The bolt is not centred on the tip radius on either sensor**, which is why the
+pad had to be sized from the reach rather than inferred from the bolt:
+
+| | bolt from axis | ear tip from axis | ear past the bolt |
+|---|--:|--:|--:|
+| CKP | 21.15 | 32.55 | 11.4 mm |
+| CMP | 19.85 | 26.25 | 6.4 mm |
+
+**[CHECK] the CMP figures against the part.** A 19 mm wide rounded tip implies a
+9.5 mm radius, which would put its centre 16.75 mm from the barrel axis — but the
+bolt measures 19.85, *outboard* of that, leaving only ~2.4 mm of material beyond
+an M8. Possible with a steel eyelet, but it is the one number of the set that
+does not sit comfortably with the others.
 
 **Still wanted: flange face → sensing tip.** It is the one that sets the sensor
 station and through it the plate width — at a 20 mm barrel the plate could be
