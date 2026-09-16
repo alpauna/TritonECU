@@ -9,5 +9,6 @@ render() {
 }
 export -f render
 printf "%s\n" base base_a base_b bearing_block motor_mount wheel_hub \
+              sensor_ckp sensor_cmp \
               crank_gear cam_gear cam_target sensor_mount \
   | xargs -P "$(nproc)" -I{} bash -c 'render {}'

@@ -425,6 +425,49 @@ module spur_gear(z) {
 }
 
 /* ===========================================================================
+   VR SENSOR — a CHECK MODEL, not a rig part.
+
+   Built from the SAME parameters the mount uses, deliberately. Print it, hold it
+   against the real sensor, and any mismatch is a mismatch in the mount too —
+   which is the whole point. It is cheaper to find that on a 20 g print than
+   after the base is done.
+
+   Everything here is measured except flange thickness and the connector, which
+   are eyeballed from photographs and marked below.
+   =========================================================================== */
+sensor_flange_t = 6.0;   // MEASURE: flange plate thickness
+sensor_conn_l   = 38.0;  // GUESS: connector arm length
+sensor_conn_w   = 14.0;  // GUESS
+sensor_conn_h   = 18.0;  // GUESS
+
+module vr_sensor(barrel_len, flange_reach, bolt_off) {
+    tip_r = sensor_flange_wide/2;
+    difference() {
+        union() {
+            /* Barrel, tip rounded. Flange face is z = 0, tip at z = barrel_len. */
+            cylinder(d = sensor_dia, h = barrel_len - tip_r/2);
+            translate([0, 0, barrel_len - tip_r/2 - 1])
+                cylinder(d1 = sensor_dia, d2 = sensor_dia - 3, h = tip_r/2 + 1);
+            /* Flange: a paddle from the barrel out to the tip radius. */
+            translate([0, 0, -sensor_flange_t]) linear_extrude(sensor_flange_t)
+                hull() {
+                    circle(d = sensor_dia + 6, $fn = 48);
+                    translate([flange_reach - tip_r, 0]) circle(r = tip_r, $fn = 48);
+                }
+            /* Connector arm, opposite the ear. Shape is approximate. */
+            translate([-sensor_conn_l, -sensor_conn_w/2, -sensor_flange_t])
+                cube([sensor_conn_l, sensor_conn_w, sensor_conn_h]);
+        }
+        /* Bolt hole */
+        translate([bolt_off, 0, -sensor_flange_t - 1])
+            cylinder(d = sensor_flange_bolt, h = sensor_flange_t + 2, $fn = 32);
+        /* O-ring groove, where the barrel meets the flange */
+        translate([0, 0, 6]) rotate_extrude($fn = 64)
+            translate([sensor_dia/2, 0]) circle(d = 2.4, $fn = 24);
+    }
+}
+
+/* ===========================================================================
    SENSOR MOUNT — the only precision part. Slotted for air-gap adjustment.
    =========================================================================== */
 module sensor_mount() {
@@ -529,6 +572,8 @@ else if (part == "crank_gear")    spur_gear(crank_gear_teeth);
 else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
+else if (part == "sensor_ckp")    vr_sensor(sensor_barrel_ckp, 25.4 + sensor_dia/2, sensor_flange_ckp);
+else if (part == "sensor_cmp")    vr_sensor(sensor_barrel_cmp, 19.1 + sensor_dia/2, sensor_flange_cmp);
 else if (part == "base")          base();
 else {
     // rough assembly preview — check clearances, do not print

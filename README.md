@@ -39,7 +39,8 @@ lives on `main`.
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
 | **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
 | **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
-| **VR test rig** | ◐ | designed, rendered and costed — 12 mm shafts, printed involute gears, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md). Parts ordered bar the stepper |
+| **VR test rig** | ◐ | all dimensions measured; 9 of 10 parts ready to print, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md). Parts ordered bar the stepper |
+| **VR rig firmware** | ✅ | RP2040 PIO step generator with a cranking profile — builds clean, [`firmware/`](hardware/vr-test-rig/firmware/) |
 | **2N7002 driver board** | ✅ | 3.3 V → DM542 opto inputs, reviewed clean from Gerbers — [`hardware/2N7002 Driver/`](hardware/2N7002%20Driver/) |
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
@@ -215,6 +216,11 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
   spans 2–4 V against a 3.3 V drive, so it works warm and fails cold. The answer
   is a logic-level FET *sinking* the input, with a gate pulldown so nothing moves
   while the Pico boots. [`hardware/2N7002 Driver/`](hardware/2N7002%20Driver/)
+- **Model the part you are designing around, then print it.** The rig's two VR
+  sensors are modelled from the *same* parameters the mount uses, so a printed
+  copy held against the real sensor tests every one of those numbers at once — and
+  a mismatch proves the mount wrong in the same way. Cheaper on a 20 g print than
+  after the base. [`hardware/vr-test-rig/`](hardware/vr-test-rig/)
 - **The MAF is a differential measurement.** It has a dedicated signal return
   separate from the ground its supply current flows in — which is the whole
   reason for the AD7606 over the MCU's own ADC.

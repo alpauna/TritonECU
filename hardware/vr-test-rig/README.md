@@ -791,3 +791,38 @@ diameter and radius), which is a parameter, not a redesign.
 rather than discovered. Put it well away from the crank gap so the sync window is
 unambiguous, then **record the angle here** — it becomes a known constant the
 decoder can be tested against, exactly like the gap-to-TDC zero.
+
+
+---
+
+# Check models: print the sensors and hold them up
+
+`part = "sensor_ckp"` and `"sensor_cmp"` model the two VR sensors — and they are
+built from **the same parameters the mount is**, on purpose.
+
+That is the entire value. If the printed model does not match the real sensor,
+then the mount is wrong *in the same way*, because both read from the same
+numbers. It is a 20 g print that tests every dimension in this file at once:
+
+| | CKP | CMP |
+|---|--:|--:|
+| Barrel Ø | 14.3 | 14.3 |
+| Barrel length, flange face → tip | 57.0 | 38.1 |
+| Flange reach from barrel axis | 32.55 | 26.25 |
+| Bolt centre from barrel axis | 21.15 | 19.85 |
+| Flange width | 19.0 | 19.0 |
+| Bolt | M8 | M8 |
+| **Printed envelope** | **70.5 × 20.3 × 63.0** | **64.2 × 20.3 × 44.1** |
+
+**What to compare, in order of how much it costs to be wrong:**
+
+1. **Barrel length.** It sets where the sensor stands, and through that the base
+   plate width. Wrong here and the base reprints.
+2. **Flange reach and bolt position.** Wrong here and only `sensor_mount`
+   reprints.
+3. Flange thickness and the connector arm — **these are guesses**, marked as such
+   in the file. They affect nothing structural; the connector is there so the
+   thing looks like a sensor when held next to one.
+
+Print flange-down, no supports needed. The barrel's O-ring groove and tapered tip
+are cosmetic, included only so the shape reads correctly in the hand.
