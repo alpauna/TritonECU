@@ -230,6 +230,35 @@ of error.
 so a GPIO high is an active pulse. Account for it in the PIO program or wire the
 active edge accordingly.
 
+#### Not IRF520 modules either — the concept is right, the part is not
+
+A MOSFET sinking the opto is exactly right. **The IRF520 is not a logic-level
+MOSFET**, and that is the whole problem:
+
+| part | Vgs(th) | Rds(on) specified at | on a 3.3 V gate? |
+|---|---|---|---|
+| **IRF520** | **2.0 – 4.0 V** | 0.27 Ω @ **Vgs = 10 V** | **no — 3.3 V can be below threshold** |
+| 2N7002 | 1.0 – 2.5 V | ~5 Ω @ Vgs = 4.5 V | yes, fully enhanced |
+| BSS138 | 0.8 – 1.5 V | ~3.5 Ω @ Vgs = 4.5 V | yes, fully enhanced |
+
+**The failure mode is the nasty kind.** `Vgs(th)` has roughly −5 mV/°C tempco, so
+a part at the high end of that 2–4 V spread conducts when warm and stops when
+cold. It passes a bench test in a heated room and fails in a cold garage —
+intermittently, which on a rig that exists to be a trustworthy datum is worse than
+not working at all.
+
+**And the modules are slow.** They carry a large gate resistor for a FET with far
+more gate capacitance:
+
+| | gate RC | of a 15.6 µs step period |
+|---|--:|--:|
+| IRF520 module, 10 kΩ gate R | 3600 ns | **23 %** |
+| IRF520 module, 1 kΩ gate R | 360 ns | 2.3 % |
+| **2N7002 + 220 Ω** | **11 ns** | **0.07 %** |
+
+These boards are built to PWM a fan or an LED strip at a few hundred hertz. At
+64 kHz they are the wrong instrument, not a marginal one.
+
 #### Not the 4-channel bidirectional level shifter modules
 
 The common **BSS138 + 10 kΩ** boards (the NXP AN10441 I²C design) **cannot drive
