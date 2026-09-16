@@ -52,7 +52,12 @@ sensor_cmp_len  =  38.1;  // body length, cam
    drops into a bore, and a single bolt through an ear beside it. That means the
    insertion depth is fixed by the flange face — the sensor cannot be slid in or
    out to set the air gap. The slotted feet are the only adjustment. */
-sensor_flange_off  = 21.0;  // MEASURE: barrel axis -> bolt hole centre
+/* The bolt axis is PERPENDICULAR to the barrel — the ear stands off to one side
+   and the bolt passes through it crosswise, which is how these mount to a cover
+   with the bolt parallel to the crank axis. Measured from the barrel's edge:
+   CKP 14.0 mm, CMP 12.7 mm, so from the barrel AXIS it is +7.15 either way. */
+sensor_flange_ckp  = 14.0 + 14.3/2;   // 21.15 — barrel axis -> bolt centre
+sensor_flange_cmp  = 12.7 + 14.3/2;   // 19.85
 sensor_flange_bolt =  6.5;  // MEASURE: bolt hole diameter (M6 clearance?)
 sensor_barrel_len  = 30.0;  // MEASURE: flange face -> sensing tip
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
@@ -404,31 +409,30 @@ module spur_gear(z) {
    =========================================================================== */
 module sensor_mount() {
     body    = sensor_dia + 2*wall + 4;
-    plate_t = sm_plate;                        /* enough to take the flange bolt */
-    span    = sensor_flange_off + sensor_dia/2 + wall + 4;
-    h       = shaft_h + sensor_dia/2 + wall + 6;
+    plate_t = sm_plate;
+    pad_x   = body/2 + wall;                   /* the ear's seating face, on +X */
+    top     = shaft_h + sensor_flange_ckp + sensor_flange_bolt/2 + wall + 3;
     footy   = gap_slot + 2*wall + 8;
     difference() {
         union() {
-            /* Upright plate, normal to the sensor axis. The flange seats on its
-               OUTBOARD face and the bolt pulls it flat — the same way it mounts
-               on an engine. */
-            translate([-body/2, -plate_t/2, 0]) cube([span + body/2, plate_t, h]);
-            translate([-body/2 - 10, -footy/2, 0]) cube([span + body/2 + 20, footy, base_t]);
+            translate([-body/2, -plate_t/2, 0]) cube([body + wall, plate_t, top]);
+            translate([-body/2 - 10, -footy/2, 0]) cube([body + wall + 20, footy, base_t]);
             for (sgn = [-1, 1]) scale([1, sgn, 1])
                 translate([-body/2, plate_t/2, 0]) rotate([90,0,0])
-                    linear_extrude(wall) polygon([[0,0],[span + body/2, 0],[0, h*0.55]]);
+                    linear_extrude(wall) polygon([[0,0],[body + wall, 0],[0, top*0.55]]);
         }
-        /* Barrel bore, through */
+        /* Barrel bore, through, along the sensor axis */
         translate([0, -plate_t, shaft_h]) rotate([-90,0,0])
             cylinder(d = sensor_dia + clr, h = 3*plate_t, $fn = fit_fn);
-        /* Flange bolt, parallel to the barrel. Slotted in X so a flange offset
-           that measures differently still lands. */
-        hull() for (dx = [-2, 2])
-            translate([sensor_flange_off + dx, -plate_t, shaft_h]) rotate([-90,0,0])
-                cylinder(d = sensor_flange_bolt + 0.4, h = 3*plate_t, $fn = hole_fn);
-        /* SLOTTED feet — the only air-gap adjustment there is now */
-        for (x = [-body/2 - 5, span + body/2 + 5])
+        /* Flange bolt, CROSSWISE to the barrel. Slotted vertically so the same
+           printed part takes both sensors — CKP sits 21.15 mm off the barrel
+           axis, CMP 19.85, and the slot spans both with room to spare. */
+        hull() for (dz = [sensor_flange_cmp - 2, sensor_flange_ckp + 2])
+            translate([pad_x + 2, 0, shaft_h + dz]) rotate([0,-90,0])
+                cylinder(d = sensor_flange_bolt + 0.4, h = body + 2*wall, $fn = hole_fn);
+        /* SLOTTED feet — with the barrel depth fixed by the flange, this is the
+           only air-gap adjustment there is. */
+        for (x = [-body/2 - 5, body/2 + wall + 5])
             hull() for (y = [-gap_slot/2, gap_slot/2])
                 translate([x, y, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
     }

@@ -686,25 +686,36 @@ into a bore, with a single bolt through an ear beside it**. Not a plain cylinder
 The sensor cannot be slid in or out to set the air gap, because the flange face
 bottoms on the mounting surface. So:
 
-- The mount is now a **plate normal to the sensor axis**: a barrel bore, and a
-  slotted bolt hole parallel to it, with the flange seating on the outboard face
-  exactly as it does on an engine.
+- The mount is now a **plate normal to the sensor axis** carrying the barrel
+  bore, with a seating pad beside it for the ear.
+- **The bolt is CROSSWISE to the barrel, not parallel to it.** That is how these
+  bolt to a cover — sensor pointing radially at the wheel, retaining bolt running
+  parallel to the crank axis. A first pass had it parallel and would have put the
+  bolt where the sensor body is.
 - **`gap_slot` went 14 → 30 mm.** The slotted feet are now the *only* air-gap
   adjustment, and they also have to absorb the uncertainty in barrel length.
 - **The station formula was wrong.** It positioned the mount by its own width;
   with a flange sensor the tip lands `sensor_barrel_len` from the mounting face,
   so the old formula would have driven the barrel tip **8 mm inside the wheel**.
 
-### Three measurements wanted, and one of them matters most
+### The flange offsets are measured; one dimension is still missing
 
-| | why |
-|---|---|
-| **Flange face → sensing tip** | **sets the sensor station, and through it the plate width** |
-| Barrel axis → bolt hole centre | positions the bolt slot |
-| Bolt hole diameter | M6 clearance assumed |
+From the barrel's edge to the bolt centre: **CKP 14.0 mm, CMP 12.7 mm**. Adding
+the 7.15 mm barrel radius gives the offset from the barrel *axis*:
 
-The first is the one to reach for. At a 20 mm barrel the plate could be 259 mm
-wide; at 40 mm it needs 299. It currently assumes **30 mm**, giving 280.
+| | edge → bolt | **axis → bolt** |
+|---|--:|--:|
+| CKP | 14.0 mm | **21.15 mm** |
+| CMP | 12.7 mm | **19.85 mm** |
+
+They differ by only 1.3 mm, so **one slotted mount takes both** — the bolt slot
+spans 19.85 to 21.15 with room either side.
+
+**Still wanted: flange face → sensing tip.** It is the one that sets the sensor
+station and through it the plate width — at a 20 mm barrel the plate could be
+259 mm; at 40 mm it needs 299. It currently assumes **30 mm**, giving 280. The
+bolt diameter is assumed M6 clearance and matters far less, because the hole is
+slotted anyway.
 
 ## 5. Settle two things the drawings leave open
 
