@@ -47,6 +47,14 @@ key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
 sensor_dia      =  14.3;  // barrel diameter, both sensors
 sensor_ckp_len  =  57.0;  // body length, crank
 sensor_cmp_len  =  38.1;  // body length, cam
+
+/* These sensors are FLANGE MOUNTED, not plain barrels: an O-ring'd barrel that
+   drops into a bore, and a single bolt through an ear beside it. That means the
+   insertion depth is fixed by the flange face — the sensor cannot be slid in or
+   out to set the air gap. The slotted feet are the only adjustment. */
+sensor_flange_off  = 21.0;  // MEASURE: barrel axis -> bolt hole centre
+sensor_flange_bolt =  6.5;  // MEASURE: bolt hole diameter (M6 clearance?)
+sensor_barrel_len  = 30.0;  // MEASURE: flange face -> sensing tip
 sensor_flat     =   0;    // set >0 if the sensor body has a flat, for anti-rotation
 
 /* --- cam channel (CMP) — 2:1 gear driven, see README ----------------------- */
@@ -91,7 +99,7 @@ clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
 
-plate_w         = 260.0;  /* the crank sensor now stands off at y = 109 */
+plate_w         = 280.0;  /* set by the crank sensor station — see y_ck */
 
 /* --- spine rods: the base's stiffness comes from these, not from the plate ---
    Two full-length steel rods in ribs under the plate. Offset from the neutral
@@ -136,7 +144,10 @@ blk_w    = brg_od + 2*wall;
 blk_t    = max(brg_w + 2*wall, 24);
 foot_y   =  34;                      // two bolt rows, not a single hinge line
 blk_h    = shaft_h + brg_od/2 + wall;
-gap_slot =  14;                      // sensor air-gap adjustment travel
+gap_slot =  30;   /* Sensor air-gap travel, widened from 14. With a flange-
+                     mounted sensor the barrel depth is fixed, so ALL of the gap
+                     adjustment lives here — and it also has to absorb the
+                     uncertainty in sensor_barrel_len. */
 
 /* --- stations along the shafts (base is centred on the origin) -------------- */
 /* Spaced against real part extents, not by eye. A bearing block's upright runs
@@ -153,11 +164,18 @@ cam_y    = -gear_module*(crank_gear_teeth + cam_gear_teeth)/2;  // -60 mm centre
 x_cbrg1  =  30;   // same station as x_brg2 but 60 mm over in Y — they miss
 x_camtgt =  88;   // 72..88
 x_cbrg2  = 110;   // upright 92..128
-/* Sensor mount stations. The mount body is 31 mm across, so its centre has to
-   clear the wheel RIM by half of that plus margin — at wheel_od/2 + 10 the
-   mount straddled the wheel plane and its body intersected the disc. */
-y_ck     = wheel_od/2 + sensor_dia/2 + 2*wall + 6;      // 95
-y_cmp    = cam_y + cam_target_od/2 + sensor_dia/2 + 2*wall + 6;
+/* Sensor mount stations. With a FLANGE-mounted sensor the tip lands at a fixed
+   distance from the mounting face, so the station is set by the barrel length —
+   not by the mount's own width, which is what the previous formula assumed.
+       flange seats on the plate's outboard face
+       tip = that face - sensor_barrel_len
+       want tip = rim + air_gap
+   The slotted feet then absorb however far sensor_barrel_len turns out to be
+   from the guess above. */
+air_gap  = 1.0;
+sm_plate = 10;                       // sensor_mount plate thickness
+y_ck     = wheel_od/2 + air_gap + sensor_barrel_len - sm_plate/2;
+y_cmp    = cam_y + cam_target_od/2 + air_gap + sensor_barrel_len - sm_plate/2;
 
 /* How far the wheel dips below the base top, and how wide the slot must be to
    let it. The old slot was cut wheel_od + 10 = 160 wide on a plate 100 wide --
@@ -385,29 +403,32 @@ module spur_gear(z) {
    SENSOR MOUNT — the only precision part. Slotted for air-gap adjustment.
    =========================================================================== */
 module sensor_mount() {
-    body = sensor_dia + 2*wall + 4;
-    h    = shaft_h + 6;
+    body    = sensor_dia + 2*wall + 4;
+    plate_t = sm_plate;                        /* enough to take the flange bolt */
+    span    = sensor_flange_off + sensor_dia/2 + wall + 4;
+    h       = shaft_h + sensor_dia/2 + wall + 6;
+    footy   = gap_slot + 2*wall + 8;
     difference() {
         union() {
-            translate([-body/2, -body/2, 0]) cube([body, body, h]);
-            translate([-body/2 - 10, -body/2, 0]) cube([body + 20, body, base_t]);
-            for (s = [-1,1]) scale([1,s,1])
-                translate([-body/2, body/2, 0])
-                    rotate([90,0,0]) linear_extrude(wall)
-                        polygon([[0,0],[body,0],[0,h*0.55]]);
+            /* Upright plate, normal to the sensor axis. The flange seats on its
+               OUTBOARD face and the bolt pulls it flat — the same way it mounts
+               on an engine. */
+            translate([-body/2, -plate_t/2, 0]) cube([span + body/2, plate_t, h]);
+            translate([-body/2 - 10, -footy/2, 0]) cube([span + body/2 + 20, footy, base_t]);
+            for (sgn = [-1, 1]) scale([1, sgn, 1])
+                translate([-body/2, plate_t/2, 0]) rotate([90,0,0])
+                    linear_extrude(wall) polygon([[0,0],[span + body/2, 0],[0, h*0.55]]);
         }
-        // sensor bore, horizontal, on the shaft centreline
-        translate([0, -body, shaft_h]) rotate([-90,0,0])
-            cylinder(d = sensor_dia + clr, $fn = fit_fn, h = 2*body);
-        if (sensor_flat > 0)
-            translate([sensor_dia/2 - sensor_flat, -body, shaft_h - sensor_dia/2])
-                cube([sensor_flat + 2, 2*body, sensor_dia]);
-        // pinch slit + clamp screw so the sensor is gripped, not glued
-        translate([-1, -body, shaft_h]) cube([2, body, h]);
-        translate([-body, 0, shaft_h + sensor_dia/2 + 5]) rotate([0,90,0])
-            cylinder(d = 4.4, $fn = hole_fn, h = 2*body);
-        // SLOTTED feet — this is the air-gap adjustment
-        for (x = [-body/2 - 5, body/2 + 5])
+        /* Barrel bore, through */
+        translate([0, -plate_t, shaft_h]) rotate([-90,0,0])
+            cylinder(d = sensor_dia + clr, h = 3*plate_t, $fn = fit_fn);
+        /* Flange bolt, parallel to the barrel. Slotted in X so a flange offset
+           that measures differently still lands. */
+        hull() for (dx = [-2, 2])
+            translate([sensor_flange_off + dx, -plate_t, shaft_h]) rotate([-90,0,0])
+                cylinder(d = sensor_flange_bolt + 0.4, h = 3*plate_t, $fn = hole_fn);
+        /* SLOTTED feet — the only air-gap adjustment there is now */
+        for (x = [-body/2 - 5, span + body/2 + 5])
             hull() for (y = [-gap_slot/2, gap_slot/2])
                 translate([x, y, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
     }

@@ -665,14 +665,46 @@ With OD and thickness now published, only the **bore** is still derived. It
 affects `wheel_hub` alone — the spigot, the keyway and the clamp — so that is the
 one part still worth holding.
 
-| safe to print now | wait for the wheel |
+| safe to print now | gated, and on what |
 |---|---|
-| `crank_gear`, `cam_gear`, `cam_target` | `wheel_hub` — bore and keyway |
-| `base` / `base_a` / `base_b` | |
-| `bearing_block` ×4, `sensor_mount` ×2, `motor_mount` | |
+| `crank_gear`, `cam_gear` | `wheel_hub` — wheel bore + keyway |
+| `cam_target` | `sensor_mount` ×2 — **sensor barrel length** |
+| `bearing_block` ×4 | `base` — plate width follows the sensor station |
+| `motor_mount` | |
 
-Everything except the hub can go on the bed now. **The hub is 20 minutes to
-print** — hold it until the bore is measured.
+The bearing blocks and motor mount are cut to `shaft_h` alone, so they are
+settled. The base is **back on the gated list** — its width is now driven by
+where the sensor has to stand.
+
+## 5. The sensors are flange-mounted, which broke the mount design
+
+The product photos show what these actually are: an **O-ring'd barrel that drops
+into a bore, with a single bolt through an ear beside it**. Not a plain cylinder.
+`sensor_mount` was a pinch clamp, and a pinch clamp is the wrong object.
+
+**The consequence is not cosmetic — insertion depth is fixed by the flange.**
+The sensor cannot be slid in or out to set the air gap, because the flange face
+bottoms on the mounting surface. So:
+
+- The mount is now a **plate normal to the sensor axis**: a barrel bore, and a
+  slotted bolt hole parallel to it, with the flange seating on the outboard face
+  exactly as it does on an engine.
+- **`gap_slot` went 14 → 30 mm.** The slotted feet are now the *only* air-gap
+  adjustment, and they also have to absorb the uncertainty in barrel length.
+- **The station formula was wrong.** It positioned the mount by its own width;
+  with a flange sensor the tip lands `sensor_barrel_len` from the mounting face,
+  so the old formula would have driven the barrel tip **8 mm inside the wheel**.
+
+### Three measurements wanted, and one of them matters most
+
+| | why |
+|---|---|
+| **Flange face → sensing tip** | **sets the sensor station, and through it the plate width** |
+| Barrel axis → bolt hole centre | positions the bolt slot |
+| Bolt hole diameter | M6 clearance assumed |
+
+The first is the one to reach for. At a 20 mm barrel the plate could be 259 mm
+wide; at 40 mm it needs 299. It currently assumes **30 mm**, giving 280.
 
 ## 5. Settle two things the drawings leave open
 
