@@ -686,12 +686,14 @@ into a bore, with a single bolt through an ear beside it**. Not a plain cylinder
 The sensor cannot be slid in or out to set the air gap, because the flange face
 bottoms on the mounting surface. So:
 
-- The mount is now a **plate normal to the sensor axis** carrying the barrel
-  bore, with a seating pad beside it for the ear.
-- **The bolt is CROSSWISE to the barrel, not parallel to it.** That is how these
-  bolt to a cover — sensor pointing radially at the wheel, retaining bolt running
-  parallel to the crank axis. A first pass had it parallel and would have put the
-  bolt where the sensor body is.
+- The mount is a **plate normal to the sensor axis**: the barrel passes through
+  it, the ear lies flat on its outboard face, and the bolt goes in alongside.
+- **The bolt runs PARALLEL to the barrel.** The *flange plate* is what sits
+  perpendicular to the barrel, and a bolt normal to that plate is therefore
+  parallel to it. An intermediate revision of this file read "90 degrees to the
+  barrel" as describing the bolt and made it crosswise — that was wrong, and the
+  bolt would have passed through the sensor body.
+- **It is an M8**, not the M6 first assumed.
 - **`gap_slot` went 14 → 30 mm.** The slotted feet are now the *only* air-gap
   adjustment, and they also have to absorb the uncertainty in barrel length.
 - **The station formula was wrong.** It positioned the mount by its own width;
@@ -709,7 +711,11 @@ the 7.15 mm barrel radius gives the offset from the barrel *axis*:
 | CMP | 12.7 mm | **19.85 mm** |
 
 They differ by only 1.3 mm, so **one slotted mount takes both** — the bolt slot
-spans 19.85 to 21.15 with room either side.
+spans 19.85 to 21.15 with room either side, and takes an **M8**.
+
+The ear is offset straight *up* from the barrel in the model. The sensor turns
+freely in its bore, so that direction is ours to pick, and up keeps the mount
+narrow in X rather than widening the base: **46.3 × 46.0 × 92.2 mm**.
 
 **Still wanted: flange face → sensing tip.** It is the one that sets the sensor
 station and through it the plate width — at a 20 mm barrel the plate could be
