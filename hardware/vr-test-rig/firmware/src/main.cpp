@@ -17,9 +17,20 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <math.h>
-#include "pico/stdlib.h"
-#include "pico/multicore.h"
+
+/* One source, two toolchains. The Arduino-Pico core is built on the Pico SDK,
+   so the hardware headers are identical either way — only the entry points and
+   the console differ. */
+#ifdef ARDUINO
+  #include <Arduino.h>
+  #define OUT(...) Serial.printf(__VA_ARGS__)
+#else
+  #include "pico/stdlib.h"
+  #include "pico/multicore.h"
+  #define OUT(...) printf(__VA_ARGS__)
+#endif
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "stepgen.pio.h"
@@ -121,12 +132,15 @@ static void set_enable(bool on) {
 }
 
 /* ---- core 1: the pacer -------------------------------------------------- */
-static void core1_main(void) {
-    float base_rpm   = 0.0f;
-    float sweep_rate = 0.0f;
-    bool  approach   = false;   /* sweep is still ramping to its start point */
+/* State the pacer carries between steps. File scope rather than local, because
+   under Arduino this is re-entered as loop1() rather than being one long loop. */
+static float base_rpm   = 0.0f;
+static float sweep_rate = 0.0f;
+static bool  approach   = false;   /* sweep still ramping to its start point */
+static volatile bool pacer_ready = false;
 
-    while (true) {
+static void pacer_step(void) {
+    {
         if (zero_request) { step_count = 0; zero_request = false; }
 
         profile_t p = profile;
@@ -140,7 +154,7 @@ static void core1_main(void) {
             sweep_rate = 0.0f;
             set_enable(false);
             sleep_ms(2);
-            continue;
+            return;
         }
         set_enable(true);
 
@@ -205,7 +219,7 @@ static void print_status(void) {
     if (in_rev < 0) in_rev += PULSES_PER_REV;
     float deg = (float)in_rev * 360.0f / (float)PULSES_PER_REV;
     static const char *names[] = {"stop", "const", "crank", "sweep"};
-    printf("profile=%s rpm=%.1f steps=%ld rev=%ld angle=%.4f deg\n",
+    OUT("profile=%s rpm=%.1f steps=%ld rev=%ld angle=%.4f deg\n",
            names[profile], (double)actual_rpm, (long)s,
            (long)(s / PULSES_PER_REV), (double)deg);
 }
@@ -216,62 +230,61 @@ static void handle(char *line) {
 
     if (!strcmp(cmd, "stop")) {
         profile = P_STOP; target_rpm = 0.0f;
-        printf("ok stop (ramping down over %.1f s)\n",
+        OUT("ok stop (ramping down over %.1f s)\n",
                (double)(actual_rpm / DECEL_RPM_S));
     } else if (!strcmp(cmd, "rpm")) {
         char *a = strtok(NULL, " \t");
-        if (!a) { printf("err: rpm <value>\n"); return; }
+        if (!a) { OUT("err: rpm <value>\n"); return; }
         float v = strtof(a, NULL);
-        if (v < 0 || v > MAX_RPM) { printf("err: 0..%.0f\n", (double)MAX_RPM); return; }
+        if (v < 0 || v > MAX_RPM) { OUT("err: 0..%.0f\n", (double)MAX_RPM); return; }
         target_rpm = v; profile = (v > 0) ? P_CONST : P_STOP;
-        printf("ok rpm %.1f\n", (double)v);
+        OUT("ok rpm %.1f\n", (double)v);
     } else if (!strcmp(cmd, "crank")) {
         char *a = strtok(NULL, " \t"), *b = strtok(NULL, " \t");
         float v = a ? strtof(a, NULL) : 200.0f;
         float pct = b ? strtof(b, NULL) : 30.0f;
-        if (v <= 0 || v > MAX_RPM) { printf("err: 0..%.0f\n", (double)MAX_RPM); return; }
-        if (pct < 0 || pct > 90) { printf("err: irregularity 0..90 %%\n"); return; }
+        if (v <= 0 || v > MAX_RPM) { OUT("err: 0..%.0f\n", (double)MAX_RPM); return; }
+        if (pct < 0 || pct > 90) { OUT("err: irregularity 0..90 %%\n"); return; }
         crank_irreg = pct / 100.0f; target_rpm = v; profile = P_CRANK;
-        printf("ok crank %.1f rpm +-%.0f%%, 4 dips/rev at TDC\n",
+        OUT("ok crank %.1f rpm +-%.0f%%, 4 dips/rev at TDC\n",
                (double)v, (double)pct);
     } else if (!strcmp(cmd, "sweep")) {
         char *a = strtok(NULL, " \t"), *b = strtok(NULL, " \t"), *c = strtok(NULL, " \t");
-        if (!a || !b || !c) { printf("err: sweep <from> <to> <secs>\n"); return; }
+        if (!a || !b || !c) { OUT("err: sweep <from> <to> <secs>\n"); return; }
         float f = strtof(a, NULL), t = strtof(b, NULL), s = strtof(c, NULL);
         if (f < 0 || t < 0 || f > MAX_RPM || t > MAX_RPM || s <= 0) {
-            printf("err: 0..%.0f rpm, secs > 0\n", (double)MAX_RPM); return; }
+            OUT("err: 0..%.0f rpm, secs > 0\n", (double)MAX_RPM); return; }
         /* A sweep down must still respect the deceleration limit. */
         if (t < f && (f - t) / s > DECEL_RPM_S) {
-            printf("err: %.0f rpm in %.1f s exceeds the %.0f rpm/s decel limit; "
+            OUT("err: %.0f rpm in %.1f s exceeds the %.0f rpm/s decel limit; "
                    "needs >= %.1f s\n", (double)(f - t), (double)s,
                    (double)DECEL_RPM_S, (double)((f - t) / DECEL_RPM_S));
             return;
         }
         sweep_from = f; sweep_to = t; sweep_secs = s;
         target_rpm = f; sweep_new = true; profile = P_SWEEP;
-        printf("ok sweep %.0f -> %.0f over %.1f s\n", (double)f, (double)t, (double)s);
+        OUT("ok sweep %.0f -> %.0f over %.1f s\n", (double)f, (double)t, (double)s);
     } else if (!strcmp(cmd, "zero")) {
         zero_request = true;
-        printf("ok zero — call this with the hub's index flute at the sensor\n");
+        OUT("ok zero — call this with the hub's index flute at the sensor\n");
     } else if (!strcmp(cmd, "status")) {
         print_status();
     } else if (!strcmp(cmd, "help")) {
-        printf("rpm <v> | crank <rpm> [irreg%%] | sweep <from> <to> <secs>\n"
+        OUT("rpm <v> | crank <rpm> [irreg%%] | sweep <from> <to> <secs>\n"
                "stop | zero | status\n"
                "%d pulses/rev, %.4f deg/step, max %.0f rpm\n",
                PULSES_PER_REV, 360.0 / PULSES_PER_REV, (double)MAX_RPM);
     } else {
-        printf("err: unknown '%s' — try help\n", cmd);
+        OUT("err: unknown '%s' — try help\n", cmd);
     }
 }
 
-int main(void) {
-    stdio_init_all();
-
+/* ---- shared bring-up ----------------------------------------------------- */
+static void rig_init(void) {
     gpio_init(PIN_DIR); gpio_set_dir(PIN_DIR, GPIO_OUT); gpio_put(PIN_DIR, 0);
     gpio_init(PIN_ENA); gpio_set_dir(PIN_ENA, GPIO_OUT);
     set_enable(false);
-    /* DM542 wants DIR settled before the first pulse, and a moment after
+    /* The DM542 wants DIR settled before the first pulse, and a moment after
        enabling before it will step. */
     sleep_ms(200);
 
@@ -280,20 +293,61 @@ int main(void) {
 
     uint offset = pio_add_program(pio, &stepgen_program);
     stepgen_program_init(pio, sm, offset, PIN_PUL);
+    pacer_ready = true;
+}
 
-    multicore_launch_core1(core1_main);
+static void banner(void) {
+    OUT("\nVR rig step generator. %d pulses/rev, %.4f deg/step. 'help' for commands.\n",
+        PULSES_PER_REV, 360.0 / PULSES_PER_REV);
+}
 
-    printf("\nVR rig step generator. %d pulses/rev, %.4f deg/step. 'help' for commands.\n",
-           PULSES_PER_REV, 360.0 / PULSES_PER_REV);
+static char linebuf[96];
+static int  linelen = 0;
 
-    char line[96]; int n = 0;
-    while (true) {
-        int ch = getchar_timeout_us(100000);
-        if (ch == PICO_ERROR_TIMEOUT) continue;
-        if (ch == '\r' || ch == '\n') {
-            if (n) { line[n] = 0; handle(line); n = 0; }
-        } else if (n < (int)sizeof(line) - 1) {
-            line[n++] = (char)ch;
-        }
+static void feed(int ch) {
+    if (ch == '\r' || ch == '\n') {
+        if (linelen) { linebuf[linelen] = 0; handle(linebuf); linelen = 0; }
+    } else if (linelen < (int)sizeof(linebuf) - 1) {
+        linebuf[linelen++] = (char)ch;
     }
 }
+
+#ifdef ARDUINO
+/* ---- Arduino / PlatformIO ------------------------------------------------ */
+void setup(void) {
+    Serial.begin(115200);
+    rig_init();
+    banner();
+}
+
+void loop(void) {
+    while (Serial.available()) feed(Serial.read());
+    delay(1);
+}
+
+void setup1(void) {
+    /* Core 1 may start before core 0 has configured the PIO. */
+    while (!pacer_ready) tight_loop_contents();
+}
+
+void loop1(void) { pacer_step(); }
+
+#else
+/* ---- Pico SDK / CMake ---------------------------------------------------- */
+static void core1_main(void) {
+    while (!pacer_ready) tight_loop_contents();
+    while (true) pacer_step();
+}
+
+int main(void) {
+    stdio_init_all();
+    rig_init();
+    multicore_launch_core1(core1_main);
+    banner();
+
+    while (true) {
+        int ch = getchar_timeout_us(100000);
+        if (ch != PICO_ERROR_TIMEOUT) feed(ch);
+    }
+}
+#endif

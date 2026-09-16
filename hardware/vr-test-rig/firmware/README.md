@@ -10,21 +10,54 @@ the reason this firmware exists.
 
 ---
 
-## Build
+## Build — PlatformIO
 
-Needs the Pico SDK and an ARM toolchain:
+```sh
+pio run -t upload        # hold BOOTSEL on the first flash
+pio device monitor
+```
+
+**Builds clean**, no warnings at `-Wall -Wextra`: 9.8 kB RAM, 54 kB flash.
+
+The platform is **Max Gerhardt's fork**, not the official `raspberrypi` one —
+the official platform carries only the Arduino Mbed core. The earlephilhower core
+is built *on* the Pico SDK, so `hardware/pio.h` and the rest are reachable
+directly, and core 1 arrives as `setup1()`/`loop1()` instead of
+`multicore_launch_core1()`.
+
+### Or the Pico SDK directly
 
 ```sh
 sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi
 git clone --depth 1 https://github.com/raspberrypi/pico-sdk
 cp pico-sdk/external/pico_sdk_import.cmake .
 export PICO_SDK_PATH=$PWD/pico-sdk
-
 mkdir build && cd build && cmake .. && make
 ```
 
-Drop `build/stepgen.uf2` on the Pico while holding BOOTSEL. Commands arrive over
-**USB CDC** (`/dev/ttyACM0`), not the UART pins.
+`src/main.cpp` serves **both** toolchains — `#ifdef ARDUINO` picks the entry
+points and the console, and everything between them is shared. Two copies of a
+control loop would have drifted apart within a week.
+
+Commands arrive over **USB CDC** (`/dev/ttyACM0`), not the UART pins.
+
+### The PIO program is committed, not generated
+
+PlatformIO does not run `pioasm`, so `src/stepgen.pio.h` is **hand-assembled and
+committed**, and CMake uses the same file rather than regenerating — which also
+guarantees both builds run the identical program.
+
+`stepgen.pio` remains the readable source of truth. To regenerate rather than
+trust the committed copy:
+
+```sh
+pioasm stepgen.pio src/stepgen.pio.h
+```
+
+The encoding is spelled out instruction by instruction in the header's comment,
+against RP2040 datasheet §3.4, and was verified by decoding all five words back
+with an independent decoder. Jump targets are stored relative to program start —
+`pio_add_program()` adds the load offset to every JMP as it writes them.
 
 ## Wiring
 

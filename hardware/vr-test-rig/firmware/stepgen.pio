@@ -31,18 +31,6 @@ lo:
     jmp x--, lo         side 0
 .wrap
 
-% c-sdk {
-static inline void stepgen_program_init(PIO pio, uint sm, uint offset, uint pin) {
-    pio_sm_config c = stepgen_program_get_default_config(offset);
-    sm_config_set_sideset_pins(&c, pin);
-    pio_gpio_init(pio, pin);
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
-    /* Run at full system clock: 8 ns resolution at 125 MHz. The period is set
-       entirely by the FIFO word, so there is no divider to quantise it. */
-    sm_config_set_clkdiv(&c, 1.0f);
-    sm_config_set_out_shift(&c, false, false, 32);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);   /* 8 deep, more slack */
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
-}
-%}
+; The c-sdk init block lives in stepgen.pio.h instead, so that one header
+; serves both builds — CMake regenerates it into the build tree via
+; pico_generate_pio_header(), PlatformIO uses the committed copy.
