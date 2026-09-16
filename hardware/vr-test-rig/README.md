@@ -625,52 +625,54 @@ deep. At a 24 mm bore that is **≈3.6 × 2.3 mm** — less than half the DIN 68
 **A printed 8 mm key would simply not have entered the slot.** `key_w` and
 `key_d` now carry the photo-derived figures, still marked MEASURE.
 
-### Unsettled: the absolute size — neither number was ever measured
+### Settled: the vendor's own listing
 
-Both the 150 mm OD and the 24 mm bore started as guesses, and **bore / OD = 0.253**
-says they cannot both be right (24/150 is 0.160). But the ratio *is* solid, so any
-self-consistent pairing is admissible and **one caliper reading fixes everything
-else**:
+**6-3/4" OD and .120" thick** — a Small Block Ford 36-1 that sits between the
+harmonic balancer and the crank pulley. In millimetres:
 
-| OD | bore | keyway |
-|--:|--:|--:|
-| 95 mm | 24.0 | 3.6 × 2.3 |
-| 130 mm | 32.9 | 4.9 × 3.1 |
-| **150 mm** | **38.0** | **5.7 × 3.6** |
-| 160 mm | 40.5 | 6.1 × 3.8 |
+| | was assumed | **actual** |
+|---|--:|--:|
+| OD | 150 | **171.45** |
+| Thickness | 5.0 | **3.05** |
+| Bore | 38 (guess) | **43.4** — 0.253 × OD, still the one to caliper |
 
-**150 / 38 is the pairing to bet on, for a physical reason rather than a
-numerical one.** This wheel mounts on a **crankshaft nose** and carries four bolt
-holes. A 24 mm bore is far too small for a Ford modular snout; 38 mm is an
-entirely ordinary one — and 38 / 0.253 lands on 150.
+The bore is the only figure still derived rather than published, and the photo's
+ratio is what supplies it. Everything else now comes from the vendor.
 
-So the SCAD now carries 150 / 38, which also happens to be what it was built
-around before any of this. It echoes the ratio on every render and complains if
-the measured numbers disagree with the photo, so a typo is caught before a print
-rather than after.
+*(It is an SBF part, not a modular one. Irrelevant on a bench — a 36-1 wheel is a
+36-1 wheel — but it does mean the earlier "Ford modular crank snout" reasoning
+was aimed at the wrong engine family.)*
 
-**Measure the OD first.** It is the largest feature, so the easiest to measure
-accurately, and it is the one that cascades. The bore then follows as a
-cross-check at 0.253 × OD.
+### Two consequences, and one of them is not obvious
+
+**The wheel is bigger, so it dips deeper.** An 85.7 mm radius against a 60 mm
+shaft height puts the rim **25.7 mm below the base top** — leaving barely **6 mm
+to the ground** on the old 24 mm feet.
+
+**The fix is taller feet, not a taller shaft.** Both would clear it, but
+`shaft_h` is what every upright is cut to, and bracket stiffness goes as `1/h³`:
+raising the shaft from 60 to 70 would cost **~30 % of the brackets' stiffness**
+for nothing. Raising the feet costs nothing at all. `foot_h` is now **34 mm**,
+giving 16 mm of clearance.
+
+**The slot and the plate both grew** — a 114 mm slot, and the crank sensor now
+stands off at y = 109, so `plate_w` goes 240 → **260**. Still 300 × 260, which a
+320 mm bed takes whole.
 
 ### What that means for print order
 
-`wheel_od` cascades: it sets the base slot, the crank sensor station, and the
-shaft height every upright and mount is cut to. At 150 mm the wheel dips 15 mm
-through a 73 mm slot, which is the geometry everything was designed around. At
-95 mm it would clear the base entirely, **the slot would vanish to zero**, and
-`shaft_h = 60` would be taller than necessary — a shorter upright being a stiffer
-one. The difference is a reprint of four part types, so it is worth ten seconds
-with calipers first.
+With OD and thickness now published, only the **bore** is still derived. It
+affects `wheel_hub` alone — the spigot, the keyway and the clamp — so that is the
+one part still worth holding.
 
 | safe to print now | wait for the wheel |
 |---|---|
-| `crank_gear`, `cam_gear` | `base` / `base_a` / `base_b` — slot |
-| `cam_target` | `wheel_hub` — bore and keyway |
-| | `bearing_block`, `sensor_mount`, `motor_mount` — all cut to `shaft_h` |
+| `crank_gear`, `cam_gear`, `cam_target` | `wheel_hub` — bore and keyway |
+| `base` / `base_a` / `base_b` | |
+| `bearing_block` ×4, `sensor_mount` ×2, `motor_mount` | |
 
-Print the gears and the cam target while the wheel is in transit. They depend on
-nothing that is still in doubt.
+Everything except the hub can go on the bed now. **The hub is 20 minutes to
+print** — hold it until the bore is measured.
 
 ## 5. Settle two things the drawings leave open
 

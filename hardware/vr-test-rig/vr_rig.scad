@@ -28,16 +28,15 @@ root_fn  = 120;  // gear root circle
        keyway width     = 15 % of bore diameter
        keyway depth     = 19 % of bore radius
    "150 mm OD with a 24 mm bore" is ratio 0.160 and cannot both be true. */
-/* NEITHER of these has been measured on the part — both started as guesses.
-   What IS measured is the ratio, so any self-consistent pairing works and one
-   caliper reading fixes the rest. 150/38 is the pairing chosen because this
-   wheel mounts on a crankshaft nose: 24 mm is far too small for a Ford modular
-   snout, 38 mm is an ordinary one, and 38 / 0.253 = 150. */
-wheel_od        = 150.0;  // MEASURE: the one to reach for first — it cascades
-wheel_thk       =   5.0;  // MEASURE: wheel thickness
-wheel_bore      =  38.0;  // MEASURE: centre bore
-key_w           =   5.7;  // MEASURE: keyway width = 15 % of bore diameter
-key_d           =   3.6;  // MEASURE: keyway depth  = 19 % of bore radius
+/* OD and thickness are from the vendor's own listing (6-3/4" x .120", a Small
+   Block Ford 36-1 that sits between the balancer and the crank pulley). The
+   bore is DERIVED from the product photo's measured bore/OD = 0.253 — still
+   worth a caliper, but it is now the only one that is. */
+wheel_od        = 171.45; // 6-3/4" — vendor listing
+wheel_thk       =   3.05; // .120"  — vendor listing
+wheel_bore      =  43.4;  // MEASURE: 0.253 x OD from the photo, not the vendor
+key_w           =   6.5;  // MEASURE: 15 % of bore diameter
+key_d           =   4.1;  // MEASURE: 19 % of bore radius
 key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
                           // 0 on this wheel: the keyway is inline with the gap.
                           // The index flute on the flange OD is cut at this angle,
@@ -87,7 +86,7 @@ clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
 
-plate_w         = 240.0;
+plate_w         = 260.0;  /* the crank sensor now stands off at y = 109 */
 
 /* --- spine rods: the base's stiffness comes from these, not from the plate ---
    Two full-length steel rods in ribs under the plate. Offset from the neutral
@@ -117,7 +116,13 @@ x_seam          = -60;
    base entirely and left the wheel slot doing nothing. Dropping the shaft so the
    wheel runs THROUGH the slot shortens the printed uprights, and upright tip
    stiffness goes as 1/h^3 -- 87 -> 60 is 2.4x on its own, for free. */
-foot_h   =  24;                      // leg height under the base
+foot_h   =  34;                      /* leg height. Set by wheel clearance, not
+                                        by looks: an 85.7 mm radius wheel dips
+                                        25.7 mm below the base top, leaving only
+                                        6 mm to the ground at 24. Raising the
+                                        FEET costs nothing; raising shaft_h
+                                        instead would cost ~30 % of the
+                                        brackets' stiffness. */
 shaft_h  =  60;                      // shaft centreline above the base top
 blk_w    = brg_od + 2*wall;
 /* Axial thickness of the upright. THIS is the rig's soft spot, not the shaft:
