@@ -28,7 +28,9 @@ more than usual here.
 | 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
 | 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
 | 1 | **Step generator** | Raspberry Pi Pico (RP2040) — **3.3 V logic, needs the buffer below** | 4 |
-| 1 | **Level buffer** | **74HCT125** or 74HCT541, run at 5 V — see below | 1 |
+| 3 | **N-FET, 2N7002 or BSS138** | sinks the DM542 opto inputs — see below | 1 |
+| 3 | Resistor, 10 kΩ | **gate pulldowns — not optional** | — |
+| 3 | Resistor, 220 Ω | gate series | — |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
 ### Verified against the 17HS19-2004S1 drawing
@@ -190,17 +192,52 @@ at half its design current turns on slowly and its delay varies with temperature
 which converts directly into position error at exactly the moment the rig is
 supposed to be the trustworthy reference.
 
-**Use a `74HCT125` (quad buffer) or `74HCT541` at 5 V.** The HCT family's input
-threshold is 2.0 V, so a 3.3 V GPIO drives it reliably, and its 5 V output drives
-the opto at full current. This is the same reason the ECU uses a 74HCT541 on the
-ignition outputs.
+#### Small N-FETs sinking the inputs — the standard way
 
-**Wire common-cathode:** `PUL− / DIR− / ENA−` to ground, and drive `PUL+ / DIR+ /
-ENA+` from the buffer. The Pico's `VBUS` supplies the 5 V.
+Tie **`PUL+ / DIR+ / ENA+` to +5 V** (from the Pico's `VBUS`) and put a
+logic-level N-FET on each **`−`** terminal, source to ground, gate from a GPIO.
+This is how CNC breakout boards have always driven these inputs, and it is
+comfortable in every direction:
 
-*(Do not wire common-anode with 5 V on the `+` terminals and the Pico sinking on
-the `−` side. That puts 5 V through the opto into a 3.3 V GPIO, and back-feeds the
-Pico whenever it is unpowered.)*
+```
+  +5V ──┬── PUL+   DIR+   ENA+
+        │     │      │      │
+        │   [opto] [opto] [opto]     (internal, 270R + LED)
+        │     │      │      │
+             PUL−   DIR−   ENA−
+              │      │      │
+             ─┴─    ─┴─    ─┴─   2N7002, source to GND
+  GPIO ──220R──┤ gate,  10k pulldown to GND
+```
+
+| | |
+|---|---|
+| Opto current | **14 mA** — the 5 V design point, not the 7.8 mA a bare 3.3 V GPIO gives |
+| FET drop at 14 mA | 2N7002 ≈ **70 mV**, irrelevant |
+| Current margin | 115 mA rating against 14 mA — **8×** |
+| Gate edge with 220 Ω | **11 ns**, against a 15.6 µs step period at 3200 pulse/rev |
+
+**The opto is the speed limit, not the FET** — the driver spec is typically
+200 kHz with a 2.5 µs minimum pulse.
+
+**The 10 kΩ gate pulldowns are not optional.** Pico GPIOs are high-impedance
+inputs during boot and reset, so without them the gates float and the driver can
+see spurious pulses before firmware ever runs. On a rig whose whole value is a
+trustworthy angular datum, steps taken before you were looking are the worst kind
+of error.
+
+**And note the logic inverts.** Pulling the `−` terminal low turns the opto *on*,
+so a GPIO high is an active pulse. Account for it in the PIO program or wire the
+active edge accordingly.
+
+*(A `74HCT125` or `74HCT541` at 5 V does the same job as one chip instead of nine
+discretes — its 2.0 V input threshold accepts 3.3 V, and it sources into a
+common-cathode wiring. Either is fine. The FETs win on availability and on
+tolerating 12 V or 24 V on the `+` side if that ever matters.)*
+
+**Never wire the Pico directly to the `−` terminals with 5 V on the `+` side.**
+That puts 5 V through the opto into a 3.3 V GPIO and back-feeds the Pico whenever
+it is unpowered. The FET is what makes this topology safe.
 
 ### Microstepping is capped by pulse rate, not by resolution
 
