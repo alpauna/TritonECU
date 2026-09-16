@@ -22,13 +22,33 @@ more than usual here.
 
 | Qty | Item | Spec | ~$ |
 |--:|---|---|--:|
-| 1 | **Stepper, NEMA 17 48 mm** | `17HS19-2004S1` — 2.0 A/phase, 0.59 N·m, **2.8 mH**, 5 mm shaft | 15 |
+| 1 | **Stepper, NEMA 17 48 mm** | `17HS19-2004S1` — 2.0 A/phase, 0.59 N·m, **2.8 mH**, Ø5 D-shaft 24 mm, 4-lead bipolar | 15 |
 | 1 | **Driver** | `DM542` / `DM542T` — 20–50 V, to 4.2 A, step/dir, selectable microstep | 20 |
 | 1 | **PSU** | **36 V** — 360 W brick in hand (Aclorol 36 V 10 A). 24 V is the marginal choice, see below | 20 |
 | 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
 | 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
 | 1 | **Step generator** | Raspberry Pi Pico (RP2040) | 4 |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
+
+### Verified against the 17HS19-2004S1 drawing
+
+Every dimension the mount depends on, checked rather than assumed:
+
+| | drawing | `vr_rig.scad` |
+|---|---|---|
+| Frame | 42.3 MAX | `nema = 42.3` ✓ |
+| Bolt pattern | 31 ±0.2 square | holes at (±15.5, ±15.5) ✓ |
+| Pilot boss | Ø22 −0.05, 2 mm tall | 23 mm clearance cut ✓ |
+| Shaft | Ø5 −0.012 × 24 mm | `nema_shaft = 5` ✓, coupling is 5 → 12 |
+| Body | 48 MAX | reaches x = −147 against a base edge at −150 ✓ |
+
+Two details the drawing adds:
+
+- **The shaft has a 4.5 mm flat** (D-cut). Land the coupling's set screw on it
+  rather than on the round — a grub screw on a plain shaft will eventually spin.
+- **The motor ships with a 1 m lead and a 2.54 mm 4-pin connector.** The DM542
+  takes screw terminals, so that plug gets cut off or adapted. Four leads means
+  bipolar, which is what the DM542 drives.
 
 ### Why this motor, and why 36 V rather than 24 V
 
@@ -179,8 +199,21 @@ after absolute position.
 | 1 | **Brass rod, 13 mm dia × 20 mm** *(or lead sinker)* | counterweight — **cut to length to balance** |
 | 1 | M3 × 6 grub screw | traps the counterweight |
 | — | M4 × 12/16/20 socket cap, M4 nuts | clamps, feet, sensor mounts |
-| — | M3 × 8 socket cap ×4 | NEMA 17 face |
+| — | **M3 × 8 socket cap ×4** | NEMA 17 face — **not longer, see below** |
 | 1 | Parallel key, **8 × 7 × 20 steel** *(optional)* | see below |
+
+**On the M3 screws: do not substitute longer ones.** The 17HS19 drawing specifies
+`4-M3 DEPTH 4.5 MIN` — a shallow blind tapped hole. Through a 4 mm mount plate:
+
+| | thread needed | result |
+|---|--:|---|
+| **M3 × 8** | 4 mm | **clamps, 0.5 mm spare** |
+| M3 × 10 | 6 mm | **bottoms out — never clamps** |
+| M3 × 12 | 8 mm | bottoms out |
+
+The instinct that a longer screw is safer is backwards here: it reaches the bottom
+of the hole and stops, leaving the motor loose under a head that feels tight.
+4 mm of M3 engagement is 1.3 × diameter, against a mount carrying 0.08 N·m.
 
 **On the key:** the hub prints its key integrally, which is fine — the drive
 torque is 82 mN·m and PETG shrugs at that. A steel parallel key is a dollar and
