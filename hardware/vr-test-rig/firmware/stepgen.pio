@@ -1,0 +1,48 @@
+;
+; stepgen.pio — one step pulse per FIFO word, 50 % duty
+;
+; Each 32-bit word written to the TX FIFO is a HALF-period, in PIO cycles.
+; The state machine drives the pin high for that long, then low for the same,
+; so the mark/space is always 50 %. That matters: the DM542 wants a pulse of
+; at least 2.5 us, and a 50 % duty satisfies it automatically for any period
+; down to 5 us (200 kHz), which is the driver's own input ceiling.
+;
+; Cycle accounting, for the host to convert a period into a FIFO word:
+;       high = x + 2 cycles      (mov, then jmp x-- running x+1 times)
+;       low  = x + 3 cycles      (mov, jmp x+1 times, then the next pull)
+;       period = 2x + 5
+;   so  x = (period_cycles - 5) / 2
+;
+; Polarity: the 2N7002 driver board inverts. A HIGH here turns the FET on,
+; which pulls the DM542's PUL- low and lights the optocoupler. So side 1 is
+; the ACTIVE pulse, and the pin idles low — which is also the safe state the
+; gate pulldown holds during reset.
+;
+.program stepgen
+.side_set 1
+
+.wrap_target
+    pull block          side 0      ; wait for the next half-period, pin idle
+    mov x, osr          side 1      ; pulse begins
+hi:
+    jmp x--, hi         side 1
+    mov x, osr          side 0      ; pulse ends (OSR still holds the count)
+lo:
+    jmp x--, lo         side 0
+.wrap
+
+% c-sdk {
+static inline void stepgen_program_init(PIO pio, uint sm, uint offset, uint pin) {
+    pio_sm_config c = stepgen_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    /* Run at full system clock: 8 ns resolution at 125 MHz. The period is set
+       entirely by the FIFO word, so there is no divider to quantise it. */
+    sm_config_set_clkdiv(&c, 1.0f);
+    sm_config_set_out_shift(&c, false, false, 32);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);   /* 8 deep, more slack */
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
