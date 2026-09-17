@@ -80,7 +80,7 @@ That single part is the one genuinely useful addition per output.
 | **VR inputs** | 2 × 5 kΩ series per leg into the MAX9926's internal ESD clamps — see the VR document |
 | **Digital switch inputs** (brake, A/C, TR, 4x4) | series resistor + TVS + pull-up; they see battery-level signals |
 | **Tach / VSS outputs** | series resistor + TVS; these drive the cluster and leave the box |
-| **J1850 bus** | already has its own protection network in the transceiver design |
+| **J1850 bus** | RX side is protected by 100 kΩ series resistors and clamps. **TX side is not** — the DRV8837's outputs connect straight to the harness on a low-voltage driver. The "already protected" claim inherited a *scan tool's* threat model — [`review-scp-chain.md`](review-scp-chain.md) §3 |
 
 ## Grounding, which matters more than any of it
 

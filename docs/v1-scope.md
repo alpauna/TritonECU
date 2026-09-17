@@ -29,7 +29,7 @@ ST-Link, USB console and Ethernet all come for free.
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native pins; TCC **NCV8405A**, EPC **NCV8408B** DPAK, ≥200 Hz), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
-| **SCP / J1850 PWM** | **DRV8837** H-bridge differential TX + **TLV7031** comparator RX, 3 GPIOs, 5 V | ✅ |
+| **SCP / J1850 PWM** | **DRV8837** H-bridge differential TX + **TLV7031** comparator RX, **4 GPIOs** (incl. `nSLEEP`), 5 V | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |
 
 That is a complete engine **and transmission** controller. Nothing in it is
@@ -97,8 +97,9 @@ Three things make including it cheap rather than a scope increase:
 - **The front end is already designed.** DRV8837 H-bridge driving TX_P/TX_N
   complementary, TLV7031 comparator across PWM+/PWM−, 5 V, no boost rail. See
   [`f150-1999-target.md`](f150-1999-target.md) §5.3.
-- **The pins were already budgeted.** `pin-budget.md` has counted TX_P, TX_N and
-  RX since before the STM32 move, against ~77 spare.
+- **The pins were already budgeted** — though the count was wrong: `nSLEEP` makes
+  it **four**, not three. See [`review-scp-chain.md`](review-scp-chain.md) §1.
+  Against ~77 spare it changes nothing.
 - **Phase 0 exercises this exact front end before the board exists.** Listening
   on the DLC with the OEM PCM still installed is the *first* thing on the plan,
   so by fabrication the design will have been proven against this truck rather

@@ -15,13 +15,13 @@ excluded, because it costs nothing beyond the one chip-select already counted.
 | VR channels — CKP, CMP, OSS, TSS | **4** | edge interrupts, 2 × MAX9926 |
 | AD7606: SCK, MISO, CS, CONVST, BUSY | **5** | the other six pins are static, on the expander |
 | MCP23S17 chain chip-select | **1** | shares the SPI bus |
-| J1850: TX_P, TX_N, RX | **3** | bit-timed at 41.6 kbps |
+| J1850: TX_P, TX_N, RX, **nSLEEP** | **4** | bit-timed at 41.6 kbps. nSLEEP releases the bus — [`review-scp-chain.md`](review-scp-chain.md) §1 |
 | TCC, EPC | **2** | PWM |
 | **EVAP purge, EGR regulator** | **2** | **PWM — see the correction below** |
 | IAC | **1** | PWM |
 | Tach out, VSS out | **2** | frequency outputs |
 | I2C: SDA, SCL | **2** | |
-| **Total** | **38** | |
+| **Total** | **39** | |
 
 On the expander and costing nothing extra: fuel pump relay, ~~EVAP purge, EGR
 regulator,~~ IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
@@ -45,7 +45,7 @@ OS0-2 / RANGE.
 ## The Waveshare board is short by 11
 
 It breaks out **27** GPIOs, of which GPIO24/25 are the USB D−/D+ pair, leaving
-**25 usable**. Against 38, that is **13 short**.
+**25 usable**. Against 39, that is **14 short**.
 
 The rest of the chip's pins are committed on the carrier to things a truck has
 no use for:
