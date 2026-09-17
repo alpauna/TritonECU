@@ -191,7 +191,8 @@ examined.
 
 Two were the same class of error — *a protection element specified against the
 nominal fault and not against that fault coinciding with a load dump.* Worth
-checking the rest of the board for the pattern.
+checking the rest of the board for the pattern. **Done —
+[`review-protection-sweep.md`](review-protection-sweep.md).**
 
 The third lesson is different and worth stating separately: **the PPTC survived
 three revisions of this design without anyone asking whether the current that

@@ -71,9 +71,10 @@ That single part is the one genuinely useful addition per output.
 |---|---|
 | **Coil outputs** | IGBT internal 400 V clamp + Schottky to ground |
 | **Injector outputs** | IntelliFET 60–70 V clamp, over-current and over-temp + Schottky to ground |
-| **Relay / solenoid outputs** (fuel pump, EVAP, EGR, IMCC, fan, A/C) | flyback diode across the load + TVS to ground; PTC acceptable, currents are low |
+| **Relay coils / lamp** (fuel pump, fans, A/C clutch, MIL) | **TBD62083AFNG** — clamp diodes integrated, to COMMON on permanent B+. No external flyback diode. **It has no current limit**, so a shorted coil draws until thermal shutdown: a PTC here is the only current-based protection, not a redundant one |
+| **Solenoids / heaters** (EVAP, EGR, IMCC, SS1/SS2/CSS, HO2S) | **NCV8405A** — 42 V integrated clamp, self-limits at 6–11 A. No external flyback diode. A PTC would trip, but adds little the driver does not already do. **See [`review-protection-sweep.md`](review-protection-sweep.md) §A1** on clamp energy during a load dump |
 | **VREF** | per-feed: current limit **250 mA** with fault flag (TPS2H160B-Q1), **ideal diode** (LM74700-Q1) blocking reverse current, **bidirectional TVS standing off 24 V**, above every DC fault, so it clamps transients only and needs no series element — see [`vref-supply.md`](vref-supply.md) |
-| **Analog sensor inputs** | series resistance + clamp. The AD7606's own ±16.5 V clamps do most of this |
+| **Analog sensor inputs** | series resistance + clamp. The **ADS8588H's** 9 kV input clamp does most of this (the AD7606 is the bench part) |
 | **VR inputs** | 2 × 5 kΩ series per leg into the MAX9926's internal ESD clamps — see the VR document |
 | **Digital switch inputs** (brake, A/C, TR, 4x4) | series resistor + TVS + pull-up; they see battery-level signals |
 | **Tach / VSS outputs** | series resistor + TVS; these drive the cluster and leave the box |
