@@ -17,8 +17,16 @@ reporting, and a 40 V output rating that survives a short to battery. See
 The separation was right and matters. The current figure moved, and the
 protection scheme had a hole in it.
 
-**No longer open — one VREF pin or two.** The EEC-V pinout shows one (pin 90,
-BRN/WHT); Ford's power-pin sheet lists two (A-20, C-20). That mattered when the
+**Closed — there is one VREF pin.** Ford's own wiring diagrams show **circuit
+351 BN/WH to PCM pin 90**, spliced at S136/S137 to the DPFE sensor, the TP sensor
+and C150. See
+[`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §1.
+The power-pin sheet's "A-20 and C-20" does not describe this truck. The second
+channel becomes a **stuffing option**, not a requirement. The reasoning that
+followed is kept below because it is why nothing had to wait for the answer.
+
+**Superseded — the EEC-V pinout shows one (pin 90,
+BRN/WHT); Ford's power-pin sheet lists two (A-20, C-20).** That mattered when the
 answer set the number of output stages. It no longer does: **the chosen part is
 dual-channel**, so both are built either way and the unused one is simply never
 enabled. Beyond that, the pinout sheet is the *MegaSquirt install's* record —
@@ -935,7 +943,7 @@ elements want different ones.
 |---|---|---|
 | **TVS** | **PGND** | transient energy to the heaviest copper |
 | **Divider bottom leg** | **AGND**, the ADC's own reference | so the reading means what it says |
-| Sensor returns | **SIGRTN** — A-17, B-17, C-17 | tied at the star point on our board |
+| Sensor returns | **SIGRTN** — one net, PCM pin 91 | [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §2 |
 
 **The divider must return to the ADC's ground, not SIGRTN.** Referencing it to
 SIGRTN passes any SIGRTN-to-AGND offset straight through at **(1 − k) = 0.89×**,
@@ -1181,7 +1189,6 @@ fault but not against that fault coinciding with a load dump.
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
-| **[CONFIRM ON TRUCK]** | one VREF pin or two. Not blocking — the part is dual-channel either way |
 | **[CONFIRM]** | TR sensor and speed-control switches really are on VREF (load table above) |
 
 The `THER` decision is worth thinking about rather than defaulting. **Auto-retry**

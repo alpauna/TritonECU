@@ -135,9 +135,15 @@ Stage 1 is enough for a condenser. `acFanStage` can raise it to 2.
 > | **A/C request** | C139/C170, listed in `sensors-to-run.md` | the driver asked for A/C |
 > | **A/C cycle switch** | EEC-V 41, BLK/YEL | the low-pressure cycling switch |
 >
-> The *request* is the right trigger — it is true whenever the system is trying
-> to cool. The cycling switch drops out every time the compressor cycles, which
-> would chatter the fan. Use the request; log the cycle switch.
+> **Resolved, and against the preference above.** Ford's diagrams show the PCM
+> has **only** the cycling pressure switch — pin 41, circuit 347 BK/YE, C139.
+> There is no A/C *request* input: the PCM drives a **WOT cutout relay** (pin 69)
+> rather than the clutch itself. See
+> [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §8.
+>
+> So the chatter has to be **handled** rather than avoided: key fan-on to pin 41
+> with a **hold-on timer** long enough to span a compressor off-cycle. Sizing it
+> is a bench measurement against the real cycling rate.
 
 A third signal exists and is worth wanting: **A/C high-side pressure**, listed
 as an analog channel in `f150-1999-target.md`. If it is fitted, high head
@@ -188,11 +194,15 @@ Hence the `4x4 Low Indicator` term. It is a discrete input on **EEC-V pin 14**
 (LT BLU/BLK) that was already found in the pinout and is not otherwise used, and
 it inhibits the cutoff outright. Cheap insurance.
 
-> **[CONFIRM]** whether OSS or the **transfer case speed sensor** (C199, 4x4
-> only) feeds the speedometer. `sensors-to-run.md` already flags this as open.
-> If the transfer case sensor is the real road-speed source, prefer it for the
-> cutoff — it is downstream of the range box and correct in both ranges, and the
-> 4x4-low inhibit becomes belt-and-braces rather than load-bearing.
+> **Resolved: use the transfer case sensor.** Ford's diagrams show it as a
+> **separate PCM input** — C199, circuit 1496 PK, **pin 7** — alongside OSS on
+> pin 84, whose own note scopes it to *"shift scheduling, torque converter
+> engagement schedule and EPC pressure"*. See
+> [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §7.
+>
+> It sits **downstream of the range box**, so it is correct in both ranges and
+> the 4×4-low inhibit (pin 14, confirmed) becomes belt-and-braces rather than
+> load-bearing.
 
 ### 4.5 Cranking
 

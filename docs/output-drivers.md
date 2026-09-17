@@ -616,22 +616,36 @@ Internal ADC channels are plentiful, so the cost is real but not scarce. **EPC
 does not need one**: the NCV8408B's gate-current flag reports its fault without
 a drain sample, and without needing to be synchronised to the PWM.
 
-> **[CONFIRM ON TRUCK]** the HO2S heater wiring really is power-fed and
-> PCM-grounded before laying this out. The claim rests on the pinout naming
-> pins 95/96 as heater outputs plus Ford convention, not on a measurement.
+> **Confirmed from Ford's diagrams.** The heaters are power-fed and
+> PCM-grounded: upstream pair on **391 RD/YE** returning to PCM pins **93/94**,
+> downstream pair on **1138 VT/WH** returning to pins **95/96** — two different
+> supply circuits. See
+> [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §3.
+> The whole low-side case for this part rested on this.
 
 ### Channel budget
 
-| Channels | Load | Current |
-|--:|---|---|
-| 4 | **HO2S heaters** | ~1–2 A each |
-| 1 | EVAP purge valve | PWM |
-| 1 | EGR vacuum regulator | PWM |
-| 1 | IMCC | **[CONFIRM]** on/off or PWM |
-| 3 | SS1, SS2, CSS | on/off |
-| 1 | **TCC** | PWM, SOT-223 |
-| 1 | **EPC** | PWM — **NCV8408B** DPAK, see above |
-| **12** | | |
+| Channels | Load | PCM pin | Drive |
+|--:|---|--:|---|
+| 4 | **HO2S heaters** | 93, 94, 95, 96 | resistive, ~1–2 A each |
+| 1 | EVAP canister purge | **56** | PWM |
+| 1 | EGR vacuum regulator | **47** | PWM |
+| 1 | **Canister vent solenoid** | **67** | on/off — *newly found* |
+| 1 | IMCC | 46 | **[CONFIRM]**, leans on/off |
+| 2 | SSA, SSB | 27 (*6), 1 (*11) | on/off |
+| 1 | **TCC** | 54 | PWM, SOT-223 |
+| 1 | **EPC** | 81 | PWM — **NCV8408B** DPAK |
+| **12** | | | |
+
+Pin numbers and circuits are from Ford's own diagrams —
+[`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md).
+Two corrections fell out of reading them:
+
+- **A third EVAP solenoid exists**, the canister vent solenoid (C413, pin 67),
+  which appeared in no list in this tree.
+- **Only two shift solenoids appear** at the transmission connector, SSA and
+  SSB. The CSS coast-clutch channel came from the MegaSquirt sheet and is not on
+  Ford's 4R70W diagram. **[CONFIRM]** — it changes the count.
 
 ### Two cautions
 

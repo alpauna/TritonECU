@@ -127,7 +127,7 @@ flag instead.
 
 ---
 
-## 4. The freewheel diode has no 12 V node inside the ECU
+## 4. ~~The freewheel diode has no 12 V node inside the ECU~~ ANSWERED
 
 A freewheel diode goes *across the load*. **We only have one end of the load.**
 The solenoid is fed 12 V from the EEC relay out in the harness; only its low
@@ -138,9 +138,19 @@ A-33) and let recirculation flow back through the harness. That works only if
 the solenoid feed and VPWR come from the same relay — electrically the same
 node, separated by harness resistance and inductance.
 
-> **[CONFIRM ON TRUCK]** that the transmission solenoid and EVAP/EGR feeds
-> originate at the same relay as VPWR. If they do not, the recirculation loop
-> closes through the battery and the diode does much less good.
+> **Answered from Ford's diagrams**, and the answer is worse than hoped — but it
+> opens a better option. See
+> [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §5.
+>
+> The transmission solenoids share **1138 VT/WH** (BJB fuse 24, off the PCM power
+> relay); EGR, EVAP and IMCC share **391 RD/YE**. **The PCM's own VPWR is 361 RD**
+> — a third branch. **Neither 1138 nor 391 reaches the PCM at all**, so a diode
+> returned to VPWR would recirculate out through the connector, across the
+> Battery Junction Box and over two fuses.
+>
+> **28 EEC-V pins are unused.** Bring **1138 and 391 into the ECU** as two
+> dedicated freewheel returns — two wires for a local, tight loop serving all
+> five PWM solenoids.
 
 The loop area also matters: recirculation current runs out of the ECU, through
 the harness, and back. That is a large loop switching at PWM rates — worth
@@ -167,7 +177,7 @@ keeping in mind for emissions.
 | 1 | ~~EVAP and EGR are PWM but assigned to an SPI expander~~ | **FIXED** — native timer pins; channels now classified by drive type |
 | 2 | ~~Gate rail unspecified; thermal budget assumed 5 V~~ | **FIXED** — second 74HCT541 at 5 V; expander chain at 5 V now required |
 | 3 | ~~Drain-sense divider into a logic input has a 4 % window~~ | **FIXED** — 100 k / 10.5 k into an internal ADC |
-| 4 | Freewheel diode has no in-ECU 12 V node | return to VPWR; **[CONFIRM]** shared relay feed |
+| 4 | ~~Freewheel diode has no in-ECU 12 V node~~ | **ANSWERED** — bring 1138 and 391 in on two spare pins |
 
 Findings 1 and 2 share a root: **outputs were classified by speed and current,
 and PWM is neither.** EVAP and EGR landed on a port expander, and the two
