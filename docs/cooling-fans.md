@@ -31,6 +31,12 @@ One expander bit. The expander chain is on the board regardless and has spare
 bits, so the board cost of this feature is a relay driver channel and a
 connector pin.
 
+> ⚠ **"Has spare bits" was never a count.** It is now:
+> [`review-expander-chain.md`](review-expander-chain.md) §3 makes it **38 bits
+> of demand against 32**. Fan 2 is not what overran it — the VREF block's six
+> GPIOs had no home in any document — but this feature is spending a bit that
+> was not there. A third MCP23S17 costs a package and no pins.
+
 ---
 
 ## 2. The connector pin conflict

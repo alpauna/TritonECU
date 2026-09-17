@@ -507,6 +507,15 @@ solenoids … all should default off."*
 The expander-driven channels need no buffer, **provided the MCP23S17 chain runs
 at 5 V.** That is now a requirement rather than a free choice.
 
+> ⚠ **This requirement does not survive review.** At V<sub>DD</sub> = 5 V the
+> MCP23S17's own V<sub>IH</sub> is 0.8 V<sub>DD</sub> = **4.0 V** — the same
+> figure this document uses for the drain-sense divider below — so a 3.3 V SPI
+> master cannot clock it. It also puts 5 V on the ADS8588H static pins, whose
+> absolute maximum is DVDD + 0.3 V. **The recommendation is to run the chain at
+> 3.3 V and buffer these eight gates with a third 74HCT541.**
+> [`review-expander-chain.md`](review-expander-chain.md) §1, §2 and the
+> recommendation.
+
 > The **2.2 kΩ** series gate resistor below forms a divider with the NCV8408B's
 > **25.5 kΩ internal gate resistance**, so 5 V arrives as 4.6 V. Small, but it
 > stacks with the above — another reason not to start from 3.3 V.

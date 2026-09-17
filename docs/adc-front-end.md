@@ -43,7 +43,9 @@ rather than registers, so the P4 opens SPI with MOSI as −1.
 
 **In the final ECU, six of these move to the MCP23S17 expander chain** —
 RESET, FRSTDATA, OS0, OS1, OS2 and RANGE are static or near-static, so they do
-not deserve native pins. That leaves SCK, MISO, CS, CONVST and BUSY, which is
+not deserve native pins. *(Right about which pins; the chain they move to was
+specified at 5 V, and DVDD + 0.3 V is 3.6 V —
+[`review-expander-chain.md`](review-expander-chain.md) §2.)* That leaves SCK, MISO, CS, CONVST and BUSY, which is
 the five the pin budget in `f150-1999-target.md` assumes. The mapping above is
 the *bench* mapping, using native pins because nothing else is connected yet.
 
@@ -337,11 +339,15 @@ cheap part has it.
 
 Two things to weigh before ordering:
 
-1. **Temperature: −40 to +85 °C, not +125 °C.** This decides where the ECU can
-   mount. The OEM PCM on this truck sits in the cabin, not the engine bay, so
-   85 °C is very likely fine — but it rules out an under-hood enclosure, and
-   that is a decision better made now than after the board is built.
-   **[CONFIRM]** the intended mounting location.
+1. ~~**Temperature: −40 to +85 °C, not +125 °C.**~~ **Wrong — struck.** The
+   ADS8588H specifies min/max over **T<sub>A</sub> = −40 to +125 °C**, and
+   Recommended Operating Conditions gives the same. The only 85 °C limit is a
+   condition on I<sub>AVDD_PWR_DN</sub>, the power-down leakage spec. The
+   **AD7606B bench part** is the 85 °C device, which is the likely source of the
+   mix-up. **This ADC does not rule out an under-hood enclosure** —
+   [`review-expander-chain.md`](review-expander-chain.md) §8. **[CONFIRM]** the
+   intended mounting location anyway, because the MCP23S17 is 125 °C-rated only
+   at V<sub>DD</sub> ≥ 4.5 V and the review recommends running it at 3.3 V.
 2. **1 MΩ input impedance, not 5 MΩ.** It loads the source slightly. Irrelevant
    for low-impedance sensors, but the battery-voltage divider should be stiff
    enough that 1 MΩ across it does not shift the ratio — keep the divider
