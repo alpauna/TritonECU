@@ -389,13 +389,21 @@ specified it.
 
 **So: PWM loads get an external freewheel diode to 12 V. On/off loads do not.**
 
-| Load | Drive | Clamp strategy |
-|---|---|---|
-| HO2S heaters ×4 | resistive | **nothing** — no stored energy |
-| EVAP purge, EGR regulator | PWM | **freewheel diode to 12 V** |
-| IMCC | **[CONFIRM]** | freewheel if PWM |
-| SS1, SS2, CSS | on/off | integrated 42 V clamp |
-| **TCC, EPC** | PWM | **freewheel diode to 12 V** |
+| Load | Drive | Gate from | Clamp strategy |
+|---|---|---|---|
+| HO2S heaters ×4 | resistive | expander, 5 V | **nothing** — no stored energy |
+| SS1, SS2, CSS | on/off | expander, 5 V | integrated 42 V clamp |
+| IMCC | **[CONFIRM]** | expander, or native if PWM | freewheel if PWM |
+| **EVAP purge, EGR regulator** | **PWM** | **native timer + buffer** | **freewheel diode to 12 V** |
+| **TCC, EPC** | **PWM** | **native timer + buffer** | **freewheel diode to 12 V** |
+
+**PWM loads take native timer pins, not the expander.** An earlier revision put
+EVAP purge and EGR regulator on the MCP23S17 chain, because outputs had been
+split into fast and slow by *current and criticality* — and PWM is neither fast
+nor critical, so it landed on the slow side. **An SPI expander cannot generate
+PWM**: every edge is a bus transaction, with microseconds of latency, no
+hardware timing, and jitter from whatever else shares the bus. The pin budget
+absorbs the move without comment, at 37 assigned against ~114.
 
 #### EPC and TCC: the same part, one in DPAK
 
@@ -467,6 +475,35 @@ protection is silently defeated:
 
 **Drive EPC and TCC at ≥ 200 Hz.** That is a firmware constraint derived from
 the driver, and nothing else in the design would have surfaced it.
+
+#### Gate drive: a second 74HCT541, for the same reason as the first
+
+**Every dissipation figure above is R<sub>DS(on)</sub> at V<sub>GS</sub> = 5 V** —
+including the 3.69 A that selected this part. Neither driver specifies
+R<sub>DS(on)</sub> at 3.3 V, and both have V<sub>GS(th)</sub> up to 2.0–2.2 V, so
+at 3.3 V they conduct without being fully enhanced and the number is simply not
+guaranteed.
+
+The native timer pins are **3.3 V**. So the four PWM channels — EVAP, EGR, TCC,
+EPC — are exactly the ones that would get the weakest gate drive, and EPC is the
+one where it matters most.
+
+**Buffer them to 5 V with a second `74HCT541`**, the same part and the same
+argument as [the ignition stage](#recommended-one-74hct541-for-all-eight-coils):
+HCT inputs take 3.3 V as a valid high, the output is a full 5 V, and one octal
+package covers four channels with four to spare.
+
+Use its enables the same way: **both `OE` pulled up to 5 V through 10 kΩ**, so
+the outputs are high-impedance at power-on. [`custom-board.md`](custom-board.md)
+already asks for this — *"the fuel pump relay and the EVAP, EGR and IMCC
+solenoids … all should default off."*
+
+The expander-driven channels need no buffer, **provided the MCP23S17 chain runs
+at 5 V.** That is now a requirement rather than a free choice.
+
+> The **2.2 kΩ** series gate resistor below forms a divider with the NCV8408B's
+> **25.5 kΩ internal gate resistance**, so 5 V arrives as 4.6 V. Small, but it
+> stacks with the above — another reason not to start from 3.3 V.
 
 #### A PWM-friendly diagnostic comes with it
 
@@ -541,23 +578,43 @@ it is the one a dumb driver cannot report at all.
 **The pull-down is not optional.** Without it an open load floats and the
 off-state test reads whatever the node happens to be holding.
 
-#### Sizing the divider
+#### Sizing the divider — and why it is not a logic input
 
-The drain node sits on the wire that leaves the box, so it can see battery, and
-it can see load dump. Two constraints pull against each other:
+The obvious implementation is a divider into a spare expander bit. **There are
+no values that work.** The drain must read high at 12 V and must not exceed the
+rail at 14.4 V charging:
 
-- it must **survive 53 V** without pushing the expander input past its rail, and
-- it must still **clear V<sub>IH</sub> at 12 V** so a healthy load reads high.
+```
+12.0 V, engine off  ->  ABOVE VIH = 4.0 V   ratio >= 0.333
+14.4 V, charging    ->  BELOW the 5 V rail  ratio <= 0.347
+```
 
-A series resistor and a clamp diode to the rail, per
-[`harness-protection.md`](harness-protection.md), is the standard shape. Pick
-the ratio against the expander's V<sub>IH</sub> = 0.8 × V<sub>DD</sub> once that
-rail is fixed.
+A **4 % window**, before resistor tolerance, V<sub>IH</sub> tolerance or supply
+variation. The cause is structural: a logic input forces the threshold into
+hardware, and the normal supply range is wider than the gap between "high" and
+the rail.
 
-**Binary is enough, and it is free.** An expander input costs a bit that is
-already there; an AD7606 channel would cost one of eight that are all allocated.
-Being able to toggle the FET supplies the second data point that an analogue
-reading would otherwise have to provide.
+**Sense into an STM32 internal ADC and put the threshold in software.**
+
+| Drain | ADC sees |
+|---|--:|
+| 0.2 V, on | 0.02 V |
+| 12.0 V, off | 1.13 V |
+| 14.4 V, off, charging | 1.36 V |
+| 35 V, load dump | 3.30 V |
+
+**100 kΩ / 10.5 kΩ**, ratio 0.094 — scaled so a *load dump* lands at full scale
+rather than so 12 V does. That is
+[`review-protection-sweep.md`](review-protection-sweep.md)'s Pattern A applied
+deliberately: size the divider against the fault coinciding with a load dump,
+not against the nominal. **No clamp is then needed** below 35 V.
+
+The analogue value is also a better diagnostic than a bit — a partially shorted
+heater element reads between the states rather than tipping one way.
+
+Internal ADC channels are plentiful, so the cost is real but not scarce. **EPC
+does not need one**: the NCV8408B's gate-current flag reports its fault without
+a drain sample, and without needing to be synchronised to the PWM.
 
 > **[CONFIRM ON TRUCK]** the HO2S heater wiring really is power-fed and
 > PCM-grounded before laying this out. The claim rests on the pinout naming

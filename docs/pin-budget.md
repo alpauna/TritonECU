@@ -17,20 +17,27 @@ excluded, because it costs nothing beyond the one chip-select already counted.
 | MCP23S17 chain chip-select | **1** | shares the SPI bus |
 | J1850: TX_P, TX_N, RX | **3** | bit-timed at 41.6 kbps |
 | TCC, EPC | **2** | PWM |
+| **EVAP purge, EGR regulator** | **2** | **PWM — see the correction below** |
 | IAC | **1** | PWM |
 | Tach out, VSS out | **2** | frequency outputs |
 | I2C: SDA, SCL | **2** | |
-| **Total** | **36** | |
+| **Total** | **38** | |
 
-On the expander and costing nothing extra: fuel pump relay, EVAP purge, EGR
-regulator, IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
+On the expander and costing nothing extra: fuel pump relay, ~~EVAP purge, EGR
+regulator,~~ IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
 four TR inputs, brake and A/C switches, and the AD7606's RESET / FRSTDATA /
 OS0-2 / RANGE.
+
+> **Correction.** EVAP purge and EGR regulator are **PWM** loads and cannot
+> live on an SPI expander — every edge would be a bus transaction. They take
+> native timer pins. The split above was made by *current and criticality*,
+> and PWM is neither, which is how they landed here. See
+> [`review-solenoid-chain.md`](review-solenoid-chain.md) §1.
 
 ## The Waveshare board is short by 11
 
 It breaks out **27** GPIOs, of which GPIO24/25 are the USB D−/D+ pair, leaving
-**25 usable**. Against 36, that is **11 short**.
+**25 usable**. Against 38, that is **13 short**.
 
 The rest of the chip's pins are committed on the carrier to things a truck has
 no use for:

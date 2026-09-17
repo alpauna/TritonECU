@@ -14,7 +14,7 @@ gate drive ─► NCV8405A / NCV8408B ─► drain ─► load ─► 12 V (VPWR
 
 ---
 
-## 1. IMPORTANT — EVAP and EGR are PWM loads assigned to a port expander
+## 1. ~~IMPORTANT — EVAP and EGR are PWM loads assigned to a port expander~~ FIXED
 
 [`pin-budget.md`](pin-budget.md) lists them among the outputs that live "on the
 expander and costing nothing extra":
@@ -41,9 +41,13 @@ EPC. The pin budget absorbs it — 37 assigned against ~114.
 > **[CONFIRM]** whether IMCC is on/off or PWM. It is already flagged in
 > `sensors-to-run.md` and it decides which side of this line it falls on.
 
+> **Fixed 2026-09-17.** `output-drivers.md` now classifies every channel by
+> **drive type**, and PWM loads take native timer pins: EVAP, EGR, TCC, EPC.
+> The expander keeps the heaters, the on/off shift solenoids and IMCC.
+
 ---
 
-## 2. IMPORTANT — the gate drive rail is unspecified, and the thermal budget assumed 5 V
+## 2. ~~IMPORTANT — the gate drive rail is unspecified~~ FIXED
 
 Every dissipation number in `output-drivers.md` — including the
 **3.69 A** limit that selected the NCV8408B for EPC — uses R<sub>DS(on)</sub>
@@ -70,9 +74,15 @@ native-pin channels — and after finding 1 that is four of them, not two.
 > latched-fault flag forms a divider with its **25.5 kΩ internal gate
 > resistance**: 5 V becomes 4.6 V at the gate. Small, but it stacks with this.
 
+> **Fixed 2026-09-17.** A **second 74HCT541 at 5 V** buffers the four native PWM
+> channels, with both `OE` pulled up so they are high-impedance at power-on —
+> the same part, the same argument and the same interlock as the ignition stage.
+> And the **MCP23S17 chain running at 5 V is now a requirement**, not a free
+> choice, since the expander-driven channels have no buffer.
+
 ---
 
-## 3. IMPORTANT — the drain-sense divider cannot work into a logic input
+## 3. ~~IMPORTANT — the drain-sense divider cannot work into a logic input~~ FIXED
 
 `output-drivers.md` specifies drain sensing as "a divider into an expander
 input", with the constraint stated but no values. There are no values that work:
@@ -107,6 +117,13 @@ than a bit.
 Cost: an internal ADC channel per sensed output. **Not all twelve need it** —
 the OBD requirement is the four heaters, and EPC and TCC have the gate-current
 flag instead.
+
+> **Fixed 2026-09-17.** Specified as **100 kΩ / 10.5 kΩ into an STM32 internal
+> ADC**, scaled so a load dump lands at full scale rather than so 12 V does —
+> the sweep's Pattern A applied deliberately this time. No clamp needed below
+> 35 V. One correction to the note above: the gate-current flag is an
+> **NCV8408B** feature, so it covers **EPC only**; TCC is on an NCV8405A and
+> needs a PWM-synchronised drain sample like the other PWM channels.
 
 ---
 
@@ -147,9 +164,9 @@ keeping in mind for emissions.
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | EVAP and EGR are PWM but assigned to an SPI expander | move to native timer pins |
-| 2 | Gate rail unspecified; thermal budget assumed 5 V, native pins are 3.3 V | **74HCT541 buffer at 5 V**, as the ignition stage already does |
-| 3 | Drain-sense divider into a logic input has a 4 % window | sense into an internal ADC, threshold in software |
+| 1 | ~~EVAP and EGR are PWM but assigned to an SPI expander~~ | **FIXED** — native timer pins; channels now classified by drive type |
+| 2 | ~~Gate rail unspecified; thermal budget assumed 5 V~~ | **FIXED** — second 74HCT541 at 5 V; expander chain at 5 V now required |
+| 3 | ~~Drain-sense divider into a logic input has a 4 % window~~ | **FIXED** — 100 k / 10.5 k into an internal ADC |
 | 4 | Freewheel diode has no in-ECU 12 V node | return to VPWR; **[CONFIRM]** shared relay feed |
 
 Findings 1 and 2 share a root: **outputs were classified by speed and current,
