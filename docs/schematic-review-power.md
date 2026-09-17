@@ -342,7 +342,7 @@ heats.
 and VREF is a 5 V rail that has no use for the voltage rating. Use a 16 V part
 at ~100–150 mA hold, and take the regulator's feedback from the far side of it
 so the resistance stays inside the loop — see
-[`vref-supply.md`](vref-supply.md#choosing-the-ptc--not-the-150-v-parts).
+[`vref-supply.md`](vref-supply.md#why-there-is-no-pptc).
 
 ### DECIDED: no fuse on the board — the truck's PDB fusing is the branch protection
 
@@ -954,7 +954,7 @@ heats.
 and VREF is a 5 V rail that has no use for the voltage rating. Use a 16 V part
 at ~100–150 mA hold, and take the regulator's feedback from the far side of it
 so the resistance stays inside the loop — see
-[`vref-supply.md`](vref-supply.md#choosing-the-ptc--not-the-150-v-parts).
+[`vref-supply.md`](vref-supply.md#why-there-is-no-pptc).
 
 ### DECIDED: no fuse on the board — the truck's PDB fusing is the branch protection
 
@@ -1554,7 +1554,7 @@ heats.
 and VREF is a 5 V rail that has no use for the voltage rating. Use a 16 V part
 at ~100–150 mA hold, and take the regulator's feedback from the far side of it
 so the resistance stays inside the loop — see
-[`vref-supply.md`](vref-supply.md#choosing-the-ptc--not-the-150-v-parts).
+[`vref-supply.md`](vref-supply.md#why-there-is-no-pptc).
 
 ### DECIDED: no fuse on the board — the truck's PDB fusing is the branch protection
 

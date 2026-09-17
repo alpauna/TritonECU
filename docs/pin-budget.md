@@ -25,8 +25,13 @@ excluded, because it costs nothing beyond the one chip-select already counted.
 
 On the expander and costing nothing extra: fuel pump relay, ~~EVAP purge, EGR
 regulator,~~ IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
-four TR inputs, brake and A/C switches, and the AD7606's RESET / FRSTDATA /
-OS0-2 / RANGE.
+four TR inputs, brake and A/C switches, the AD7606's RESET / FRSTDATA /
+OS0-2 / RANGE, and the **MAX25239 `SYNC`** skip/FPWM select.
+
+> `SYNC` changes only at sleep entry and exit, so it is static in the sense this
+> split uses and needs no native pin. **Fit a pulldown**: at cold power-up the
+> expander's outputs are high-Z, and the safe default is skip mode.
+> [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap)
 
 > **Correction.** EVAP purge and EGR regulator are **PWM** loads and cannot
 > live on an SPI expander — every edge would be a bus transaction. They take

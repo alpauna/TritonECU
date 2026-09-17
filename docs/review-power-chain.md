@@ -56,6 +56,27 @@ so forgiving.
 > headroom on a supply is cheap — but it should be a known choice rather than an
 > artefact of counting a radio that was deleted.
 
+### RESOLVED — keep the part, but `SYNC` becomes a GPIO
+
+**Keep the MAX25239.** It is compensated, laid out and twice reviewed, and 7 %
+load is not a reason to redo any of that.
+
+The oversizing does have a consequence, and it is not efficiency. At 2.2 µH and
+2.1 MHz the **skip-mode boundary is 345 mA**, so 425 mA clears it by only 23 % —
+and key-on with the engine off drops the rail back under. Spread spectrum was
+chosen here for EMI, and dithering ±6 % around a frequency that is itself
+load-dependent is not the spectrum that choice was made against.
+
+`SYNC` high selects FPWM and fixes it, and `SPS` is a separate pin so spread
+spectrum survives. **But it cannot be strapped high** — the 95 µA standby figure
+is specified at V<sub>SYNC</sub> = 0 V, and a static logic high leaks 20–50 µA
+besides. So `SYNC` is driven: low in Standby, high when running. It goes on the
+expander with a pulldown, costing no native pin.
+
+Written up in
+[`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap),
+and **that section now owns the current budget.**
+
 ---
 
 ## 2. IMPORTANT — the sleep budget omits the battery-sense divider
@@ -84,6 +105,30 @@ the 5 V rail going down: it is a resistor to ground on a live rail.
 - **Or gate it**, with a FET to ground — but that costs a part and a pin to save
   what the resistors already save for free.
 
+### RESOLVED — **150 k / 33 k**, and the suggestion above was wrong
+
+**470 k / 100 k is too high**, and the sentence ruling it out was already written
+in [`adc-front-end.md`](adc-front-end.md): *"keep the divider resistances well
+under 100 kΩ"* — 470 k / 100 k presents 83 kΩ. Proposing it here is the same
+defect this review is about, committed by this review.
+
+The ADS8588H's input is **1 MΩ ±15 %**. The nominal loading error calibrates
+out; the ±15 % spread does not. At 470 k / 100 k that spread is **±301 mV at
+14 V**, against a **0.1 V** resolution target for the channel — it misses
+outright. At 150 k / 33 k it is ±111 mV.
+
+**150 k / 33 k** takes 246 µA down to **77 µA**, which is most of what the
+high-impedance argument wanted. The last 52 µA is nothing against a 25–50 mA
+parked allowance, and buying it would cost the accuracy.
+
+Value and reasoning now live in
+[`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider), **which owns
+it**, next to the R<sub>IN</sub> spec that decides it.
+
+**And the same table was missing something larger.** The MAX25239 itself —
+**95 µA** in skip — was never in the sleep budget either. Corrected total:
+**≈944 µA**.
+
 ---
 
 ## 3. Checked and clear — and the session's additions cost almost nothing
@@ -101,13 +146,24 @@ the 5 V rail going down: it is a resistor to ground on a live rail.
 
 ## Summary
 
-| # | Finding | Action |
-|---|---|---|
-| 1 | 5 V budget counts 750 mA of deleted hardware; real figure is ~425 mA | rebuild the table; **[DECIDE]** whether the converter is now oversized |
-| 2 | Sleep budget omits a 246 µA divider on a permanent rail — 31 % of it | raise it to 470 k / 100 k |
+| # | Finding | Action | Status |
+|---|---|---|---|
+| 1 | 5 V budget counts 750 mA of deleted hardware; real figure is ~425 mA | rebuild the table; **[DECIDE]** whether the converter is now oversized | **fixed** — table rebuilt and given an owner; MAX25239 kept, `SYNC` driven rather than strapped |
+| 2 | Sleep budget omits a 246 µA divider on a permanent rail — 31 % of it | ~~raise it to 470 k / 100 k~~ | **fixed** — **150 k / 33 k**, owned by `adc-front-end.md`. The 470 k suggestion was itself wrong, and the MAX25239's 95 µA was missing too |
 
 Both findings are the same shape, and it is the shape this session keeps
 finding: **a number that was correct when written, consumed by decisions taken
 elsewhere, and never revisited.** The ADC budget, the VR channel count and now
 the current budget. The fix each time is the same — give the number an owner and
 make everything that spends it go through that owner.
+
+> **Closing both of them made the point twice more.** The sleep table was missing
+> the MAX25239 as well as the divider, and the fix this review proposed for the
+> divider was contradicted by a rule already written in `adc-front-end.md`. A
+> review that spends a number it does not own makes the same mistake it is
+> auditing. Owners now assigned: **current budget** →
+> [`power-supply.md`](power-supply.md#current-budget-first--it-decides-the-topology),
+> **sleep budget** →
+> [`always-on-domain.md`](always-on-domain.md#the-number-that-decides-it-parasitic-drain),
+> **divider value** →
+> [`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider).
