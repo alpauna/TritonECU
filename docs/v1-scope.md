@@ -21,6 +21,8 @@ ST-Link, USB console and Ethernet all come for free.
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17 | ✅ |
+| **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
+| **Solenoid / heater drivers** | **NCV8405ASTT1G** ×10 — self-protected low-side, drain-sense diagnosis | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |

@@ -1,4 +1,4 @@
-# Output driver parts — ignition and injection
+# Output driver parts — ignition, injection, relays and solenoids
 
 Both loads are dumb and low-side switched: permanently at 12 V on one side, the
 driver grounds the other. See `custom-board.md` for why their clamping
@@ -220,15 +220,285 @@ No buffer, no driver, no level shift — straight off the P4.
 
 ---
 
+## Relays and lamps: Toshiba **TBD62083AFNG**
+
+An 8-channel DMOS sink array, pin-compatible with the ULN2803 family it
+replaces. **Chosen deliberately as the simple answer** for the slow low-side
+group — relay coils and the MIL — and it is the right part for that job and
+no larger one. See §"What it must not drive".
+
+Datasheet: [`Datasheets/TBD62083AFNG-datasheet.pdf`](Datasheets/TBD62083AFNG-datasheet.pdf).
+
+| Parameter | Value |
+|---|---|
+| Channels | **8**, sink |
+| V<sub>OUT</sub> | 50 V max |
+| I<sub>OUT</sub> | 500 mA/ch absolute; **400 mA operating**, 1 channel at 25 °C |
+| **R<sub>ON</sub>** | **0.7 Ω typ, 1.14 Ω max** at 350 mA |
+| **V<sub>IN</sub> (output on)** | **2.5 V min**, 25 V max |
+| V<sub>IN</sub> (output off) | 0.6 V max |
+| **I<sub>IN</sub> (output on)** | **0.1 mA max** at V<sub>IN</sub> = 2.5 V |
+| Clamp diode | **built in, every channel**, to the COMMON pin. I<sub>F</sub> 400 mA |
+| Package (FNG) | SSOP18-P-225-0.65, P<sub>D</sub> = 0.96 W |
+| T<sub>opr</sub> | **−40 to +85 °C** |
+
+### Why this rather than a ULN2803
+
+Three things, and the first is the one that matters:
+
+- **V<sub>IN(ON)</sub> = 2.5 V, drawing 100 µA.** It switches directly from
+  **3.3 V logic** and equally from 5 V, so it does not care which rail the
+  MCP23S17 chain runs at and imposes no level shifter of its own. A ULN2803's
+  Darlington input wants milliamps of base current per channel and carries a
+  package-total limit with it; at 100 µA per channel that constraint disappears.
+  The expander's 25 mA per pin is not remotely troubled.
+- **R<sub>ON</sub> 1.14 Ω worst case, not a 1.1 V saturation drop.** At a 200 mA
+  relay coil that is **46 mW per channel against 220 mW** for the Darlington —
+  roughly five times less heat — and the output actually pulls to near ground,
+  so the coil sees effectively the full supply rather than supply minus 1.1 V.
+  On a marginal coil at a low battery that difference is the difference between
+  pulling in and not.
+- **Clamp diodes are built in.** [`harness-protection.md`](harness-protection.md)
+  requires a flyback diode across every relay and solenoid load. This part
+  satisfies that internally, per channel, which is eight diodes and sixteen pads
+  removed from the board.
+
+Pin compatibility with the ULN2803 family is a free hedge: if a channel ever
+needs the Darlington's higher voltage tolerance, the footprint already takes it.
+
+### Wiring COMMON — one rail, and which one
+
+**There is a single COMMON pin for all eight clamp diodes.** Every load on the
+package therefore returns its flyback to the same rail, which constrains the
+layout more than it first appears:
+
+> **Tie COMMON to permanent B+, and feed every relay coil on the package from
+> that same permanent B+.**
+
+Two reasons. A clamp tied to a rail *lower* than a load's supply does not
+protect that load; and a coil whose supply is off while COMMON is high offers a
+leakage path back through the winding. One rail for the whole package avoids
+both without any thought at assembly.
+
+This suits the design anyway. [`cooling-fans.md`](cooling-fans.md) §4.6 needs
+the fan relay coils on a rail that survives key-off for the run-on to work, and
+the [always-on MCU domain](always-on-domain.md) means the ECU is awake to
+de-energise them. Permanent B+ for the whole relay group is consistent with
+both.
+
+### Channel budget — one package is enough
+
+| Channel | Load | Coil / lamp current |
+|--:|---|---|
+| 1 | Fuel pump relay | ~150–200 mA |
+| 2 | **Cooling fan 1 relay** | ~150–200 mA |
+| 3 | **Cooling fan 2 relay** | ~150–200 mA |
+| 4 | A/C clutch relay | ~150–200 mA |
+| 5 | MIL | ~150–300 mA |
+| 6–8 | spare | |
+
+**Five used, three spare, one package.**
+
+Thermally this is not close. Five channels at 200 mA and R<sub>ON(max)</sub>
+1.14 Ω is 5 × 0.2² × 1.14 = **0.23 W**. The FNG package allows 0.96 W at 25 °C,
+derating 7.7 mW/°C, so at a 60 °C cabin ambient the budget is still **0.69 W**.
+Even all eight channels loaded would be 0.37 W.
+
+The **−40 to +85 °C** operating range is comfortable *because*
+[`enclosure.md`](enclosure.md) puts the box in the **cabin, behind the
+glovebox**. Underhood it would be marginal, and this part choice should be
+revisited if the enclosure ever moves.
+
+### What it must not drive
+
+400 mA operating is the honest limit, and several loads on the output list are
+well past it. **This package covers relays and the lamp — not the rest of the
+slow group:**
+
+| Load | Current | Verdict |
+|---|---|---|
+| HO2S heaters ×4 | **~1–2 A each** | ✗ far over. Needs its own driver |
+| SS1, SS2, CSS | ~0.5–1 A | ✗ / marginal |
+| EVAP purge, EGR regulator | ~0.5–1 A, PWM | ⚠ marginal — measure first |
+| IMCC | **[CONFIRM]** on/off or PWM, likely ~0.5 A | ⚠ measure first |
+| A/C **clutch coil** driven directly | ~3–4 A | ✗ — drive a **relay**, not the clutch |
+
+The last row is the easy mistake: the A/C clutch itself is a several-amp
+electromagnet. The channel above drives a *relay coil*, and the relay carries
+the clutch.
+
+Everything in that table is covered by the **NCV8405A** below. Measure the
+actual coil currents on the truck before committing — every figure above is an
+estimate.
+
+---
+
+## Solenoids and heaters: onsemi **NCV8405ASTT1G**
+
+A three-terminal self-protected low-side MOSFET. It covers everything above the
+TBD62083A's 400 mA and below the ignition and injection stages — and, with a
+resistor on the drain, it diagnoses its own load.
+
+Datasheet: [`Datasheets/NCV8405ASTT1G-Datasheet.pdf`](Datasheets/NCV8405ASTT1G-Datasheet.pdf).
+
+| Parameter | Value |
+|---|---|
+| Package | **SOT-223** (`STT1G`). DPAK is `NCV8405ADTRKG` |
+| V<sub>GS(th)</sub> | **1.0 / 1.6 / 2.0 V** — drives from 3.3 V or 5 V |
+| R<sub>DS(on)</sub> at V<sub>GS</sub> = 5 V | 105 typ / **120 mΩ max** at 25 °C; 185 / **210 mΩ** at 150 °C |
+| Current limit | **6.0 / 9.0 / 11 A** at 25 °C; 3.0 / 5.0 / 8.0 A at 150 °C |
+| Clamp | **42 V integrated**, E<sub>AS</sub> 275 mJ |
+| Thermal | shutdown at 150–200 °C, **automatic restart** |
+| P<sub>D</sub> (SOT-223) | 1.0 W on min pad, 1.7 W on a 2″ board. Rθ<sub>JA</sub> 130 / 72 °C/W |
+| Qualification | AEC-Q101, survives 53 V load dump |
+
+### Why low-side, and why that settles it
+
+**The truck is already wired this way.** Ford feeds each HO2S heater 12 V and
+the PCM supplies the ground — pins 95 and 96 are *"RR / LR HO2S Heat"*. Same for
+the solenoids. A low-side driver drops onto the harness that exists; a high-side
+part would mean cutting every feed and routing it through the ECU instead.
+
+The integrated 42 V clamp settles a second thing for free. The EEC-V pinout's
+note that **"EPC needs a flyback diode to 12 V"** is handled inside the part, per
+channel, so those external diodes come off the board alongside the ones the
+TBD62083A removed.
+
+### Drain-voltage sense — the load diagnoses itself
+
+A pull-down at the drain plus a divider into an expander input turns each
+channel into a fault detector. **Toggling the FET is what makes it work**: one
+reading is ambiguous, two are not.
+
+| FET | Drain reads | Meaning |
+|---|---|---|
+| OFF | **high** (~12 V through the load) | healthy |
+| OFF | **low** | **open load** — burnt element, unplugged connector |
+| ON | **low** (~0.2 V) | healthy |
+| ON | **high** | **short to battery**, or the FET is in current limit / thermal shutdown |
+
+That last row is the *"HO2S heater circuit high"* fault — the P0135 family — and
+it is the one a dumb driver cannot report at all.
+
+**The pull-down is not optional.** Without it an open load floats and the
+off-state test reads whatever the node happens to be holding.
+
+#### Sizing the divider
+
+The drain node sits on the wire that leaves the box, so it can see battery, and
+it can see load dump. Two constraints pull against each other:
+
+- it must **survive 53 V** without pushing the expander input past its rail, and
+- it must still **clear V<sub>IH</sub> at 12 V** so a healthy load reads high.
+
+A series resistor and a clamp diode to the rail, per
+[`harness-protection.md`](harness-protection.md), is the standard shape. Pick
+the ratio against the expander's V<sub>IH</sub> = 0.8 × V<sub>DD</sub> once that
+rail is fixed.
+
+**Binary is enough, and it is free.** An expander input costs a bit that is
+already there; an AD7606 channel would cost one of eight that are all allocated.
+Being able to toggle the FET supplies the second data point that an analogue
+reading would otherwise have to provide.
+
+> **[CONFIRM ON TRUCK]** the HO2S heater wiring really is power-fed and
+> PCM-grounded before laying this out. The claim rests on the pinout naming
+> pins 95/96 as heater outputs plus Ford convention, not on a measurement.
+
+### Channel budget
+
+| Channels | Load | Current |
+|--:|---|---|
+| 4 | **HO2S heaters** | ~1–2 A each |
+| 1 | EVAP purge valve | PWM |
+| 1 | EGR vacuum regulator | PWM |
+| 1 | IMCC | **[CONFIRM]** on/off or PWM |
+| 3 | SS1, SS2, CSS | on/off |
+| **10** | | |
+
+### Two cautions
+
+**O2 heaters are PTC — cold inrush is several amps** against ~1.5 A steady. The
+part current-limits briefly at 6 A minimum, which is a soft-start rather than a
+fault, and **firmware must not read it as one**. Ford PWM-ramps heaters at
+startup anyway to avoid thermally shocking the ceramic; plan on doing the same.
+
+**SOT-223 wants copper.** At 1.5 A and the hot R<sub>DS(on)</sub> of 210 mΩ that
+is 0.47 W. On a minimum pad at 130 °C/W that is a 61 °C rise — about 121 °C
+junction at a 60 °C cabin ambient, inside the 150 °C limit but not by much. On a
+2″ pour at 72 °C/W it is a 34 °C rise and ~94 °C. **Pour copper, or use DPAK for
+margin.**
+
+**For PWM loads, synchronise the drain sample to the PWM state.** Sampling
+mid-chop reads whatever the duty cycle happened to be at that instant, not the
+health of the load.
+
+---
+
+## Considered and rejected: Infineon **BTS71040-4ESA** (SPOC™+2)
+
+A 4-channel SPI high-side switch, 4 × 22.5 mΩ, with proportional current sense,
+open-load detection in both states, and short-to-battery/ground diagnosis.
+Recorded here because it is a genuinely strong part and will otherwise be
+proposed again.
+
+Datasheet: [`Datasheets/BTS710404ESAXUMA1-datasheet.pdf`](Datasheets/BTS710404ESAXUMA1-datasheet.pdf).
+
+**It was considered for two jobs and lost both.**
+
+### Not for VREF — the overload threshold is the wrong order of magnitude
+
+| | |
+|---|---|
+| `IL(OVL0)` overload trip | **44–53 A** (35–39 A at 150 °C) |
+| What [`vref-supply.md`](vref-supply.md) requires | **~150 mA** with a fault flag |
+
+A 44 A trip protects the silicon, not a 22 AWG harness wire — which is exactly
+the argument `vref-supply.md` already used to demote the PTC to a backstop:
+*a current limit only protects what it is set below*. Enforcing 150 mA from the
+current sense in firmware is possible (k<sub>ILIS</sub> = 2000, so 150 mA reads
+as 75 µA) but replaces a microsecond hardware limit with a millisecond software
+loop. **VREF still needs a dedicated precise limiter** — that remains open.
+
+### Not for the heaters — it is high-side, and the truck is not
+
+Electrically it fits well: 4 channels for 4 heaters, 3 A nominal against 1–2 A
+loads, with exactly the per-channel diagnostics OBD-II heater monitoring wants.
+But it would require **cutting each heater's 12 V feed and routing four new runs
+through the ECU**, abandoning the PCM heater pins. The NCV8405A gets comparable
+fault coverage on the wiring that is already in the truck.
+
+### What would bring it back
+
+- **If the enclosure leaves the cabin.** AEC-Q100 **Grade 1** against the
+  TBD62083A's 85 °C ceiling — see [`enclosure.md`](enclosure.md).
+- **If proportional current measurement is ever needed** rather than the
+  NCV8405A's high/low fault detection.
+- Its 0.4 µA sleep current is invisible against the 780 µA
+  [always-on](always-on-domain.md) budget, so that is never the objection.
+
+The objection is fit, not quality: its sweet spot is 3 A high-side with
+diagnostics, and this truck's loads are either well under it (relay coils, where
+a dumb sink array is cheaper and simpler) or well over it (fans at 15–20 A, fuel
+pump at 5–8 A).
+
+---
+
 ## Summary
 
 | Load | Part | Clamp | Drive |
 |---|---|---|---|
-| Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω. No gate driver IC |
+| Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω |
 | Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
+| Relays ×5, MIL | **TBD62083AFNG** | **built in**, to COMMON | **Direct from the expander**, 3.3 V or 5 V |
+| Heaters ×4, solenoids ×6 | **NCV8405ASTT1G** | **42 V integrated** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
+| VREF feeds ×2 | **still open** | — | needs a ~150 mA limit, see `vref-supply.md` |
 
-Neither needs a dedicated gate-driver IC. One octal buffer covers the entire
-ignition side, and the injectors need nothing at all.
+None of the four needs a dedicated gate-driver IC. One octal buffer covers the
+entire ignition side, the injectors need nothing at all, one sink array covers
+every relay on the truck with three channels to spare, and one self-protected
+FET type covers every remaining low-side load — while telling you when that load
+has failed.
 
-Both keep the rule from `custom-board.md`: **clamp both, dissipate neither**,
-with the clamp voltage chosen for what the load is meant to do.
+All four keep the rule from `custom-board.md`: **clamp both, dissipate
+neither**, with the clamp voltage chosen for what the load is meant to do.

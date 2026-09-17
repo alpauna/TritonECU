@@ -85,7 +85,7 @@ Listed because "what makes it run" is not only sensors.
 | **Fuel pump relay** | 1 | Inertia switch (C204) stays in series downstream — safety device, do not remove |
 | **VREF supply** | 2 feeds | see Tier 1 |
 | **IMCC**, C118 | 1 | Intake manifold runner control. **[CONFIRM]** on/off or PWM |
-| **Cooling fan, A/C clutch (C106), MIL** | 3 | Slow — expander chain |
+| **Cooling fans × 2, A/C clutch (C106), MIL** | 4 | Slow — expander chain. Two staged electric fans replace the clutch fan — [`../cooling-fans.md`](../cooling-fans.md) |
 | **EVAP purge valve**, C164 | 1 PWM | Not needed to run |
 | **EGR vacuum regulator**, C121 | 1 PWM | Only if EGR retained |
 | **Speed control servo**, C157 | — | Cruise control is a PCM function on this truck; it stops working unless the replacement drives it |
