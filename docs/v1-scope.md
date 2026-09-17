@@ -26,7 +26,7 @@ ST-Link, USB console and Ethernet all come for free.
 | **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
 | **Solenoid / heater drivers** | **NCV8405ASTT1G** ×10 — self-protected low-side, drain-sense diagnosis | ✅ |
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
-| **Transmission I/O** | TCC + EPC PWM (native **pins** — ⚠ **no driver assigned**, see [`output-drivers.md`](output-drivers.md)), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ◐ |
+| **Transmission I/O** | TCC + EPC PWM (native pins, **NCV8405A** drivers — EPC in DPAK), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |
 

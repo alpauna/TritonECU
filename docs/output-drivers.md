@@ -390,11 +390,58 @@ specified it.
 | EVAP purge, EGR regulator | PWM | **freewheel diode to 12 V** |
 | IMCC | **[CONFIRM]** | freewheel if PWM |
 | SS1, SS2, CSS | on/off | integrated 42 V clamp |
-| EPC, TCC | PWM | **freewheel diode to 12 V** — and see below |
+| **TCC, EPC** | PWM | **freewheel diode to 12 V** |
 
-> **EPC and TCC have no driver assigned.** [`v1-scope.md`](v1-scope.md) lists
-> them as "native PWM", which allocates *pins*, not drivers — and the channel
-> budget below covers neither. Two channels short.
+#### EPC and TCC: the same part, one in DPAK
+
+[`v1-scope.md`](v1-scope.md) listed these as "native PWM", which allocates
+*pins* rather than drivers, so neither appeared in the channel budget below.
+**They take NCV8405A as well** — the part is rated 6 A and already on the board,
+so the only real question is dissipation.
+
+| | Package | |
+|---|---|---|
+| **TCC** | `NCV8405ASTT1G` SOT-223 | ~1 A class |
+| **EPC** | **`NCV8405ADTRKG` DPAK** | the higher-current one |
+
+Dissipation limits at a 60 °C in-cavity ambient, 150 °C junction, and the hot
+R<sub>DS(on)</sub> of 210 mΩ:
+
+| Package and copper | Rθ<sub>JA</sub> | Budget | Max I<sub>rms</sub> |
+|---|--:|--:|--:|
+| SOT-223, min pad | 130 °C/W | 0.69 W | 1.82 A |
+| SOT-223, 1 in² pour | 72 °C/W | 1.25 W | 2.44 A |
+| **DPAK, 1 in² pour** | 50 °C/W | 1.80 W | **2.93 A** |
+
+For a PWM load `I_rms = I_peak × √duty`, so DPAK with a pour covers a 3 A peak
+at up to ~95 % duty. **That is the threshold to check against**, and EPC on this
+transmission runs *high* duty at light load — a 4R70W's EPC gives maximum line
+pressure at minimum current, so high duty is a normal cruising condition, not an
+extreme.
+
+> **[MEASURE]** EPC and TCC solenoid resistance, and EPC's operating current
+> range. **If EPC exceeds ~2.9 A RMS, the NCV8405A is out** and the channel needs
+> a lower-R<sub>DS(on)</sub> part — this is the number that decides it.
+
+**Both get a freewheel diode to 12 V**, per the section above. Rate it for the
+solenoid current and for the supply during a load dump: the diode sits reverse-
+biased at the supply voltage whenever the FET is on, so **≥ 60 V**, 3 A, fast
+recovery or Schottky.
+
+#### Open-loop duty is a control decision, not a driver one
+
+The legacy firmware drove both as **open-loop duty** (`tccDuty`, `epcDuty`), with
+no current feedback. A production PCM closes the loop on EPC current, and the
+reason is physical: **solenoid copper rises ~40 % in resistance from 20 °C to
+120 °C**, so a fixed duty delivers ~40 % less current hot than cold. On EPC that
+is line pressure drifting with transmission temperature.
+
+Closing the loop in hardware would mean a sense resistor and an amplifier on
+that channel. **It is probably unnecessary here:** battery voltage and **TFT are
+already inputs**, and current ≈ V<sub>bat</sub> × duty / R(T) is a compensation
+that costs nothing but arithmetic. Worth doing before adding hardware.
+
+Two channels short becomes **twelve NCV8405A channels**, not ten.
 
 This also bounds
 [`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
@@ -461,7 +508,9 @@ reading would otherwise have to provide.
 | 1 | EGR vacuum regulator | PWM |
 | 1 | IMCC | **[CONFIRM]** on/off or PWM |
 | 3 | SS1, SS2, CSS | on/off |
-| **10** | | |
+| 1 | **TCC** | PWM, SOT-223 |
+| 1 | **EPC** | PWM, **DPAK** — see above |
+| **12** | | |
 
 ### Two cautions
 
@@ -538,7 +587,7 @@ pump at 5–8 A).
 | Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω |
 | Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
 | Relays ×5, MIL | **TBD62083AFNG** | **built in**, to COMMON | **Direct from the expander**, 3.3 V or 5 V |
-| Heaters ×4, solenoids ×6 | **NCV8405ASTT1G** | **42 V integrated** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
+| Heaters ×4, solenoids ×8 | **NCV8405ASTT1G** (EPC: **DPAK**) | 42 V integrated — **PWM loads use a freewheel diode instead** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
 | VREF feeds ×2 | **TPS2H160B-Q1** | 40 V rated | **High-side** from the 5 V rail, 250 mA limit, `CS` diagnosis |
 
 None of the four needs a dedicated gate-driver IC. One octal buffer covers the
