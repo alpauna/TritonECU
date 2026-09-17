@@ -891,10 +891,64 @@ ratiometric sense at the regulator, one channel, covering both feeds; if a PTC
 has tripped or aged, the per-feed diagnostic divider is what reports it rather
 than a drifting voltage nobody can calibrate out.
 
-## On "isolated"
+## Grounds
 
 Worth being explicit: this should be a **separate regulator with a common
 ground**, not galvanic isolation.
+
+### Which leg of the star each element returns to
+
+One ground, star topology — but *which leg* matters, and the two protection
+elements want different ones.
+
+| Element | Returns to | |
+|---|---|---|
+| **TVS** | **PGND** | transient energy to the heaviest copper |
+| **Divider bottom leg** | **AGND**, the ADC's own reference | so the reading means what it says |
+| Sensor returns | **SIGRTN** — A-17, B-17, C-17 | tied at the star point on our board |
+
+**The divider must return to the ADC's ground, not SIGRTN.** Referencing it to
+SIGRTN passes any SIGRTN-to-AGND offset straight through at **(1 − k) = 0.89×**,
+against a healthy-state signal of only **0.55 V**:
+
+| Offset | Adds to the reading |
+|---|--:|
+| 0.1 V | 0.09 V |
+| 0.5 V | **0.44 V** — nearly doubles it |
+| 1.0 V | 0.89 V |
+
+A high-ratio divider is unusually sensitive this way: the *signal* is attenuated
+11× while the *offset* is not attenuated at all.
+
+**The TVS must not return to SIGRTN.** A clamping TVS carries amps. Pushing that
+into the sensor return would offset SIGRTN for **every sensor on that
+connector** — briefly, but by far more than any of them can tolerate, and
+precisely when the readings are already suspect. PGND is the defined
+low-impedance path and the TVS is protecting the ECU, not the harness.
+
+### The assumption that buys, and the second reason for 6.0 V
+
+Returning the TVS to PGND means a SIGRTN-to-PGND offset eats directly into its
+standoff margin:
+
+```
+TVS standoff 6.0 V  -  VREF max 5.1 V  =  0.9 V of margin
+dedicated sensor return, ~25 mA through ~0.1 ohm  =  ~2.5 mV
+```
+
+**360× margin**, so the assumption is safe — but it *is* an assumption, and it
+rests on SIGRTN being a dedicated low-current return rather than a shared one.
+
+It also gives a **second, independent reason not to shave the TVS standoff to
+5.5 V.** [§ Selecting it](#selecting-it-smaj60ca) declined that on leakage
+grounds; ground-offset margin says the same thing for a different reason.
+
+> **Related, and larger than this document:** whether **VREF sense** itself
+> should be measured *differentially against SIGRTN* rather than single-ended.
+> That would make the ratiometric cancellation exact rather than merely good,
+> and the converter has differential capability — it is already used for the MAF,
+> which has its own dedicated return. That is an ADC architecture question, not
+> a VREF one.
 
 VREF's return path is SIGRTN, and the ADC has to measure sensor voltages
 against that same reference. Galvanically isolating VREF would break the
@@ -1093,7 +1147,6 @@ fault but not against that fault coinciding with a load dump.
 
 | | |
 |---|---|
-| **[DECIDE]** | TVS and divider **ground return** — SIGRTN or power ground. [`review-vref-chain.md`](review-vref-chain.md) §4 |
 | **[CONFIRM]** | the 20 ms startup blanking window, on the bench against the real sensor load — see [§ The retry policy](#the-retry-policy) |
 | **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |

@@ -109,7 +109,7 @@ fault handling.** As written it covers the fault path only.
 
 ---
 
-## 4. Which ground do the TVS and dividers return to?
+## 4. ~~Which ground do the TVS and dividers return to?~~ SETTLED
 
 Not specified, and it matters. `vref-supply.md` §"On isolated" is explicit that
 VREF returns via **SIGRTN**, with separation of supply and a shared ground at
@@ -123,6 +123,19 @@ the star point.
 
 **[DECIDE]** before layout. This is the kind of thing that is free to get right
 on a schematic and expensive afterwards.
+
+> **Settled 2026-09-17.** TVS → **PGND**; divider bottom leg → **AGND**, the
+> ADC's own reference; sensor returns stay on SIGRTN, tied at the star point.
+>
+> The divider is the sharp one: a high-ratio divider attenuates the *signal* 11×
+> but not the *offset*, so referencing it to SIGRTN would pass a ground offset
+> through at 0.89× against a 0.55 V healthy signal. The TVS goes the other way —
+> it carries amps when clamping, and putting that into the sensor return would
+> offset every sensor on that connector.
+>
+> The cost is that a SIGRTN-to-PGND offset now eats TVS standoff margin: 0.9 V
+> available against ~2.5 mV real. Ample, but it is an assumption resting on
+> SIGRTN being a dedicated return.
 
 ---
 
@@ -150,7 +163,7 @@ examined.
 | 1 | PPTC 16 V rating exceeded by short-to-battery during a load dump | resolve the NSHT035 derating `[CONFIRM]` — it may make the 30 V part free |
 | 2 | ~~Feed divider presents 5.7 V to the ADC at 27 V~~ | **FIXED** — 100 k / 12.4 k + Schottky |
 | 3 | ~~Startup blanking covers faults but not reading validity~~ | **FIXED** — validity gated on measured VREF, not a timer |
-| 4 | TVS and divider ground return unspecified | `[DECIDE]` before layout |
+| 4 | ~~TVS and divider ground return unspecified~~ | **SETTLED** — TVS to PGND, divider to AGND |
 
 Two of the four are the same class of error — **a protection element specified
 against the nominal fault and not against the fault coinciding with a load
