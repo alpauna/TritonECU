@@ -127,7 +127,7 @@ flag instead.
 
 ---
 
-## 4. ~~The freewheel diode has no 12 V node inside the ECU~~ ANSWERED
+## 4. ~~The freewheel diode has no 12 V node inside the ECU~~ FIXED
 
 A freewheel diode goes *across the load*. **We only have one end of the load.**
 The solenoid is fed 12 V from the EEC relay out in the harness; only its low
@@ -151,6 +151,12 @@ node, separated by harness resistance and inductance.
 > **28 EEC-V pins are unused.** Bring **1138 and 391 into the ECU** as two
 > dedicated freewheel returns — two wires for a local, tight loop serving all
 > five PWM solenoids.
+>
+> **Fixed 2026-09-17: pin 82 for 1138** (adjacent to EPC on 81) **and pin 48 for
+> 391** (between EGR on 47 and EVAP on 56). Both also get a divider into an
+> internal ADC, which gives EPC's open-loop compensation the *real* solenoid
+> supply rather than V<sub>BAT</sub>, and turns a blown BJB fuse 24 into one DTC
+> instead of four simultaneous solenoid failures.
 
 The loop area also matters: recirculation current runs out of the ECU, through
 the harness, and back. That is a large loop switching at PWM rates — worth
@@ -177,7 +183,7 @@ keeping in mind for emissions.
 | 1 | ~~EVAP and EGR are PWM but assigned to an SPI expander~~ | **FIXED** — native timer pins; channels now classified by drive type |
 | 2 | ~~Gate rail unspecified; thermal budget assumed 5 V~~ | **FIXED** — second 74HCT541 at 5 V; expander chain at 5 V now required |
 | 3 | ~~Drain-sense divider into a logic input has a 4 % window~~ | **FIXED** — 100 k / 10.5 k into an internal ADC |
-| 4 | ~~Freewheel diode has no in-ECU 12 V node~~ | **ANSWERED** — bring 1138 and 391 in on two spare pins |
+| 4 | ~~Freewheel diode has no in-ECU 12 V node~~ | **FIXED** — 1138 on pin 82, 391 on pin 48, both sensed |
 
 Findings 1 and 2 share a root: **outputs were classified by speed and current,
 and PWM is neither.** EVAP and EGR landed on a port expander, and the two

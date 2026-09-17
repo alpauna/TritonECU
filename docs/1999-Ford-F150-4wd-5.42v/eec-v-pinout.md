@@ -148,6 +148,18 @@ connector from these numbers alone.
 - **Knock is a two-wire differential piezo** — pins 57 (YEL/RED) and 32
   (DK GRN/VIO).
 
+### Pins this design allocates that the OEM leaves unused
+
+| Pin | Use | Why this pin |
+|--:|---|---|
+| 18 | **Cooling fan 2** relay | free, adjacent to 19 |
+| 19 | **Cooling fan 1** relay | free; the MS sheet already annotated it "Electric Fan 1" |
+| **48** | **391 RD/YE** freewheel return | between EGR (47) and EVAP (56) |
+| **82** | **1138 VT/WH** freewheel return | adjacent to EPC (81) |
+
+See [`../output-drivers.md`](../output-drivers.md) and
+[`../cooling-fans.md`](../cooling-fans.md).
+
 ### New — things not in the design yet
 
 - **CSS, Coast Clutch Solenoid (pin 20, BRN/ORG).** A *fourth* 4R70W solenoid.

@@ -524,10 +524,54 @@ E<sub>AS</sub> is lower than the NCV8405A's — 185 mJ against 275 mJ — which
 costs nothing here, because these channels have **freewheel diodes and the clamp
 should never engage.** It matters only if a freewheel diode opens.
 
-**Both get a freewheel diode to 12 V**, per the section above. Rate it for the
-solenoid current and for the supply during a load dump: the diode sits reverse-
-biased at the supply voltage whenever the FET is on, so **≥ 60 V**, 3 A, fast
-recovery or Schottky.
+#### The freewheel returns: two spare EEC-V pins
+
+A freewheel diode goes *across the load*, and the ECU only sees the low side —
+the solenoid feeds run out in the harness. Ford's diagrams show **neither feed
+reaches the PCM**:
+
+| Feed | Serves | Source |
+|---|---|---|
+| **1138 VT/WH** | TCC, EPC (and SSA/SSB, which need no diode) | BJB fuse 24, 15 A, off the PCM power relay |
+| **391 RD/YE** | EVAP purge, EGR regulator, IMCC | Battery Junction Box |
+| 361 RD | *the PCM's own VPWR* | a third branch |
+
+Returning the diodes to VPWR would recirculate out through the connector, across
+the Battery Junction Box and over two fuses. **28 EEC-V pins are unused**, so
+bring the real feeds in instead:
+
+| New pin | Circuit | Chosen because |
+|--:|---|---|
+| **82** | **1138 VT/WH** | adjacent to EPC on pin 81 |
+| **48** | **391 RD/YE** | sits between EGR (47) and EVAP (56) |
+
+Two wires buy a **local, tight recirculation loop** for all five PWM solenoids
+instead of one that leaves the box.
+
+**Diode spec:** the shared pin carries the sum of its group's recirculation
+current — worst case ~4 A on pin 82 if TCC and EPC switch together, ~1.5 A on
+pin 48. **≥ 60 V, 3 A, Schottky, AEC-Q101.** Schottky rather than fast-recovery:
+no reverse recovery at PWM rates, and the lower V<sub>f</sub> gives the slower
+decay that is the whole point. The 60 V is because the diode sits reverse-biased
+at the supply whenever the FET is on, and that supply reaches ~35 V in a load
+dump.
+
+#### Sense both new pins — they earn a second job
+
+Put a **100 kΩ / 10.5 kΩ divider** on each into an internal ADC, the same
+network as the drain sense. It pays for itself twice:
+
+- **EPC's open-loop compensation gets the real supply voltage.** The section
+  below proposes compensating duty for `V × duty / R(T)` using V<sub>BAT</sub>
+  and TFT. **Pin 82 is strictly better than V<sub>BAT</sub>** — it is the actual
+  solenoid supply, after the fuse and the harness drop.
+- **A blown BJB fuse 24 becomes one DTC instead of four.** Without this, losing
+  1138 presents as TCC, EPC, SSA and SSB all failing at once with nothing to
+  distinguish it from a harness or driver fault.
+
+> These are two new **12 V entries into the box**. They are fused upstream
+> (15 A on 1138), but they must be routed as harness-facing power rather than
+> signal, and kept away from the analogue section.
 
 #### Open-loop duty is a control decision, not a driver one
 
