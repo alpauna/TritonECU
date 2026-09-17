@@ -312,14 +312,23 @@ the truck's harness should not be.
 
 ```
 250 mA (channel in current limit)  +  25 mA (healthy channel)  =  275 mA
-(14 V − 5 V) × 275 mA  =  2.5 W
 ```
 
-That is the number the package and copper have to carry, and it is what keeps
-this a *linear* regulator question rather than a buck one — 2.5 W in a fault
-that lasts until someone fixes the harness, against 0.25 W normally. Wanting a
-quiet ratiometric reference is what rules the buck out; see
+**It is fed from the 6.0 V SEPIC rail, not from battery**, so the drop is 1 V:
+
+```
+(6.0 V − 5.0 V) × 275 mA  =  0.275 W   in fault
+(6.0 V − 5.0 V) ×  25 mA  =  0.025 W   normally
+```
+
+That makes the thermal question a non-question, and the linear choice trivially
+correct — the argument against a buck here was never dissipation, it was ripple
+on a ratiometric reference. See
 [§ Why the number fights itself](#why-the-number-fights-itself).
+
+The ~275 mA does come out of the 6.0 V rail's budget, which
+[`power-supply.md`](power-supply.md) settled at **2 A**. (Note
+[`v1-scope.md`](v1-scope.md) still says 3 A in its board table — stale.)
 
 | | |
 |---|---|
