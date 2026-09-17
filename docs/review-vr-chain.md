@@ -72,7 +72,7 @@ the diagram shows.
 
 ---
 
-## 2. The fourth MAX9926 channel is no longer spare
+## 2. ~~The fourth MAX9926 channel is no longer spare~~ FIXED
 
 Two documents record it as free:
 
@@ -97,6 +97,21 @@ That is a fourth VR input:
 This is the same failure mode as the internal ADC in
 [`review-analog-chain.md`](review-analog-chain.md) §1 — a resource spent in one
 document while another still lists it as available.
+
+> **Fixed 2026-09-17, at the cause rather than the symptom.** The three stale
+> "spare" claims were corrected when this review was written; what was left was
+> that **no document owned the count**, which is how it came to be spent twice.
+>
+> [`vr-conditioning.md`](1999-Ford-F150-4wd-5.42v/vr-conditioning.md) now carries
+> an explicit **channel allocation table and owns it** — four rows, two packages,
+> exact fit — the same treatment
+> [`adc-front-end.md`](adc-front-end.md) got for the ADC budget. Anything needing
+> a VR channel adds a row there first.
+>
+> And the loss is smaller than it looked: **the contention is temporal.** M3/M4
+> run on a bench with a trigger wheel, where OSS and the transfer case sensor are
+> not connected — so two channels are free during exactly the phase the roadmap
+> calls highest-risk. The squeeze only arrives at M12.
 
 ---
 
@@ -169,7 +184,7 @@ budget.**
 | # | Finding | Action |
 |---|---|---|
 | 1 | ~~Diagram shows CMP with a `*12V` feed~~ | **CLOSED** — measured **371 Ω**, CMP is VR. My misread of the scan |
-| 2 | The "fourth channel spare" was spent by the fan road-speed decision | correct both documents; **no spare** |
+| 2 | ~~"Fourth channel spare" was spent elsewhere~~ | **FIXED** — `vr-conditioning.md` now owns an explicit allocation table |
 | 3 | ~~No shield termination specified~~ | **FIXED** — pin 25 to case ground, single-point; and pin 25 was mislabelled a power ground |
 
 Findings 1 and 2 interacted: if CMP had been Hall it would have handed back

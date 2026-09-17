@@ -13,6 +13,47 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 matching negative because it is a **single-ended VR**: the coil's other end
 returns on sensor ground (pin 91, SGND) rather than a dedicated wire.
 
+## Channel allocation — this document owns it
+
+Four VR inputs, two MAX9926 packages, **exact fit**. It is a fit rather than a
+shortage: the earlier "fourth channel spare" was a byproduct of needing three
+channels from two-channel parts, not designed margin.
+
+| Ch | Signal | PCM pin | Circuit | Notes |
+|---|---|--:|---|---|
+| 1 | **CKP** | 21 / 22 | DK BLU / GRY | **differential** — the only one |
+| 2 | **CMP** | 85 (+ SGND 91) | DK GRN | single-ended, **371 Ω measured**. Shield on pin 25 |
+| 3 | **OSS** | 84 | 136 DB/YE, C187 | transmission control: shift scheduling, TCC, EPC |
+| 4 | **Transfer case speed** | 7 | 1496 PK, C199 | **road speed** — downstream of the range box |
+
+**No spare.** This table is the count; anything that needs a VR channel adds a
+row here first.
+
+> The fourth was described as spare in three separate documents while
+> [`../cooling-fans.md`](../cooling-fans.md) §4.4 was spending it on road speed.
+> Nothing owned the number, which is how it got allocated twice. See
+> [`../review-vr-chain.md`](../review-vr-chain.md) §2.
+
+### The contention is temporal, not absolute
+
+Losing the spare costs **bring-up flexibility**, and
+[`../roadmap.md`](../roadmap.md) calls M3/M4 — crank and cam sync — the highest-
+risk phase in the project. That is less bad than it sounds:
+
+**M3 and M4 run on a bench with a trigger wheel.** OSS and the transfer case
+sensor are not connected then, so **two of the four channels are free for
+exactly the phase that most wants them** — a second scope tap, a known-good
+reference signal, a substitute sensor.
+
+The squeeze only arrives at M12, by which time crank sync is long proven.
+
+> If permanent margin is wanted, a **third MAX9926 as a DNP footprint** fits the
+> board's existing policy — [`../v1-scope.md`](../v1-scope.md): *"Footprints for
+> the 'yes' rows cost almost nothing and save a respin."* Two spare pins would
+> need routing to the connector. **Not specified**, because no fifth VR sensor
+> has been identified: TSS is 4R100-only and not fitted, and the wheel-speed
+> sensors belong to the ABS module.
+
 The MAX9926 handles single-ended VR sensors directly. Wire it as:
 
 | MAX9926 | Connect to |
