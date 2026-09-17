@@ -221,6 +221,59 @@ It also softens the open `THER` question below: if firmware sheds the channel in
 milliseconds, the part's own thermal latch-versus-retry behaviour rarely gets
 the chance to matter.
 
+### The regulator's capacitors
+
+| | Value | Rating | Why |
+|---|---|---|---|
+| **C<sub>in</sub>** | **1 µF + 100 nF** | **50 V** | datasheet minimum is 0.1 µF; the rating clears the 27–30 V clamp at the board's 40 % derating precedent |
+| **C<sub>out</sub>** | **22 µF X7R + 100 nF** | ≥ 16 V | datasheet minimum is 1 µF, which is a *stability* floor — not enough for this load step |
+
+#### The 1 µF minimum is not the answer here
+
+The NCV8772C's reference application is a microprocessor: a steady load. Ours
+has a **250 mA step** every time a channel enters current limit, and the dip
+during the loop's response is `ΔI × t / C`:
+
+| C<sub>out</sub> | 5 µs | 10 µs | 20 µs |
+|---|--:|--:|--:|
+| 1 µF | 1250 mV | 2500 mV | 5000 mV |
+| 10 µF | 125 mV | 250 mV | 500 mV |
+| **22 µF** | **57 mV** | **114 mV** | **227 mV** |
+
+**22 µF**, comfortably inside the datasheet's 1–100 µF stable region, and the
+part requires no minimum ESR so plain ceramic is fine.
+
+**Rate it for DC bias, not just voltage.** A 22 µF X7R loses a substantial
+fraction of its value at 5 V of bias — use 16 V or 25 V and treat the derated
+figure as the real one. A 6.3 V part would lose most of it and put you back near
+the stability floor.
+
+> How much the dip matters is worth being clear about, because it is less than
+> it looks. VREF and the sensor are sampled **simultaneously** on the same
+> converter, so a common-mode dip **cancels ratiometrically**. What it must not
+> do is disturb the *healthy* feed badly enough to matter, or drop an active
+> sensor below its operating range — which at ~100 mV it will not.
+
+#### The input side is already handled upstream
+
+The datasheet asks that input edges stay **below 50 V/µs**, and warns that an
+input filter is needed otherwise. Nothing is needed here:
+
+```
+to slew the LTC4364 rail at 50 V/us through its 1000 uF bulk
+   I = C dV/dt = 50,000 A
+```
+
+The system bulk cap makes that rate unreachable, so the local input capacitance
+is doing ordinary high-frequency decoupling rather than slew limiting. 1 µF plus
+100 nF at the pin covers the 275 mA step locally until the upstream rail
+responds; at 1 µF that is a 0.275 V local dip per microsecond, refilled from the
+bulk.
+
+**The 50 V rating is not optional.** This part sits on the clamped rail, so it
+sees 27–30 V during a load dump — the same reasoning that put a 50 V part on the
+1000 µF bulk.
+
 ### The retry policy
 
 `THER` is strapped to latch, so the switch never retries on its own —
@@ -944,7 +997,9 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
 | 1 | R<sub>THER</sub> = **10 kΩ to V<sub>S</sub>** | straps `THER` high — latch mode, not auto-retry |
 | **2** | divider pair | per-feed short-to-battery sense → internal ADC |
-| — | C<sub>in</sub> / C<sub>out</sub> per all three datasheets | NCV8772C ≥ 1 µF out; LM74700 needs 0.1 µF VCAP–ANODE |
+| 1 | C<sub>in</sub> = **1 µF + 100 nF, 50 V** | LDO input, on the clamped rail |
+| 1 | C<sub>out</sub> = **22 µF X7R ≥ 16 V + 100 nF** | LDO output; sized for the 250 mA step, not the 1 µF stability floor |
+| 2 | **0.1 µF** VCAP–ANODE, **22 nF** ANODE | per LM74700-Q1, one set per controller |
 
 **Not fitted, and worth recording why:** no rail clamp, no Schottky, no TVS on
 the 5 V rail. The ideal diodes prevent the reverse condition that would have
