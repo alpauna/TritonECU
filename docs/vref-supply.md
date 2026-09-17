@@ -386,10 +386,43 @@ the truck's harness should not be.
 
 ## Still open
 
-**The regulator has no part number.** It needs to be rated **≥ 40 V** to clear
-the 27–30 V clamp with margin — the TPS7B69xx-Q1 / TPS7B4253-Q1 class — linear,
-with thermal shutdown, and able to carry 2.5 W in the package and pour chosen
-for it.
+**The regulator has no part number.** Three constraints, in the order they will
+actually narrow the search:
+
+**1. Thermals — the binding one.** It has to carry **2.5 W** in whatever package
+and pour it gets. This will eliminate more candidates than anything else on this
+list, and it is the reason to look at package before parametrics.
+
+**2. Placement — downstream of the pass FET.** This matters more than any
+voltage rating. Upstream, the part sees what
+[`surge-stopper.md`](surge-stopper.md) describes the LTC4364 surviving: *a 200 V
+1 ms transient, clamping a 92 V surge to 27 V.* No LDO rating saves you there —
+the topology does.
+
+**3. Voltage rating — clear the clamp, with derating.** The hard floor is the
+clamped rail's maximum:
+
+| | |
+|---|---|
+| Clamp, design | **27 V** — [`power-supply.md`](power-supply.md) §"V<sub>IN(MAX)</sub>" |
+| Clamp, maximum | **30 V** |
+| Derating precedent on this board | the 1000 µF bulk is **50 V on the 30 V clamp**, 40 % |
+
+So **>30 V is the requirement**, not 40 V. A 36 V part clears it by 20 %; 40 V
+clears it by 33 % and is simply where automotive LDOs cluster — the
+TPS7B69xx-Q1 / TPS7B4253-Q1 class. **If a 36 V part has materially better
+dropout, PSRR or thermals, take it**; the voltage bucket is the least binding of
+the three.
+
+One caveat against sizing too close: a clamp **overshoots on the transient edge**
+before its loop settles, so 30 V is not a number to design exactly to. That is
+the argument for margin — not the 30 V figure itself.
+
+**PSRR is a non-issue on this rail**, unlike the 5 V-switcher option this
+document rejects: 9 V of headroom at 14 V in means the part never operates near
+dropout, which is precisely why this source works.
+
+Linear, with thermal shutdown.
 
 | | |
 |---|---|
