@@ -133,7 +133,7 @@ Every row, asked "which part switches it":
 | VR channels | 4 | MAX9926 — input |
 | AD7606 SPI + control | 5 | input |
 | MCP23S17 chain CS | 1 | n/a |
-| J1850 TX/RX | 3 | transceiver, deferred |
+| J1850 TX/RX | 3 | DRV8837 + TLV7031 — **no longer deferred** |
 | TCC, EPC | 2 | NCV8405A / NCV8408B |
 | EVAP, EGR | 2 | NCV8405A |
 | IAC | 1 | NCV8405A — *this review* |

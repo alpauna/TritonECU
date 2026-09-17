@@ -29,6 +29,7 @@ ST-Link, USB console and Ethernet all come for free.
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native pins; TCC **NCV8405A**, EPC **NCV8408B** DPAK, ≥200 Hz), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
+| **SCP / J1850 PWM** | **DRV8837** H-bridge differential TX + **TLV7031** comparator RX, 3 GPIOs, 5 V | ✅ |
 | Connector | EEC-V 104-pin, rusEFI footprint | ✅ |
 
 That is a complete engine **and transmission** controller. Nothing in it is
@@ -73,18 +74,47 @@ was always the point of the split, and it does not require two chips.
 | **ADR4525 precision reference** | Only needed *for* alternator control. The AD7606's internal reference is fine for everything else | **yes** — REF SELECT strap + footprint |
 | **INA238-Q1 current monitor** | Diagnostics. The engine runs without knowing its own current draw | **yes** — I²C, two pads |
 | **Knock sensing** | Run conservative timing until it works. The engine runs; it just cannot use all its timing | **yes** — one ADC channel routed |
-| **J1850 / SCP** | Needed for the cluster and OBD-II, not to run. ~~Tach and speedo can be discrete outputs~~ — **false, see below** | **yes** — it is only three GPIOs and a transceiver |
+| ~~**J1850 / SCP**~~ | **Moved onto the board** — see below | n/a |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
 | **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1 | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
 
-> **Correction on J1850.** Ford's cluster diagrams show the cluster's *only*
-> connection to the PCM is SCP, and neither the tachometer, the speedometer nor
-> the MIL has a discrete PCM pin. **Deferring SCP means no tach, no speedo and
-> no check-engine lamp** — the deferral still holds for *running the engine*,
-> which was its point, but it costs the whole dash rather than nothing. See
-> [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §10.
+### Why J1850 / SCP moved onto the board
+
+It was deferred on the grounds that *"tach and speedo can be discrete outputs."*
+Ford's cluster diagrams show that is **false**: the cluster's only connection to
+the PCM is SCP, and neither the tachometer, the speedometer nor the MIL has a
+discrete PCM pin. See
+[`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md)
+§10.
+
+So the choice was never "SCP or discrete wires". It was **SCP or no dash at
+all** — no tachometer, no speedometer, no check-engine lamp.
+
+Three things make including it cheap rather than a scope increase:
+
+- **The front end is already designed.** DRV8837 H-bridge driving TX_P/TX_N
+  complementary, TLV7031 comparator across PWM+/PWM−, 5 V, no boost rail. See
+  [`f150-1999-target.md`](f150-1999-target.md) §5.3.
+- **The pins were already budgeted.** `pin-budget.md` has counted TX_P, TX_N and
+  RX since before the STM32 move, against ~77 spare.
+- **Phase 0 exercises this exact front end before the board exists.** Listening
+  on the DLC with the OEM PCM still installed is the *first* thing on the plan,
+  so by fabrication the design will have been proven against this truck rather
+  than against a datasheet.
+
+That last point matters because the reference design carries its own warning —
+*"the PWM side is experimental and expects per-vehicle tuning"* — and Phase 0 is
+exactly where that tuning happens. Deferring the hardware would mean doing
+Phase 0 on a breadboard and then trusting the transfer.
+
+**One connection note:** the ECU reaches the bus through **EEC-V pins 15 and 16**
+(SCP− PNK/LT BLU, SCP+ TAN/ORG), which are circuits 915 and 914 — the same wires
+as DLC pins 10 and 2. One connection serves both the cluster and a scan tool.
+
+> **[CONFIRM]** automotive qualification for both parts. Everything else in the
+> signal path is AEC-Q; the DRV8837 has a Q1 variant, the TLV7031 wants checking.
 
 Footprints for the "yes" rows cost almost nothing and save a respin. Everything
 else stays off the board entirely.
