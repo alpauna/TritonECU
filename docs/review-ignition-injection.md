@@ -145,7 +145,12 @@ They leave the box and drive the instrument cluster, and
 [`harness-protection.md`](harness-protection.md) specifies only *"series
 resistor + TVS"* — protection, not a driver.
 
-That one cannot be closed yet: it depends on **what the cluster expects**, which
-is a Phase 0 capture. If the cluster provides its own pull-up, open-drain
-low-side is right and a spare NCV8405A channel does it; if it expects a driven
-high, it needs push-pull. **[CONFIRM]** before assuming either.
+**Partly closed by the cluster diagrams.** There is **no discrete tach output at
+all** — the cluster takes engine speed over SCP, and has no pin for it. What
+remains is the **VSS output on pin 68** (679 GY/BK), feeding the speed control
+servo, the GEM and the rear air suspension module — not the cluster.
+
+So the row should read *VSS out | 1*, and the open question narrows to **what
+level those three modules expect**. See
+[`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §10
+and §12.

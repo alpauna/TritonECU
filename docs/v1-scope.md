@@ -73,11 +73,18 @@ was always the point of the split, and it does not require two chips.
 | **ADR4525 precision reference** | Only needed *for* alternator control. The AD7606's internal reference is fine for everything else | **yes** — REF SELECT strap + footprint |
 | **INA238-Q1 current monitor** | Diagnostics. The engine runs without knowing its own current draw | **yes** — I²C, two pads |
 | **Knock sensing** | Run conservative timing until it works. The engine runs; it just cannot use all its timing | **yes** — one ADC channel routed |
-| **J1850 / SCP** | Needed for the cluster and OBD-II, not to run. Tach and speedo can be discrete outputs | **yes** — it is only three GPIOs and a transceiver |
+| **J1850 / SCP** | Needed for the cluster and OBD-II, not to run. ~~Tach and speedo can be discrete outputs~~ — **false, see below** | **yes** — it is only three GPIOs and a transceiver |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
 | **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1 | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
+
+> **Correction on J1850.** Ford's cluster diagrams show the cluster's *only*
+> connection to the PCM is SCP, and neither the tachometer, the speedometer nor
+> the MIL has a discrete PCM pin. **Deferring SCP means no tach, no speedo and
+> no check-engine lamp** — the deferral still holds for *running the engine*,
+> which was its point, but it costs the whole dash rather than nothing. See
+> [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §10.
 
 Footprints for the "yes" rows cost almost nothing and save a respin. Everything
 else stays off the board entirely.

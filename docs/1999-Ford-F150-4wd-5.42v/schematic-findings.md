@@ -156,3 +156,85 @@ The only A/C input it has is the **cycling pressure switch** on pin 41, annotate
 | **TFT sensor** | C183 pin 2 → 923 OG/BK → PCM **37**, returning on 359 GY/RD |
 | **Fuel pump relay** | PCM pin **80** grounds the coil via 926 LB/OG |
 | **Transmission control switch (O/D off)** | pin **29** (224 TN/WH); indicator lamp pin **79** (911 WH/LG) — in no output list in this tree |
+
+---
+
+# Instrument cluster sheets
+
+`InstramentCluster1-5.png`. These settle the tach/VSS driver question that
+[`review-ignition-injection.md`](../review-ignition-injection.md) left open, and
+the answer is not the one the scope assumed.
+
+## 10. There is no discrete tach output, and no discrete MIL output
+
+Across five cluster sheets, **the cluster's only connection to the PCM is SCP** —
+circuits **914 TN/OG** and **915 PK/LB** at C237 pins 1 and 2, marked
+*"MULTIPLEX COMMUNICATION NETWORK"*.
+
+The **MIL lives inside the cluster**, driven by the cluster's own microprocessor
+via the *"theft indicator micro cluster"*. No wire runs to it from the PCM. And
+`grep -niE 'tach|MIL'` over [`eec-v-pinout.md`](eec-v-pinout.md) returns
+**nothing** — neither has a PCM pin.
+
+> ### This invalidates the J1850 deferral rationale
+>
+> [`v1-scope.md`](../v1-scope.md) defers SCP on the grounds:
+>
+> > *Needed for the cluster and OBD-II, not to run. **Tach and speedo can be
+> > discrete outputs.***
+>
+> **They cannot.** The cluster has no discrete inputs for them. Without SCP this
+> truck has **no tachometer, no speedometer and no check-engine lamp** — the
+> dash simply does not work.
+>
+> That does not make SCP required *to run the engine*, which was the deferral's
+> real point. But "defer it, the cluster can be driven discretely" was wrong,
+> and the cost of deferring is larger than recorded.
+
+## 11. The MIL channel has nothing to drive
+
+[`output-drivers.md`](../output-drivers.md) allocates a TBD62083AFNG channel to
+the MIL. There is no MIL circuit to switch. **Five channels used becomes four**,
+and four spare becomes five.
+
+Lighting the check-engine lamp is an **SCP message**, not an output.
+
+## 12. The VSS output is real — but not to the cluster
+
+PCM **pin 68**, circuit **679 GY/BK**, reaches the **speed control servo**
+(C157), the **GEM** (C267) and the **rear air suspension module** (C277). Not
+the cluster.
+
+So `pin-budget.md`'s *"Tach out, VSS out | 2"* should read **VSS out | 1**. The
+fourth no-driver instance narrows to a single frequency output feeding three
+module inputs.
+
+> **[CONFIRM]** what level those three modules expect on 679 — 12 V, 5 V or
+> open-drain. It decides whether a spare NCV8405A channel does it or whether it
+> needs push-pull.
+
+## 13. Oil pressure and fuel level go to the cluster, not the PCM
+
+| Signal | Circuit | Goes to |
+|---|---|---|
+| **Engine oil pressure switch**, C101 | 31 WH/RD | **cluster** C236 pin 20 |
+| **Fuel level sender** | 29 YE/WH | **cluster** C236 pin 3 |
+
+Both appear in this tree's input lists —
+[`f150-1999-target.md`](../f150-1999-target.md) has *"oil pressure switch"* among
+the digital inputs and *"Fuel level"* on an ADC channel — **as though the PCM
+sees them. It does not.**
+
+The oil pressure switch is *"closed with normal oil pressure"*, so the cluster
+reads it directly and drives its own gauge.
+
+If the ECU wants either, the circuits must be **tapped** — both pass through
+C120/C158 in the engine harness, so the tap is physically easy. But it is added
+wiring, not an existing PCM input, and nothing in the tree said so.
+
+## 14. Minor — the 4×4 low input holds up
+
+Pin **14** reads the **4x4 low and high indicator *switch*** (C189, 784 LB/BK),
+so it is an input, as the cooling-fan cutoff inhibit assumes. The *indicator
+lamp* is PCM-commanded, but over SCP — the cluster note says *"LOW Range
+indicator is controlled by the PCM"* with no wire to it.

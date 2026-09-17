@@ -304,10 +304,10 @@ both.
 | 2 | **Cooling fan 1 relay** | ~150–200 mA |
 | 3 | **Cooling fan 2 relay** | ~150–200 mA |
 | 4 | A/C clutch relay | ~150–200 mA |
-| 5 | MIL | ~150–300 mA |
-| 6–8 | spare | |
+| ~~5~~ | ~~MIL~~ | **no discrete MIL circuit exists** — the cluster drives it, over SCP |
+| 5–8 | spare | four spare, not three |
 
-**Five used, three spare, one package.**
+**Four used, four spare, one package.** The MIL was a fifth until Ford's cluster diagrams showed it has no PCM wire — see [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §11.
 
 Thermally this is not close. Five channels at 200 mA and R<sub>ON(max)</sub>
 1.14 Ω is 5 × 0.2² × 1.14 = **0.23 W**. The FNG package allows 0.96 W at 25 °C,
