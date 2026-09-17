@@ -15,6 +15,7 @@ ST-Link, USB console and Ethernet all come for free.
 | Input protection | LTC4364-2 + pass FET + ideal-diode FET, fuse, TVS | ✅ |
 | Main supply | **MAX25239AFFA buck-boost → 5.0 V**, 2.1 MHz, spread spectrum, 2.2 µH | ✅ |
 | Rails | **TLV62085 buck → 3.3 V** from 5 V; ADC reference MAX6070AAUT25 2.5 V, gated | ✅ |
+| **VREF output chain** | **TPS2H160B-Q1** dual switch → **LM74700-Q1** ideal diode → **MF-NSHT050KX** PPTC, per feed | ✅ |
 | **VREF supply** | **NCV8772CDT504RKG** 5.00 V LDO off the **LTC4364 protected rail** — not the 5 V switcher, which has no headroom and is spread-spectrum. [`vref-supply.md`](vref-supply.md) | ✅ |
 | MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
 | Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, 9 kV clamp. Bench: Tokmas AD7606BSTZ, same LQFP-64 | ✅ |

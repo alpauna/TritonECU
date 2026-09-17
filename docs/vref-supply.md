@@ -103,19 +103,19 @@ current limit sits, and make the thing that sits there survive a short to
 battery.
 
 ```
-  LTC4364 protected rail        ← 14 V nominal, clamped 27–30 V
+  LTC4364 protected rail        ← 14 V nom, clamped 27–30 V
   (NOT the 5 V switcher)
           │
           ▼
   [ 5.00 V linear regulator ]   ← its own, EN under MCU control
           │
           ▼
-  ┌──────────── TPS2H160B-Q1, dual channel ─────────────┐
-  │  ch1  limit 250 mA  ──►  PTC  ──►  A-20             │
-  │  ch2  limit 250 mA  ──►  PTC  ──►  C-20             │
-  │                                                     │
-  │  FAULT ──► GPIO   SEL ──► GPIO   CS ──► ADC         │
-  └─────────────────────────────────────────────────────┘
+  ┌──────── TPS2H160B-Q1, dual channel ────────┐
+  │  ch1  limit 250 mA                         │──► ideal diode ──► PTC ──► A-20
+  │  ch2  limit 250 mA                         │──► ideal diode ──► PTC ──► C-20
+  │                                            │
+  │  FAULT ─► GPIO  SEL ─► GPIO  CS ─► ADC     │
+  └────────────────────────────────────────────┘
 ```
 
 - **Fed from the LTC4364's protected output, not from the 5 V rail.** See
@@ -128,7 +128,7 @@ battery.
 - **Fault flag into a GPIO** so a VREF short becomes a logged DTC — "VREF
   circuit A shorted" — rather than a truck that mysteriously will not run.
 - **PTC keeps a job, but not the one it was given.** See
-  [§ What the PTC is actually for](#what-the-ptc-is-actually-for).
+  [§ The PTC, demoted](#the-ptc-demoted-to-what-it-was-always-good-for).
 
 ---
 
@@ -348,49 +348,155 @@ against a pin budget of 37 used out of ~114.
 
 ---
 
-## What the PTC is actually for
+## The output chain
 
-The original scheme gave the PTC a job it could not do — see
-[§ The blind spot](#the-blind-spot-short-to-battery) — and the switch now does
-that job properly. But the PTC is not redundant, because **running the switch
-from 5 V creates a reverse-current path the datasheet requires you to limit.**
+```
+TPS2H160B OUT ──► [ LM74700-Q1 + N-FET ] ──► PTC ──► connector pin
+                     ideal diode            backstop        │
+                                                            └──► divider ──► STM32 ADC
+```
 
-§8.3.6.3: on a short to battery, if V<sub>OUT</sub> − V<sub>S</sub> exceeds the
-body-diode drop, reverse current flows and **must be externally limited to below
-I<sub>R(1)</sub> = 2.5 A**.
+Three elements, each doing one job, in this order for a reason: the ideal diode
+sits closest to the switch so reverse current never reaches anything downstream,
+and the diagnostic divider sits outboard of everything so it sees what the
+harness sees.
 
-At V<sub>S</sub> = 13.5 V a 14 V short is a 0.5 V differential and nothing
-happens. **At V<sub>S</sub> = 5 V it is a 9 V differential**, so real current
-flows. Harness resistance plus the PTC is what keeps it under 2.5 A.
+### The reverse path, and why a PTC cannot close it
 
-So the PTC stays, and its sizing rationale is unchanged — a **16 V part**, not
-the 2920L030/150GR 150 V devices freed up from the input, for the reason that
-disqualified them upstream: **high-voltage PPTCs trip in 8–16 seconds**, because
+`TPS2H160B` §8.3.6.3: on a short to battery, if V<sub>OUT</sub> −
+V<sub>S</sub> exceeds the body-diode drop, reverse current flows and must be
+externally limited to below **I<sub>R(1)</sub> = 2.5 A**. At V<sub>S</sub> =
+13.5 V a 14 V short is a 0.5 V differential and nothing happens; **at
+V<sub>S</sub> = 5 V it is a 9 V differential**, so real current flows.
+
+Two things follow, and an earlier revision of this document got both wrong.
+
+**A PTC cannot limit it.** For current limiting you must assume R<sub>min</sub>
+— a fresh part — not R<sub>1max</sub>. Against the whole Bourns MF-NSHT family:
+
+| Part | I<sub>hold</sub> | R<sub>min</sub> | peak reverse current |
+|---|--:|--:|--:|
+| NSHT010 | 0.10 A | 1.00 Ω | 6.8 A |
+| NSHT020 | 0.20 A | 0.60 Ω | 11 A |
+| NSHT035 | 0.35 A | 0.40 Ω | 17 A |
+| NSHT050 | 0.50 A | 0.17 Ω | 40 A |
+
+**Not one of them reaches 2.5 A.** Even the highest-resistance device is 2.7×
+over, and the low-resistance parts exceed their own I<sub>max</sub>. A PPTC is
+low-resistance until it heats; it is not a current limiter in the first
+millisecond, which is the only millisecond that matters here.
+
+**And a rail clamp only survives the fault rather than preventing it.** Reverse
+current does not merely flow — with nothing to sink it, it *raises the 5 V rail*
+toward 13.3 V. Both candidate regulators die there: the NCV8772C's output is
+rated **7 V** absolute maximum, the TPS7E82's is 2 × V<sub>OUT(nom)</sub>. A
+clamp in the 5.1 V → 7 V window would have to sink a 40 A pulse, which is not a
+window a TVS clamps inside.
+
+### The ideal diode closes it: LM74700-Q1
+
+Break the path instead of surviving it. Datasheet:
+[`Datasheets/LM74700-Q1-Datasheet.pdf`](Datasheets/LM74700-Q1-Datasheet.pdf).
+
+| Parameter | Value | |
+|---|---|---|
+| **CATHODE to ANODE** | **−5 to +75 V** abs max | our reverse case is +9 V |
+| ANODE operating | **3.2 V to 65 V** | runs from the 5 V rail |
+| Reverse blocking response | **< 0.75 µs** | against a PPTC's milliseconds |
+| DC reverse current | **zero** | |
+| Forward regulation | **20 mV** | |
+| I<sub>Q</sub> | 80 µA operating, 1 µA shut down | |
+| Package | SOT-23-6, 2.90 × 1.60 mm | |
+| Qualification | AEC-Q100 | |
+
+N-channel, source at the switch's OUT, drain toward the feed, so the body diode
+conducts forward and blocks reverse while the controller holds the gate off.
+The FET only has to stand 9 V off and 20 mA on — any small 30–60 V logic-level
+part does.
+
+> **Why not a passive P-FET with no controller.** Blocking reverse current
+> requires the body diode to oppose it, which forces **source-toward-load**. With
+> the source at the load, a rising load makes V<sub>gs</sub> *more* negative, so
+> a passively-biased FET turns **on** exactly when it must turn off — 5 V gives
+> V<sub>gs</sub> = −5 V, and a 14 V short gives −14 V. No passive gate network
+> fixes that: a divider scales V<sub>gs</sub> and a zener clamps it, neither can
+> invert it. Turning the FET off means pulling the gate up to a source sitting at
+> 14 V, which requires comparing against the input — and that comparison is the
+> controller. Passive ideal diodes also generate gate drive *from the forward
+> drop*, which here is deliberately microvolts.
+
+**What this deletes:** the rail clamp, the Schottky that would have diverted the
+pulse, the TVS sized for 40 A, and the tight 5.1 → 7 V window. Net part count is
+roughly a wash and the unquantified item is gone.
+
+**The forward drop is 20 mV** — similar in magnitude to a PPTC's, but
+**regulated rather than resistive**, so it is a stable offset rather than
+something that drifts with current, ambient and trip history. That is the
+difference that matters for a ratiometric reference.
+
+### The PTC, demoted to what it was always good for
+
+With reverse handled by the ideal diode and forward limiting handled by the
+switch, the PTC returns to the job the original design gave it: **a per-feed
+backstop for the case where the switch itself fails short.**
+
+**`MF-NSHT050KX`** — Bourns MF-NSHT, 1206, AEC-Q200.
+[`Datasheets/MF-NSHT-PPTC-Datasheet.pdf`](Datasheets/MF-NSHT-PPTC-Datasheet.pdf).
+
+| | |
+|---|---|
+| I<sub>hold</sub> | **0.50 A** — 2× the switch's 250 mA limit, so it never trips on a fault the switch is already handling |
+| V<sub>max</sub> | **16 V** — the rating this document specified from the start |
+| Resistance | R<sub>min</sub> 0.17 Ω, **R<sub>1max</sub> 1.60 Ω** |
+| Trip | 8 A in ≤ 0.10 s |
+| I<sub>max</sub> | 20 A, −40 to +125 °C |
+
+Low-ohm is the right choice **because no PPTC bounds the reverse current
+anyway** — so there is nothing to buy by accepting a higher resistance, and the
+accuracy is free. The 16 V part remains right for the reason that disqualified
+the 150 V devices upstream: **high-voltage PPTCs trip in 8–16 seconds**, because
 a 120–150 V element needs a thick polymer body and thickness is thermal mass.
 
-| | 150 V part | 16 V part |
-|---|---|---|
-| Trip time | **8–16 s** | 0.1–0.5 s |
-| Resistance | 1–3 Ω | lower for the same hold current |
+> **[CONFIRM]** I<sub>hold</sub> derates with ambient temperature. Check the
+> derating curve holds 0.50 A above the switch's 250 mA limit at the cabin's
+> worst case, or the PTC will nuisance-trip on a fault the switch is containing.
 
-Size the hold current at ~100–150 mA: below the switch's 250 mA limit, above the
-~25 mA real load.
+### Diagnosis, now that the switch cannot see the fault
 
-### The accuracy problem this document used to have is gone
+The ideal diode blocks the battery from reaching OUT, so **the TPS2H160B loses
+short-to-battery detection** — a short now reads as *no current*, which is
+indistinguishable from an open load.
 
-Earlier revisions argued at length that VREF must be *sensed downstream of the
-PTC*, because a PPTC is a thermistor by construction — its resistance rises with
-current and ambient and roughly doubles after each trip, putting 75 mV of
-wandering error on a 5.00 V ratiometric reference.
+Recover it with **a divider from each feed into an STM32 internal ADC**. It sees
+14 V directly and says unambiguously which feed is shorted, which is better than
+the detection it replaces. Same reasoning as `CS`: a diagnostic, not a
+ratiometric measurement, so it does not belong on the precision converter, and
+internal channels are plentiful.
 
-**That argument is retired.** The fix it proposed — take the regulator's
-feedback from the far side of the PTC — never worked for two feeds anyway: there
-are two far sides and one loop. What actually removes the problem is the switch's
-**4 mV** drop at 25 mA, which is 20× smaller than the PTC's and stable.
+### The accuracy argument, corrected
 
-Take the sense at the regulator, one channel, covering both feeds. If a PTC
-trips, the `FAULT` and `CS` path is what reports it — not a drifting voltage
-nobody can calibrate out.
+Earlier revisions argued VREF must be *sensed downstream of the PTC*, because a
+PPTC is a thermistor by construction — resistance rising with current and
+ambient, roughly doubling after each trip, putting 75 mV of wandering error on a
+ratiometric reference.
+
+A later revision claimed the switch's 4 mV drop retired that argument. **It did
+not, and that was an error**: the switch and the PTC are in *series*, so a small
+drop across one says nothing about the other.
+
+What actually retires it is the chain above. Per feed at ~20 mA:
+
+| Element | Drop | Character |
+|---|--:|---|
+| TPS2H160B, 160 mΩ | 3 mV | resistive, stable |
+| LM74700-Q1 + FET | 20 mV | **regulated**, a fixed offset |
+| MF-NSHT050KX | 3–32 mV | **resistive and drifting** — the only bad actor left |
+
+The PTC is still the worst term, but it is now a backstop carrying no fault
+current in normal life, and at R<sub>min</sub> it contributes 3 mV. Take the
+ratiometric sense at the regulator, one channel, covering both feeds; if a PTC
+has tripped or aged, the per-feed diagnostic divider is what reports it rather
+than a drifting voltage nobody can calibrate out.
 
 ## On "isolated"
 
@@ -531,18 +637,27 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 |--:|---|---|
 | 1 | **NCV8772CDT504RKG** | 5.00 V LDO, DPAK-5 |
 | 1 | **TPS2H160BQPWPRQ1** | dual high-side switch, both feeds |
-| **2** | PTC, 16 V, ~100–150 mA hold | **one per feed** — the only doubled item |
+| **2** | **LM74700QDBVRQ1** | ideal diode controller, SOT-23-6 — **one per feed** |
+| **2** | N-channel FET, 30–60 V logic level | **one per feed** — stands 9 V off, 20 mA on |
+| **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
 | 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
 | 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
-| — | C<sub>in</sub> / C<sub>out</sub> per both datasheets | NCV8772C wants ≥ 1 µF out |
+| **2** | divider pair | per-feed short-to-battery sense → internal ADC |
+| — | C<sub>in</sub> / C<sub>out</sub> per all three datasheets | NCV8772C ≥ 1 µF out; LM74700 needs 0.1 µF VCAP–ANODE |
 
-**Pin cost: 6 GPIO and 1 internal ADC channel.**
+**Not fitted, and worth recording why:** no rail clamp, no Schottky, no TVS on
+the 5 V rail. The ideal diodes prevent the reverse condition that would have
+needed all three — see
+[§ The ideal diode closes it](#the-ideal-diode-closes-it-lm74700-q1).
+
+**Pin cost: 6 GPIO and 3 internal ADC channels.**
 
 | | |
 |---|---|
 | GPIO | `EN` (LDO), `IN1`, `IN2`, `DIAG_EN`, `SEL`, `FAULT` |
-| STM32 internal ADC | `CS` |
-| Strapped, not driven | `THER` — firmware sheds the channel long before the part's own latch-versus-retry behaviour matters |
+| STM32 internal ADC | `CS`, plus **one per feed** for short-to-battery sense |
+| Precision ADC | one VREF sense at the regulator, covering both feeds |
+| Strapped, not driven | `THER`; the LM74700 `EN` pins tie high — they are powered from the gated VREF rail, so the LDO's `EN` already gates them |
 
 If the truck turns out to have **one** VREF pin rather than two, nothing changes
 except populating one PTC and never enabling channel 2. Regulator and switch
@@ -576,7 +691,8 @@ cost you the sensors on that branch.
 |---|---|
 | **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
 | **[DECIDE]** | `THER` pin: latch or auto-retry on thermal shutdown |
-| **[DECIDE]** | PTC part — 16 V, ~100–150 mA hold |
+| **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
+| **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
 | **[CONFIRM ON TRUCK]** | one VREF pin or two. Not blocking — the part is dual-channel either way |
 | **[CONFIRM]** | TR sensor and speed-control switches really are on VREF (load table above) |
