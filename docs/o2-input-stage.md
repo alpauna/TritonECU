@@ -84,6 +84,13 @@ which is the whole reason for choosing Schottky over a signal diode here.
 fault.** That was the concern that made this a finding in the first place: the
 ADS8588H's 9 kV clamp is rated for that job and an op-amp's is not.
 
+> The OPA2376 turns out to have more headroom than this was designed against:
+> its signal-input absolute maximum is **(V−) − 0.5 V to (V+) + 0.5 V**, so
+> −0.5 V to 5.5 V, and it specifies a **±10 mA** input current limit explicitly
+> permitting operation beyond the rails when current-limited. D1 at 5.3 V sits
+> inside that with margin to spare, and R1 bounds the worst case at 10 mA even
+> if D1 were absent. §6.
+
 ### Where the fault current goes
 
 Into the **+5 V analog rail**, which carries the ADS8588H (25 mA), two MAX9926s
@@ -132,6 +139,10 @@ through R2 is an error in the other direction. At a 100 kΩ source, rich peak:
 1 mV of bias error, against the 82 mV being removed. With a 1 nA part there is
 no good value at all, which is why §6 makes bias current the selection criterion
 rather than a checkbox.
+
+> **Settled at 10 MΩ.** The chosen part is ~200 pA at +125 °C, so the real total
+> is **6.5 mV**. The optimum moves to 15 MΩ for 6.0 mV, which is not worth
+> chasing. Worked through in §6.
 
 ### One fault couples slightly into the other three
 
@@ -193,7 +204,7 @@ current:
 | Narrowband HEGO | 0.0 – 1.0 V | ✓ |
 | **CJ125 `UA`** | **0.19 – 3.14 V** | ✓ |
 | External module, configurable output | set it 0 – 3.5 V | ✓ |
-| External module, fixed 0 – 5 V | 0.0 – 5.0 V | ✗ — use **JP** |
+| External module, fixed 0 – 5 V | 0.0 – 5.0 V | ✓ — **see the note below** |
 
 The CJ125 figures are read off the Bosch LSU 4.9 characteristic table in the
 legacy firmware (`src/CJ125Controller.cpp`): the 23-point curve spans ADC 39 to
@@ -204,52 +215,89 @@ Stoich sits at 1.50 V.
 on-board CJ125 outright**, and covers an external module whenever its output
 span is configurable — which the mainstream ones are.
 
-**JP** is the escape hatch for a fixed 0–5 V module: link across the buffer,
-signal reaches the ADC through R1 + R3 = 11 kΩ, costing 1.1 % of gain. That is a
-fixed constant folded into the module's transfer function in config, and a
-wideband module needs a transfer function entered regardless.
+> **The datasheet is kinder than this table assumed.** The OPA2376's common-mode
+> range is **(V−) − 0.1 V to (V+) + 0.1 V** — genuinely rail-to-rail — so a fixed
+> 0–5 V module works directly. What the 1.3 V figure actually bounds is where
+> **CMRR, PSRR and I<sub>Q</sub> are specified**: above (V+) − 1.3 V the part
+> operates but its CMRR minimum of 76 dB no longer applies. The cost is a few
+> millivolts of offset shift in the top 1.3 V of a 5 V span — irrelevant on a
+> linear-in-lambda wideband signal, and never reached by narrowband or CJ125.
+
+**JP is therefore an unfitted option rather than a requirement.** It remains on
+the board because a 0 Ω pad costs nothing: linking it bypasses the buffer for a
+fixed 0–5 V module, at R1 + R3 = 11 kΩ into the ADC, or 1.1 % of gain — a fixed
+constant folded into the transfer function that such a module needs entered
+anyway.
 
 > This is the payoff from [`review-o2-chain.md`](review-o2-chain.md) §5: **the
 > wideband decision stays open, and none of it changes this board.**
 
 ---
 
-## 6. The op-amp
+## 6. The op-amp — OPA2376, checked against the datasheet
 
-Two duals cover four channels.
+Datasheet: [`Datasheets/OPA2376AIDR-Datasheet.pdf`](Datasheets/OPA2376AIDR-Datasheet.pdf)
+(SBOS406F). The four confirmations §6 previously demanded, answered:
 
-| Requirement | Value | Why |
+| Asked | Datasheet | |
 |---|---|---|
-| **Input bias current** | **≤ 100 pA at +125 °C, specified not typical** | §3 — through 10 MΩ this *is* the error budget |
-| Input offset | ≤ 1 mV | against a 450 mV switch point |
-| Input CM range | **includes ground**, up to ≥ 3.5 V on a 5 V supply | §5 |
-| Output | rail-to-rail | |
-| **Input current limit** | **specified, ±10 mA class** | §2 — the datasheet must permit clamped operation |
-| Supply | single 2.7–5.5 V | +5 V<sub>A</sub> |
-| Qualification | **AEC-Q100**, −40 to +125 °C | consistent with the board |
-| Package | dual, SOIC-8 preferred | hand-assembly |
+| **I<sub>B</sub> at +125 °C** | **≈ 200 pA typical**, Figure 11. 0.2 pA typ / **10 pA max at 25 °C only**; over temperature the datasheet says *"See Typical Characteristics"* | ⚠ **see below** |
+| **Input current limit specified** | **±10 mA**, and note (2) is explicit: *"Input terminals are diode-clamped to the power-supply rails. Input signals that can swing more than 0.5 V beyond the supply rails should be current limited to 10 mA or less"* | ✓ |
+| **Common-mode range** | **(V−) − 0.1 V to (V+) + 0.1 V** — rail-to-rail, better than assumed | ✓ **see §5** |
+| **AEC-Q100** | **No.** `OPA2376AIDR` is industrial, −40 to +125 °C. The datasheet's *Other Qualified Versions* lists only **`OPA376-Q1` — the single**, not the dual | ✗ **open** |
 
-**Bias current is the criterion, and it is not the number datasheets lead
-with.** A CMOS part quoting "0.2 pA typical" quotes it at 25 °C. The mechanism
-is ESD-diode leakage, which roughly doubles every 10 °C — so 0.2 pA at 25 °C can
-be hundreds of pA to nanoamps at 125 °C. **Read the over-temperature curve, not
-the headline.**
+Specifications not asked for that turned out to matter:
 
-This is also why a **zero-drift/chopper** part is not automatically the answer
-despite its superb offset: chopper input bias current comes from switch charge
-injection and starts in the hundreds of pA, which §3 shows is already marginal
-against 10 MΩ. Offset is the easy specification here; bias current is the hard
-one.
+| | |
+|---|---|
+| V<sub>OS</sub> | **5 µV typ, 25 µV max** — forty times better than the ≤ 1 mV wanted. Offset is simply not a term in this design |
+| dV<sub>OS</sub>/dT | 0.26 µV/°C typ, 1 µV/°C max, **specified only to +85 °C**. Even extrapolated to 125 °C that is 100 µV |
+| Signal input abs max | **(V−) − 0.5 V to (V+) + 0.5 V**, i.e. −0.5 V to **5.5 V** — *more* headroom than §2 designed against |
+| Output swing from rail | 10 mV typ / 20 mV max at R<sub>L</sub> = 10 kΩ, and our DC load is ~1 MΩ | |
+| I<sub>Q</sub> | 760 µA typ, **950 µA max** per amplifier → **3.04 mA typ / 3.80 mA max** for four |
+| ESD | HBM 4 kV | |
 
-> **[DECIDE] the part.** `OPA2376-Q1` is the leading candidate — CMOS, AEC-Q100,
-> offset in the tens of µV, and an input common-mode range of roughly (V−) − 0.1
-> to (V+) − 1.3 V, which §5 shows is sufficient. **[CONFIRM] from the datasheet:**
-> (a) input bias current at +125 °C, (b) that an input current limit is
-> specified, (c) the common-mode range, (d) AEC-Q100 grade.
->
-> Everything else in this document is independent of which part wins.
+### 200 pA is twice the target, and the design absorbs it
 
----
+§3 asked for ≤ 100 pA. Re-running the trade against the real figure:
+
+```
+   R2      loading    bias current     total
+  4.7M      9.57 mV      0.94 mV      10.51 mV
+   10M      4.50 mV      2.00 mV       6.50 mV
+   15M      3.00 mV      3.00 mV       6.00 mV   <- optimum
+   22M      2.05 mV      4.40 mV       6.45 mV
+```
+
+**Keep R2 = 10 MΩ.** The optimum has moved to 15 MΩ but 10 MΩ is only 8 % worse
+in total error, and 10 MΩ is the easier value to buy, guard and keep clean.
+
+**6.5 mV against the 82 mV this stage removes**, so the buffer still wins by
+more than an order of magnitude. But two honest caveats:
+
+- It is a **typical** curve. There is no maximum specified above 25 °C, so a
+  worst-case part at 125 °C is unquantified. The curve's dashed extrapolation
+  reaches 1 nA by ~145 °C, which would be 10 mV.
+- This is the term that would **dominate** if the ECU were ever mounted
+  under-hood. At cabin temperatures it is a few hundred microvolts. Another
+  reason the mounting decision in
+  [`adc-front-end.md`](adc-front-end.md) deserves to be made explicitly.
+
+### The open question: qualification
+
+Every other active part on this board is AEC-Q100 or Q101. **This one would be
+the first deliberate exception**, because TI qualified the single and not the
+dual:
+
+| | **4 × OPA376-Q1** | **2 × OPA2376AIDR** |
+|---|---|---|
+| Qualification | **AEC-Q100** | industrial, −40 to +125 °C |
+| Packages | 4 | **2** |
+| Specs | same silicon — **[CONFIRM]** against its own datasheet | **confirmed, in hand** |
+| Board area | 4 × SOT-23-5 or SC-70 is *smaller* than 2 × SOIC-8 | 2 × SOIC-8, easier to hand-solder |
+
+**[DECIDE]** — this is a judgement about how strictly the Q100 rule binds, not a
+technical difference, and it is the last open item in this document.
 
 ## 7. Bill of materials
 
@@ -269,7 +317,7 @@ Shared:
 
 | Ref | Part | Note |
 |---|---|---|
-| U1, U2 | dual op-amp — **[DECIDE]**, §6 | 2 channels each |
+| U1, U2 | **OPA2376AIDR** SOIC-8 ×2, or **OPA376-Q1** ×4 — **[DECIDE]**, §6 | the only open item |
 | R4 | 91 kΩ 1 % 0603 | bias divider top |
 | R5 | 9.1 kΩ 1 % 0603 | bias divider bottom |
 | C3 | 100 nF X7R 0603 | bias decoupling |
@@ -286,13 +334,13 @@ Shared:
 | [`harness-protection.md`](harness-protection.md) | Already updated: the O2 inputs no longer sit behind the ADS8588H's 9 kV clamp — D1 and R1 are their protection now |
 | [`review-analog-chain.md`](review-analog-chain.md) | Finding 4, the unspecified series resistance, is **closed on these four channels** at 10 kΩ. Still open on the rest, which stay unbuffered |
 | [`adc-front-end.md`](adc-front-end.md) | Channels 2 and 3 are marked buffered. **No channel count changes** |
-| [`power-supply.md`](power-supply.md) | Two op-amps and a 50 µA divider on the 5 V analog rail — roughly **1.5 mA**, against a 425 mA budget. Noted, not material |
+| [`power-supply.md`](power-supply.md) | Four amplifiers at 950 µA max plus a 50 µA divider — **3.85 mA worst case**, booked as **4 mA** against a 425 mA budget. Noted, not material |
 | [`always-on-domain.md`](always-on-domain.md) | **Nothing.** Every element here is on the switched analog rail and draws zero when parked |
 
 ## 9. Open items
 
 | | |
 |---|---|
-| **[DECIDE]** | the op-amp, against §6's four confirmations |
+| **[DECIDE]** | **qualification only** — 4 × `OPA376-Q1` (AEC-Q100) against 2 × `OPA2376AIDR` (industrial). §6. The electrical design is settled either way; it is the same silicon |
 | **[CONFIRM]** | the F767's maximum external ADC impedance, for the two downstream channels. The buffer makes it moot — output impedance there is 1 kΩ, far inside any plausible limit — but the number was never established and is worth having |
 | **[MEASURE]** | source impedance of the truck's actual HO2S at operating temperature, once one is on the bench. Every error figure here is quoted against an assumed 100 kΩ, and the real number would let the residual 4.5 mV be stated rather than estimated |
