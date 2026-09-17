@@ -36,7 +36,15 @@ draws before ours.
 | STM32F767 Standby + RTC + backup SRAM | **3 µA** |
 | Always-on 3.3 V converter, quiescent | ~20 µA |
 | INA238 in shutdown | ~2 µA |
-| **Total** | **≈ 780 µA** |
+| ADC battery-sense divider, 47 k / 10 k on a **permanent** rail | **246 µA** |
+| **Total** | **≈ 1.03 mA** |
+
+> ⚠ **The divider was missing from this table** and is 31 % of the original
+> 780 µA. Unlike the rest, it cannot be gated away by the 5 V rail going
+> down — it is a resistor to ground on a live rail. **Raise it to 470 k /
+> 100 k** and it becomes 24.6 µA, restoring the budget to ≈ 805 µA. The ADC
+> then sees ~85 kΩ of source impedance and wants a longer acquisition window.
+> See [`review-power-chain.md`](review-power-chain.md) §2.
 
 ```
 780 µA × 720 h  =  0.56 Ah/month

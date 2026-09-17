@@ -49,20 +49,47 @@
 
 ## Current budget first — it decides the topology
 
-| Load | 5 V rail draw |
+> ⚠ **The table below is the ESP32-P4-era budget and is wrong by ~3.5×.** It
+> counts an ESP32-C6 that was *dropped*, a P4 that was *replaced*, and VREF
+> which now has its own LDO on the protected rail. Superseded by the rebuild
+> underneath it — see [`review-power-chain.md`](review-power-chain.md) §1. Kept
+> because the conclusion it reached is still right, and more so.
+
+| ~~Load~~ | ~~5 V rail draw~~ |
 |---|---|
-| ESP32-P4 at 400 MHz + 32 MB PSRAM (via its 3.3 V regulator) | ~350–500 mA |
-| ESP32-C6 module, peak TX | ~300 mA |
+| ~~ESP32-P4 at 400 MHz + 32 MB PSRAM~~ | ~~~350–500 mA~~ — platform replaced |
+| ~~ESP32-C6 module, peak TX~~ | ~~~300 mA~~ — **Wi-Fi dropped** |
 | SD card, peak | ~100 mA |
-| AD7606 (110 mW) | ~25 mA |
+| ~~AD7606~~ → ADS8588H | ~25 mA |
 | MAX9926 ×2 | ~20 mA |
 | 74HCT541, MCP23S17 chain | ~20 mA |
-| Sensor pull-ups | ~50 mA |
-| **VREF** | **~25 mA** |
-| **Total, realistic peak** | **~1.5 A** |
+| ~~Sensor pull-ups~~ | ~~~50 mA~~ — sourced from **VREF**, not this rail |
+| ~~**VREF**~~ | ~~**~25 mA**~~ — its own LDO, on the protected rail |
+| ~~**Total, realistic peak**~~ | ~~**~1.5 A**~~ |
 
-**Not 3 A.** That matters, because it removes the only argument for
-interleaving.
+### Rebuilt, 2026-09-17
+
+| 3.3 V rail via TLV62085 | mA |
+|---|--:|
+| STM32F767ZI @ 216 MHz | 250 |
+| SD card, peak | 100 |
+| Ethernet PHY | 80 |
+| 3.3 V logic, TLV7031, misc | 20 |
+| **450** → reflected to 5 V at 90 % | **330** |
+
+| Direct 5 V | mA |
+|---|--:|
+| MCP23S17 ×2 **at 5 V** | 20 |
+| 74HCT541 ×2 — ignition + PWM gate buffer | 10 |
+| ADS8588H | 25 |
+| MAX9926 ×2 | 20 |
+| DRV8837, during SCP TX | 20 |
+| **Total** | **95** |
+
+**5 V rail: ~425 mA.**
+
+**Not 3 A — and not 1.5 A either.** That matters, because it removes the only
+argument for interleaving, and now removes it decisively.
 
 Note this table is the *5 V-equivalent* load. Once the P4, C6 and SD card are
 fed by a 3.3 V buck rather than directly, the actual draw on the SEPIC falls
