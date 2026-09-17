@@ -48,7 +48,7 @@ Every three-wire sensor on this truck, at its worst case:
 | DPFE (C122) | ~12 mA | the largest single VREF load |
 | CHT pull-up (C179) | ~0.4 mA | pull-up is inside the ECU, sourced from VREF |
 | IAT pull-up (C107) | ~0.4 mA | same |
-| TR sensor | ~5 mA | resistive ladder **[CONFIRM]** |
+| ~~TR sensor~~ | — | **not on VREF** — a switch array on SIGRTN, per Ford's diagrams |
 | Speed control switches | ~5 mA | **[CONFIRM]** whether on VREF |
 | **Total** | **~25 mA** | |
 
@@ -1189,7 +1189,7 @@ fault but not against that fault coinciding with a load dump.
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
-| **[CONFIRM]** | TR sensor and speed-control switches really are on VREF (load table above) |
+| ~~**[CONFIRM]**~~ | ~~TR sensor on VREF~~ — **closed**: Ford's diagrams show the DTR is a switch array returning on SIGRTN, not a VREF load. Speed-control switches still open |
 
 The `THER` decision is worth thinking about rather than defaulting. **Auto-retry**
 keeps the engine running through a transient short, which is what you want from

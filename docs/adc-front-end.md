@@ -47,6 +47,11 @@ not deserve native pins. That leaves SCK, MISO, CS, CONVST and BUSY, which is
 the five the pin budget in `f150-1999-target.md` assumes. The mapping above is
 the *bench* mapping, using native pins because nothing else is connected yet.
 
+> **A pre-schematic review of this chain is in
+> [`review-analog-chain.md`](review-analog-chain.md).** The eight precision
+> channels came out clean; the findings are all on the **internal** ADC, whose
+> running demand is **~22 channels** and had never been counted.
+
 ## Channel allocation
 
 Eight channels, and they are all spoken for:
@@ -62,8 +67,14 @@ Eight channels, and they are all spoken for:
 | 6 | Battery voltage | via divider; injector dead-time compensation |
 | 7 | **VREF sense** | sensors are ratiometric, and this ADC is not — see below |
 
-Moved to the P4's own ADC because they are slow and not fuelling-critical:
-DPFE, TFT, downstream O2 ×2, fuel pump monitor.
+Moved to the **STM32's own ADC** because they are slow and not fuelling-critical:
+DPFE, TFT, downstream O2 ×2, fuel pump monitor. *(The "P4" here is stale — the
+platform moved to the STM32F767ZI.)*
+
+**Four O2 sensors, and the split matches what each is for.** Ford's diagrams
+confirm four: **#11 / #21 upstream** on 391 RD/YE, **#12 / #22 downstream** on
+1138 VT/WH. The upstream pair is fuelling and sits on this converter; the
+downstream pair is catalyst monitoring and is slow enough for the internal ADC.
 
 Knock (C103) is **not** on this ADC as a routine channel — it is a piezo
 needing a charge amplifier and windowed sampling around each combustion event.
@@ -87,6 +98,11 @@ between the two conversions. That property is worth the channel.
 |---|---|
 | ±10 V | 305.18 µV |
 | ±5 V | 152.59 µV |
+
+**±10 V is forced, not chosen.** `RANGE` is one setting for all eight channels
+and **channel 7 carries VREF at 5.00 V** — on a ±5 V range that is exactly full
+scale, so any tolerance or overshoot clips the one signal that must never clip.
+Recorded so it is not later "optimised" to ±5 V.
 
 ±10 V takes 0–5 V sensors directly with headroom for overshoot. ±5 V doubles
 the resolution but leaves no margin — worth switching to only once every input
