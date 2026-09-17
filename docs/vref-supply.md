@@ -412,24 +412,51 @@ trips, so a fast pulse passes straight through it to the TVS. The PTC only sees
 a large voltage once tripped, and then it is holding off the 14 V of a sustained
 fault — inside its 16 V rating.
 
-### Selecting it
+### Selecting it: SMAJ6.0CA
 
-| | |
-|---|---|
-| Type | **bidirectional**, AEC-Q101 |
-| V<sub>RWM</sub> | **≥ 6.0 V** — above the 5.1 V worst-case VREF, with margin so it never leaks in normal operation |
-| Package | SMA is ample; the energy here is transient, and the line carries 25 mA |
-| Reference | **SMAJ6.0CA class** |
+Bidirectional — the `C` suffix in this series. Datasheet:
+[`Datasheets/SMAJ6.0CA-Datasheet-C908810.pdf`](Datasheets/SMAJ6.0CA-Datasheet-C908810.pdf).
 
-**Leakage is the parameter to watch**, and for an unusual reason: the TVS sits
-*downstream of the ratiometric sense point*, so anything it draws is a direct
-error rather than something the regulator corrects out. At a few µA against a
-25 mA load it is negligible — a few µA through the PTC's 1.6 Ω is microvolts —
-but it is the reason to take a 6.0 V standoff rather than shave it to 5.5 V.
+| Parameter | Value | |
+|---|---|---|
+| V<sub>RWM</sub> standoff | **6.0 V** | above the 5.1 V worst-case VREF |
+| V<sub>BR</sub> | 6.67 min / 7.67 max at 10 mA | |
+| V<sub>C</sub> clamping | **10.3 V** at 38.8 A | far below the FET's 60 V and the switch's 40 V |
+| Peak power | 400 W, 10/1000 µs | |
+| Reverse leakage | **800 µA max at V<sub>RWM</sub>** | see below |
+| T<sub>J</sub> | −55 to +150 °C | |
+| Package | SMA | |
 
-> **[DECIDE]** exact part number. The requirement is settled; the specific
-> device wants the usual datasheet check, particularly leakage at 5.1 V and
-> AEC-Q101 status.
+**The leakage worry was misplaced, and the reason is the placement.** This
+document flagged leakage as the parameter to watch because the TVS sits
+downstream of the ratiometric sense point. With the real number the arithmetic
+is unambiguous:
+
+```
+TVS node sits between the ideal diode and the PTC,
+so leakage to ground does NOT flow through the PTC
+
+800 uA x 160 mohm (switch)  =  0.13 mV
+```
+
+The PTC's 1.6 Ω — the one resistive term that would have mattered — is
+**outboard of the TVS**, so leakage bypasses it entirely. Two TVS at the
+worst-case 800 µA add 1.6 mA to a 25 mA load, and the spec is taken at the 6.0 V
+standoff rather than at our 5.1 V, where it will be well below that. Neither the
+error nor the load is a real constraint.
+
+**The gap is qualification, not electrical.** This datasheet makes no AEC-Q101
+or automotive claim anywhere — it is a generic SMAJ series part. Every other
+device in this chain is qualified: TPS2H160B-Q1 and NCV8772C to AEC-Q100 Grade 1,
+LM74700-Q1 to AEC-Q100, DMN6040SVTQ to AEC-Q101, MF-NSHT050KX to AEC-Q200. A
+non-qualified TVS would be the only exception.
+
+**SMAJ6.0CA is an industry-standard part number available from qualified
+sources** — Littelfuse, Vishay, Bourns among others — so this is a sourcing
+decision rather than a redesign. The generic part is fine for a bench build.
+
+> **[DECIDE]** which manufacturer. The part number is settled; buy it from an
+> AEC-Q101 qualified source to match the rest of the chain.
 
 ### The reverse path, and why a PTC cannot close it
 
@@ -753,7 +780,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | **2** | **LM74700QDBVRQ1** | ideal diode controller, SOT-23-6 — **one per feed** |
 | **2** | **DMN6040SVTQ-7** | N-FET, TSOT26, 60 V / ±20 V V<sub>GS</sub> — **one per feed** |
 | **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
-| **2** | TVS, bidirectional, V<sub>RWM</sub> ≥ 6.0 V, SMAJ6.0CA class | **one per feed**, inboard of the PTC |
+| **2** | **SMAJ6.0CA** | bidirectional TVS, SMA — **one per feed**, inboard of the PTC. Buy AEC-Q101 qualified |
 | 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
 | 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
 | **2** | divider pair | per-feed short-to-battery sense → internal ADC |
@@ -805,7 +832,7 @@ cost you the sensors on that branch.
 |---|---|
 | **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
 | **[DECIDE]** | `THER` pin: latch or auto-retry on thermal shutdown |
-| **[DECIDE]** | TVS part number — bidirectional, V<sub>RWM</sub> ≥ 6.0 V, AEC-Q101; check leakage at 5.1 V |
+| **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
