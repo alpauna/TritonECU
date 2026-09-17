@@ -417,16 +417,60 @@ the truck's harness should not be.
 
 ---
 
-## Still open
+## The regulator: onsemi NCV8772CDT504RKG
 
-**The regulator has no part number.** Three constraints, in the order they will
-actually narrow the search:
+**Settled: onsemi NCV8772CDT504RKG**, 5.0 V, DPAK-5. Datasheet:
+[`Datasheets/NCV8772CDT504RKG-Datasheet.pdf`](Datasheets/NCV8772CDT504RKG-Datasheet.pdf).
+
+| Parameter | Value | Against the requirement |
+|---|---|---|
+| Input | 4.5–40 V operating, **40 V abs max DC**, 45 V load-dump suppressed | 33 % over the 30 V clamp max |
+| Output | **5.0 V fixed**, ±2 % (4.9–5.1 V) | ratiometric, so absolute accuracy is low-stakes |
+| Current | **350 mA** rated, limit **400 mA min** / 1100 mA max | clears the 275 mA fault case without limiting |
+| Rθ<sub>JA</sub> | **47.1 °C/W** (DPAK-5, 1 in² of 1 oz Cu) | |
+| **Rθ<sub>JC</sub>** | **12.6 °C/W** | the number that governs the pulse |
+| Thermal shutdown | 150 / 175 / 195 °C, 10 °C hysteresis | |
+| `EN` | yes, 1 µA disabled | [§ Put EN under MCU control](#put-en-under-mcu-control) |
+| Reverse output current protection | **yes** | |
+| Qualification | **AEC-Q100 Grade 1**, EMC compliant | |
+| Iq | 18 µA typ | irrelevant — the part is EN-gated |
+
+### Why this one
+
+**Rθ<sub>JC</sub> = 12.6 °C/W is what made the decision.** The fault is a pulse,
+and junction-to-case governs a pulse: `2.5 W × 12.6 = 32 °C` rise to the case,
+which is a non-event. It also means **most of the 47.1 °C/W lives in the board**,
+so copper pour buys real margin rather than a rounding difference.
+
+That matters more than usual here, because at 5 V **DPAK-5 is the only package
+offered** — the D2PAK-5 variant (42.3 °C/W) is 3.3 V only. Pour is the single
+thermal lever available.
+
+**Reverse output current protection** earns its place given the part is
+`EN`-gated: VREF bulk plus sensor capacitance can hold the output up while
+V<sub>in</sub> falls.
+
+It is also an established part rather than a recent release, and onsemi is
+already on this board via the NCV8405A — the same qualification and supply path.
+
+### Three constraints it had to meet
 
 **1. Thermals — a pulse, not a steady state.** Continuous dissipation is
-**0.22 W**. The 2.5 W fault case lasts until firmware sheds the channel, so what
-the package has to survive is that energy pulse and whatever retry policy sits
-on top of it — see [§ Shedding a faulted feed](#shedding-a-faulted-feed). Size
-against the retry policy once it is written, not against 2.5 W continuous.
+**0.22 W** → 10 °C rise, nothing. The 2.5 W fault case lasts until firmware
+sheds the channel; see [§ Shedding a faulted feed](#shedding-a-faulted-feed).
+
+> **No candidate survives 2.5 W continuously**, which is worth stating because
+> it means the shedding requirement is structural rather than an artifact of
+> this part:
+>
+> ```
+> NCV8772  DPAK-5    2.5 W x 47.1 = 118 C rise -> TJ 178 C  (TSD min 150 C)
+> TPS7E82  HVSSOP-8  2.5 W x 58.5 = 146 C rise -> TJ 206 C  (TSD     163 C)
+> ```
+>
+> Both shut down. The architecture has to shed, whatever part is fitted — and
+> the **retry policy must be seconds apart, not milliseconds**, or the part
+> simply re-heats into shutdown.
 
 **2. Placement — downstream of the pass FET.** This matters more than any
 voltage rating. Upstream, the part sees what
@@ -434,8 +478,7 @@ voltage rating. Upstream, the part sees what
 1 ms transient, clamping a 92 V surge to 27 V.* No LDO rating saves you there —
 the topology does.
 
-**3. Voltage rating — clear the clamp, with derating.** The hard floor is the
-clamped rail's maximum:
+**3. Voltage rating — clear the clamp, with derating.**
 
 | | |
 |---|---|
@@ -443,23 +486,71 @@ clamped rail's maximum:
 | Clamp, maximum | **30 V** |
 | Derating precedent on this board | the 1000 µF bulk is **50 V on the 30 V clamp**, 40 % |
 
-So **>30 V is the requirement**, not 40 V. A 36 V part clears it by 20 %; 40 V
-clears it by 33 % and is simply where automotive LDOs cluster — the
-TPS7B69xx-Q1 / TPS7B4253-Q1 class. **If a 36 V part has materially better
-dropout, PSRR or thermals, take it**; the voltage bucket is the least binding of
-the three.
-
-One caveat against sizing too close: a clamp **overshoots on the transient edge**
-before its loop settles, so 30 V is not a number to design exactly to. That is
-the argument for margin — not the 30 V figure itself.
+**>30 V is the requirement**, not 40 V. The NCV8772C's 40 V DC maximum clears it
+by 33 %. A clamp **overshoots on the transient edge** before its loop settles, so
+30 V is not a number to design exactly to — that is the argument for margin,
+rather than the 30 V figure itself.
 
 **PSRR is a non-issue on this rail**, unlike the 5 V-switcher option this
 document rejects: 9 V of headroom at 14 V in means the part never operates near
-dropout, which is precisely why this source works.
+dropout, which is precisely why this source works. Worth noting anyway that the
+NCV8772C characterises PSRR **only at 100 Hz** (75 dB) — a real gap if anything
+ever couples in, and the one place the rejected alternative was stronger.
 
-Linear, with thermal shutdown.
+### Considered: TI TPS7E8250QDGNRQ1
 
-### Why not a buck here
+40 V (42 V abs max), 300 mA, ±1.2 % accuracy, PSRR 70 dB at 1 kHz and 45 dB at
+100 kHz, HVSSOP-8 at 58.5 °C/W. Better accuracy and far better characterised
+PSRR, and 2 V more headroom over the clamp.
+
+Passed over on thermals and margin: no published Rθ<sub>JC</sub>, a worse
+Rθ<sub>JA</sub> in a package where copper helps less, 300 mA against 350, and a
+350 mA limit minimum against 400. It also derates current above **15 V of
+headroom** (`V_HEADROOM`), so it delivers less during a 27 V clamp — protective,
+but a behaviour the NCV8772C does not impose. And it is a November 2025 release
+where the onsemi part has been in production since 2018.
+
+The accuracy and PSRR advantages are largely neutralised here: VREF is measured
+ratiometrically, and the source is a linear-fed protected rail rather than a
+switcher.
+
+---
+
+## BOM
+
+**One regulator and one switch — not one per feed.** Isolation between feeds
+comes from the switch's two independent current limits, not from separate
+regulators. Two regulators was rejected: it costs two precision ADC channels and
+gives ~2 % channel-to-channel spread where one regulator through one switch
+gives **4 mV**.
+
+The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
+(the healthy one)` only exists because both channels share one regulator.
+
+| Qty | Part | |
+|--:|---|---|
+| 1 | **NCV8772CDT504RKG** | 5.00 V LDO, DPAK-5 |
+| 1 | **TPS2H160BQPWPRQ1** | dual high-side switch, both feeds |
+| **2** | PTC, 16 V, ~100–150 mA hold | **one per feed** — the only doubled item |
+| 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
+| 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
+| — | C<sub>in</sub> / C<sub>out</sub> per both datasheets | NCV8772C wants ≥ 1 µF out |
+
+**Pin cost: 6 GPIO and 1 internal ADC channel.**
+
+| | |
+|---|---|
+| GPIO | `EN` (LDO), `IN1`, `IN2`, `DIAG_EN`, `SEL`, `FAULT` |
+| STM32 internal ADC | `CS` |
+| Strapped, not driven | `THER` — firmware sheds the channel long before the part's own latch-versus-retry behaviour matters |
+
+If the truck turns out to have **one** VREF pin rather than two, nothing changes
+except populating one PTC and never enabling channel 2. Regulator and switch
+counts stay at one each.
+
+---
+
+## Why not a buck here
 
 A buck would cut the fault-case dissipation, but a switcher does not go directly
 on a ratiometric reference — the shape would have to be **buck → ~6.5 V → LDO →
@@ -477,8 +568,13 @@ That argument does not hold here, for the reason in
 [§ Shedding a faulted feed](#shedding-a-faulted-feed): the fault has already
 cost you the sensors on that branch.
 
+---
+
+## Still open
+
 | | |
 |---|---|
+| **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
 | **[DECIDE]** | `THER` pin: latch or auto-retry on thermal shutdown |
 | **[DECIDE]** | PTC part — 16 V, ~100–150 mA hold |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
