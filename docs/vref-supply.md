@@ -411,8 +411,51 @@ Break the path instead of surviving it. Datasheet:
 
 N-channel, source at the switch's OUT, drain toward the feed, so the body diode
 conducts forward and blocks reverse while the controller holds the gate off.
-The FET only has to stand 9 V off and 20 mA on — any small 30–60 V logic-level
-part does.
+
+#### The FET: Diodes **DMN6040SVTQ-7**
+
+TSOT26, single. Datasheet:
+[`Datasheets/DMN6040SVTQ-7-Datasheet.pdf`](Datasheets/DMN6040SVTQ-7-Datasheet.pdf).
+
+| Parameter | Value | |
+|---|---|---|
+| V<sub>DSS</sub> | **60 V** | 6.7× the 9 V reverse case |
+| **V<sub>GSS</sub>** | **±20 V** | clears the controller's 15 V requirement |
+| V<sub>GS(th)</sub> | **1–3 V** | standard threshold — see below |
+| R<sub>DS(on)</sub> | 30 typ / **44 mΩ max** at V<sub>GS</sub> = 10 V | 0.9 mV at 20 mA |
+| I<sub>D</sub> | 5.0 A at 25 °C, 4.0 A at 70 °C | the switch-fails-short case is 400 mA |
+| Qualification | AEC-Q101, PPAP capable | |
+
+> **ADVANCE INFORMATION**, DS38508 Rev. 1 — preliminary, so specs can move.
+> Check stock and status before committing, as with any preliminary part.
+
+Nothing here is demanding: 0.4 mW of dissipation and 20 mA through a part rated
+5 A. The two ratings that *do* matter are both easy to get wrong.
+
+#### Two constraints, and both rule out the obvious parts
+
+**1. V<sub>GS</sub> rating ≥ 15 V — so a *standard*-threshold FET, not a
+logic-level one.** This is backwards from the usual reflex. The LM74700's charge
+pump drives to approximately 15 V and its own GATE-to-ANODE absolute maximum
+*is* 15 V; the datasheet states the requirement directly as
+`External MOSFET max VGS rating: GATE to ANODE — 15 V minimum`. Gate sensitivity
+buys nothing when the controller supplies that much drive, and the thin gate
+oxide that gives a logic-level part its low threshold is exactly what caps it at
+±12 V.
+
+**2. R<sub>DS(on)</sub> comfortably under 1 Ω.** The controller regulates the
+forward drop at **20 mV**. If `I × R_DS(on)` exceeds that, the loop cannot
+regulate: the FET sits fully on and the drop becomes **resistive and drifting** —
+precisely the property the PTC was demoted for.
+
+| Part | Fails on | |
+|---|---|---|
+| **NVTR4503N** | V<sub>GS</sub> **±12 V** | V<sub>GS(th)</sub> 0.6–1.2 V; a logic-level part, thin oxide |
+| **BSS123** | ~6 Ω → **120 mV** at 20 mA | already on the power BOM for Q3/Q4 — the obvious reuse, and wrong |
+| **2N7002** | ~3 Ω → **60 mV** at 20 mA | in `hardware/2N7002 Driver/`; same problem |
+
+Both small-signal FETs already on this board fail, for different reasons. Worth
+recording, because BSS123 is what you would reach for to delete a BOM line.
 
 > **Why not a passive P-FET with no controller.** Blocking reverse current
 > requires the body diode to oppose it, which forces **source-toward-load**. With
@@ -638,7 +681,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | **NCV8772CDT504RKG** | 5.00 V LDO, DPAK-5 |
 | 1 | **TPS2H160BQPWPRQ1** | dual high-side switch, both feeds |
 | **2** | **LM74700QDBVRQ1** | ideal diode controller, SOT-23-6 — **one per feed** |
-| **2** | N-channel FET, 30–60 V logic level | **one per feed** — stands 9 V off, 20 mA on |
+| **2** | **DMN6040SVTQ-7** | N-FET, TSOT26, 60 V / ±20 V V<sub>GS</sub> — **one per feed** |
 | **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
 | 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
 | 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
