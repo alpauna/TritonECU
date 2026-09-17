@@ -24,7 +24,7 @@ ST-Link, USB console and Ethernet all come for free.
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17, **at 5 V** — the solenoid gates have no buffer | ✅ |
 | **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
-| **PWM gate buffer** | 2nd **74HCT541** at 5 V — EVAP, EGR, TCC, EPC take native timer pins at 3.3 V | ✅ |
+| **PWM gate buffer** | 2nd **74HCT541** at 5 V — EVAP, EGR, TCC, EPC, **IAC** take native timer pins at 3.3 V (5 of 8 used) | ✅ |
 | **Solenoid / heater drivers** | **NCV8405ASTT1G** ×10 — self-protected low-side, drain-sense diagnosis | ✅ |
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native pins; TCC **NCV8405A**, EPC **NCV8408B** DPAK, ≥200 Hz), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |

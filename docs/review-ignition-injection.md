@@ -17,7 +17,7 @@ rather than wrong within it.
 
 ---
 
-## 1. IMPORTANT — the IAC valve has no driver assigned
+## 1. ~~IMPORTANT — the IAC valve has no driver assigned~~ FIXED
 
 | | |
 |---|---|
@@ -44,6 +44,12 @@ spare and this makes five. Channel count goes **12 → 13**.
 **And it needs a freewheel diode, but uniquely no new connector pin.** Its feed
 is **361 RD**, which *is* the ECU's VPWR at pins 71 and 97 — already inside the
 box. Unlike 1138 and 391, the return node is free.
+
+> **Fixed 2026-09-17.** NCV8405A in SOT-223 with a 1 in² pour, buffer channel 5,
+> freewheel to VPWR. One layout constraint came out of it: **connect the diode
+> on the connector side of the LTC4364's current shunt**, or recirculation flows
+> backwards through it and corrupts the INA238's battery-current reading at PWM
+> rate.
 
 ---
 
@@ -114,5 +120,32 @@ read off a diagram.
 
 **The recurring defect is not electrical.** Three times now a load has been
 listed in `pin-budget.md` as *"N | PWM"* and read as though a driver had been
-assigned, when only a pin had. EPC, TCC and now IAC. Worth a pass over that
-table asking, for every row, **which part switches it.**
+assigned, when only a pin had. EPC, TCC and now IAC.
+
+### That pass over the table, done
+
+Every row, asked "which part switches it":
+
+| Row | Pins | Driver |
+|---|--:|---|
+| Coil drivers, COP | 8 | ISL9V3040 |
+| Injector drivers | 8 | ZXMS6005DGQ |
+| VR channels | 4 | MAX9926 — input |
+| AD7606 SPI + control | 5 | input |
+| MCP23S17 chain CS | 1 | n/a |
+| J1850 TX/RX | 3 | transceiver, deferred |
+| TCC, EPC | 2 | NCV8405A / NCV8408B |
+| EVAP, EGR | 2 | NCV8405A |
+| IAC | 1 | NCV8405A — *this review* |
+| **Tach out, VSS out** | **2** | **none** |
+| I2C | 2 | n/a |
+
+**A fourth instance: the tach and road-speed outputs have no driver either.**
+They leave the box and drive the instrument cluster, and
+[`harness-protection.md`](harness-protection.md) specifies only *"series
+resistor + TVS"* — protection, not a driver.
+
+That one cannot be closed yet: it depends on **what the cluster expects**, which
+is a Phase 0 capture. If the cluster provides its own pull-up, open-drain
+low-side is right and a spare NCV8405A channel does it; if it expects a driven
+high, it needs push-pull. **[CONFIRM]** before assuming either.

@@ -401,6 +401,7 @@ specified it.
 | IMCC | **[CONFIRM]** | expander, or native if PWM | freewheel if PWM |
 | **EVAP purge, EGR regulator** | **PWM** | **native timer + buffer** | **freewheel diode to 12 V** |
 | **TCC, EPC** | **PWM** | **native timer + buffer** | **freewheel diode to 12 V** |
+| **IAC valve** | **PWM** | **native timer + buffer** | **freewheel diode — to VPWR, no new pin** |
 
 **PWM loads take native timer pins, not the expander.** An earlier revision put
 EVAP purge and EGR regulator on the MCP23S17 chain, because outputs had been
@@ -561,6 +562,33 @@ decay that is the whole point. The 60 V is because the diode sits reverse-biased
 at the supply whenever the FET is on, and that supply reaches ~35 V in a load
 dump.
 
+#### IAC: the one PWM load whose return is already inside the box
+
+| | |
+|---|---|
+| PCM pin | **83**, circuit 264 WH/LB, C110 |
+| Feed | **361 RD** — *the ECU's own VPWR*, at pins 71 and 97 |
+| Current | ~1–2 A (Ford IAC, ~6–13 Ω) |
+| Driver | **NCV8405A, SOT-223 with a 1 in² pour** |
+| Gate | **74HCT541** channel 5 of 8 |
+
+Because its feed *is* VPWR, **IAC needs no new connector pin** — unlike the five
+solenoids on 1138 and 391. Its freewheel diode returns to a node already
+present.
+
+> **Connect that diode on the *connector side* of the current shunt.** The
+> LTC4364's 10 mΩ shunt sits between the VPWR pins and the internal rail, and
+> the INA238 measures across it. Returning the diode to the *internal* rail
+> would push recirculation current **backwards through the shunt** and corrupt
+> the battery-current reading at PWM rate. Returned at the pin, the loop closes
+> through the harness and never touches it.
+
+Thermally, SOT-223 with a pour carries **2.44 A RMS**, and for a PWM load
+`I_rms = I_peak × √duty`.
+
+> **[MEASURE]** the IAC valve's resistance and duty range. **Above 2.44 A RMS it
+> wants DPAK**, the same threshold question as EPC.
+
 #### Sense both new pins — they earn a second job
 
 Put a **100 kΩ / 10.5 kΩ divider** on each into an internal ADC, the same
@@ -684,7 +712,8 @@ a drain sample, and without needing to be synchronised to the PWM.
 | 2 | SSA, SSB | 27 (*6), 1 (*11) | on/off |
 | 1 | **TCC** | 54 | PWM, SOT-223 |
 | 1 | **EPC** | 81 | PWM — **NCV8408B** DPAK |
-| **12** | | | |
+| 1 | **IAC valve** | **83** | **PWM, SOT-223 with a pour** — see below |
+| **13** | | | |
 
 Pin numbers and circuits are from Ford's own diagrams —
 [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md).
@@ -771,7 +800,7 @@ pump at 5–8 A).
 | Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω |
 | Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
 | Relays ×5, MIL | **TBD62083AFNG** | **built in**, to COMMON | **Direct from the expander**, 3.3 V or 5 V |
-| Heaters ×4, solenoids ×7 | **NCV8405ASTT1G** | 42 V integrated — **PWM loads use a freewheel diode instead** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
+| Heaters ×4, solenoids ×8 | **NCV8405ASTT1G** | 42 V integrated — **PWM loads use a freewheel diode instead** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
 | **EPC** (PWM, high current) | **NCV8408BDTRKG** | 42 V, latched shutdown | **Direct**; ≥ 200 Hz PWM — see above |
 | VREF feeds ×2 | **TPS2H160B-Q1** | 40 V rated | **High-side** from the 5 V rail, 250 mA limit, `CS` diagnosis |
 

@@ -34,6 +34,14 @@ OS0-2 / RANGE.
 > and PWM is neither, which is how they landed here. See
 > [`review-solenoid-chain.md`](review-solenoid-chain.md) §1.
 
+> **This table allocates pins, not drivers — and three loads were missed because
+> it reads like both.** TCC, EPC and IAC each appeared here as `N | PWM` and
+> were taken as handled when only a pin had been reserved. The audit is in
+> [`review-ignition-injection.md`](review-ignition-injection.md), and it found a
+> fourth still open: **tach and VSS outputs have no driver assigned.**
+>
+> **Whatever replaces this table for the STM32 should carry a "driven by" column.**
+
 ## The Waveshare board is short by 11
 
 It breaks out **27** GPIOs, of which GPIO24/25 are the USB D−/D+ pair, leaving
