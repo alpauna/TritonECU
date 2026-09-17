@@ -323,6 +323,23 @@ through a slew-rate-controlled turn-on can engage the limit briefly. Trying to
 tune a deglitch around that is fragile; a fixed window after enabling is not.
 **[CONFIRM]** the 20 ms on the bench against the real sensor load.
 
+**Blanking covers faults. Reading validity is a separate question, and a timer
+is the wrong tool for it.** At startup, current flows through the ideal diode
+FET's **body diode** until the LM74700's charge pump establishes gate drive, so
+VREF sits near **5 − V<sub>SD</sub> ≈ 4.3 V**. Any ratiometric reading taken then
+is wrong by ~14 %.
+
+Gate validity on the **measured VREF**, not on elapsed time:
+
+```
+sensor readings valid  <=>  VREF sense within 4.75 - 5.25 V
+```
+
+VREF is already on the precision ADC as the ratiometric divisor, so this costs
+nothing and is strictly better than a window: it catches the body-diode plateau
+at startup, and equally a brownout, a sagging regulator, or a channel that came
+up into a fault — none of which a timer would notice.
+
 #### The two sense paths resolve all four states
 
 Neither `CS` nor the per-feed divider is sufficient alone; together they are
@@ -824,6 +841,31 @@ the detection it replaces. Same reasoning as `CS`: a diagnostic, not a
 ratiometric measurement, so it does not belong on the precision converter, and
 internal channels are plentiful.
 
+**100 kΩ / 12.4 kΩ, plus a Schottky to V<sub>DDA</sub>.** Sized so our own 27 V
+clamp lands just inside the ADC range rather than so 14 V does — the first
+version of this was scaled for the nominal short only, and presented 5.7 V to
+the ADC when the shorted circuit was itself in a load dump:
+
+| Feed at | ADC sees | |
+|---|--:|---|
+| 0 V | 0.00 V | channel off, or short to ground |
+| 5 V | 0.55 V | healthy |
+| 14 V | 1.54 V | short to battery |
+| 27 V | 2.98 V | short during a clamp — just inside range |
+| 35 V+ | clamped | Schottky |
+
+**No series resistor is needed here**, unlike on `CS`: the 100 kΩ top leg *is*
+the series element. Even with the feed at 100 V it passes 964 µA, of which the
+bottom leg takes 290 µA, leaving the Schottky under 700 µA.
+
+Two consequences worth carrying into layout:
+
+- **Source impedance is 11 kΩ.** Use a long ADC sampling time, and a 10 nF cap
+  at the ADC node to supply the sampling capacitor. The resulting ~110 µs time
+  constant is irrelevant for a diagnostic.
+- **Continuous load is 44 µA**, which sits downstream of the ratiometric sense
+  point but ahead of nothing that matters: 0.07 mV across the PTC.
+
 ### The accuracy argument, corrected
 
 Earlier revisions argued VREF must be *sensed downstream of the PTC*, because a
@@ -996,7 +1038,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | R<sub>CS</sub> = **2.2 kΩ** | current sense; 2.5 V linear ceiling at V<sub>VS</sub> = 5 V |
 | 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
 | 1 | R<sub>THER</sub> = **10 kΩ to V<sub>S</sub>** | straps `THER` high — latch mode, not auto-retry |
-| **2** | divider pair | per-feed short-to-battery sense → internal ADC |
+| **2** | divider **100 kΩ / 12.4 kΩ** + Schottky to V<sub>DDA</sub> + 10 nF | per-feed short-to-battery sense → internal ADC |
 | 1 | C<sub>in</sub> = **1 µF + 100 nF, 50 V** | LDO input, on the clamped rail |
 | 1 | C<sub>out</sub> = **22 µF X7R ≥ 16 V + 100 nF** | LDO output; sized for the 250 mA step, not the 1 µF stability floor |
 | 2 | **0.1 µF** VCAP–ANODE, **22 nF** ANODE | per LM74700-Q1, one set per controller |
@@ -1052,8 +1094,6 @@ fault but not against that fault coinciding with a load dump.
 | | |
 |---|---|
 | **[DECIDE]** | TVS and divider **ground return** — SIGRTN or power ground. [`review-vref-chain.md`](review-vref-chain.md) §4 |
-| **[FIX]** | feed divider needs a series R + Schottky like `CS`; it presents 5.7 V to the ADC at 27 V. §2 |
-| **[FIX]** | startup blanking must gate **reading validity**, not just fault handling — VREF sits at ~4.3 V through the body diode until the charge pump starts. §3 |
 | **[CONFIRM]** | the 20 ms startup blanking window, on the bench against the real sensor load — see [§ The retry policy](#the-retry-policy) |
 | **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |

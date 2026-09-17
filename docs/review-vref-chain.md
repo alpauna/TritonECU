@@ -54,7 +54,7 @@ option 2 free.** That measurement now decides two things instead of one.
 
 ---
 
-## 2. IMPORTANT — the feed divider will exceed the ADC input
+## 2. ~~IMPORTANT~~ FIXED — the feed divider will exceed the ADC input
 
 The per-feed short-to-battery divider feeds an STM32 internal ADC. At a
 plausible 100 kΩ / 27 kΩ:
@@ -72,9 +72,16 @@ clamp is the better answer.
 
 **This was missed because the divider was specified for the 14 V case only.**
 
+> **Fixed 2026-09-17.** Divider is now **100 kΩ / 12.4 kΩ**, scaled so our own
+> 27 V clamp lands at 2.98 V rather than so 14 V lands mid-scale, plus a
+> **Schottky to V<sub>DDA</sub>**. No series resistor is needed — the 100 kΩ top
+> leg is the series element, passing under 1 mA even with the feed at 100 V.
+> Source impedance is 11 kΩ, so the ADC wants a long sampling time and a 10 nF
+> cap at the node.
+
 ---
 
-## 3. The startup window must gate readings, not just faults
+## 3. ~~The startup window must gate readings, not just faults~~ FIXED
 
 `vref-supply.md` specifies 20 ms of blanking after a channel enable, to stop
 inrush being read as a short. The LM74700 datasheet notes that **at startup
@@ -86,6 +93,19 @@ So for that interval VREF sits at roughly **5 V − V<sub>SD</sub> ≈ 4.3 V**, 
 
 **The blanking window must therefore suppress sensor validity too, not only
 fault handling.** As written it covers the fault path only.
+
+> **Fixed 2026-09-17, and a timer turned out to be the wrong tool.** Validity is
+> now gated on the **measured VREF** instead:
+>
+> ```
+> sensor readings valid  <=>  VREF sense within 4.75 - 5.25 V
+> ```
+>
+> VREF is already on the precision ADC as the ratiometric divisor, so this costs
+> nothing and is strictly better than a window — it catches the body-diode
+> plateau, and equally a brownout, a sagging regulator, or a channel that came
+> up into a fault. None of those would trip a timer. The 20 ms blanking stays,
+> for fault handling only.
 
 ---
 
@@ -128,8 +148,8 @@ examined.
 | # | Finding | Action |
 |---|---|---|
 | 1 | PPTC 16 V rating exceeded by short-to-battery during a load dump | resolve the NSHT035 derating `[CONFIRM]` — it may make the 30 V part free |
-| 2 | Feed divider presents 5.7 V to the ADC at 27 V | series R + Schottky to V<sub>DDA</sub>, as on `CS` |
-| 3 | Startup blanking covers faults but not reading validity | extend it to sensor validity |
+| 2 | ~~Feed divider presents 5.7 V to the ADC at 27 V~~ | **FIXED** — 100 k / 12.4 k + Schottky |
+| 3 | ~~Startup blanking covers faults but not reading validity~~ | **FIXED** — validity gated on measured VREF, not a timer |
 | 4 | TVS and divider ground return unspecified | `[DECIDE]` before layout |
 
 Two of the four are the same class of error — **a protection element specified
