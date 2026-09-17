@@ -21,7 +21,7 @@ findings come straight out of that difference.
 
 ---
 
-## 1. IMPORTANT — `nSLEEP` is a fourth pin, and it is not optional
+## 1. ~~IMPORTANT — `nSLEEP` is a fourth pin, and it is not optional~~ FIXED
 
 Every pin count in the tree says **three**: `pin-budget.md` has
 *"J1850: TX_P, TX_N, RX | 3"*, and `v1-scope.md` repeats *"only three GPIOs and
@@ -37,6 +37,14 @@ lines whenever it is powered, and no other node can talk.
 
 **Four pins, not three.** The budget absorbs it without comment; the count being
 wrong is the problem, not the pin.
+
+> **Fixed 2026-09-17.** `pin-budget.md` and `v1-scope.md` corrected, total
+> 38 → 39. And a requirement that was not there before:
+> **pull `nSLEEP` LOW with 10 kΩ**, so the bus is released at power-on before
+> firmware runs — the same discipline as the ignition buffer's `OE` pull-ups.
+> An ECU that holds the bus down while booting takes the cluster and the GEM
+> with it. Written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3.
 
 ---
 
@@ -102,7 +110,7 @@ specified against the expected fault, not against the harness.
 
 ---
 
-## 4. Do not copy the upstream reference's RX divider — it has a known bug
+## 4. ~~Do not copy the upstream reference's RX divider — it has a known bug~~ FIXED
 
 `j1850_multiprotocol.md` records a **real functional defect** in the original
 OpenJ1850 circuit, found and fixed during that board's bring-up:
@@ -123,6 +131,12 @@ tenth.
 **Carry the corrected values, not the reference schematic.** This is the most
 likely way to introduce a known-and-already-solved bug into a new board.
 
+> **Fixed 2026-09-17.** The corrected network is now written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3 in full — 100 k : 100 k both
+> to ground, MM3Z3V3BW clamps, 4.7 MΩ hysteresis, 100 Ω + SMF3.3 on the output —
+> with **both traps recorded as traps**, so the design no longer depends on
+> anyone reading a sibling project's bring-up notes to avoid them.
+
 ---
 
 ## 5. Checked and clear
@@ -141,10 +155,10 @@ likely way to introduce a known-and-already-solved bug into a new board.
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | `nSLEEP` uncounted — every pin count says three | **four pins**; it is how the bus is released |
+| 1 | ~~`nSLEEP` uncounted~~ | **FIXED** — four pins, and a 10 kΩ pulldown so the bus is released at power-on |
 | 2 | H-bridge has no arbitration mechanism; ECU duty cycle ≠ scanner's | make **transmitting into live traffic** an explicit Phase 0 objective |
 | 3 | TX outputs face the harness on a low-voltage driver | **[CONFIRM]** abs-max, then protect or replace |
-| 4 | Upstream reference has a known RX abs-max bug | carry the **corrected** divider, not the reference |
+| 4 | ~~Upstream reference has a known RX abs-max bug~~ | **FIXED** — corrected network written into §5.3, both traps recorded |
 
 Findings 2 and 3 are the same observation in two places: **the reference design
 was validated as a scan tool, and we are using it as a node.** Its warning about
