@@ -184,9 +184,42 @@ other keeps working** — 250 mA in current limit plus 25 mA healthy:
 | Clamping, normal load | 27 V | 25 mA | 0.55 W |
 | Clamping **and** a shorted feed | 27 V | 275 mA | 6.1 W, ~400 ms |
 
-**The 2.5 W row sizes the package and the copper.** The last row is a load dump
-coinciding with a chafed harness — survive it on thermal shutdown, do not design
-the thermals around it.
+**None of these is a steady state except the first.** The 2.5 W row lasts only
+until firmware sheds the faulted channel — see
+[§ Shedding a faulted feed](#shedding-a-faulted-feed) — which is milliseconds,
+not the life of the fault. Size the regulator for that energy pulse and its
+retry policy, not for 2.5 W continuous. The last row is a load dump coinciding
+with a chafed harness: survive it on thermal shutdown, do not design around it.
+
+### Shedding a faulted feed
+
+The part already carries everything needed to make the fault transient, for
+reasons that had nothing to do with thermals:
+
+```
+short occurs         ->  channel clamps at 250 mA
+80–180 µs            ->  FAULT asserts        (t_CL(deg), datasheet)
+firmware reads CS    ->  identifies the channel
+firmware drops INx   ->  that channel off
+                     ->  dissipation back to 0.22 W
+```
+
+**This is a firmware requirement, not just a diagnostic.** The regulator's
+thermal sizing depends on it, so it is load-bearing:
+
+- deglitch **longer than `t_CL(deg)` (80–180 µs)**, and longer than the inrush
+  into sensor capacitance at power-up, so a healthy start is not read as a short;
+- a retry policy — how many attempts, how far apart, and whether to latch;
+- the DTC is logged either way. A shed channel must be visible, not silent.
+
+Shedding is not a loss compared to the alternative. If the shorted feed is the
+one carrying TPS, throttle position is gone and the engine is unrunnable whether
+or not VREF stays up. What shedding preserves is **the other feed** — which is
+the entire reason for two of them.
+
+It also softens the open `THER` question below: if firmware sheds the channel in
+milliseconds, the part's own thermal latch-versus-retry behaviour rarely gets
+the chance to matter.
 
 ### Put EN under MCU control
 
@@ -389,9 +422,11 @@ the truck's harness should not be.
 **The regulator has no part number.** Three constraints, in the order they will
 actually narrow the search:
 
-**1. Thermals — the binding one.** It has to carry **2.5 W** in whatever package
-and pour it gets. This will eliminate more candidates than anything else on this
-list, and it is the reason to look at package before parametrics.
+**1. Thermals — a pulse, not a steady state.** Continuous dissipation is
+**0.22 W**. The 2.5 W fault case lasts until firmware sheds the channel, so what
+the package has to survive is that energy pulse and whatever retry policy sits
+on top of it — see [§ Shedding a faulted feed](#shedding-a-faulted-feed). Size
+against the retry policy once it is written, not against 2.5 W continuous.
 
 **2. Placement — downstream of the pass FET.** This matters more than any
 voltage rating. Upstream, the part sees what
@@ -423,6 +458,24 @@ document rejects: 9 V of headroom at 14 V in means the part never operates near
 dropout, which is precisely why this source works.
 
 Linear, with thermal shutdown.
+
+### Why not a buck here
+
+A buck would cut the fault-case dissipation, but a switcher does not go directly
+on a ratiometric reference — the shape would have to be **buck → ~6.5 V → LDO →
+5.00 V**, with the LDO's PSRR cleaning up the ripple. That puts the linear's
+fault case at `(6.5 − 5) × 275 mA = 0.41 W`.
+
+The cost is another inductor, another switching node, more EMC surface, and a
+**second uncorrelated switching frequency** near the sensor reference, given the
+5 V rail is already spread-spectrum. That is a lot of board to buy back a
+millisecond transient that firmware already closes.
+
+**It would become the right answer** if VREF had to ride out a short
+indefinitely rather than shed the channel — then 2.5 W really is continuous.
+That argument does not hold here, for the reason in
+[§ Shedding a faulted feed](#shedding-a-faulted-feed): the fault has already
+cost you the sensors on that branch.
 
 | | |
 |---|---|
