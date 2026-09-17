@@ -359,10 +359,57 @@ the PCM supplies the ground — pins 95 and 96 are *"RR / LR HO2S Heat"*. Same f
 the solenoids. A low-side driver drops onto the harness that exists; a high-side
 part would mean cutting every feed and routing it through the ECU instead.
 
-The integrated 42 V clamp settles a second thing for free. The EEC-V pinout's
-note that **"EPC needs a flyback diode to 12 V"** is handled inside the part, per
-channel, so those external diodes come off the board alongside the ones the
-TBD62083A removed.
+### The integrated clamp does not replace a freewheel diode
+
+**An earlier revision of this document claimed it did, and that was wrong.** The
+EEC-V pinout's note that *"EPC needs a flyback diode to 12 V"* asks for
+**recirculation back to the supply**, which is a different thing from avalanche
+to ground:
+
+| | Avalanche clamp | Freewheel diode to 12 V |
+|---|---|---|
+| Decay rate | (V<sub>clamp</sub> − V<sub>supply</sub>)/L — **560 A/s** at 50 mH | I·R/L — **250 A/s** at 25 Ω, 0.5 A |
+| Energy goes | **into the FET** | into the load's own resistance |
+| Per switching event | every one | none |
+
+On an **on/off** solenoid the clamp is right: fast release is what you want, and
+the event happens twice a shift.
+
+On a **PWM** solenoid it is wrong twice over. The clamp's fast decay *creates*
+large current ripple, and then the FET dissipates that ripple's energy on every
+cycle. A freewheel diode decays slowly, so the ripple is small and almost
+nothing reaches the FET. For EPC — a current-controlled pressure solenoid — the
+smaller ripple also matters for control quality, which is likely why Ford
+specified it.
+
+**So: PWM loads get an external freewheel diode to 12 V. On/off loads do not.**
+
+| Load | Drive | Clamp strategy |
+|---|---|---|
+| HO2S heaters ×4 | resistive | **nothing** — no stored energy |
+| EVAP purge, EGR regulator | PWM | **freewheel diode to 12 V** |
+| IMCC | **[CONFIRM]** | freewheel if PWM |
+| SS1, SS2, CSS | on/off | integrated 42 V clamp |
+| EPC, TCC | PWM | **freewheel diode to 12 V** — and see below |
+
+> **EPC and TCC have no driver assigned.** [`v1-scope.md`](v1-scope.md) lists
+> them as "native PWM", which allocates *pins*, not drivers — and the channel
+> budget below covers neither. Two channels short.
+
+This also bounds
+[`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
+clamp energy rising 4× in a load dump. Once the loads are classified, **only the
+three on/off shift solenoids can clamp at all** — the heaters store nothing and
+the PWM loads recirculate. At a Ford shift solenoid's real ~0.5 A rather than
+the 1 A assumed, the energy is 4× lower again:
+
+| | Clamp energy | Margin on E<sub>AS</sub> = 275 mJ |
+|---|--:|--:|
+| Normal, 14 V | 9.4 mJ | 29× |
+| Load dump, 35 V | **37.5 mJ** | **7.3×** |
+
+The margin is restored, and the `[MEASURE]` narrows from every inductive load to
+**the three shift solenoids only**.
 
 ### Drain-voltage sense — the load diagnoses itself
 

@@ -12,7 +12,7 @@ rest of the board for the same three shapes.
 
 ---
 
-## A1. Clamp energy rises 4× on the NCV8405A during a load dump
+## A1. ~~Clamp energy rises 4× on the NCV8405A during a load dump~~ FIXED
 
 A low-side driver's clamp absorbs more than the inductor's stored energy —
 the supply keeps pushing current during the decay. Total clamp energy is
@@ -45,6 +45,24 @@ outside its rating.
 > **[MEASURE]** the inductance and hold current of the 4R70W shift solenoids,
 > EVAP purge, EGR regulator and IMCC. This is the number the NCV8405A choice
 > actually depends on, and nothing in the tree records it.
+>
+> **Fixed 2026-09-17, and fixing it exposed a larger error.** The loads were
+> never classified by drive type. Once they are, most of them cannot clamp at
+> all: the **4 HO2S heaters are resistive** and store nothing, and the **PWM
+> loads should recirculate through a freewheel diode**, not avalanche. Only the
+> **3 on/off shift solenoids** remain exposed — and at a Ford solenoid's real
+> ~0.5 A rather than the 1 A assumed here, the load-dump margin is **7.3×**, not
+> 1.8×.
+>
+> The larger error: `output-drivers.md` claimed the NCV8405A's integrated clamp
+> satisfied the OEM's *"EPC needs a flyback diode to 12 V"* note. It does not —
+> a clamp and a freewheel diode do opposite things, and on a PWM solenoid the
+> clamp's fast decay *creates* the ripple it then dissipates, every cycle.
+> Corrected, with a per-load clamp strategy table.
+>
+> Also surfaced: **EPC and TCC have no driver assigned at all.** `v1-scope.md`
+> calls them "native PWM", which allocates pins rather than drivers, and the
+> NCV8405A channel budget covers neither.
 
 Note the ignition and injection stages are immune for a structural reason worth
 keeping: **their clamps sit far above any credible supply excursion.** That is
@@ -106,7 +124,7 @@ the wrong part gets fitted.
 
 | # | Finding | Action |
 |---|---|---|
-| A1 | NCV8405A clamp energy ×4 in a load dump; margin 7.3× → 1.8× | **[MEASURE]** solenoid inductance — the choice depends on it |
+| A1 | ~~NCV8405A clamp energy ×4 in a load dump~~ | **FIXED** — loads classified; only 3 on/off solenoids can clamp, margin 7.3×. Exposed a clamp-vs-freewheel error and an unassigned driver |
 | B1 | "PTC acceptable" stated per pin type, but the two drivers differ | rewrite `harness-protection.md` per driver |
 | C1 | Two policy rows name superseded parts | correct to TBD62083A / NCV8405A and ADS8588H |
 
