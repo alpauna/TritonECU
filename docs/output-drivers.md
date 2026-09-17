@@ -220,6 +220,11 @@ No buffer, no driver, no level shift — straight off the P4.
 
 ---
 
+> **A pre-schematic review of the solenoid and heater chain is in
+> [`review-solenoid-chain.md`](review-solenoid-chain.md)** — four findings, two
+> of which share a root: outputs were classified by speed and current, and PWM
+> is neither.
+
 ## Relays and lamps: Toshiba **TBD62083AFNG**
 
 An 8-channel DMOS sink array, pin-compatible with the ULN2803 family it
