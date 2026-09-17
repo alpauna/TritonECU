@@ -220,6 +220,11 @@ No buffer, no driver, no level shift — straight off the P4.
 
 ---
 
+> **Pre-schematic reviews:**
+> [`review-solenoid-chain.md`](review-solenoid-chain.md) (solenoids and heaters)
+> and [`review-ignition-injection.md`](review-ignition-injection.md) (coils and
+> injectors — which found that the **IAC valve has no driver assigned**).
+
 > **A pre-schematic review of the solenoid and heater chain is in
 > [`review-solenoid-chain.md`](review-solenoid-chain.md)** — four findings, two
 > of which share a root: outputs were classified by speed and current, and PWM
