@@ -13,10 +13,11 @@ ST-Link, USB console and Ethernet all come for free.
 | Block | Parts | Decided |
 |---|---|---|
 | Input protection | LTC4364-2 + pass FET + ideal-diode FET, fuse, TVS | ✅ |
-| Main supply | LM5155-Q1 SEPIC → 6.0 V / 3 A, 2.2 MHz, 80 V devices | ✅ |
-| Rails | buck → 3.3 V; LDOs → 5 V digital, 5 V analog, 5.00 V VREF | ✅ |
+| Main supply | **MAX25239AFFA buck-boost → 5.0 V**, 2.1 MHz, spread spectrum, 2.2 µH | ✅ |
+| Rails | **TLV62085 buck → 3.3 V** from 5 V; ADC reference MAX6070AAUT25 2.5 V, gated | ✅ |
+| **VREF supply** | 5.00 V linear, **off the LTC4364 protected rail** — not off the 5 V switcher, which has no headroom and is spread-spectrum. [`vref-supply.md`](vref-supply.md) | ✅ |
 | MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
-| Analog in | AD7606, 8 channels, SPI_MODE2 | ✅ |
+| Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, 9 kV clamp. Bench: Tokmas AD7606BSTZ, same LQFP-64 | ✅ |
 | Crank/cam/OSS | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS (+1 spare) | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |

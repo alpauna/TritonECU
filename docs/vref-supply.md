@@ -7,7 +7,8 @@ provides on two pins (A-20, C-20). See
 **Originally specified:** separate supply, isolated from the internal 5 V,
 outbound resettable fuse, **3 A** output.
 
-**Decided:** separate 5 V linear supply, common ground, feeding a
+**Decided:** a 5.00 V linear regulator of its own, **fed from the LTC4364's
+protected output** rather than from any switching rail, common ground, feeding a
 **TPS2H160B-Q1** dual-channel smart high-side switch — one channel per VREF
 feed, current limit set at **250 mA**, per-channel current sense, fault
 reporting, and a 40 V output rating that survives a short to battery. See
@@ -102,18 +103,25 @@ current limit sits, and make the thing that sits there survive a short to
 battery.
 
 ```
-  12 V ──► [ separate 5 V linear regulator ]  ← own regulator, not the logic rail
-                        │
-                        │   ┌─────────── TPS2H160B-Q1, dual channel ───────────┐
-                        └──►│  ch1  limit 250 mA ├──► PTC ──► A-20             │
-                            │  ch2  limit 250 mA ├──► PTC ──► C-20             │
-                            │  FAULT ──► GPIO    CS ──► STM32 ADC   SEL ──► GPIO│
-                            └──────────────────────────────────────────────────┘
+  LTC4364 protected rail        ← 14 V nominal, clamped 27–30 V
+  (NOT the 5 V switcher)
+          │
+          ▼
+  [ 5.00 V linear regulator ]   ← its own, EN under MCU control
+          │
+          ▼
+  ┌──────────── TPS2H160B-Q1, dual channel ─────────────┐
+  │  ch1  limit 250 mA  ──►  PTC  ──►  A-20             │
+  │  ch2  limit 250 mA  ──►  PTC  ──►  C-20             │
+  │                                                     │
+  │  FAULT ──► GPIO   SEL ──► GPIO   CS ──► ADC         │
+  └─────────────────────────────────────────────────────┘
 ```
 
-- **Separate regulator from the internal 5 V.** As originally specified.
-  Sensor-supply noise and harness fault current never reach the logic rail or
-  the ADC supply. A linear regulator is sufficient and preferable at this load.
+- **Fed from the LTC4364's protected output, not from the 5 V rail.** See
+  [§ Where the supply comes from](#where-the-supply-comes-from). Sensor-supply
+  noise and harness fault current never reach the logic rail or the ADC supply,
+  and — just as important — the switching rail's ripple never reaches VREF.
 - **Per-feed current limit at 250 mA**, set by one resistor. Ten times the
   ~25 mA real load, and it matches what Ford's own VREF is rated at across both
   pins. A 22 AWG wire is untroubled by it.
@@ -121,6 +129,77 @@ battery.
   circuit A shorted" — rather than a truck that mysteriously will not run.
 - **PTC keeps a job, but not the one it was given.** See
   [§ What the PTC is actually for](#what-the-ptc-is-actually-for).
+
+---
+
+## Where the supply comes from
+
+**The LTC4364's protected output** — the ideal-diode / surge-stopper rail,
+~14 V nominal and **clamped at 27–30 V** during a load dump.
+
+Not the 5 V rail. The board's 5 V comes from a **MAX25239AFFA buck-boost at
+2.1 MHz with spread spectrum**, and there are two reasons that cannot feed VREF:
+
+1. **No headroom.** A linear regulator cannot make 5.00 V from 5 V, and running
+   one near dropout is worse than it looks — **PSRR collapses as an LDO
+   approaches dropout**, so it would stop rejecting the very ripple it was put
+   there to reject.
+2. **Spread spectrum is unhelpful here specifically.** It is the right call for
+   EMC, which is why `SPS` is strapped to VCC. But it smears the switching
+   energy across a band instead of one tone, so the ripple on a ratiometric
+   reference cannot be notched out or synchronised to. Good for the FCC, bad for
+   VREF.
+
+### How this came to be missed
+
+[`power-supply.md`](power-supply.md) records the rail change as:
+
+> | 6.0 V main rail | **5.0 V**, since there are no LDOs needing headroom |
+
+That was true of every rail on the power sheets. **VREF's LDO needed headroom
+and lived in this document**, so it was not in view when the 6.0 V rail went
+away. Worth remembering as a documentation failure rather than a design one.
+
+### Why the protected rail is the right source
+
+- **Completely independent of the switching supply.** No spread-spectrum ripple
+  on the reference at all — the strongest form of the separation this document
+  has argued for throughout.
+- **Already protected.** Reverse polarity, load dump clamped to 27–30 V, and the
+  4.47 V UV holdoff. The regulator sees a bounded 27 V, not an 87 V transient.
+- **Rides out cranking on the LTC4364's holdup**, so VREF does not sag
+  independently of the sensors it feeds.
+- **Restores the headroom** the rail change removed, without adding a second
+  switcher to solve a ripple problem.
+
+### Dissipation
+
+The sizing case is not the 25 mA load. It is **a fault on one feed while the
+other keeps working** — 250 mA in current limit plus 25 mA healthy:
+
+| Condition | V<sub>in</sub> | I | P |
+|---|--:|--:|--:|
+| Normal | 14 V | 25 mA | **0.22 W** |
+| One feed in current limit | 14 V | 275 mA | **2.5 W** |
+| Clamping, normal load | 27 V | 25 mA | 0.55 W |
+| Clamping **and** a shorted feed | 27 V | 275 mA | 6.1 W, ~400 ms |
+
+**The 2.5 W row sizes the package and the copper.** The last row is a load dump
+coinciding with a chafed harness — survive it on thermal shutdown, do not design
+the thermals around it.
+
+### Put EN under MCU control
+
+VREF only matters while sensors are being read, so the regulator should be
+**enabled by the MCU rather than always on**. Three things follow:
+
+- it stays out of the always-on domain's ~780 µA parasitic budget
+  ([`always-on-domain.md`](always-on-domain.md));
+- the ECU can **power-cycle VREF** to clear a latched fault;
+- with the feeds disabled and `CS` still reading current, a short is **inside the
+  box**, not in the harness. That is a diagnosis you cannot otherwise make.
+
+---
 
 ---
 
@@ -215,18 +294,18 @@ fault — worth having on a truck where a chafed harness is the expected failure
 the resolution where the fault case is. The CS pin tolerates 7 V and 30 mA, so
 there is ample margin.
 
-### CS does not belong on the AD7606
+### CS does not belong on the precision ADC
 
 Two VREF-related analog signals exist and only one is precision-critical.
 Conflating them is easy and wrong:
 
 | Signal | Converter | Why |
 |---|---|---|
-| **VREF sense** — the 5.00 V rail itself | **AD7606** | it is the ratiometric divisor; measuring it on the same converter as the sensors lets errors cancel |
+| **VREF sense** — the 5.00 V rail itself | **ADS8588H** (bench: AD7606) | it is the ratiometric divisor; measuring it on the same converter as the sensors, which sample **simultaneously**, lets common-mode error cancel |
 | **CS** — diagnostic current | **STM32 internal ADC** | ±17% inherent accuracy, static, fault detection only |
 
 Putting CS on the precision converter would be measuring a ±17% signal with a
-16-bit instrument. The internal ADC's own error is a rounding difference against
+16-bit instrument, and it would occupy one of only eight channels. The internal ADC's own error is a rounding difference against
 the sense ratio's tolerance.
 
 There is no shortage of native channels to worry about, either. The four-channel
@@ -307,28 +386,10 @@ the truck's harness should not be.
 
 ## Still open
 
-**The 5 V regulator itself has no part number.** Its sizing case is not the
-25 mA normal load — it is **a fault on one feed while the other keeps working**:
-
-```
-250 mA (channel in current limit)  +  25 mA (healthy channel)  =  275 mA
-```
-
-**It is fed from the 6.0 V SEPIC rail, not from battery**, so the drop is 1 V:
-
-```
-(6.0 V − 5.0 V) × 275 mA  =  0.275 W   in fault
-(6.0 V − 5.0 V) ×  25 mA  =  0.025 W   normally
-```
-
-That makes the thermal question a non-question, and the linear choice trivially
-correct — the argument against a buck here was never dissipation, it was ripple
-on a ratiometric reference. See
-[§ Why the number fights itself](#why-the-number-fights-itself).
-
-The ~275 mA does come out of the 6.0 V rail's budget, which
-[`power-supply.md`](power-supply.md) settled at **2 A**. (Note
-[`v1-scope.md`](v1-scope.md) still says 3 A in its board table — stale.)
+**The regulator has no part number.** It needs to be rated **≥ 40 V** to clear
+the 27–30 V clamp with margin — the TPS7B69xx-Q1 / TPS7B4253-Q1 class — linear,
+with thermal shutdown, and able to carry 2.5 W in the package and pour chosen
+for it.
 
 | | |
 |---|---|
