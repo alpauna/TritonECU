@@ -451,14 +451,14 @@ Datasheet: [`Datasheets/BTS710404ESAXUMA1-datasheet.pdf`](Datasheets/BTS710404ES
 | | |
 |---|---|
 | `IL(OVL0)` overload trip | **44–53 A** (35–39 A at 150 °C) |
-| What [`vref-supply.md`](vref-supply.md) requires | **~150 mA** with a fault flag |
+| What [`vref-supply.md`](vref-supply.md) requires | **250 mA** with a fault flag |
 
 A 44 A trip protects the silicon, not a 22 AWG harness wire — which is exactly
 the argument `vref-supply.md` already used to demote the PTC to a backstop:
-*a current limit only protects what it is set below*. Enforcing 150 mA from the
-current sense in firmware is possible (k<sub>ILIS</sub> = 2000, so 150 mA reads
-as 75 µA) but replaces a microsecond hardware limit with a millisecond software
-loop. **VREF still needs a dedicated precise limiter** — that remains open.
+*a current limit only protects what it is set below*. Enforcing the limit from
+the current sense in firmware is possible (k<sub>ILIS</sub> = 2000) but replaces
+a microsecond hardware limit with a millisecond software loop. **VREF went to
+the TPS2H160B-Q1 instead** — same idea, adjustable down to 250 mA.
 
 ### Not for the heaters — it is high-side, and the truck is not
 
@@ -492,7 +492,7 @@ pump at 5–8 A).
 | Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
 | Relays ×5, MIL | **TBD62083AFNG** | **built in**, to COMMON | **Direct from the expander**, 3.3 V or 5 V |
 | Heaters ×4, solenoids ×6 | **NCV8405ASTT1G** | **42 V integrated** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
-| VREF feeds ×2 | **still open** | — | needs a ~150 mA limit, see `vref-supply.md` |
+| VREF feeds ×2 | **TPS2H160B-Q1** | 40 V rated | **High-side** from the 5 V rail, 250 mA limit, `CS` diagnosis |
 
 None of the four needs a dedicated gate-driver IC. One octal buffer covers the
 entire ignition side, the injectors need nothing at all, one sink array covers

@@ -186,9 +186,9 @@ connector from these numbers alone.
 2. **Only one VREF pin appears here.** Pin 90 (BRN/WHT) is the only VREF, but
    the Ford power-pin sheet lists **two** (A-20 and C-20). Either the second is
    unused on this application, or this sheet only records what the MegaSquirt
-   install connected. **[CONFIRM]** — it decides whether the VREF supply needs
-   one output feed or two, which is the main open question in
-   [`../vref-supply.md`](../vref-supply.md).
+   install connected. **[CONFIRM]** — but it no longer gates anything: the chosen
+   output stage is dual-channel, so both feeds are built either way and an unused
+   one is simply never enabled. See [`../vref-supply.md`](../vref-supply.md).
 
 ---
 
