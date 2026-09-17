@@ -321,11 +321,53 @@ reports **how much** as well as **which**. A partially shorted sensor or a
 slowly drifting load shows as a rising VREF draw long before it becomes a hard
 fault — worth having on a truck where a chafed harness is the expected failure.
 
-**Sizing R<sub>CS</sub>.** K(CS) = 290, so I<sub>CS</sub> = I<sub>OUT</sub>/290:
-25 mA gives 86 µA, and the 250 mA limit gives 862 µA. At **R<sub>CS</sub> =
-3.3 kΩ** that is 0.28 V normally and 2.84 V at the limit — a 3.3 V ADC span with
-the resolution where the fault case is. The CS pin tolerates 7 V and 30 mA, so
-there is ample margin.
+#### Setting R<sub>CL</sub> and R<sub>CS</sub>
+
+```
+R_CL = K_CL x VCL(th) / I_limit  =  2500 x 0.8 / 0.250  =  8000 ohm
+                                                        -> 8.06k, E96 1%  = 248 mA
+```
+
+R<sub>CL</sub> carries 99 µA against a 6 mA pin rating, and the resistor's
+tolerance is a rounding error against the part's own ±20 % limit accuracy.
+
+**R<sub>CS</sub> is constrained by something that only exists because we run at
+5 V.** The current-sense output is linear only up to
+**V<sub>CS(lin)</sub> = V<sub>VS</sub> − 2.5 V**, which at V<sub>VS</sub> = 5 V
+is **2.5 V**. At the datasheet's usual 13.5 V it would be 4 V — so the headroom
+is 40 % smaller here than the tables suggest at a glance.
+
+It also has to be sized against **K(CS)'s ±17 %**, not its nominal 290:
+
+| R<sub>CS</sub> | at 250 mA nom | at 250 mA **+17 %** | at 25 mA | |
+|---|--:|--:|--:|---|
+| 3.3 kΩ | 2.84 V | 3.33 V | 0.284 V | **over 2.5 V** |
+| 2.7 kΩ | 2.33 V | 2.72 V | 0.233 V | **over** |
+| **2.2 kΩ** | **1.90 V** | **2.22 V** | **0.190 V** | ok |
+
+**R<sub>CS</sub> = 2.2 kΩ.** An earlier revision of this document proposed
+3.3 kΩ, reasoning from a 3.3 V ADC span — that is outside the linear range and
+was wrong.
+
+#### The CS pin is driven high in a fault, and the ADC needs protecting
+
+`V_CS(H)`, the current-sense pin output voltage **in fault mode**, is
+`Min(V_VS − 2, 4.5)` minimum — **3 V at V<sub>VS</sub> = 5 V** — with at least
+15 mA of drive behind it. Into 2.2 kΩ that takes only 1.4 mA, so **the node
+genuinely leaves the measurement range and heads for the rail.**
+
+That is deliberate: it is how the part flags a fault on the CS pin. But 3–5 V
+into an STM32 ADC input rated V<sub>DDA</sub> + 0.3 V is a damage path.
+
+| | |
+|---|---|
+| **4.7 kΩ series** from the CS node to the ADC pin | limits clamp current to a few hundred µA |
+| **Schottky to V<sub>DDA</sub>** (BAT54 class) | preferable to relying on the internal ESD diode, which injects into the die and can disturb other ADC channels |
+| **Long ADC sampling time** | source impedance is ~2.2 kΩ plus the series resistor |
+
+No measurement error results: the ADC input is high-impedance, so there is no DC
+drop across the series resistor. And a reading pinned at the rail is
+unambiguous — it *is* the fault flag.
 
 ### CS does not belong on the precision ADC
 
@@ -781,8 +823,9 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | **2** | **DMN6040SVTQ-7** | N-FET, TSOT26, 60 V / ±20 V V<sub>GS</sub> — **one per feed** |
 | **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
 | **2** | **SMAJ6.0CA** | bidirectional TVS, SMA — **one per feed**, inboard of the PTC. Buy AEC-Q101 qualified |
-| 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
-| 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
+| 1 | R<sub>CL</sub> = **8.06 kΩ 1 %** | sets the limit to 248 mA |
+| 1 | R<sub>CS</sub> = **2.2 kΩ** | current sense; 2.5 V linear ceiling at V<sub>VS</sub> = 5 V |
+| 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
 | **2** | divider pair | per-feed short-to-battery sense → internal ADC |
 | — | C<sub>in</sub> / C<sub>out</sub> per all three datasheets | NCV8772C ≥ 1 µF out; LM74700 needs 0.1 µF VCAP–ANODE |
 
@@ -796,7 +839,7 @@ needed all three — see
 | | |
 |---|---|
 | GPIO | `EN` (LDO), `IN1`, `IN2`, `DIAG_EN`, `SEL`, `FAULT` |
-| STM32 internal ADC | `CS`, plus **one per feed** for short-to-battery sense |
+| STM32 internal ADC | `CS` (via 4.7 kΩ + Schottky — it is driven to the rail in a fault), plus **one per feed** for short-to-battery sense |
 | Precision ADC | one VREF sense at the regulator, covering both feeds |
 | Strapped, not driven | `THER`; the LM74700 `EN` pins tie high — they are powered from the gated VREF rail, so the LDO's `EN` already gates them |
 
