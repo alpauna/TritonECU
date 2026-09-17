@@ -5,7 +5,7 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 | Sensor | Pins | Confirmed by |
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
-| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — confirmed by the owner |
+| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — confirmed by the owner. ⚠ Ford's diagram shows a `*12V` feed at C100, which would make it Hall — [`../review-vr-chain.md`](../review-vr-chain.md) §1 |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
 | ~~TSS~~ | 59 | **Not fitted.** C192 is 4R100-only — confirmed by the owner. The PCM pin exists for other applications |
 
@@ -139,7 +139,10 @@ Note the series resistor sizing is **tighter**, not looser: at 3 mA design curre
 a 150 V peak wants ~50 kΩ, against the 5 kΩ used here.
 
 Three VR channels means **three LM1815s** and three sets of arming and peak-detect
-components, against two MAX9926s with the fourth channel spare.
+components, against two MAX9926s. **The fourth channel is no longer spare** —
+[`../cooling-fans.md`](../cooling-fans.md) §4.4 takes road speed from the
+transfer case speed sensor (pin 7), so all four are allocated. See
+[`../review-vr-chain.md`](../review-vr-chain.md) §2.
 
 ### RESOLVED — the timing advantage does not exist
 

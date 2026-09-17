@@ -19,7 +19,7 @@ ST-Link, USB console and Ethernet all come for free.
 | **VREF supply** | **NCV8772CDT504RKG** 5.00 V LDO off the **LTC4364 protected rail** — not the 5 V switcher, which has no headroom and is spread-spectrum. [`vref-supply.md`](vref-supply.md) | ✅ |
 | MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
 | Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, 9 kV clamp. Bench: Tokmas AD7606BSTZ, same LQFP-64 | ✅ |
-| Crank/cam/OSS | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS (+1 spare) | ✅ |
+| Crank/cam/OSS/TC | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS, **transfer case speed**. No spare | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | 2 × MCP23S17, **at 5 V** — the solenoid gates have no buffer | ✅ |
