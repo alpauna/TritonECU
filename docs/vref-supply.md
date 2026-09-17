@@ -1043,8 +1043,17 @@ cost you the sensors on that branch.
 
 ## Still open
 
+**A pre-schematic review of this chain is in
+[`review-vref-chain.md`](review-vref-chain.md)** — four findings, two of which
+are the same class of error: a protection element specified against the nominal
+fault but not against that fault coinciding with a load dump.
+
+
 | | |
 |---|---|
+| **[DECIDE]** | TVS and divider **ground return** — SIGRTN or power ground. [`review-vref-chain.md`](review-vref-chain.md) §4 |
+| **[FIX]** | feed divider needs a series R + Schottky like `CS`; it presents 5.7 V to the ADC at 27 V. §2 |
+| **[FIX]** | startup blanking must gate **reading validity**, not just fault handling — VREF sits at ~4.3 V through the body diode until the charge pump starts. §3 |
 | **[CONFIRM]** | the 20 ms startup blanking window, on the bench against the real sensor load — see [§ The retry policy](#the-retry-policy) |
 | **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
