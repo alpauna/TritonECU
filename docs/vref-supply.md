@@ -111,8 +111,8 @@ battery.
           │
           ▼
   ┌──────── TPS2H160B-Q1, dual channel ────────┐
-  │  ch1  limit 250 mA                         │──► ideal diode ──► PTC ──► A-20
-  │  ch2  limit 250 mA                         │──► ideal diode ──► PTC ──► C-20
+  │  ch1  limit 250 mA                         │──► ideal diode ──► A-20
+  │  ch2  limit 250 mA                         │──► ideal diode ──► C-20
   │                                            │
   │  FAULT ─► GPIO  SEL ─► GPIO  CS ─► ADC     │
   └────────────────────────────────────────────┘
@@ -127,8 +127,9 @@ battery.
   pins. A 22 AWG wire is untroubled by it.
 - **Fault flag into a GPIO** so a VREF short becomes a logged DTC — "VREF
   circuit A shorted" — rather than a truck that mysteriously will not run.
-- **PTC keeps a job, but not the one it was given.** See
-  [§ The PTC, demoted](#the-ptc-demoted-to-what-it-was-always-good-for).
+- **No PPTC, and no rail clamp.** Both were carried in earlier revisions for
+  jobs the ideal diode does better or that stopped existing. See
+  [§ Why there is no PPTC](#why-there-is-no-pptc).
 
 ---
 
@@ -579,23 +580,26 @@ against a pin budget of 37 used out of ~114.
 ## The output chain
 
 ```
-TPS2H160B OUT ──► [ LM74700-Q1 + N-FET ] ──┬──► PTC ──► connector pin
-                     ideal diode           │   backstop        │
-                                          TVS                  └──► divider ──► STM32 ADC
-                                       (bidir)
+TPS2H160B OUT ──► [ LM74700-Q1 + N-FET ] ──┬──► connector pin
+                     ideal diode           │          │
+                                          TVS         └──► divider ──► STM32 ADC
+                                    SMAJ24CA, bidir
                                            │
-                                          GND
+                                         PGND
 ```
 
-Four elements, each doing one job, and **the order is load-bearing**:
+Two protection elements and a sense tap, each doing one job:
 
-- the **ideal diode** sits closest to the switch, so reverse current never
-  reaches anything inboard of it;
-- the **TVS** sits inboard of the PTC, **not at the connector**, because the PTC
-  has to be the element that sees fault current — see below;
-- the **PTC** sits outboard, at the connector;
-- the **diagnostic divider** sits outboard of everything, so it sees what the
-  harness sees.
+- the **ideal diode** blocks every DC reverse condition — a short to battery
+  never reaches anything inboard of it;
+- the **TVS** clamps transients, standing off **above any DC fault** so it never
+  conducts continuously and never needs a series element to survive;
+- the **diagnostic divider** taps the connector, so it sees what the harness
+  sees.
+
+> **There is no PPTC.** An earlier revision had one, sized 16 V, with two jobs
+> it could not do — see
+> [§ Why there is no PPTC](#why-there-is-no-pptc).
 
 ### The TVS, and why it is not the clamp that was deleted
 
@@ -617,61 +621,58 @@ bidirectional part blocks until −V<sub>BR</sub> instead.
 > The trade, recorded so it is not a surprise: a bidirectional TVS lets the line
 > swing to −V<sub>BR</sub> before clamping, and the ideal-diode FET's **body
 > diode forward-conducts** long before that — source at 5 V, drain going
-> negative. The PTC limits that current and the LDO's 400 mA limit backs it up,
-> so it is contained, but the body diode is what takes a negative pulse first.
+> negative. **The switch's 250 mA limit bounds that current** — it sits between
+> the 5 V rail and the FET's source — so it is contained, but the body diode is
+> what takes a negative pulse first.
 
-### Why the TVS goes inboard of the PTC
+### Standing off above the fault, not clamping through it
 
-The instinct is to put a TVS at the connector, as close to the boundary as
-possible. That is wrong here, and the reason is the sustained fault rather than
-the transient:
+The hard problem with a TVS on a 5 V line is that **no standoff low enough to
+protect 5 V logic can also withstand 14 V continuously.** A 6.0 V part conducts
+the moment the feed is shorted to battery, and then needs a series element —
+a PPTC — to limit and clear the current before it fails.
 
-| Order | Sustained short to battery |
-|---|---|
-| connector → **TVS** → PTC | TVS conducts 14 V straight to ground with **no series element** to limit or clear it. The PTC, being inboard, carries nothing. The TVS fails |
-| connector → **PTC** → TVS | current flows battery → PTC → TVS → ground. **The PTC sees it, limits it, and trips.** The TVS only has to survive the trip time |
+That series element is what created
+[review finding 1](review-vref-chain.md), and it could not do its other job
+either. **The way out is to stop clamping through DC faults at all:**
 
-No TVS with a standoff low enough to protect a 5 V line can also withstand 14 V
-continuously. So the series element must be between the fault and the clamp, and
-here that element is the PTC.
+| | 6.0 V standoff | **24 V standoff** |
+|---|---|---|
+| Short to battery, 14 V | conducts — needs a PPTC to clear | **never conducts** |
+| Short during our 27 V clamp | conducts hard | **never conducts** |
+| Genuine transient | clamps at 10.3 V | clamps at 38.9 V |
+| Leakage at 5.1 V | 800 µA spec | **5 µA** |
+| Series element required | **yes** | **no** |
 
-Transients are unaffected by the choice: the PTC is a low resistance until it
-trips, so a fast pulse passes straight through it to the TVS. The PTC only sees
-a large voltage once tripped, and then it is holding off the 14 V of a sustained
-fault — inside its 16 V rating.
+The DC cases belong to the ideal diode, which blocks them outright. The TVS is
+left with the one job a TVS is actually good at.
 
-### Selecting it: SMAJ6.0CA
+**What clamps below 24 V is nothing, and nothing needs it.** The only part of
+the ECU exposed to the feed is the ideal-diode FET's drain, rated **60 V** — the
+switch's 40 V OUT sits behind the FET, which blocks. And a TVS at the ECU never
+protected the sensors out on the harness anyway: the transient is on the wire
+between them.
+
+### Selecting it: SMAJ24CA
 
 Bidirectional — the `C` suffix in this series. Datasheet:
 [`Datasheets/SMAJ6.0CA-Datasheet-C908810.pdf`](Datasheets/SMAJ6.0CA-Datasheet-C908810.pdf).
 
 | Parameter | Value | |
 |---|---|---|
-| V<sub>RWM</sub> standoff | **6.0 V** | above the 5.1 V worst-case VREF |
-| V<sub>BR</sub> | 6.67 min / 7.67 max at 10 mA | |
-| V<sub>C</sub> clamping | **10.3 V** at 38.8 A | far below the FET's 60 V and the switch's 40 V |
+| V<sub>RWM</sub> standoff | **24 V** | above every DC fault, so it never conducts continuously |
+| V<sub>BR</sub> | 26.7 min / 30.7 max at 1 mA | |
+| V<sub>C</sub> clamping | **38.9 V** at 10.3 A | below the FET's 60 V |
 | Peak power | 400 W, 10/1000 µs | |
-| Reverse leakage | **800 µA max at V<sub>RWM</sub>** | see below |
+| Reverse leakage | **5 µA** | 160× lower than the 6.0 V part |
 | T<sub>J</sub> | −55 to +150 °C | |
 | Package | SMA | |
 
-**The leakage worry was misplaced, and the reason is the placement.** This
-document flagged leakage as the parameter to watch because the TVS sits
-downstream of the ratiometric sense point. With the real number the arithmetic
-is unambiguous:
-
-```
-TVS node sits between the ideal diode and the PTC,
-so leakage to ground does NOT flow through the PTC
-
-800 uA x 160 mohm (switch)  =  0.13 mV
-```
-
-The PTC's 1.6 Ω — the one resistive term that would have mattered — is
-**outboard of the TVS**, so leakage bypasses it entirely. Two TVS at the
-worst-case 800 µA add 1.6 mA to a 25 mA load, and the spec is taken at the 6.0 V
-standoff rather than at our 5.1 V, where it will be well below that. Neither the
-error nor the load is a real constraint.
+**Leakage stops being a question at this standoff.** It was worth watching when
+the part stood off 6.0 V against a 5.1 V rail — operating close to breakdown is
+where leakage lives. At 24 V standoff against the same 5.1 V the part is nowhere
+near conducting, and the spec is **5 µA** rather than 800 µA. Two of them draw
+10 µA against a 25 mA load.
 
 **The gap is qualification, not electrical.** This datasheet makes no AEC-Q101
 or automotive claim anywhere — it is a generic SMAJ series part. Every other
@@ -679,7 +680,7 @@ device in this chain is qualified: TPS2H160B-Q1 and NCV8772C to AEC-Q100 Grade 1
 LM74700-Q1 to AEC-Q100, DMN6040SVTQ to AEC-Q101, MF-NSHT050KX to AEC-Q200. A
 non-qualified TVS would be the only exception.
 
-**SMAJ6.0CA is an industry-standard part number available from qualified
+**SMAJ24CA is an industry-standard part number available from qualified
 sources** — Littelfuse, Vishay, Bourns among others — so this is a sourcing
 decision rather than a redesign. The generic part is fine for a bench build.
 
@@ -802,32 +803,60 @@ roughly a wash and the unquantified item is gone.
 something that drifts with current, ambient and trip history. That is the
 difference that matters for a ratiometric reference.
 
-### The PTC, demoted to what it was always good for
+### Why there is no PPTC
 
-With reverse handled by the ideal diode and forward limiting handled by the
-switch, the PTC returns to the job the original design gave it: **a per-feed
-backstop for the case where the switch itself fails short.**
+An earlier revision carried a `MF-NSHT050KX` per feed, with two jobs. It could
+not do either, and
+[`review-vref-chain.md`](review-vref-chain.md) finding 1 is what exposed it.
 
-**`MF-NSHT050KX`** — Bourns MF-NSHT, 1206, AEC-Q200.
-[`Datasheets/MF-NSHT-PPTC-Datasheet.pdf`](Datasheets/MF-NSHT-PPTC-Datasheet.pdf).
+**Job one — limit current into the TVS on a sustained short to battery.** That
+job existed only because the TVS stood off 6.0 V, below battery. Raising the
+standoff to 24 V deletes the job rather than doing it better.
 
-| | |
-|---|---|
-| I<sub>hold</sub> | **0.50 A** — 2× the switch's 250 mA limit, so it never trips on a fault the switch is already handling |
-| V<sub>max</sub> | **16 V** — the rating this document specified from the start |
-| Resistance | R<sub>min</sub> 0.17 Ω, **R<sub>1max</sub> 1.60 Ω** |
-| Trip | 8 A in ≤ 0.10 s |
-| I<sub>max</sub> | 20 A, −40 to +125 °C |
+**Job two — backstop if the switch fails short.** It cannot:
 
-Low-ohm is the right choice **because no PPTC bounds the reverse current
-anyway** — so there is nothing to buy by accepting a higher resistance, and the
-accuracy is free. The 16 V part remains right for the reason that disqualified
-the 150 V devices upstream: **high-voltage PPTCs trip in 8–16 seconds**, because
-a 120–150 V element needs a thick polymer body and thickness is thermal mass.
+```
+NCV8772C current limit, what would actually flow    400 - 1100 mA
+MF-NSHT050KX Itrip, guaranteed trip at 23 C            2500 mA
+                              derated to 60 C          1850 mA
+```
 
-> **[CONFIRM]** I<sub>hold</sub> derates with ambient temperature. Check the
-> derating curve holds 0.50 A above the switch's 250 mA limit at the cabin's
-> worst case, or the PTC will nuisance-trip on a fault the switch is containing.
+The fault current lands **between I<sub>hold</sub> and I<sub>trip</sub>** — the
+indeterminate zone where a PPTC may or may not trip. It never reliably clears
+the one fault it was there for. **What actually protects in that case is the
+LDO's own thermal shutdown**, and it always did.
+
+**And the 30 V part cannot be substituted.** Finding 1 was that the 16 V rating
+is exceeded by a short to battery coinciding with a load dump. The obvious fix
+is `NSHT035` at 30 V — but its hold current derates below the switch's 250 mA
+limit well inside the operating range:
+
+| Ambient | NSHT035 (30 V) | NSHT050 (16 V) |
+|---|--:|--:|
+| 50 °C | 0.28 A | 0.41 A |
+| 60 °C | 0.26 A | 0.37 A |
+| **70 °C** | **0.23 A — trips** | 0.34 A |
+| 85 °C | 0.20 A — trips | 0.28 A |
+
+[`enclosure.md`](enclosure.md) is explicit that behind the glovebox is "a
+confined space with poor convection", that "a closed cavity raises local ambient
+above cabin temperature", and that the connector face conducts heat *in* from
+the engine bay. 70 °C in-cavity is not a stretch. A PPTC that trips on a fault
+the switch is already containing turns a contained single-channel fault into a
+dead feed needing a power cycle — **worse than the problem it solves.**
+
+#### What removing it buys
+
+- **Finding 1 disappears** rather than being mitigated. There is no voltage
+  rating left to exceed.
+- Two components, and the only series element in the feed.
+- **The last drifting term leaves the ratiometric path** — see
+  [§ The accuracy argument](#the-accuracy-argument-corrected).
+
+Every fault still has an owner: forward overcurrent is the switch's 250 mA
+limit, DC reverse is the ideal diode, transients are the TVS, and switch-fails-
+short is the LDO's current limit and thermal shutdown — which was always the
+real answer there.
 
 ### Diagnosis, now that the switch cannot see the fault
 
@@ -881,15 +910,16 @@ What actually retires it is the chain above. Per feed at ~20 mA:
 
 | Element | Drop | Character |
 |---|--:|---|
-| TPS2H160B, 160 mΩ | 3 mV | resistive, stable |
+| TPS2H160B, 160 mΩ | 3 mV | resistive, **stable** |
 | LM74700-Q1 + FET | 20 mV | **regulated**, a fixed offset |
-| MF-NSHT050KX | 3–32 mV | **resistive and drifting** — the only bad actor left |
 
-The PTC is still the worst term, but it is now a backstop carrying no fault
-current in normal life, and at R<sub>min</sub> it contributes 3 mV. Take the
-ratiometric sense at the regulator, one channel, covering both feeds; if a PTC
-has tripped or aged, the per-feed diagnostic divider is what reports it rather
-than a drifting voltage nobody can calibrate out.
+**Both remaining terms are stable.** The PPTC was the only drifting one, and
+[§ Why there is no PPTC](#why-there-is-no-pptc) removed it for unrelated
+reasons — the accuracy improvement is a side effect.
+
+Take the ratiometric sense at the regulator — one channel, covering both feeds.
+23 mV of stable, characterisable offset on 5.00 V is 0.46 %, and it does not
+wander with current, ambient or fault history.
 
 ## Grounds
 
@@ -940,7 +970,7 @@ dedicated sensor return, ~25 mA through ~0.1 ohm  =  ~2.5 mV
 rests on SIGRTN being a dedicated low-current return rather than a shared one.
 
 It also gives a **second, independent reason not to shave the TVS standoff to
-5.5 V.** [§ Selecting it](#selecting-it-smaj60ca) declined that on leakage
+5.5 V.** [§ Selecting it](#selecting-it-smaj24ca) declined that on leakage
 grounds; ground-offset margin says the same thing for a different reason.
 
 > **Related, and larger than this document:** whether **VREF sense** itself
@@ -1086,8 +1116,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | **TPS2H160BQPWPRQ1** | dual high-side switch, both feeds |
 | **2** | **LM74700QDBVRQ1** | ideal diode controller, SOT-23-6 — **one per feed** |
 | **2** | **DMN6040SVTQ-7** | N-FET, TSOT26, 60 V / ±20 V V<sub>GS</sub> — **one per feed** |
-| **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
-| **2** | **SMAJ6.0CA** | bidirectional TVS, SMA — **one per feed**, inboard of the PTC. Buy AEC-Q101 qualified |
+| **2** | **SMAJ24CA** | bidirectional TVS, SMA — **one per feed**, to PGND. Buy AEC-Q101 qualified |
 | 1 | R<sub>CL</sub> = **8.06 kΩ 1 %** | sets the limit to 248 mA |
 | 1 | R<sub>CS</sub> = **2.2 kΩ** | current sense; 2.5 V linear ceiling at V<sub>VS</sub> = 5 V |
 | 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
@@ -1148,7 +1177,7 @@ fault but not against that fault coinciding with a load dump.
 | | |
 |---|---|
 | **[CONFIRM]** | the 20 ms startup blanking window, on the bench against the real sensor load — see [§ The retry policy](#the-retry-policy) |
-| **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
+| **[DECIDE]** | TVS **manufacturer** — SMAJ24CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |

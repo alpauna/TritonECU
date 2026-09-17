@@ -12,7 +12,7 @@ LTC4364 rail ─► NCV8772C ─► TPS2H160B ─┬─► LM74700 + DMN6040 ─
 
 ---
 
-## 1. IMPORTANT — the PPTC's 16 V rating is exceeded by a compound fault
+## 1. ~~IMPORTANT — the PPTC's 16 V rating is exceeded by a compound fault~~ RESOLVED
 
 `MF-NSHT050KX` is a **16 V** part. Once tripped it holds off the difference
 between the shorted-to circuit and the TVS clamp:
@@ -51,6 +51,28 @@ Options, none free:
 
 **Recommendation: resolve the NSHT035 derating question, because it may make
 option 2 free.** That measurement now decides two things instead of one.
+
+> **Resolved 2026-09-17 — by option 3, removing the PPTC entirely.** The
+> derating table settled option 2 first: `NSHT035` holds only **0.23 A at 70 °C**
+> against the switch's 250 mA limit, and `enclosure.md` warns that in-cavity
+> ambient behind the glovebox exceeds cabin air. It would nuisance-trip on a
+> fault the switch is already containing.
+>
+> That sent the question back to whether the PPTC earns its place at all, and it
+> does not. Its second job — backstop if the switch fails short — is one it
+> cannot do: the LDO upstream limits at **400–1100 mA** while the PPTC's
+> guaranteed trip is **2500 mA** (1850 mA at 60 °C). The fault current lands in
+> the indeterminate zone between I<sub>hold</sub> and I<sub>trip</sub>. What
+> actually protects there is the LDO's thermal shutdown, and always did.
+>
+> Its first job — limiting current into the TVS on a sustained short to battery —
+> existed only because the TVS stood off 6.0 V, below battery. **The TVS is now
+> `SMAJ24CA`**, standing off above every DC fault, so it never conducts
+> continuously and needs no series element. The job is deleted, not reassigned.
+>
+> The finding disappears rather than being mitigated: there is no voltage rating
+> left to exceed. Side effects: two components out, TVS leakage 800 µA → 5 µA,
+> and the only *drifting* term leaves the ratiometric path.
 
 ---
 
@@ -160,11 +182,19 @@ examined.
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | PPTC 16 V rating exceeded by short-to-battery during a load dump | resolve the NSHT035 derating `[CONFIRM]` — it may make the 30 V part free |
+| 1 | ~~PPTC 16 V rating exceeded by short-to-battery during a load dump~~ | **RESOLVED** — PPTC removed; TVS re-specified to SMAJ24CA |
 | 2 | ~~Feed divider presents 5.7 V to the ADC at 27 V~~ | **FIXED** — 100 k / 12.4 k + Schottky |
 | 3 | ~~Startup blanking covers faults but not reading validity~~ | **FIXED** — validity gated on measured VREF, not a timer |
 | 4 | ~~TVS and divider ground return unspecified~~ | **SETTLED** — TVS to PGND, divider to AGND |
 
-Two of the four are the same class of error — **a protection element specified
-against the nominal fault and not against the fault coinciding with a load
-dump.** Worth checking the rest of the board for the same pattern.
+**All four closed.**
+
+Two were the same class of error — *a protection element specified against the
+nominal fault and not against that fault coinciding with a load dump.* Worth
+checking the rest of the board for the pattern.
+
+The third lesson is different and worth stating separately: **the PPTC survived
+three revisions of this design without anyone asking whether the current that
+would actually flow could trip it.** It was carried as "a backstop" without the
+arithmetic. Reviewing what a protection element *does* rather than what it is
+*for* is what found it.
