@@ -399,10 +399,10 @@ specified it.
 **They take NCV8405A as well** — the part is rated 6 A and already on the board,
 so the only real question is dissipation.
 
-| | Package | |
+| | Part | |
 |---|---|---|
-| **TCC** | `NCV8405ASTT1G` SOT-223 | ~1 A class |
-| **EPC** | **`NCV8405ADTRKG` DPAK** | the higher-current one |
+| **TCC** | `NCV8405ASTT1G` SOT-223 | ~1 A class — 1.82 A on a minimum pad |
+| **EPC** | **`NCV8408BDTRKG` DPAK** | the sibling built for this, see below |
 
 Dissipation limits at a 60 °C in-cavity ambient, 150 °C junction, and the hot
 R<sub>DS(on)</sub> of 210 mΩ:
@@ -419,9 +419,68 @@ transmission runs *high* duty at light load — a 4R70W's EPC gives maximum line
 pressure at minimum current, so high duty is a normal cruising condition, not an
 extreme.
 
-> **[MEASURE]** EPC and TCC solenoid resistance, and EPC's operating current
-> range. **If EPC exceeds ~2.9 A RMS, the NCV8405A is out** and the channel needs
-> a lower-R<sub>DS(on)</sub> part — this is the number that decides it.
+#### EPC takes the NCV8408B, not the NCV8405A
+
+Same family, same 42 V clamp, same package — built for the higher-current end.
+Datasheet:
+[`Datasheets/NCV8408BDTRKG-datasheet-C500319.pdf`](Datasheets/NCV8408BDTRKG-datasheet-C500319.pdf).
+
+| | NCV8405A, DPAK | **NCV8408B, DPAK** |
+|---|--:|--:|
+| R<sub>DS(on)</sub> at 150 °C | 210 mΩ | **120 mΩ** |
+| Rθ<sub>JA</sub> | 50 °C/W | 55 °C/W |
+| **Max I<sub>rms</sub> at 60 °C** | 2.93 A | **3.69 A** |
+| Current limit | 6 / 9 / 11 A | **10 / 13 / 16 A** |
+| Load dump | 53 V | **63 V** |
+| Thermal shutdown | auto-restart | **latched** |
+| E<sub>AS</sub> | 275 mJ | 185 mJ |
+
+Its Rθ<sub>JA</sub> is *worse*, but the on-resistance is nearly half, and that
+wins: **the threshold moves from 2.9 A to 3.7 A RMS**, which clears a 3 A peak at
+100 % duty rather than sitting on the edge of it.
+
+> **[MEASURE]** EPC and TCC solenoid resistance and EPC's operating current.
+> The threshold is now **3.7 A RMS**, not 2.9.
+
+**Latched thermal shutdown is the right behaviour**, and for the same reason the
+TPS2H160B's `THER` is strapped to latch: firmware owns the retry, the fault
+cannot thermally cycle, and on EPC an auto-restarting driver would oscillate
+line pressure.
+
+#### The latch interacts with PWM, and this is easy to miss
+
+The latch clears when the gate is held below V<sub>LR</sub> (~1.4 V) for
+**t<sub>LR</sub> = 10 ms minimum**. **PWM pulls the gate low every cycle.** If the
+off-time exceeds that, normal operation clears the latch every cycle and the
+protection is silently defeated:
+
+| PWM | Period | Off-time at 10 % duty | |
+|---|--:|--:|---|
+| 50 Hz | 20.0 ms | 18.0 ms | **defeats the latch** |
+| 100 Hz | 10.0 ms | 9.0 ms | holds, barely |
+| **200 Hz** | 5.0 ms | 4.5 ms | **holds** |
+
+**Drive EPC and TCC at ≥ 200 Hz.** That is a firmware constraint derived from
+the driver, and nothing else in the design would have surfaced it.
+
+#### A PWM-friendly diagnostic comes with it
+
+Gate input current is **25 µA normal, 440 µA latched** — an 18× step. That
+matters because the drain-sense scheme above **needs synchronising to the PWM**,
+and this does not:
+
+| Series gate R | Normal | Latched |
+|---|--:|--:|
+| 2.2 kΩ | 110 mV | **0.97 V** |
+| 4.7 kΩ | 235 mV | **2.07 V** |
+
+Against the part's **25.5 kΩ internal gate resistance**, a 2.2 kΩ series
+resistor is negligible for switching speed. Worth considering on the two PWM
+channels in place of a synchronised drain sample.
+
+E<sub>AS</sub> is lower than the NCV8405A's — 185 mJ against 275 mJ — which
+costs nothing here, because these channels have **freewheel diodes and the clamp
+should never engage.** It matters only if a freewheel diode opens.
 
 **Both get a freewheel diode to 12 V**, per the section above. Rate it for the
 solenoid current and for the supply during a load dump: the diode sits reverse-
@@ -441,7 +500,7 @@ that channel. **It is probably unnecessary here:** battery voltage and **TFT are
 already inputs**, and current ≈ V<sub>bat</sub> × duty / R(T) is a compensation
 that costs nothing but arithmetic. Worth doing before adding hardware.
 
-Two channels short becomes **twelve NCV8405A channels**, not ten.
+Two channels short becomes **eleven NCV8405A channels plus one NCV8408B**.
 
 This also bounds
 [`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
@@ -509,7 +568,7 @@ reading would otherwise have to provide.
 | 1 | IMCC | **[CONFIRM]** on/off or PWM |
 | 3 | SS1, SS2, CSS | on/off |
 | 1 | **TCC** | PWM, SOT-223 |
-| 1 | **EPC** | PWM, **DPAK** — see above |
+| 1 | **EPC** | PWM — **NCV8408B** DPAK, see above |
 | **12** | | |
 
 ### Two cautions
@@ -587,7 +646,8 @@ pump at 5–8 A).
 | Coil ×8 | ISL9V3040 | 400 V | **74HCT541 buffer at 5 V** + 470 Ω |
 | Injector ×8 | ZXMS6005DGQ | 60–70 V | **Direct from 3.3 V GPIO** + 470 Ω |
 | Relays ×5, MIL | **TBD62083AFNG** | **built in**, to COMMON | **Direct from the expander**, 3.3 V or 5 V |
-| Heaters ×4, solenoids ×8 | **NCV8405ASTT1G** (EPC: **DPAK**) | 42 V integrated — **PWM loads use a freewheel diode instead** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
+| Heaters ×4, solenoids ×7 | **NCV8405ASTT1G** | 42 V integrated — **PWM loads use a freewheel diode instead** | **Direct**, V<sub>GS(th)</sub> ≤ 2 V. Drain sense for diagnosis |
+| **EPC** (PWM, high current) | **NCV8408BDTRKG** | 42 V, latched shutdown | **Direct**; ≥ 200 Hz PWM — see above |
 | VREF feeds ×2 | **TPS2H160B-Q1** | 40 V rated | **High-side** from the 5 V rail, 250 mA limit, `CS` diagnosis |
 
 None of the four needs a dedicated gate-driver IC. One octal buffer covers the
