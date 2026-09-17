@@ -20,6 +20,24 @@ The MAX9926 handles single-ended VR sensors directly. Wire it as:
 | IN2+ | CMP signal (pin 85) via 2 × 5 kΩ |
 | IN2− | **sensor ground (pin 91)** via 2 × 5 kΩ |
 
+### Terminate the CMP shield — at pin 25, to case ground
+
+Ford brings the CMP cable's shield into the PCM on **pin 25** (circuit
+567 LB/YE, drained via S199/S101), and terminates it **only there** — the sensor
+end is just the shield around the cable. Reproduce that:
+
+| | |
+|---|---|
+| **Where** | **pin 25**, at the connector entry |
+| **To what** | the **case/chassis ground leg** of the star — what `CSEGND` exists for |
+| **Not to** | **sensor ground or analogue ground.** A shield carries the noise current it intercepted; dumping that into the reference the signal is measured against injects exactly what the shield was fitted to exclude |
+| **How many points** | **one.** A shield grounded at both ends is a loop, and this truck's chassis carries alternator and starter current — such a loop injects far more than it excludes |
+
+> ⚠ [`eec-v-pinout.md`](eec-v-pinout.md) lists pin 25 as a **power ground**, from
+> the MegaSquirt sheet. Ford's diagram says otherwise. Wiring it as a power
+> ground would put engine-bay ground current into the sensor cable shield — see
+> [`schematic-findings.md`](schematic-findings.md) §15.
+
 **Use the same series resistance in both legs.** The differential amplifier's
 common-mode rejection depends on the two paths being balanced — grounding IN2−
 directly while IN+ sees 10 kΩ throws that away, and CMRR is the whole reason

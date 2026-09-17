@@ -38,7 +38,7 @@ connector from these numbers alone.
 | 22 | CKP- | CKP- | Same | GRY |  |
 | 23 | -- | -- | Same |  |  |
 | 24 | GND | Power Ground | -- |  |  |
-| 25 | GND | Power Ground | Same | BLK | MicroSquirt Pin 23 (Power Ground) |
+| 25 | GND | Power Ground | **CMP shield drain** | **LB/YE (567)** | ⚠ MS sheet says power ground, BLK. **Ford's diagram says 567 LB/YE, 0 V, the CMP cable shield** — see [`schematic-findings.md`](schematic-findings.md) §15 |
 | 26 | Ign Coil 1 | IGNA | Same | LT GRN/WHT |  |
 | 27 | Ign Coil 5 | IGNF | Same | LT GRN/YEL |  |
 | 28 | -- | -- | Same |  |  |

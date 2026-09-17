@@ -100,7 +100,7 @@ document while another still lists it as available.
 
 ---
 
-## 3. The CMP cable is shielded, and nothing in the design terminates the shield
+## 3. ~~The CMP cable is shielded, and nothing terminates the shield~~ FIXED
 
 `EngineControls6.png` shows the CMP cable explicitly **shielded**, with the
 shield drained through splices S199 and S101 to **567 LB/YE at PCM pin 25**,
@@ -119,6 +119,17 @@ Ford thought this one cable worth shielding when CKP's is not.
 > **[DECIDE]** where the shield drain terminates on our board. It is a
 > single-point connection by nature; the question is **which** point, and it
 > should not be the sensor-ground net the signal returns on.
+>
+> **Fixed 2026-09-17: pin 25, to the case-ground leg of the star, single-point.**
+> That is where Ford already brings it, and terminating it only at the ECU
+> matches the OEM — the sensor end is just the shield around the cable.
+>
+> **And answering it found a mislabelled pin.** `eec-v-pinout.md` has pin 25 as a
+> **power ground**, from the MegaSquirt sheet; Ford's diagram has `567 LB/YE`
+> carrying the CMP shield. Wiring it as a power ground would have put engine-bay
+> ground current **into the sensor cable shield** — the precise inversion of what
+> a shield is for. Recorded in
+> [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §15.
 
 ---
 
@@ -159,8 +170,8 @@ budget.**
 |---|---|---|
 | 1 | ~~Diagram shows CMP with a `*12V` feed~~ | **CLOSED** — measured **371 Ω**, CMP is VR. My misread of the scan |
 | 2 | The "fourth channel spare" was spent by the fan road-speed decision | correct both documents; **no spare** |
-| 3 | CMP cable is shielded; no shield termination is specified | **[DECIDE]** the drain point, and not onto sensor ground |
+| 3 | ~~No shield termination specified~~ | **FIXED** — pin 25 to case ground, single-point; and pin 25 was mislabelled a power ground |
 
 Findings 1 and 2 interacted: if CMP had been Hall it would have handed back
 exactly the channel finding 2 spent. **It is not — measured 371 Ω — so the
-MAX9926 allocation is full at four, with no spare.** Findings 2 and 3 remain.
+MAX9926 allocation is full at four, with no spare.** Finding 2 remains.

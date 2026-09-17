@@ -238,3 +238,34 @@ Pin **14** reads the **4x4 low and high indicator *switch*** (C189, 784 LB/BK),
 so it is an input, as the cooling-fan cutoff inhibit assumes. The *indicator
 lamp* is PCM-commanded, but over SCP — the cluster note says *"LOW Range
 indicator is controlled by the PCM"* with no wire to it.
+
+---
+
+## 15. Pin 25 is the CMP shield drain, not a power ground
+
+[`eec-v-pinout.md`](eec-v-pinout.md) has pin 25 as *"GND | Power Ground | Same |
+BLK"*, from the MegaSquirt sheet. **Ford's `EngineControls6.png` shows
+`567 LB/YE`, marked 0 V, carrying the camshaft sensor's cable shield** — drained
+through splices S199 and S101.
+
+They disagree on the function *and* the wire colour. **The diagram wins**, as it
+did on [pin 46](#2-the-connector-pin-conflict): the MegaSquirt sheet is one
+install's mapping, not Ford's.
+
+This matters more than a label. Wiring pin 25 as a power ground would put
+**engine-bay ground current into a sensor cable shield** — the precise inversion
+of what a shield is for.
+
+### Why CMP is shielded and CKP is not
+
+Worth recording, because it is not arbitrary:
+
+| | |
+|---|---|
+| **CKP** | **differential**, pins 21/22 — rejects pickup by construction. No shield |
+| **CMP** | **single-ended**, one signal wire returning on the shared sensor ground. **No common-mode rejection of its own** — the shield does that job instead |
+
+Our design wires CMP *pseudo*-differentially (`IN2+` on pin 85, `IN2−` on sensor
+ground, balanced 5 kΩ legs), which recovers rejection of noise **common to pins
+85 and 91**. It does nothing about noise picked up on the CMP conductor itself.
+**The shield still does real work.**
