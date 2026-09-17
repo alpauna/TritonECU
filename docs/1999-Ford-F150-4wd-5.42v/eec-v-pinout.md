@@ -183,7 +183,8 @@ See [`../output-drivers.md`](../output-drivers.md) and
    returning on sensor ground. **[CONFIRM]** — it decides whether CMP needs a
    conditioner channel or connects almost directly.
 
-   **Effectively resolved 2026-09-14: CMP is VR.** The sensor-side connector is
+   **Resolved 2026-09-17 by measurement: the coil reads 371 Ω, so CMP is VR.**
+   A Hall sensor would read open. The reasoning below reached the same answer:
    the *same two-cavity part* as CKP — Motorcraft `3U2Z145411SMA` covers both.
    **A three-wire Hall cannot fit in two cavities**, and the same connector
    serves CKP, which is unambiguously VR on pins 21/22. The lone "CMP+" at pin 85

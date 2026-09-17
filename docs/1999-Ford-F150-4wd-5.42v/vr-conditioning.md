@@ -5,7 +5,7 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 | Sensor | Pins | Confirmed by |
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
-| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — confirmed by the owner. ⚠ Ford's diagram shows a `*12V` feed at C100, which would make it Hall — [`../review-vr-chain.md`](../review-vr-chain.md) §1 |
+| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — **measured 371 Ω 2026-09-17**, so settled beyond the owner's confirmation |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
 | ~~TSS~~ | 59 | **Not fitted.** C192 is 4R100-only — confirmed by the owner. The PCM pin exists for other applications |
 

@@ -19,7 +19,7 @@ what feeds it.
 
 ---
 
-## 1. IMPORTANT — the diagram appears to show CMP with a 12 V feed
+## 1. ~~IMPORTANT — the diagram appears to show CMP with a 12 V feed~~ CLOSED — CMP is VR
 
 The tree resolved this confidently:
 
@@ -54,6 +54,21 @@ The tree's own reasoning for "VR" was that the sensor connector has two pins.
 **Two pins is equally consistent with a Hall sensor fed 12 V and returning its
 signal**, with the ground arriving via the shield drain — which is exactly what
 the diagram shows.
+
+> ### Measured 2026-09-17: **371 Ω. CMP is VR.**
+>
+> Squarely inside the *"few hundred ohms to about 2 kΩ"* that
+> [`eec-v-pinout.md`](1999-Ford-F150-4wd-5.42v/eec-v-pinout.md) gives for a VR
+> coil; a Hall sensor would read open. **The tree's resolution was right and my
+> reading of the scanned diagram was wrong** — whatever the `*12V` marking
+> belongs to, it is not a feed into C100.
+>
+> The measurement also validates an assumption made silently in §4: the
+> attenuation there treated the sensor as an ideal source. At 371 Ω the coil is
+> **1.9 % of the series network**, moving attenuation from 76.5 % to 76.1 % and
+> leaving the **5.1× cranking margin unchanged**.
+>
+> **No channel comes back** — so finding 2 stands in full.
 
 ---
 
@@ -142,9 +157,10 @@ budget.**
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | Diagram shows CMP with a `*12V` feed, against a "resolved: VR" | **[CONFIRM]** — ohm the two wires. Decides MAX9926 channel vs level-shifted digital input |
+| 1 | ~~Diagram shows CMP with a `*12V` feed~~ | **CLOSED** — measured **371 Ω**, CMP is VR. My misread of the scan |
 | 2 | The "fourth channel spare" was spent by the fan road-speed decision | correct both documents; **no spare** |
 | 3 | CMP cable is shielded; no shield termination is specified | **[DECIDE]** the drain point, and not onto sensor ground |
 
-Findings 1 and 2 interact: **if CMP turns out to be Hall, it hands back exactly
-the channel finding 2 just spent.** Worth measuring before ordering parts.
+Findings 1 and 2 interacted: if CMP had been Hall it would have handed back
+exactly the channel finding 2 spent. **It is not — measured 371 Ω — so the
+MAX9926 allocation is full at four, with no spare.** Findings 2 and 3 remain.
