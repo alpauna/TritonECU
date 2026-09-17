@@ -234,17 +234,35 @@ anyway.
 
 ---
 
-## 6. The op-amp — OPA2376, checked against the datasheet
+## 6. The op-amp — OPA2376, checked against both datasheets
 
-Datasheet: [`Datasheets/OPA2376AIDR-Datasheet.pdf`](Datasheets/OPA2376AIDR-Datasheet.pdf)
-(SBOS406F). The four confirmations §6 previously demanded, answered:
+**Decided: `OPA2376AQDRQ1`.** Two of them, SOIC-8, AEC-Q100 Grade 1.
+
+> **Watch the part number.** The Q-grade is `OPA2376A**Q**DRQ1`, not
+> `OPA2376A**I**DRQ1` — the `I` that marks the industrial grade becomes `Q`. The
+> file in `Datasheets/` is named with the `I` spelling; the orderable device in
+> TI's own ordering table is `OPA2376AQDRQ1`.
+
+Specifications below are from
+[`Datasheets/OPA2376AIDR-Datasheet.pdf`](Datasheets/OPA2376AIDR-Datasheet.pdf)
+(SBOS406F, industrial) and confirmed identical in
+[`Datasheets/OPA2376AIDRQ1-Datasheet.pdf`](Datasheets/OPA2376AIDRQ1-Datasheet.pdf)
+(ZHCS042C, Q1) except where noted. The four confirmations §6 previously
+demanded, answered:
 
 | Asked | Datasheet | |
 |---|---|---|
 | **I<sub>B</sub> at +125 °C** | **≈ 200 pA typical**, Figure 11. 0.2 pA typ / **10 pA max at 25 °C only**; over temperature the datasheet says *"See Typical Characteristics"* | ⚠ **see below** |
 | **Input current limit specified** | **±10 mA**, and note (2) is explicit: *"Input terminals are diode-clamped to the power-supply rails. Input signals that can swing more than 0.5 V beyond the supply rails should be current limited to 10 mA or less"* | ✓ |
 | **Common-mode range** | **(V−) − 0.1 V to (V+) + 0.1 V** — rail-to-rail, better than assumed | ✓ **see §5** |
-| **AEC-Q100** | **No.** `OPA2376AIDR` is industrial, −40 to +125 °C. The datasheet's *Other Qualified Versions* lists only **`OPA376-Q1` — the single**, not the dual | ✗ **open** |
+| **AEC-Q100** | **Yes — `OPA2376-Q1` exists.** Grade 1, −40 to +125 °C, dual, SOIC-8. Orderable as **`OPA2376AQDRQ1`** | ✓ |
+
+> **I got this wrong first time.** The industrial datasheet's *Other Qualified
+> Versions of OPA376* lists only *"Automotive: OPA376-Q1"* — the single — and I
+> concluded from that absence that no dual was qualified. The `OPAx376-Q1`
+> datasheet (ZHCS042C, revised March 2021) covers **OPA376-Q1, OPA2376-Q1 and
+> OPA4376-Q1**. A cross-reference list in an older document is not an inventory,
+> and I treated it as one.
 
 Specifications not asked for that turned out to matter:
 
@@ -283,21 +301,38 @@ more than an order of magnitude. But two honest caveats:
   reason the mounting decision in
   [`adc-front-end.md`](adc-front-end.md) deserves to be made explicitly.
 
-### The open question: qualification
+### DECIDED: `OPA2376AQDRQ1` — two duals, AEC-Q100
 
-Every other active part on this board is AEC-Q100 or Q101. **This one would be
-the first deliberate exception**, because TI qualified the single and not the
-dual:
+Datasheet: [`Datasheets/OPA2376AIDRQ1-Datasheet.pdf`](Datasheets/OPA2376AIDRQ1-Datasheet.pdf)
+(ZHCS042C). There is no trade to make — the Q1 dual gives qualification *and*
+the two-package count, and on one specification it is better than the industrial
+part rather than merely requalified:
 
-| | **4 × OPA376-Q1** | **2 × OPA2376AIDR** |
+| | Industrial `OPA2376AIDR` | **`OPA2376AQDRQ1`** |
 |---|---|---|
-| Qualification | **AEC-Q100** | industrial, −40 to +125 °C |
-| Packages | 4 | **2** |
-| Specs | same silicon — **[CONFIRM]** against its own datasheet | **confirmed, in hand** |
-| Board area | 4 × SOT-23-5 or SC-70 is *smaller* than 2 × SOIC-8 | 2 × SOIC-8, easier to hand-solder |
+| Qualification | none | **AEC-Q100 Grade 1**, −40 to +125 °C |
+| Functional safety | — | **documentation available** for OPA376-Q1 / OPA2376-Q1 |
+| **dV<sub>OS</sub>/dT** | 1 µV/°C max, **specified only to +85 °C** | **2 µV/°C max, specified −40 to +125 °C** |
+| V<sub>OS</sub>, I<sub>B</sub>, V<sub>CM</sub>, I<sub>Q</sub>, abs max | — | **identical** |
 
-**[DECIDE]** — this is a judgement about how strictly the Q100 rule binds, not a
-technical difference, and it is the last open item in this document.
+The drift entry is the one that matters. §6 had to extrapolate the industrial
+part's drift past +85 °C; the Q1 part specifies it across the whole range. Two
+µV/°C over 100 °C is **200 µV** — an order below the 6.5 mV bias term and
+untroubling, but now it is a specification rather than an assumption.
+
+### One layout consequence from Figure 6-18
+
+Small-signal overshoot against capacitive load reaches **~50 % by 500 pF** and
+climbs steeply after 100 pF. Two things follow:
+
+- **The R3-then-C2 topology is load-bearing, not stylistic.** The op-amp drives
+  1 kΩ and never sees C2. Putting the capacitor directly on the output would sit
+  far off the right of that graph.
+- **The guard ring is a real capacitive load.** Its capacitance to the *node* is
+  bootstrapped away — that is the point of guarding — but its capacitance to
+  ground and adjacent planes is not, and it lands on the output. Keep it to a
+  ring, not a pour: tens of pF is ~10 % overshoot, which the 159 Hz filter
+  removes anyway, but a large guard *plane* would be a different matter.
 
 ## 7. Bill of materials
 
@@ -317,7 +352,7 @@ Shared:
 
 | Ref | Part | Note |
 |---|---|---|
-| U1, U2 | **OPA2376AIDR** SOIC-8 ×2, or **OPA376-Q1** ×4 — **[DECIDE]**, §6 | the only open item |
+| U1, U2 | **OPA2376AQDRQ1** SOIC-8 ×2 | AEC-Q100 Grade 1 dual, §6 |
 | R4 | 91 kΩ 1 % 0603 | bias divider top |
 | R5 | 9.1 kΩ 1 % 0603 | bias divider bottom |
 | C3 | 100 nF X7R 0603 | bias decoupling |
@@ -341,6 +376,6 @@ Shared:
 
 | | |
 |---|---|
-| **[DECIDE]** | **qualification only** — 4 × `OPA376-Q1` (AEC-Q100) against 2 × `OPA2376AIDR` (industrial). §6. The electrical design is settled either way; it is the same silicon |
+| ~~**[DECIDE]** the op-amp~~ | **Closed** — `OPA2376AQDRQ1`, §6 |
 | **[CONFIRM]** | the F767's maximum external ADC impedance, for the two downstream channels. The buffer makes it moot — output impedance there is 1 kΩ, far inside any plausible limit — but the number was never established and is worth having |
 | **[MEASURE]** | source impedance of the truck's actual HO2S at operating temperature, once one is on the bench. Every error figure here is quoted against an assumed 100 kΩ, and the real number would let the residual 4.5 mV be stated rather than estimated |
