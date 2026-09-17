@@ -48,7 +48,7 @@ wrong is the problem, not the pin.
 
 ---
 
-## 2. IMPORTANT — the H-bridge has no arbitration story, and an ECU is not a scanner
+## 2. ~~IMPORTANT — the H-bridge has no arbitration story~~ FIXED
 
 J1850 PWM is **multi-master CSMA/CD with bitwise arbitration**: nodes monitor
 the bus while transmitting and the loser backs off. That requires a driver where
@@ -81,9 +81,25 @@ the stage presents high-impedance during the window where arbitration is
 resolved, making it behave as open-drain. That is firmware, and it is why
 `nSLEEP` being a real pin (finding 1) matters beyond bookkeeping.
 
+> **Fixed 2026-09-17, and better than that mitigation.** `nSLEEP` would have
+> carried a wake-time penalty per bit. **The DRV8837's own truth table already
+> has the release: `IN1 = IN2 = LOW` is coast, both outputs Hi-Z** — a *logic*
+> state on pins we already have.
+>
+> So the fix is an encoding change: **the passive state is coast, not the
+> opposite drive.** The reference's *"drive TX_P/TX_N as complementary signals"*
+> is correct for a scan tool and wrong for a bus node. Written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3.
+>
+> Phase 0 still validates transmitting into live traffic — this makes
+> arbitration *possible*, it does not prove it works. And a new question falls
+> out: **[CONFIRM]** whether removing the OEM PCM removes the bus's bias or
+> termination, since every node releasing to Hi-Z leaves the passive level
+> undefined.
+
 ---
 
-## 3. IMPORTANT — the TX outputs face the harness, and the part is low-voltage
+## 3. ~~IMPORTANT — the TX outputs face the harness~~ FIXED
 
 The DRV8837's `OUT1`/`OUT2` connect **directly to SCP+ and SCP−**, which run the
 length of the truck. The reference runs its `VM` from **5 V**, and the DRV8837
@@ -107,6 +123,17 @@ specified against the expected fault, not against the harness.
 > series resistance ahead of the outputs, a clamp, or a different driver. The
 > 100 kΩ series resistors already protect the **RX** side; the **TX** side has
 > nothing, because a motor driver is meant to drive a motor, not a harness.
+>
+> **Fixed 2026-09-17: 100 Ω series per output, and the VREF lesson applied.**
+> Stand the clamp off *above* battery so it never conducts on a DC fault, and
+> let the series resistance bound what does get through: `(14 − 5.7)/100` =
+> **83 mA** into the body diode and thence the 5 V rail, which the board's own
+> load absorbs without noticing.
+>
+> It costs nothing in signalling — 100 Ω into ~500 pF is a **50 ns** time
+> constant, **0.6 %** of an 8 µs tic. The remaining `[CONFIRM]` is the
+> DRV8837's abs-max, and whether the bus needs more drive than 100 Ω allows,
+> which Phase 0 measures directly.
 
 ---
 
@@ -156,8 +183,8 @@ likely way to introduce a known-and-already-solved bug into a new board.
 | # | Finding | Action |
 |---|---|---|
 | 1 | ~~`nSLEEP` uncounted~~ | **FIXED** — four pins, and a 10 kΩ pulldown so the bus is released at power-on |
-| 2 | H-bridge has no arbitration mechanism; ECU duty cycle ≠ scanner's | make **transmitting into live traffic** an explicit Phase 0 objective |
-| 3 | TX outputs face the harness on a low-voltage driver | **[CONFIRM]** abs-max, then protect or replace |
+| 2 | ~~H-bridge has no arbitration mechanism~~ | **FIXED** — passive state is `IN1=IN2=LOW` coast, not complementary drive |
+| 3 | ~~TX outputs face the harness~~ | **FIXED** — 100 Ω series; clamp stands off above battery, rail absorbs 83 mA |
 | 4 | ~~Upstream reference has a known RX abs-max bug~~ | **FIXED** — corrected network written into §5.3, both traps recorded |
 
 Findings 2 and 3 are the same observation in two places: **the reference design
