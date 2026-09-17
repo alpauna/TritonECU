@@ -127,6 +127,13 @@ capacitor through an RC that must settle inside the acquisition window.
 > input impedance. Too small and the clamp carries more fault current than it
 > needs to; too large and channels do not settle.
 
+> **CLOSED on the four O2 channels**, and the reason generalises. The trade above
+> only exists on an *unbuffered* input, where series resistance adds into the
+> 1 MΩ divider. Behind the picoamp buffer that
+> [`review-o2-chain.md`](review-o2-chain.md) §2 requires for other reasons,
+> 10 kΩ × 1 pA is 10 nV — so the resistor is sized purely for fault current.
+> **Still open on the remaining channels**, which stay unbuffered.
+
 Also worth flagging: **the bench part is far less protected than the production
 part.** ADS8588H has a 9 kV clamp; the AD7606 has **±16.5 V**. Bench work on a
 live harness is being done with an order of magnitude less headroom than the

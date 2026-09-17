@@ -77,6 +77,7 @@ That single part is the one genuinely useful addition per output.
 | **Heaters** (HO2S ×4) | **NCV8405A** — resistive, so no flyback path is needed at all |
 | **VREF** | per-feed: current limit **250 mA** with fault flag (TPS2H160B-Q1), **ideal diode** (LM74700-Q1) blocking reverse current, **bidirectional TVS standing off 24 V**, above every DC fault, so it clamps transients only and needs no series element — see [`vref-supply.md`](vref-supply.md) |
 | **Analog sensor inputs** | series resistance + clamp. The **ADS8588H's** 9 kV input clamp does most of this (the AD7606 is the bench part) |
+| **O2 inputs ×4** | **the ADC's clamp stops protecting these** once the buffer of [`review-o2-chain.md`](review-o2-chain.md) §2 goes in — the op-amp faces the harness instead. 10 kΩ series + rail clamps **ahead of the buffer**, sized for fault current now that series resistance no longer costs accuracy |
 | **VR inputs** | 2 × 5 kΩ series per leg into the MAX9926's internal ESD clamps — see the VR document |
 | **Digital switch inputs** (brake, A/C, TR, 4x4) | series resistor + TVS + pull-up; they see battery-level signals |
 | **Tach / VSS outputs** | series resistor + TVS; these drive the cluster and leave the box |

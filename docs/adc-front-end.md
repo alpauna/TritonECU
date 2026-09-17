@@ -62,8 +62,8 @@ Eight channels, and they are all spoken for:
 |---|---|---|
 | 0 | MAF signal (+) / return (−) | **differential** — the whole reason for this part |
 | 1 | TPS | fast, and ratiometric to VREF |
-| 2 | O2 upstream bank 1 | |
-| 3 | O2 upstream bank 2 | |
+| 2 | O2 upstream bank 1 | **buffered** — [`review-o2-chain.md`](review-o2-chain.md) §5 |
+| 3 | O2 upstream bank 2 | **buffered** — same. These two are what a wideband conversion would reuse for CJ125 `UA` |
 | 4 | CHT — cylinder head temperature | |
 | 5 | IAT — intake air temperature | |
 | 6 | Battery voltage | via **150 k / 33 k** divider — see below; injector dead-time compensation |
@@ -134,6 +134,15 @@ regulatory requirement nor a natural feedback path.
 confirm four: **#11 / #21 upstream** on 391 RD/YE, **#12 / #22 downstream** on
 1138 VT/WH. The upstream pair is fuelling and sits on this converter; the
 downstream pair is catalyst monitoring and is slow enough for the internal ADC.
+
+> **All four need a unity-gain buffer**, which the split above does not change
+> but does not provide either — a zirconia cell is high-impedance and both
+> converters load it, the internal one worse because it is switched-capacitor.
+> [`review-o2-chain.md`](review-o2-chain.md) §1.
+>
+> **If the upstream pair goes wideband**, channels 2 and 3 carry CJ125 `UA`
+> instead, and `UR` ×2 comes out of the internal spare below — 17 of 18, one
+> spare. Recorded here because **this document owns both allocations**.
 
 Knock (C103) is **not** on this ADC as a routine channel — it is a piezo
 needing a charge amplifier and windowed sampling around each combustion event.
