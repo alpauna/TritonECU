@@ -209,7 +209,7 @@ thermal sizing depends on it, so it is load-bearing:
 
 - deglitch **longer than `t_CL(deg)` (80–180 µs)**, and longer than the inrush
   into sensor capacitance at power-up, so a healthy start is not read as a short;
-- a retry policy — how many attempts, how far apart, and whether to latch;
+- a retry policy — **settled**, see [§ The retry policy](#the-retry-policy);
 - the DTC is logged either way. A shed channel must be visible, not silent.
 
 Shedding is not a loss compared to the alternative. If the shorted feed is the
@@ -220,6 +220,77 @@ the entire reason for two of them.
 It also softens the open `THER` question below: if firmware sheds the channel in
 milliseconds, the part's own thermal latch-versus-retry behaviour rarely gets
 the chance to matter.
+
+### The retry policy
+
+`THER` is strapped to latch, so the switch never retries on its own —
+**firmware owns this entirely.** The policy is what keeps the 2.5 W fault case a
+pulse rather than a steady state, so it is part of the thermal design, not a
+convenience.
+
+```
+startup blanking   20 ms after any channel enable, FAULT ignored
+confirm            hardware deglitch 80-180 us, plus 2 ms in software
+shed               drop INx, capture CS first, log the DTC
+retry              1 s, then 5 s, then 30 s          (3 attempts)
+latch              after the third, until key cycle or explicit clear
+reset              60 s of good operation clears the attempt counter;
+                   the cumulative count stays in the DTC
+```
+
+**Thermally, 1 s is already generous.** Average dissipation in the shared LDO,
+against its 47.1 °C/W:
+
+| shed time | spacing | duty | avg power | junction rise |
+|---|--:|--:|--:|--:|
+| 10 ms | 0.1 s | 10 % | 250 mW | 11.8 °C |
+| 10 ms | **1 s** | 1 % | 25 mW | **1.2 °C** |
+| 2 ms | 1 s | 0.2 % | 5 mW | 0.2 °C |
+
+So the "seconds, not milliseconds" rule holds with enormous margin at the first
+retry. **The escalation to 5 s and 30 s is not thermal** — it is there to avoid
+hammering a shorted harness with repeated 250 mA pulses, to stop endless
+retrying from masking a real fault, and to give a genuinely transient fault
+(a wet connector drying, a vibrating terminal) more than one chance.
+
+Three implementation notes that are easy to get wrong:
+
+**Retry and fault-clear are the same action.** Toggling `INx` both re-enables the
+channel *and* clears the latched thermal fault — the datasheet is explicit that
+it is "cleared after toggling the related INx pin". There is no separate clear
+step to forget.
+
+**`FAULT` is ORed across both channels**, so on assertion firmware must attribute
+it: read `CS` with `SEL` low, then high, allowing the 50 µs `t_SEL` settling.
+**Capture `CS` before shedding** — the magnitude is the diagnostic, and it is
+gone once the channel is off.
+
+**Blanking, not deglitching, handles startup.** Sensor capacitance charging
+through a slew-rate-controlled turn-on can engage the limit briefly. Trying to
+tune a deglitch around that is fragile; a fixed window after enabling is not.
+**[CONFIRM]** the 20 ms on the bench against the real sensor load.
+
+#### The two sense paths resolve all four states
+
+Neither `CS` nor the per-feed divider is sufficient alone; together they are
+unambiguous:
+
+| `CS` | feed divider | State |
+|---|---|---|
+| load current | ~5 V | healthy |
+| **at limit, 250 mA** | ~0 V | **short to ground** |
+| ~0 | **~14 V** | **short to battery** — the ideal diode is blocking |
+| ~0 | ~5 V | open load |
+
+That is the payoff for spending an internal ADC channel per feed, and it is why
+losing the switch's own short-to-battery detection to the ideal diode cost
+nothing.
+
+> **Out of scope here:** what the ECU does about *fuelling* with a VREF feed
+> down. If the shed feed carries TPS, throttle position is gone and that is limp
+> mode's problem, not this document's. Whether a feed carrying critical sensors
+> deserves a more persistent retry depends on which sensors sit on which pin —
+> which is still open above.
 
 ### Put EN under MCU control
 
@@ -919,7 +990,7 @@ cost you the sensors on that branch.
 
 | | |
 |---|---|
-| **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
+| **[CONFIRM]** | the 20 ms startup blanking window, on the bench against the real sensor load — see [§ The retry policy](#the-retry-policy) |
 | **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
