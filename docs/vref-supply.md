@@ -369,6 +369,51 @@ No measurement error results: the ADC input is high-impedance, so there is no DC
 drop across the series resistor. And a reading pinned at the rail is
 unambiguous — it *is* the fault flag.
 
+### THER: strapped high, latch mode
+
+`THER` selects what the switch does after its own thermal shutdown. **Strap it
+high — latch.** It has an **internal pulldown of 100 / 175 / 230 kΩ**, so
+floating is *low*, and low is auto-retry: the choice has to be made actively.
+
+**1. Auto-retry would take the retry cadence away from the device that sets
+it.** [§ Shedding a faulted feed](#shedding-a-faulted-feed) established that
+retries must be **seconds apart**, because the binding thermal constraint lives
+in the **shared LDO**, not in the switch. Hardware auto-retry retries as soon as
+the *switch's* junction falls below T<sub>SD</sub> − hysteresis — a far faster
+cadence, set by the wrong part.
+
+**2. On a shared supply, retrying endangers the healthy channel.** Both channels
+draw from one regulator. Each retry pulls up to `I_CL(TSD)` — **60 % of the
+external limit**, so ~149 mA — through that regulator. Repeated retries walk the
+LDO toward *its* thermal shutdown, which drops **both** feeds: the precise
+failure the two-feed split exists to prevent. Latching contains the fault to the
+channel that has it.
+
+**3. The fault stays sticky.** In auto-retry the thermal fault signal clears on
+its own once T<sub>J</sub> < T<sub>SD,rst</sub>, so a brief event can self-clear
+and never be logged. Latched, it clears only when firmware toggles `INx` — so
+firmware always sees it, and the DTC is never silently lost.
+
+The cost is that a genuinely transient fault needs firmware to clear it. That is
+not a cost here: firmware owns the retry policy regardless, and if firmware were
+hung, auto-retry would not rescue anything — it would thermally cycle both feeds
+instead of one.
+
+#### Wiring it
+
+**10 kΩ to the switch's own V<sub>S</sub>**, not to the 3.3 V logic rail.
+V<sub>S</sub> is the gated VREF rail, so `THER` is never held high on an
+unpowered device. Against the worst-case 100 kΩ internal pulldown that gives
+4.5 V, comfortably above V<sub>IH</sub> = 2 V and well inside the 7 V pin rating.
+
+> The same discipline applies to `IN1`, `IN2`, `DIAG_EN` and `SEL`: firmware
+> should hold them low whenever the VREF rail is gated off, so no logic pin is
+> driven into an unpowered part.
+
+A GPIO instead of a strap would let firmware fall back to auto-retry, and the
+pin budget allows it — but it buys a capability firmware already has, at the
+price of a new failure mode: a GPIO stuck low is silent auto-retry.
+
 ### CS does not belong on the precision ADC
 
 Two VREF-related analog signals exist and only one is precision-critical.
@@ -826,6 +871,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | R<sub>CL</sub> = **8.06 kΩ 1 %** | sets the limit to 248 mA |
 | 1 | R<sub>CS</sub> = **2.2 kΩ** | current sense; 2.5 V linear ceiling at V<sub>VS</sub> = 5 V |
 | 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
+| 1 | R<sub>THER</sub> = **10 kΩ to V<sub>S</sub>** | straps `THER` high — latch mode, not auto-retry |
 | **2** | divider pair | per-feed short-to-battery sense → internal ADC |
 | — | C<sub>in</sub> / C<sub>out</sub> per all three datasheets | NCV8772C ≥ 1 µF out; LM74700 needs 0.1 µF VCAP–ANODE |
 
@@ -841,7 +887,7 @@ needed all three — see
 | GPIO | `EN` (LDO), `IN1`, `IN2`, `DIAG_EN`, `SEL`, `FAULT` |
 | STM32 internal ADC | `CS` (via 4.7 kΩ + Schottky — it is driven to the rail in a fault), plus **one per feed** for short-to-battery sense |
 | Precision ADC | one VREF sense at the regulator, covering both feeds |
-| Strapped, not driven | `THER`; the LM74700 `EN` pins tie high — they are powered from the gated VREF rail, so the LDO's `EN` already gates them |
+| Strapped, not driven | `THER` **high via 10 kΩ to V<sub>S</sub>** — latch mode; the LM74700 `EN` pins tie high, gated with the rail |
 
 If the truck turns out to have **one** VREF pin rather than two, nothing changes
 except populating one PTC and never enabling channel 2. Regulator and switch
@@ -874,7 +920,6 @@ cost you the sensors on that branch.
 | | |
 |---|---|
 | **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
-| **[DECIDE]** | `THER` pin: latch or auto-retry on thermal shutdown |
 | **[DECIDE]** | TVS **manufacturer** — SMAJ6.0CA from an AEC-Q101 qualified source; the generic datasheet in the repo claims no automotive qualification |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
