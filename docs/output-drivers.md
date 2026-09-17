@@ -689,9 +689,21 @@ not against the nominal. **No clamp is then needed** below 35 V.
 The analogue value is also a better diagnostic than a bit — a partially shorted
 heater element reads between the states rather than tipping one way.
 
-Internal ADC channels are plentiful, so the cost is real but not scarce. **EPC
-does not need one**: the NCV8408B's gate-current flag reports its fault without
-a drain sample, and without needing to be synchronised to the PWM.
+**Internal ADC channels are not plentiful** — [`adc-front-end.md`](adc-front-end.md)
+counts **18 available**, Ethernet RMII having taken six. So drain sense is fitted
+only where nothing else sees the circuit:
+
+| Sensed | Why |
+|---|---|
+| **HO2S heaters ×4** | OBD-II heater circuit monitor |
+| **EVAP purge, canister vent** | OBD-II EVAP monitor |
+
+Everything else has better feedback than a drain voltage: **DPFE** measures EGR
+flow, **gear-ratio mismatch** catches the shift solenoids, **RPM vs OSS** catches
+TCC, **idle error** catches IAC, and EPC has the **NCV8408B's gate-current
+flag** — which also needs no PWM synchronisation. Only IMCC loses diagnosis, and
+it is the one load with neither a regulatory requirement nor a natural feedback
+path.
 
 > **Confirmed from Ford's diagrams.** The heaters are power-fed and
 > PCM-grounded: upstream pair on **391 RD/YE** returning to PCM pins **93/94**,

@@ -71,6 +71,63 @@ Moved to the **STM32's own ADC** because they are slow and not fuelling-critical
 DPFE, TFT, downstream O2 ×2, fuel pump monitor. *(The "P4" here is stale — the
 platform moved to the STM32F767ZI.)*
 
+**This document owns the channel allocation** — for both converters. Where
+[`f150-1999-target.md`](f150-1999-target.md) §3 lists signals, it is an
+inventory; the allocation lives here.
+
+## The internal ADC budget
+
+Not "plentiful". Counted:
+
+| | |
+|---|--:|
+| ADC1/2/3 shared inputs, PA0–PA7 / PB0–PB1 / PC0–PC5 | 16 |
+| ADC3-only inputs, PF3–PF10 | 8 |
+| **Total ADC-capable pins** | **24** |
+| Consumed by **Ethernet RMII** — PA1, PA2, PA7, PC1, PC4, PC5 | **−6** |
+| **Available** | **18** |
+
+The Ethernet collision is real and already visible in the firmware:
+`Board.h` lists the RMII pins, and six of them are `ADC123_IN1`, `IN2`, `IN7`,
+`IN11`, `IN14`, `IN15`.
+
+> **[CONFIRM]** the 24 against the F767ZI datasheet's pinout for this package,
+> and against anything else already claiming those pins.
+
+### Demand, after the reduction below
+
+| Demand | Ch |
+|---|--:|
+| DPFE, TFT, downstream O2 ×2, fuel pump monitor | 5 |
+| VREF `CS` current sense | 1 |
+| VREF feed short-to-battery sense — **one feed, not two** | 1 |
+| Output drain sense — **six, not thirteen** | 6 |
+| 1138 / 391 solenoid supply sense | 2 |
+| **Total** | **15** |
+
+**23 before, 15 after, against 18 available.**
+
+### Which outputs get drain sense, and what replaces it on the rest
+
+The first count put drain sense on all thirteen NCV8405A/NCV8408B channels.
+**Most of them already have better feedback than a drain voltage**, so sensing
+the drain was buying a second opinion at the cost of a channel and a pin:
+
+| Load | Drain sense | Why |
+|---|:--:|---|
+| **HO2S heaters ×4** | **yes** | OBD-II heater circuit monitor. Nothing else sees the heater |
+| **EVAP purge** | **yes** | OBD-II EVAP monitor |
+| **Canister vent** | **yes** | OBD-II EVAP monitor |
+| EGR regulator | no | **DPFE is the feedback** — measuring EGR flow is what it is for |
+| SSA, SSB | no | gear-ratio mismatch: commanded gear vs RPM vs OSS |
+| TCC | no | converter slip: RPM vs OSS |
+| EPC | no | the **NCV8408B's gate-current flag**, which needs no PWM-synchronised sample |
+| IAC | no | idle speed error is the feedback |
+| IMCC | no | no OBD requirement, and no cheap alternative — accepted, not solved |
+
+Only IMCC loses diagnosis outright, and it is the one load with neither a
+regulatory requirement nor a natural feedback path.
+
 **Four O2 sensors, and the split matches what each is for.** Ford's diagrams
 confirm four: **#11 / #21 upstream** on 391 RD/YE, **#12 / #22 downstream** on
 1138 VT/WH. The upstream pair is fuelling and sits on this converter; the

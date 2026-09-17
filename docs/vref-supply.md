@@ -1129,7 +1129,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | 1 | R<sub>CS</sub> = **2.2 kΩ** | current sense; 2.5 V linear ceiling at V<sub>VS</sub> = 5 V |
 | 1 | R<sub>series</sub> = **4.7 kΩ** + Schottky to V<sub>DDA</sub> | protects the ADC pin when CS is driven high in a fault |
 | 1 | R<sub>THER</sub> = **10 kΩ to V<sub>S</sub>** | straps `THER` high — latch mode, not auto-retry |
-| **2** | divider **100 kΩ / 12.4 kΩ** + Schottky to V<sub>DDA</sub> + 10 nF | per-feed short-to-battery sense → internal ADC |
+| **1** (2 if the second feed is populated) | divider **100 kΩ / 12.4 kΩ** + Schottky to V<sub>DDA</sub> + 10 nF | short-to-battery sense → internal ADC. One VREF feed on this truck |
 | 1 | C<sub>in</sub> = **1 µF + 100 nF, 50 V** | LDO input, on the clamped rail |
 | 1 | C<sub>out</sub> = **22 µF X7R ≥ 16 V + 100 nF** | LDO output; sized for the 250 mA step, not the 1 µF stability floor |
 | 2 | **0.1 µF** VCAP–ANODE, **22 nF** ANODE | per LM74700-Q1, one set per controller |

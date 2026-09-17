@@ -11,7 +11,7 @@ called "plentiful" without once counting it.
 
 ---
 
-## 1. IMPORTANT — the internal ADC budget has never been counted, and it is ~22
+## 1. ~~IMPORTANT — the internal ADC budget has never been counted~~ FIXED
 
 | Demand | Ch | Added by |
 |---|--:|---|
@@ -41,9 +41,24 @@ STM32F767ZI's actual channel map.**
 - The remaining seven could **multiplex** — they are slow, static signals and
   nothing needs them simultaneously.
 
+> **Fixed 2026-09-17, and without multiplexing.** Counted first: **24
+> ADC-capable pins, minus 6 consumed by Ethernet RMII** (PA1, PA2, PA7, PC1,
+> PC4, PC5 are `ADC123_IN1/2/7/11/14/15`, and `Board.h` already lists them as
+> RMII) = **18 available**.
+>
+> Then reduced demand **23 → 15**, by noticing that most outputs already have
+> **better feedback than a drain voltage**: DPFE measures EGR flow, gear-ratio
+> mismatch catches the shift solenoids, RPM-versus-OSS catches TCC, idle error
+> catches IAC, and EPC has the gate-current flag. Drain sense is kept only where
+> nothing else sees the circuit — the **four heaters plus EVAP purge and
+> canister vent**, all OBD-II monitors. Only IMCC loses diagnosis outright.
+>
+> The allocation and the budget now live in
+> [`adc-front-end.md`](adc-front-end.md), which owns them.
+
 ---
 
-## 2. Two allocated channels are for signals the PCM does not have
+## 2. ~~Two allocated channels are for signals the PCM does not have~~ FIXED
 
 [`f150-1999-target.md`](f150-1999-target.md) §3 lists on the native ADC:
 
@@ -64,6 +79,11 @@ If either is wanted, it is a **harness tap**, not an existing input.
 moved-off channels as *"DPFE, TFT, downstream O2 ×2, fuel pump monitor"* —
 neither fuel level nor A/C pressure appears. One list has phantoms, the other
 does not, and nothing reconciles them.
+
+> **Fixed 2026-09-17.** Both phantoms struck from `f150-1999-target.md` §3 with
+> the reason recorded, and the two documents given distinct jobs: **§3 is an
+> inventory of signals, `adc-front-end.md` owns the allocation.** §3 now says so
+> at the top, which is what stops them drifting apart again.
 
 ---
 
@@ -152,8 +172,8 @@ something else is hung on it.
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | Internal ADC demand is ~22 channels, never counted | **[CONFIRM]** the real channel map; multiplex or drop drain-sense channels |
-| 2 | Fuel level and A/C pressure are not PCM inputs; two docs disagree | reconcile `f150-1999-target.md` §3 with `adc-front-end.md` |
+| 1 | ~~Internal ADC demand ~22, never counted~~ | **FIXED** — 18 available (Ethernet takes 6), demand cut 23 → 15 |
+| 2 | ~~Phantom channels; two docs disagree~~ | **FIXED** — struck, and the two docs given distinct jobs |
 | 3 | ±10 V is forced by VREF sense, not chosen | record it as forced so it is not "optimised" later |
 | 4 | Series resistance into the ADC unspecified | **[DECIDE]** against acquisition time |
 
