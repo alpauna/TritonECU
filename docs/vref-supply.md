@@ -351,15 +351,85 @@ against a pin budget of 37 used out of ~114.
 ## The output chain
 
 ```
-TPS2H160B OUT ──► [ LM74700-Q1 + N-FET ] ──► PTC ──► connector pin
-                     ideal diode            backstop        │
-                                                            └──► divider ──► STM32 ADC
+TPS2H160B OUT ──► [ LM74700-Q1 + N-FET ] ──┬──► PTC ──► connector pin
+                     ideal diode           │   backstop        │
+                                          TVS                  └──► divider ──► STM32 ADC
+                                       (bidir)
+                                           │
+                                          GND
 ```
 
-Three elements, each doing one job, in this order for a reason: the ideal diode
-sits closest to the switch so reverse current never reaches anything downstream,
-and the diagnostic divider sits outboard of everything so it sees what the
-harness sees.
+Four elements, each doing one job, and **the order is load-bearing**:
+
+- the **ideal diode** sits closest to the switch, so reverse current never
+  reaches anything inboard of it;
+- the **TVS** sits inboard of the PTC, **not at the connector**, because the PTC
+  has to be the element that sees fault current — see below;
+- the **PTC** sits outboard, at the connector;
+- the **diagnostic divider** sits outboard of everything, so it sees what the
+  harness sees.
+
+### The TVS, and why it is not the clamp that was deleted
+
+[§ The ideal diode closes it](#the-ideal-diode-closes-it-lm74700-q1) deleted a
+clamp on the **5 V rail, inside the box**, whose job was to survive the rail
+being back-driven. The ideal diode prevents that condition, so that clamp has no
+job.
+
+This is a different part in a different place doing a different job: **clamping
+what arrives from the harness.** VREF leaves the box, so
+[`harness-protection.md`](harness-protection.md) already requires it — the same
+rule it applies to the tach and VSS outputs.
+
+**Bidirectional**, not unidirectional. On a negative transient — ISO 7637
+pulse 1 and 3a are large and negative — a *unidirectional* TVS forward-conducts,
+becoming a low-impedance path that must absorb the whole pulse as a diode. A
+bidirectional part blocks until −V<sub>BR</sub> instead.
+
+> The trade, recorded so it is not a surprise: a bidirectional TVS lets the line
+> swing to −V<sub>BR</sub> before clamping, and the ideal-diode FET's **body
+> diode forward-conducts** long before that — source at 5 V, drain going
+> negative. The PTC limits that current and the LDO's 400 mA limit backs it up,
+> so it is contained, but the body diode is what takes a negative pulse first.
+
+### Why the TVS goes inboard of the PTC
+
+The instinct is to put a TVS at the connector, as close to the boundary as
+possible. That is wrong here, and the reason is the sustained fault rather than
+the transient:
+
+| Order | Sustained short to battery |
+|---|---|
+| connector → **TVS** → PTC | TVS conducts 14 V straight to ground with **no series element** to limit or clear it. The PTC, being inboard, carries nothing. The TVS fails |
+| connector → **PTC** → TVS | current flows battery → PTC → TVS → ground. **The PTC sees it, limits it, and trips.** The TVS only has to survive the trip time |
+
+No TVS with a standoff low enough to protect a 5 V line can also withstand 14 V
+continuously. So the series element must be between the fault and the clamp, and
+here that element is the PTC.
+
+Transients are unaffected by the choice: the PTC is a low resistance until it
+trips, so a fast pulse passes straight through it to the TVS. The PTC only sees
+a large voltage once tripped, and then it is holding off the 14 V of a sustained
+fault — inside its 16 V rating.
+
+### Selecting it
+
+| | |
+|---|---|
+| Type | **bidirectional**, AEC-Q101 |
+| V<sub>RWM</sub> | **≥ 6.0 V** — above the 5.1 V worst-case VREF, with margin so it never leaks in normal operation |
+| Package | SMA is ample; the energy here is transient, and the line carries 25 mA |
+| Reference | **SMAJ6.0CA class** |
+
+**Leakage is the parameter to watch**, and for an unusual reason: the TVS sits
+*downstream of the ratiometric sense point*, so anything it draws is a direct
+error rather than something the regulator corrects out. At a few µA against a
+25 mA load it is negligible — a few µA through the PTC's 1.6 Ω is microvolts —
+but it is the reason to take a 6.0 V standoff rather than shave it to 5.5 V.
+
+> **[DECIDE]** exact part number. The requirement is settled; the specific
+> device wants the usual datasheet check, particularly leakage at 5.1 V and
+> AEC-Q101 status.
 
 ### The reverse path, and why a PTC cannot close it
 
@@ -683,6 +753,7 @@ The 275 mA sizing figure is the tell — `250 mA (one channel in limit) + 25 mA
 | **2** | **LM74700QDBVRQ1** | ideal diode controller, SOT-23-6 — **one per feed** |
 | **2** | **DMN6040SVTQ-7** | N-FET, TSOT26, 60 V / ±20 V V<sub>GS</sub> — **one per feed** |
 | **2** | **MF-NSHT050KX** | PPTC backstop, 1206 — **one per feed** |
+| **2** | TVS, bidirectional, V<sub>RWM</sub> ≥ 6.0 V, SMAJ6.0CA class | **one per feed**, inboard of the PTC |
 | 1 | R<sub>CL</sub> | sets the 250 mA limit, `I_CL = 0.8 V / R_CL` |
 | 1 | R<sub>CS</sub> ≈ 3.3 kΩ | current sense into the ADC |
 | **2** | divider pair | per-feed short-to-battery sense → internal ADC |
@@ -734,6 +805,7 @@ cost you the sensors on that branch.
 |---|---|
 | **[DECIDE]** | **Channel-shed retry policy** — attempts, spacing, whether to latch. Load-bearing: it is what keeps the 2.5 W fault a pulse, and spacing must be seconds, not milliseconds. See [§ Shedding a faulted feed](#shedding-a-faulted-feed) |
 | **[DECIDE]** | `THER` pin: latch or auto-retry on thermal shutdown |
+| **[DECIDE]** | TVS part number — bidirectional, V<sub>RWM</sub> ≥ 6.0 V, AEC-Q101; check leakage at 5.1 V |
 | **[CONFIRM]** | LM74700-Q1 behaviour at **20 mA forward** — controllers regulate a small forward drop and some specify a minimum current for regulation |
 | **[CONFIRM]** | MF-NSHT050KX I<sub>hold</sub> derating — 0.50 A must stay above the switch's 250 mA limit at worst-case cabin ambient, or it nuisance-trips |
 | **[CONFIRM]** | TPS2H160B-Q1 specs are characterised at V<sub>VS</sub> = 13.5 V. 5 V is inside the 3.4–40 V operating range but not where the tables were taken — verify current-limit accuracy at 5 V |
