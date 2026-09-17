@@ -146,6 +146,100 @@ gland_x = out_l - 45;
 gland_z = psu_z0 + psu_h/2;
 
 /* ---------------------------------------------------------------------------
+   DC-DC module — LONG SIDE (y = out_w), END A end of the bay
+   ---------------------------------------------------------------------------
+   A second supply, but not a second mains supply: it hangs off the 36 V output
+   of the one already in the box. Two rails — a fixed 5 V that runs the Pico and
+   the DM542's opto commons, and an adjustable rail set from its own LCD.
+
+   It is held by ITS OWN SNAP LOCKS and nothing else. The two tapered locks
+   start about 1 mm behind the bezel and taper back 3, so they grip a panel
+   roughly 1-4 mm thick. A 3 mm wall sits at the very end of that taper, which
+   is a loose grip on a module standing 25 mm off the panel — so the panel is
+   thinned locally to mod_panel_t and the lock bites mid-taper. That relief is
+   cut on the INSIDE face, so the outside stays flat and the bezel lands on
+   plain wall.
+
+   MEASURE every value marked below. The one that is a DECISION rather than a
+   measurement is mod_boss, and it changes the shape of the box. */
+mod_cut_w   = 64;      // MEASURE: body through the panel, along X
+mod_cut_h   = 38.5;    // MEASURE: body through the panel, along Z
+mod_depth   = 25.4;    // MEASURE: how far it stands behind the panel
+mod_flange  = 4;       // MEASURE: bezel lip beyond the cutout, all round
+mod_cut_clr = 0.4;     // a snap lock wants the cutout tight, not generous
+mod_panel_t = 2.0;     // local panel at the cutout, for the snap locks to bite
+
+/* Two locks, one on each VERTICAL edge of the cutout, centred in Z. So the
+   surfaces that actually carry the module are the cutout's left and right
+   edges — which, with the tub printed floor-down, are vertical walls in the
+   print and come out crisp. Nothing may intrude on those edges, and the relief
+   below has to reach past them. */
+mod_lock_w  = 12.7;    // MEASURE: each lock, along Z
+mod_relief_m= 6;       // how far the thinned panel reaches past the cutout
+
+/* The bay is 39 wide and the module eats 25.4 of it, leaving 13.6 for its
+   terminals and the bend in the wire — not enough if the terminals exit
+   straight back, which on these modules they usually do. So the panel steps
+   OUTWARD on a drafted boss: 12 mm buys 25.6 mm of clear bay behind the module
+   and costs 12 mm of bed in Y, which a 300 bed has to spare (X is the tight
+   axis here, not Y).
+
+   Set mod_boss = 0 if your module's terminals exit sideways or upward and you
+   would rather have a flat wall. Decide BEFORE printing. */
+mod_boss    = 12;
+
+mod_x       = 64;                // clear of the plug pad, END A end of the bay
+mod_z       = psu_z0 + psu_h/2;  // same centreline as the plug and the gland
+mod_face_y  = out_w + mod_boss;  // the panel the module snaps into
+
+/* Boss outline: bezel footprint, plus a wall each side, plus a little margin. */
+mod_bw = mod_cut_w + 2*mod_flange + 2*wall + 6;
+mod_bh = mod_cut_h + 2*mod_flange + 2*wall + 6;
+
+/* Low-voltage output — END A, in the bay's corner.
+   Deliberately NOT on the plug wall: it keeps the 5 V and adjustable rails from
+   running the length of the bay alongside the mains terminals. */
+lv_gland_d = 12.5;
+lv_gland_y = psu_y0 + psu_w + bay_w/2;
+lv_gland_z = mod_z;
+
+/* ---------------------------------------------------------------------------
+   Checks — the module was dropped into a wall that already had two things on it
+   ---------------------------------------------------------------------------
+   These are the clearances that were tight enough to be worth arithmetic rather
+   than a look at the preview. They fire at render time, so changing mod_x,
+   mod_boss or the bay tells you immediately instead of after a 14 hour print. */
+mod_clear_behind = bay_w + mod_boss - mod_depth;
+
+assert(mod_clear_behind > 8,
+       "DC-DC module: not enough bay left behind it for terminals. Raise mod_boss.");
+assert(mod_x + mod_bw/2 < plug_x - plug_pad_x/2,
+       "DC-DC boss runs into the IEC plug pad. Move mod_x toward END A.");
+assert(mod_x - mod_bw/2 > wall,
+       "DC-DC boss overhangs END A. Move mod_x toward the plug.");
+/* The boss's cavity floor drafts up toward the panel at 45 degrees; it has to
+   stay below the bottom of the module's body or it fouls it. */
+assert(mod_z - (mod_bh - 2*wall)/2 < mod_z - mod_cut_h/2 - 2,
+       "DC-DC boss is too shallow in Z - its drafted floor fouls the module.");
+assert(mod_panel_t >= 1 && mod_panel_t <= 4,
+       "DC-DC panel is outside the snap lock's 1-4 mm grip range.");
+/* The locks ride the cutout's vertical edges, so the thinned panel has to
+   extend past those edges — and stay inside the boss, or it breaks through. */
+assert(mod_relief_m >= 3,
+       "Thinned panel does not reach past the cutout edges the snap locks ride.");
+assert(mod_cut_w + 2*mod_relief_m < mod_bw - 2*wall &&
+       mod_cut_h + 2*mod_relief_m < mod_bh - 2*wall || mod_boss == 0,
+       "Panel relief is wider than the boss it is cut into.");
+assert(mod_lock_w < mod_cut_h,
+       "Snap lock is longer than the edge it sits on - check mod_cut_h.");
+/* The boss is on the OUTSIDE, so what bounds it is the wall itself: the lid
+   line above, the floor below. Its skirt reaches mod_boss lower than its face. */
+assert(mod_z + mod_bh/2 < out_h && mod_z - mod_bh/2 - mod_boss > 0,
+       "DC-DC boss runs off the wall in Z.");
+assert(lv_gland_y - lv_gland_d/2 > psu_y0 + psu_w,
+       "LV gland is in the supply's shadow, not the bay.");
+
+/* ---------------------------------------------------------------------------
    TUB
    --------------------------------------------------------------------------- */
 module cavity() {
@@ -160,6 +254,8 @@ module cavity() {
     // the band itself, and out through the top
     translate([wall + rim_w, wall + rim_w, rim_z1])
         cube([in_l - 2*rim_w, in_w - 2*rim_w, out_h - rim_z1 + 1]);
+    // the bay, carried out into the module's boss
+    mod_boss_cavity();
 }
 
 module fan_pad_solid() {
@@ -237,6 +333,59 @@ module gland_cut() {
         rotate([-90, 0, 0]) cylinder(d = gland_d, h = wall + 2, $fn = fit_fn);
 }
 
+/* The boss the module's panel sits on. Drafted 45 degrees on its UNDERSIDE —
+   wider at the wall, narrower at the face — so it grows out of a vertical wall
+   with nothing to support. The sides are vertical planes and the top is flat,
+   both of which print as they are. */
+module mod_boss_solid() {
+    if (mod_boss > 0) {
+        x0 = mod_x - mod_bw/2;
+        z0 = mod_z - mod_bh/2;
+        hull() {
+            translate([x0, out_w - 0.01, z0 - mod_boss])
+                cube([mod_bw, 0.01, mod_bh + mod_boss]);
+            translate([x0, mod_face_y, z0]) cube([mod_bw, 0.01, mod_bh]);
+        }
+    }
+}
+
+/* ...and the bay carried out into it, leaving 3 mm of wall all round. The
+   ceiling is a 3-sided bridge only mod_boss deep, which any printer manages. */
+module mod_boss_cavity() {
+    if (mod_boss > 0) {
+        cw = mod_bw - 2*wall;
+        ch = mod_bh - 2*wall;
+        x0 = mod_x - cw/2;
+        z0 = mod_z - ch/2;
+        hull() {
+            translate([x0, out_w - wall - 1, z0 - mod_boss])
+                cube([cw, 0.01, ch + mod_boss]);
+            translate([x0, mod_face_y - wall, z0]) cube([cw, 0.01, ch]);
+        }
+    }
+}
+
+/* Thin the panel from the inside so the snap locks bite mid-taper. */
+module mod_panel_relief() {
+    pw = mod_cut_w + 2*mod_relief_m;
+    ph = mod_cut_h + 2*mod_relief_m;
+    d  = wall - mod_panel_t;
+    translate([mod_x - pw/2, mod_face_y - wall - 0.01, mod_z - ph/2])
+        cube([pw, d + 0.01, ph]);
+}
+
+module mod_cuts() {
+    translate([mod_x - (mod_cut_w + mod_cut_clr)/2,
+               mod_face_y - wall - 2,
+               mod_z - (mod_cut_h + mod_cut_clr)/2])
+        cube([mod_cut_w + mod_cut_clr, wall + 4, mod_cut_h + mod_cut_clr]);
+}
+
+module lv_gland_cut() {
+    translate([-1, lv_gland_y, lv_gland_z])
+        rotate([0, 90, 0]) cylinder(d = lv_gland_d, h = wall + 2, $fn = fit_fn);
+}
+
 /* Screw stations, on the centreline of wall + rim band. */
 lid_inset = (wall + rim_w)/2;
 lid_screws = concat(
@@ -273,6 +422,7 @@ module tub() {
                     cube([out_l, out_w, out_h]);
                     fan_pad_solid();
                     plug_pad_solid();
+                    mod_boss_solid();
                 }
                 cavity();
             }
@@ -282,6 +432,9 @@ module tub() {
         grid_cuts();
         plug_cuts();
         gland_cut();
+        mod_cuts();
+        mod_panel_relief();
+        lv_gland_cut();
         lid_screw_blind();
         standoff_holes();
     }
@@ -345,6 +498,15 @@ module ghost_plug() {
 module ghost_fan() {
     translate([-fan_pad_t - 10, fan_cy - 20, fan_cz - 20]) cube([10, 40, 40]);
 }
+/* The DC-DC module: body behind the panel, bezel in front. The body is the
+   check that matters — how much bay is left behind it for the terminals. */
+module ghost_mod() {
+    translate([mod_x - mod_cut_w/2, mod_face_y - mod_depth, mod_z - mod_cut_h/2])
+        cube([mod_cut_w, mod_depth, mod_cut_h]);
+    translate([mod_x - (mod_cut_w + 2*mod_flange)/2, mod_face_y,
+               mod_z - (mod_cut_h + 2*mod_flange)/2])
+        cube([mod_cut_w + 2*mod_flange, 3, mod_cut_h + 2*mod_flange]);
+}
 
 if      (part == "tub") tub();
 else if (part == "lid") lid();
@@ -355,12 +517,17 @@ else {
     %translate([psu_x0, psu_y0, psu_z0]) cube([psu_l, psu_w, psu_h]);
     %ghost_plug();
     %ghost_fan();
+    %ghost_mod();
 }
 
 echo(str("external  ", out_l, " x ", out_w, " x ", out_h + lid_t,
-         "   (bed footprint ", out_l + fan_pad_t, " x ", out_w + plug_pad_t, ")"));
+         "   (bed footprint ", out_l + fan_pad_t, " x ",
+         out_w + max(plug_pad_t, mod_boss), ")"));
 echo(str("interior  ", in_l, " x ", in_w, " x ", in_h,
          "   clear for the supply ", in_l, " x ", psu_w + clr_side, " x ", psu_h + head));
 echo(str("bay       ", bay_w, " wide; plug flange eats ",
          19 - wall - plug_pad_t, ", leaving ", bay_w - (19 - wall - plug_pad_t)));
+echo(str("DC-DC     cutout ", mod_cut_w, " x ", mod_cut_h,
+         " in a ", mod_panel_t, " panel; boss ", mod_boss,
+         "; clear bay behind it ", bay_w + mod_boss - mod_depth));
 echo(str("lid screws ", len(lid_screws), " x M3"));
