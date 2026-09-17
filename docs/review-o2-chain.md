@@ -155,7 +155,7 @@ ADC's clamp protects this input" stops being true the moment the buffer goes in.
 
 | Requirement | Value | Why |
 |---|---|---|
-| Input bias current | **≤ 100 pA at +125 °C**, specified not typical | see below — this is the selection criterion |
+| ~~Input bias current ≤ 100 pA at +125 °C~~ | **not a constraint** | ~~*the selection criterion*~~ — **wrong**, see the correction in §3 |
 | Input offset | ≤ 1 mV | against a 450 mV switch point |
 | Input range | **rail-to-rail**, includes ground | narrowband sits at 0.1 V; wideband reaches 5 V |
 | Output | rail-to-rail | same |
@@ -200,10 +200,21 @@ where §2's temperature requirement comes from. The two pull opposite ways:
      22 M         2.0 mV           22.0 mV              2.2 mV
 ```
 
-**With a genuinely picoamp part, 10 MΩ is the right value** — 4.5 mV of loading
+~~**With a genuinely picoamp part, 10 MΩ is the right value** — 4.5 mV of loading
 and 1 mV of bias error against the 82 mV it replaces. With a 1 nA part there is
 no good value, which is the point of making bias current the selection criterion
-rather than an afterthought.
+rather than an afterthought.~~
+
+> ⚠ **The bias-current column above is wrong, and so is the conclusion drawn
+> from it.** `I_B × R_bias` is the **open-circuit** value. Bias current flows
+> into the non-inverting node, whose Thévenin impedance is **Rs ‖ R_bias**, and
+> with a sensor connected Rs dominates — at 100 kΩ and 200 pA the real
+> contribution is **20 µV**, not millivolts.
+>
+> There is therefore no opposing term, bias current is **not** a selection
+> criterion, and R_bias should simply be large. Settled at **22 MΩ** in
+> [`o2-input-stage.md`](o2-input-stage.md) §3, where leakage — which *does*
+> scale with R_bias — sets the upper limit instead.
 
 ### The bias source needs no op-amp
 
@@ -360,7 +371,7 @@ forecloses wideband. §5 shows that costs nothing to avoid.
 | 1 | The narrowband cell is a high-impedance source into a 1 MΩ resistive input — up to **−82 mV at a normal 100 kΩ**, worse cold and aged. The fuelling impact is negligible because the cell is 40 V/lambda near stoich, but it compresses the **rich peak below the OBD-II 0.7 V threshold** at 300 kΩ, generating false lazy-sensor DTCs exactly on the sensors being diagnosed | important |
 | 1b | The downstream pair have it worse: a **switched-cap** input makes it a settling error, plus mux crosstalk from six drain-sense channels sharing the scan | important |
 | 2 | Adding a buffer **relocates the protection boundary** off the ADS8588H's 9 kV clamp onto the op-amp. Series resistance and rail clamps must move in front of it — and behind a buffer the series value stops trading against accuracy, closing `review-analog-chain.md` §4 | important |
-| 3 | A picoamp input with no bias network has **no open-circuit diagnostic**. 10 MΩ to a 455 mV divider, and **op-amp bias current at +125 °C becomes the part-selection criterion** — at 1 nA it costs more than it fixes | important |
+| 3 | A picoamp input with no bias network has **no open-circuit diagnostic**. ~~10 MΩ~~ **22 MΩ** to a 455 mV divider. ~~*and op-amp bias current at +125 °C becomes the part-selection criterion*~~ — **that part was wrong**, see the correction in §3: bias current contributes 20 µV with a sensor connected, and leakage sets the limit on R<sub>bias</sub> instead | important |
 | — | Corrected from last turn: I called this a lean-bias fuelling error. It is not; it is a diagnostic-amplitude error | correction |
 
 **Wideband:** all three architectures present a low-impedance output, so none of

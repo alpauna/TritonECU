@@ -22,7 +22,7 @@ One stage, built four times, identical on every channel.
         ├──[ D1 BAT54S ]──┬────── AGND
         │                 └────── +5VA        clamp at ~5.3 V
         │
-        ├──[ R2 10M ]───────────► 455 mV bias node (shared, 8.3k)
+        ├──[ R2 22M ]───────────► 455 mV bias node (shared, 8.3k)
         │
         │  << guarded high-Z node >>
         │
@@ -45,7 +45,7 @@ One stage, built four times, identical on every channel.
 | **R1** | **10 kΩ**, 1 %, ≥ 0.25 W | bounds fault current into D1 |
 | **C1** | **1 nF**, C0G | RF, and it gives D1 something to work against |
 | **D1** | **BAT54S** dual Schottky, to AGND and +5 V<sub>A</sub> | the clamp that the ADC used to provide |
-| **R2** | **10 MΩ**, 1 % | open-circuit bias — §3 |
+| **R2** | **22 MΩ**, 1 % | open-circuit bias — §3 |
 | **R3 / C2** | **1 kΩ + 1 µF** X7R | 159 Hz post-buffer filter — §4 |
 | **JP** | link across the buffer | bypass for a fixed 0–5 V wideband module — §5 |
 
@@ -99,14 +99,14 @@ shorted at 27 V injects 8.7 mA — absorbed without the rail moving.
 
 ---
 
-## 3. Bias: 10 MΩ to a shared 455 mV node
+## 3. Bias: 22 MΩ to a shared 455 mV node
 
 A picoamp input on an unplugged sensor floats and reads nothing meaningful.
 Biasing to ~0.45 V parks an open circuit at a known value, and *"sitting at
 455 mV with no switching activity"* is a monitor that has to exist anyway.
 
 **The bias source needs no op-amp.** Its impedance only has to be small compared
-with R2, and a plain divider off the analog rail is smaller by a thousand:
+with R2, and a plain divider off the analog rail is smaller by three orders:
 
 ```
    +5VA ──[ 91k 1% ]──┬──[ 9.1k 1% ]── AGND
@@ -121,41 +121,66 @@ with R2, and a plain divider off the analog rail is smaller by a thousand:
 | V<sub>bias</sub> | **455 mV** |
 | Z<sub>src</sub> | **8.3 kΩ** — 1200× below R2 |
 | Draw | **50 µA**, off the **switched** rail, so it never reaches the parked budget owned by [`always-on-domain.md`](always-on-domain.md) |
-| Channel-to-channel coupling | **0.083 %** — each channel is isolated by its own 10 MΩ |
+| Channel-to-channel coupling | **0.038 %** — each channel is isolated by its own 22 MΩ |
 
-### What 10 MΩ buys and what it costs
+### Why R2 is 22 MΩ, and a correction
 
-R2 loads the cell exactly as the ADC used to, and the op-amp's bias current
-through R2 is an error in the other direction. At a 100 kΩ source, rich peak:
+R2 loads the cell exactly as the ADC used to. **Make it as large as practical** —
+there is no opposing term of consequence.
 
-| R2 | Loading error | Bias-current error @ 1 nA | @ 100 pA |
-|--:|--:|--:|--:|
-| 1 MΩ | 45.0 mV | 1.0 mV | 0.1 mV |
-| 3.3 MΩ | 13.6 mV | 3.3 mV | 0.3 mV |
-| **10 MΩ** | **4.5 mV** | 10.0 mV | **1.0 mV** |
-| 22 MΩ | 2.0 mV | 22.0 mV | 2.2 mV |
+> ⚠ **An earlier revision of this section had this wrong**, and the error is
+> worth keeping because it changed a part-selection criterion.
+>
+> It claimed the op-amp's bias current pulls the other way as `I_B × R2`, and
+> built a trade table and a "15 MΩ optimum" on that. **`I_B × R2` is the
+> open-circuit value.** Bias current flows into the non-inverting node, whose
+> Thévenin impedance is **Rs ‖ R2** — and with a sensor connected, Rs dominates
+> completely.
 
-**10 MΩ is right only with a genuinely picoamp part** — 4.5 mV of loading and
-1 mV of bias error, against the 82 mV being removed. With a 1 nA part there is
-no good value at all, which is why §6 makes bias current the selection criterion
-rather than a checkbox.
+| R2 | Rs | Z = Rs ‖ R2 | I<sub>B</sub> × Z | R2 loading | Total |
+|--:|--:|--:|--:|--:|--:|
+| 10 MΩ | 100 kΩ | 99.0 kΩ | **20 µV** | 4.41 mV | 4.43 mV |
+| **22 MΩ** | **100 kΩ** | **99.5 kΩ** | **20 µV** | **2.01 mV** | **2.03 mV** |
+| 47 MΩ | 100 kΩ | 99.8 kΩ | 20 µV | 0.94 mV | 0.96 mV |
+| 22 MΩ | *open* | 22 MΩ | 4.4 mV | — | 4.4 mV |
 
-> **Settled at 10 MΩ.** The chosen part is ~200 pA at +125 °C, so the real total
-> is **6.5 mV**. The optimum moves to 15 MΩ for 6.0 mV, which is not worth
-> chasing. Worked through in §6.
+**Bias current contributes 20 µV with a sensor connected.** It only reaches
+millivolts on an open circuit — where the node's job is to read *"455 mV, sensor
+absent"* and a few millivolts of error is meaningless.
+
+So loading is the only term that matters, and it falls monotonically with R2.
+
+**22 MΩ, not 47 MΩ**, for reasons that are all about the open-circuit case and
+the physical part:
+
+| | 10 MΩ | **22 MΩ** | 47 MΩ |
+|---|--:|--:|--:|
+| Loading at 100 kΩ | 4.41 mV | **2.01 mV** | 0.94 mV |
+| Open-circuit offset from I<sub>B</sub> | 2.0 mV | **4.4 mV** | 9.4 mV |
+| Bias-node lift per shorted channel | 4.0 mV | **1.8 mV** | 0.8 mV |
+| Settling on disconnect | 10 ms | **22 ms** | 48 ms |
+| Availability, tolerance, voltage coefficient | good | **good** | poorer |
+
+22 MΩ halves the dominant error against 10 MΩ and halves the fault coupling too,
+while keeping the open-circuit offset small and staying on a common value.
+
+Johnson noise is a non-issue at either value: **0.64 µV** at the connected-sensor
+impedance and **9.5 µV** open, in the 159 Hz bandwidth the post-filter allows.
 
 ### One fault couples slightly into the other three
 
-A channel shorted to battery sits at D1's 5.3 V, pushing 0.48 µA through its
-R2 into the shared 8.3 kΩ bias node and lifting it **4 mV**. Four shorted
-channels lift it 16 mV. Small, only present during a fault, and worth knowing
+A channel shorted to battery sits at D1's 5.3 V, pushing 0.22 µA through its
+R2 into the shared 8.3 kΩ bias node and lifting it **1.8 mV**. Four shorted
+channels lift it 7 mV. Small, only present during a fault, and worth knowing
 before someone chases it: **a single shorted O2 wire shifts the other three
-channels' zero by 4 mV.**
+channels' zero by about 2 mV.**
 
-### Leakage is the real enemy at 10 MΩ, so guard the node
+### Leakage is the real enemy at 22 MΩ, so guard the node
 
-Surface leakage across contaminated FR4 can reach nanoamps, which through 10 MΩ
-is tens of millivolts — larger than everything this stage was built to fix.
+Surface leakage across contaminated FR4 can reach nanoamps, which through 22 MΩ
+is **22 mV per nanoamp** — larger than everything this stage was built to fix,
+and the one term that genuinely *does* scale with R2. It is why §3 stops at
+22 MΩ rather than going further.
 
 **Ring the high-impedance node with a guard trace driven from the buffer
 output.** The buffer is unity gain, so guard and node sit at the same potential,
@@ -275,31 +300,38 @@ Specifications not asked for that turned out to matter:
 | I<sub>Q</sub> | 760 µA typ, **950 µA max** per amplifier → **3.04 mA typ / 3.80 mA max** for four |
 | ESD | HBM 4 kV | |
 
-### 200 pA is twice the target, and the design absorbs it
+### 200 pA at +125 °C, and why it does not matter
 
-§3 asked for ≤ 100 pA. Re-running the trade against the real figure:
+§3 originally demanded ≤ 100 pA and called bias current *"the selection
+criterion"*. **That requirement was built on a wrong model** — the correction is
+in §3. With a sensor connected, bias current sees Rs ‖ R2 ≈ 99 kΩ, so 200 pA
+contributes **20 µV**, not millivolts.
 
-```
-   R2      loading    bias current     total
-  4.7M      9.57 mV      0.94 mV      10.51 mV
-   10M      4.50 mV      2.00 mV       6.50 mV
-   15M      3.00 mV      3.00 mV       6.00 mV   <- optimum
-   22M      2.05 mV      4.40 mV       6.45 mV
-```
+| | |
+|---|---|
+| Connected sensor, 100 kΩ | 200 pA × 99.5 kΩ = **20 µV** |
+| Open circuit | 200 pA × 22 MΩ = **4.4 mV**, on a reading whose only job is to say *"sensor absent"* |
 
-**Keep R2 = 10 MΩ.** The optimum has moved to 15 MΩ but 10 MΩ is only 8 % worse
-in total error, and 10 MΩ is the easier value to buy, guard and keep clean.
+**So the part is not marginal on the specification I thought was critical, and
+nothing about the bias-current curve constrains this design.** The dominant
+error is R2 loading at **2.0 mV**, which is set by R2 and is independent of the
+op-amp entirely.
 
-**6.5 mV against the 82 mV this stage removes**, so the buffer still wins by
-more than an order of magnitude. But two honest caveats:
+### Would a FET-input op-amp be better? No
 
-- It is a **typical** curve. There is no maximum specified above 25 °C, so a
-  worst-case part at 125 °C is unquantified. The curve's dashed extrapolation
-  reaches 1 nA by ~145 °C, which would be 10 mV.
-- This is the term that would **dominate** if the ECU were ever mounted
-  under-hood. At cabin temperatures it is a few hundred microvolts. Another
-  reason the mounting decision in
-  [`adc-front-end.md`](adc-front-end.md) deserves to be made explicitly.
+Asked and worth recording, because the answer is not obvious:
+
+- **The 200 pA is not the input device.** A CMOS gate passes essentially no DC
+  current — that figure is **ESD-diode leakage at the pin**, and a JFET-input
+  part carries the same protection structures. Both mechanisms double roughly
+  every 10 °C. Changing input topology does not attack the dominant term.
+- **Supply and common-mode range rule most JFET parts out.** This stage needs
+  **single 5 V** with the input range **including ground**. Precision JFET amps
+  generally want ±4 V or more and exclude one rail on the common mode. That is a
+  hard constraint here, not a preference.
+- **Offset moves the wrong way** — 25 µV max here against typically 100 µV to
+  1 mV for JFET-input precision parts.
+- **And it would buy nothing**, per the correction above.
 
 ### DECIDED: `OPA2376AQDRQ1` — two duals, AEC-Q100
 
@@ -317,7 +349,7 @@ part rather than merely requalified:
 
 The drift entry is the one that matters. §6 had to extrapolate the industrial
 part's drift past +85 °C; the Q1 part specifies it across the whole range. Two
-µV/°C over 100 °C is **200 µV** — an order below the 6.5 mV bias term and
+µV/°C over 100 °C is **200 µV** — an order below the 2.0 mV loading term and
 untroubling, but now it is a specification rather than an assumption.
 
 ### One layout consequence from Figure 6-18
@@ -341,7 +373,7 @@ Per channel, ×4:
 | Ref | Part | Note |
 |---|---|---|
 | R1 | 10 kΩ 1 % 0805 | fault limiting |
-| R2 | **10 MΩ 1 %** 0805 | bias — guard the node |
+| R2 | **22 MΩ 1 %** 0805 | bias — guard the node, §3 |
 | R3 | 1 kΩ 1 % 0603 | filter |
 | C1 | 1 nF C0G 0603 50 V | RF |
 | C2 | 1 µF X7R 0603 16 V | filter |
