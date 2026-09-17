@@ -332,6 +332,11 @@ Not a board question, but it belongs in the decision:
 **Build the buffered input stage now, on all four channels. Defer the wideband
 decision, and take W1 first if you take it at all.**
 
+> **Built.** The stage is specified in
+> [`o2-input-stage.md`](o2-input-stage.md), which now **owns** this conditioning
+> for all four channels. One open item remains: the op-amp, against four
+> datasheet confirmations.
+
 1. **Four buffers, 10 kΩ series, rail clamps, 10 MΩ bias to a shared 455 mV
    divider.** This is required for narrowband correctness regardless of what
    happens later, it closes the open `[DECIDE]` on series resistance, and it is

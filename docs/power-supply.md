@@ -84,9 +84,10 @@
 | ADS8588H | 25 |
 | MAX9926 ×2 | 20 |
 | DRV8837, during SCP TX | 20 |
-| **Total** | **95** |
+| **O2 input stage** — 2 dual op-amps + 50 µA bias divider, [`o2-input-stage.md`](o2-input-stage.md) | **4** |
+| **Total** | **99** |
 
-**5 V rail: ~425 mA.**
+**5 V rail: ~429 mA.**
 
 **Not 3 A — and not 1.5 A either.** That matters, because it removes the only
 argument for interleaving, and now removes it decisively.
