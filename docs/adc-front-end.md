@@ -41,7 +41,7 @@ also 3.3 V, so **no level shifting is needed** — this is a wire-for-wire move.
 MOSI is not wired. In hardware mode range and oversampling are set by pins
 rather than registers, so the P4 opens SPI with MOSI as −1.
 
-**In the final ECU, six of these move to the MCP23S17 expander chain** —
+~~**In the final ECU, six of these move to the MCP23S17 expander chain**~~ — **the chain is dropped; they take native pins.** Which also removes the DVDD conflict that made them illegal there. Six static lines —
 RESET, FRSTDATA, OS0, OS1, OS2 and RANGE are static or near-static, so they do
 not deserve native pins. *(Right about which pins; the chain they move to was
 specified at 5 V, and DVDD + 0.3 V is 3.6 V —
@@ -355,7 +355,7 @@ Two things to weigh before ordering:
    **AD7606B bench part** is the 85 °C device, which is the likely source of the
    mix-up. **This ADC does not rule out an under-hood enclosure** —
    [`review-expander-chain.md`](review-expander-chain.md) §8. **[CONFIRM]** the
-   intended mounting location anyway, because the MCP23S17 is 125 °C-rated only
+   intended mounting location anyway, because the MCP23S17 was 125 °C-rated only
    at V<sub>DD</sub> ≥ 4.5 V and the review recommends running it at 3.3 V.
 2. **1 MΩ input impedance, not 5 MΩ.** It loads the source slightly. Irrelevant
    for low-impedance sensors, but the battery-voltage divider should be stiff

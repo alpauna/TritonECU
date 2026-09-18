@@ -257,11 +257,11 @@ Datasheet: [`Datasheets/TBD62083AFNG-datasheet.pdf`](Datasheets/TBD62083AFNG-dat
 Three things, and the first is the one that matters:
 
 - **V<sub>IN(ON)</sub> = 2.5 V, drawing 100 µA.** It switches directly from
-  **3.3 V logic** and equally from 5 V, so it does not care which rail the
-  MCP23S17 chain runs at and imposes no level shifter of its own. A ULN2803's
+  **3.3 V logic**, so it takes an STM32 pin with no level shifter of its own.
+  (This originally read "does not care which rail the MCP23S17 chain runs at" —
+  that chain is now dropped and the four relay channels are native.) A ULN2803's
   Darlington input wants milliamps of base current per channel and carries a
   package-total limit with it; at 100 µA per channel that constraint disappears.
-  The expander's 25 mA per pin is not remotely troubled.
 - **R<sub>ON</sub> 1.14 Ω worst case, not a 1.1 V saturation drop.** At a 200 mA
   relay coil that is **46 mW per channel against 220 mW** for the Darlington —
   roughly five times less heat — and the output actually pulls to near ground,
@@ -409,7 +409,12 @@ split into fast and slow by *current and criticality* — and PWM is neither fas
 nor critical, so it landed on the slow side. **An SPI expander cannot generate
 PWM**: every edge is a bus transaction, with microseconds of latency, no
 hardware timing, and jitter from whatever else shares the bus. The pin budget
-absorbs the move without comment, at 37 assigned against ~114.
+absorbs the move without comment.
+
+> The expander chain has since been dropped entirely — every signal is native,
+> 76 of ~114. This finding was the first crack in it: outputs had been split by
+> *current and criticality* when the real question was *what the pin has to do*.
+> [`review-expander-chain.md`](review-expander-chain.md)
 
 #### EPC and TCC: the same part, one in DPAK
 

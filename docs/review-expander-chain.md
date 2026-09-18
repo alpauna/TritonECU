@@ -1,5 +1,46 @@
 # Expander chain review — pre-schematic
 
+> ## ⛔ SUPERSEDED — the chain is dropped
+>
+> Every finding below is real, and all of them were closed. Then the obvious
+> question got asked: **does the STM32 need this chain at all?**
+>
+> ```
+>   native as budgeted, minus the expander CS    38
+>   formerly on the expander                     38
+>   total native signals                         76   of ~114 on an F767ZI
+>   spare                                        36   (after SWD)
+> ```
+>
+> It does not. **The chain existed because the ESP32-P4 had 40 GPIOs and needed
+> 39.** [`platform-decision.md`](platform-decision.md) already said *"several
+> earlier decisions existed only to fit 40 pins"* and listed three to revisit —
+> semi-sequential injection, 1-bit SDMMC, tach/VSS over SCP. This chain is the
+> same class of decision and was not on that list.
+>
+> Findings §1, §2, §3, §5 and §6 all evaporate. Two do not merely get
+> mitigated:
+>
+> - **§4** — outputs latching through an MCU reset **cannot happen**. An STM32
+>   GPIO goes high-Z on reset and both driver families default off with nothing
+>   driving them. There is no latched state to survive the reboot, so the
+>   watchdog-driven `RESET` becomes unnecessary rather than sufficient.
+> - **§6** — real edge interrupts, so the A/C switch chatter is a firmware
+>   debounce question rather than a bus-rate argument.
+>
+> **What survives:** the third 74HCT541 stays. It is a *voltage* translator, not
+> a pin saver — the eight NCV8405A gates have R<sub>DS(on)</sub> specified at
+> V<sub>GS</sub> = 5 V and the STM32 is a 3.3 V part. That buffer was never the
+> expander's to justify.
+>
+> **What it costs:** 38 signals move from three chips near their loads onto 38
+> traces from the MCU. A layout cost rather than a schematic one — the only
+> honest argument for keeping the chain, and not enough of one.
+>
+> The review stays because its *findings* stay useful: §8's temperature
+> correction is unaffected, and §1/§2 are a worked example of the
+> 0.8 V<sub>DD</sub> trap that applies to any 5 V part on this 3.3 V board.
+
 The MCP23S17 chain has been on every pin budget since the first one, and has
 never been reviewed on its own. It is treated everywhere as the place things go
 when they are *not* interesting: `pin-budget.md` excludes it from the native

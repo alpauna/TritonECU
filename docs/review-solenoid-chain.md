@@ -60,7 +60,7 @@ fully enhanced, and the figure is simply not guaranteed.
 
 | Channel | Driven from | Gate voltage |
 |---|---|---|
-| Heaters, on/off solenoids | MCP23S17 chain | **rail unspecified** in the tree |
+| Heaters, on/off solenoids | ~~MCP23S17 chain~~ native via 74HCT541 #3 | rail settled at 5 V through the buffer |
 | **TCC, EPC** | **native STM32 timer pins** | **3.3 V — certain** |
 
 So the two channels where dissipation actually matters are the two guaranteed to
@@ -77,7 +77,9 @@ native-pin channels — and after finding 1 that is four of them, not two.
 > **Fixed 2026-09-17.** A **second 74HCT541 at 5 V** buffers the four native PWM
 > channels, with both `OE` pulled up so they are high-impedance at power-on —
 > the same part, the same argument and the same interlock as the ignition stage.
-> And the **MCP23S17 chain running at 5 V is now a requirement**, not a free
+> ~~And the **MCP23S17 chain running at 5 V is now a requirement**~~ — **the
+> chain is dropped; these gates take native pins through a third 74HCT541 at
+> 5 V.** [`review-expander-chain.md`](review-expander-chain.md). Originally: not a free
 > choice, since the expander-driven channels have no buffer.
 
 ---

@@ -8,7 +8,7 @@ traffic, which is the one moment cooling actually matters. Electric fans move
 that decision to the ECU, where the head temperature is already known.
 
 **The control side is nearly free.** Everything this needs is in the design
-already except one expander output — see [What it costs](#what-it-costs). The
+already except one output pin — see [What it costs](#1-what-it-costs). The
 work is in the strategy and the wiring, not the pin count.
 
 ---
@@ -17,8 +17,8 @@ work is in the strategy and the wiring, not the pin count.
 
 | Signal | Direction | Where it already lives | New? |
 |---|---|---|---|
-| Fan 1 relay | out | MCP23S17 expander | — *(the existing "cooling fan" output)* |
-| **Fan 2 relay** | out | MCP23S17 expander | **yes — one output** |
+| Fan 1 relay | out | ~~MCP23S17 expander~~ **native pin** | — *(the existing "cooling fan" output)* |
+| **Fan 2 relay** | out | ~~MCP23S17 expander~~ **native pin** | **yes — one output** |
 | A/C request | in | expander input, `sensors-to-run.md` | — |
 | A/C clutch | out | expander output, EEC-V 69 | — |
 | CHT | in | AD7606B, EEC-V 66 | — |
@@ -35,7 +35,7 @@ connector pin.
 > [`review-expander-chain.md`](review-expander-chain.md) §3 makes it **38 bits
 > of demand against 32**. Fan 2 is not what overran it — the VREF block's six
 > GPIOs had no home in any document — but this feature is spending a bit that
-> was not there. A third MCP23S17 costs a package and no pins.
+> was not there. ~~A third MCP23S17 costs a package and no pins.~~ **The chain is dropped entirely — both relays take native pins.** [`review-expander-chain.md`](review-expander-chain.md)
 
 ---
 
@@ -278,7 +278,7 @@ the thermal numbers are in
 What it means for the fans:
 
 - **Direct from the expander.** V<sub>IN(ON)</sub> is 2.5 V at 100 µA, so an
-  MCP23S17 pin drives a channel with nothing in between — no level shift, no
+  GPIO pin drives a channel with nothing in between — no level shift, no
   base resistor, and nowhere near the expander's 25 mA.
 - **No flyback diodes to fit.** Every channel has a clamp diode to COMMON built
   in, which satisfies `harness-protection.md`'s requirement for relay coils.

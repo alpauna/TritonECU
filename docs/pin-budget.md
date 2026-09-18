@@ -3,6 +3,56 @@
 Two questions, different answers: does the **Waveshare board** fit a full ECU
 (no), and does the **ESP32-P4 chip** (yes, comfortably).
 
+## The STM32F767ZI map — every signal native
+
+**The MCP23S17 expander chain is dropped.** It existed because the ESP32-P4 had
+40 GPIOs and needed 39; on ~114 the split stops being necessary. See
+[`review-expander-chain.md`](review-expander-chain.md), superseded header.
+
+This table carries the **driven by** column the old one was criticised for
+lacking — the omission that let TCC, EPC, IAC and the tach/VSS outputs be
+counted as handled when only a pin had been reserved.
+
+| Function | Pins | Driven by |
+|---|--:|---|
+| Coil drivers, COP | 8 | ISL9V3040 via 74HCT541 #1 |
+| Injector drivers | 8 | ZXMS6005DGQ, direct |
+| VR channels — CKP, CMP, OSS, TSS | 4 | 2 × MAX9926 |
+| ADS8588H: SCK, MISO, CS, CONVST, BUSY | 5 | direct, 3.3 V |
+| J1850: TX_P, TX_N, RX, nSLEEP | 4 | DRV8837 + TLV7031 |
+| TCC, EPC | 2 | NCV8405A / NCV8408B via 74HCT541 #2 |
+| EVAP purge, EGR regulator | 2 | via 74HCT541 #2 |
+| IAC | 1 | via 74HCT541 #2 |
+| Tach out, VSS out | 2 | **driver still unassigned — open** |
+| I²C: SDA, SCL | 2 | — |
+| **subtotal, as previously budgeted** | **38** | *(39 less the expander CS)* |
+| Relays — fuel pump, fan 1, fan 2, A/C clutch | 4 | TBD62083AFNG, direct at 3.3 V |
+| NCV8405A — IMCC, HO2S ×4, SS1, SS2, CSS | 8 | **74HCT541 #3 at 5 V** |
+| ADS8588H static — RESET, FRSTDATA, OS0–2, RANGE | 6 | direct, 3.3 V — now legal |
+| MAX25239 `SYNC` | 1 | direct, with a pulldown |
+| Inputs — TR ×4, brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled** |
+| VREF — EN, IN1, IN2, DIAG_EN, SEL, FAULT | 6 | TPS2H160B-Q1 |
+| Watchdog kick | 1 | — |
+| 74HCT541 #2 `OE` | 1 | software-releasable |
+| Supervisory — `SHDN#`, `FLT#`, `PGOOD`, `ALERT` | 4 | — |
+| **subtotal, formerly on the expander** | **38** | |
+| **TOTAL** | **76** | of ~114. **36 spare** after SWD |
+
+74HCT541 **#3**'s `OE` costs no pin — it shares the watchdog net that drives
+`OE2` on #1.
+
+Two things this table does *not* say are now settled by dropping the chain:
+there is no poll interval to state, because the inputs are edge interrupts; and
+there is no expander `RESET` to wire, because an STM32 GPIO goes high-Z on reset
+and both driver families default off unaided.
+
+---
+
+## Historical — the ESP32-P4 budget
+
+Everything below was written against the P4's 40 GPIOs and is kept for the
+reasoning, not the numbers. The expander split it describes no longer exists.
+
 ## What a full single-node ECU needs
 
 Native pins only. Anything that can live on the MCP23S17 expander chain is

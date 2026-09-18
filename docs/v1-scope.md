@@ -22,7 +22,7 @@ ST-Link, USB console and Ethernet all come for free.
 | Crank/cam/OSS/TC | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS, **transfer case speed**. No spare | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
-| Slow I/O | ~~2 × MCP23S17, **at 5 V**~~ → **3 × MCP23S17 at 3.3 V**, gates buffered by a third 74HCT541, `RESET` on the watchdog — [`review-expander-chain.md`](review-expander-chain.md) | ✅ |
+| Slow I/O | ~~MCP23S17 expander chain~~ — **dropped. Every signal is native.** 76 of ~114 pins, 36 spare. Gates still buffered by a third 74HCT541 at 5 V, which was always a voltage question — [`review-expander-chain.md`](review-expander-chain.md) | ✅ |
 | **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
 | **PWM gate buffer** | 2nd **74HCT541** at 5 V — EVAP, EGR, TCC, EPC, **IAC** take native timer pins at 3.3 V (5 of 8 used) | ✅ |
 | **Solenoid / heater drivers** | **NCV8405ASTT1G** ×10 — self-protected low-side, drain-sense diagnosis | ✅ |
@@ -50,8 +50,8 @@ everything the 4R70W needs:
 | TCC | GPIO10, PWM | native pin, already allocated |
 | EPC | GPIO11, PWM | native pin, already allocated |
 | OSS | GPIO22, via MAX9926 | native pin, already allocated |
-| SS1, SS2, CSS | MCP23S17 outputs | free — expander already present |
-| TR sensor, 4-bit | MCP23S17 inputs | free |
+| SS1, SS2, CSS | native pins via 74HCT541 #3 | 3 of the 36 spare |
+| TR sensor, 4-bit | native inputs, edge interrupts | 4 of the 36 spare |
 | TFT | analog channel | free |
 
 **One board does both.** Only TCC and EPC cost native pins, and both were
