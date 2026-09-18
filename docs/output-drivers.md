@@ -815,8 +815,50 @@ committed.
 
 **O2 heaters are PTC — cold inrush is several amps** against ~1.5 A steady. The
 part current-limits briefly at 6 A minimum, which is a soft-start rather than a
-fault, and **firmware must not read it as one**. Ford PWM-ramps heaters at
-startup anyway to avoid thermally shocking the ceramic; plan on doing the same.
+fault, and **firmware must not read it as one**.
+
+#### PWM the heaters — but the driver was never the reason
+
+Two separate problems that look like one, and answering the driver question
+does not answer the other.
+
+**The driver copes unaided.** Current limit *is* a soft start; it will survive a
+cold PTC indefinitely. **But look at what coping costs it:**
+
+```
+  steady 1.5 A at 13.5 V -> hot resistance 9.0 ohm
+  PTC cold resistance is typically 1/5 to 1/10 of hot
+
+  cold R   load drops   FET drops   FET power
+  1.80R       10.8 V       2.7 V      16.2 W
+  0.90R        5.4 V       8.1 V      48.6 W
+```
+
+In current limit the FET drops whatever the cold heater does not, so it is
+dissipating **tens of watts in a SOT-223** until the PTC warms enough to fall
+below 6 A — hundreds of milliseconds, four channels, every cold start. Against
+a steady-state 0.47 W that already gives a 61 °C rise on a minimum pad.
+
+**And the harness sees 24 A** across four channels clamping together, against
+6 A steady.
+
+**The real reason is the sensor.** A cold zirconia element with exhaust
+condensation on it cracks when heated fast. OEMs **delay** the heater until the
+exhaust is above dew point and *then* ramp duty — the delay matters as much as
+the ramp, and neither has anything to do with the driver.
+
+So: three things, in descending order of importance, none of which changes the
+hardware.
+
+| | |
+|---|---|
+| **1. Delay** turn-on after a cold start — time or CHT based | protects the sensor. The part that actually matters |
+| **2. Ramp** duty from cold rather than stepping to 100 % | keeps the driver out of current limit entirely, turning a 16–49 W transient into nothing |
+| **3. Stagger** the four channels | 24 A becomes 10.5 A. The firmware is sequencing them anyway |
+
+> **[MEASURE]** the **cold resistance of one sensor**. 1/5 against 1/10 of hot
+> is the difference between 16 W and 49 W in the driver, and it sets where the
+> ramp has to start.
 
 **SOT-223 wants copper.** At 1.5 A and the hot R<sub>DS(on)</sub> of 210 mΩ that
 is 0.47 W. On a minimum pad at 130 °C/W that is a 61 °C rise — about 121 °C

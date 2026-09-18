@@ -163,7 +163,7 @@ CONTENTS
 
    GPIO x8 --> 74HCT541 #3 @ 5 V --> NCV8405ASTT1G x8   ** FULL, 8 of 8 **
 
-     HO2S heater x4   pins 93, 94, 95, 96
+     HO2S heater x4   pins 93, 94, 95, 96   - PWM them, see below
      canister vent    pin 67   - found reading Ford's diagrams; in no earlier list
      IMCC             pin 46   [CONFIRM] leans on/off
      SSA, SSB         pins 27, 1
@@ -180,6 +180,27 @@ CONTENTS
   74HCT541 #3's `OE` shares the watchdog net that drives #1's `OE2` - one
   net, no extra pin, and the shutdown path becomes redundant rather than
   serial.
+
+  ** PWM THE O2 HEATERS - AND THE DRIVER IS NOT THE REASON. **
+
+  The driver copes unaided: current limit at 6 A IS a soft start, and firmware
+  must not read it as a fault. But while coping it drops whatever the cold PTC
+  does not - 16 W at a cold resistance 1/5 of hot, 49 W at 1/10 - in a SOT-223,
+  for hundreds of milliseconds, four channels, every cold start. Steady state
+  is 0.47 W.
+
+  The real reason is the SENSOR. A cold zirconia element with exhaust
+  condensation on it cracks when heated fast. So:
+
+    1. DELAY turn-on after a cold start (time or CHT)   protects the sensor
+    2. RAMP duty rather than stepping to 100%           keeps the driver out
+                                                        of current limit
+    3. STAGGER the four channels                        24 A becomes 10.5 A
+
+  None of it changes the hardware. output-drivers.md.
+
+  [MEASURE] the cold resistance of one sensor - 1/5 against 1/10 of hot is the
+  difference between 16 W and 49 W in the driver.
 
   NCV8405A carries drain-sense diagnosis. The divider that reads it cannot be
   sized against a 5 V VIH of 4.0 V - "there are no values that work" - which
@@ -362,10 +383,13 @@ CONTENTS
      against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
      measurement, not a decision.
 
-  2. [CONFIRM] what the speed control servo, GEM and rear air suspension
+  2. [MEASURE] the O2 heater's COLD resistance - sec.7. It sets the ramp
+     start and decides whether the driver sees 16 W or 49 W if it is ever
+     allowed into current limit.
+  3. [CONFIRM] what the speed control servo, GEM and rear air suspension
      module expect on circuit 679 - sec.8a. The open-drain default is safe
      whatever the answer; it decides only whether a pull-up gets populated.
-  3. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
+  4. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
-  4. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
-  5. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
+  5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
+  6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
