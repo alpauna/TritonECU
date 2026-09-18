@@ -35,6 +35,9 @@ ST-Link, USB console and Ethernet all come for free.
 That is a complete engine **and transmission** controller. Nothing in it is
 unresolved.
 
+**The wiring view is [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt)** —
+block by block, with the document behind each value cited inline.
+
 ### Correction: there is no separate transmission node
 
 Earlier notes referred to a "transmission node" — a second board over CAN, as
@@ -55,8 +58,9 @@ everything the 4R70W needs:
 | TFT | analog channel | free |
 
 **One board does both.** Only TCC and EPC cost native pins, and both were
-already in the budget. The solenoids and the four TR inputs are slow enough to
-live on the expander chain that is on the board anyway.
+already in the budget. ~~The solenoids and the four TR inputs are slow enough to
+live on the expander chain that is on the board anyway.~~ **The chain is gone —
+they take native pins, 7 of the 36 spare.**
 
 Splitting into two boards would add a CAN bus, a second MCU, a second power
 supply and a second enclosure to solve a problem that no longer exists.

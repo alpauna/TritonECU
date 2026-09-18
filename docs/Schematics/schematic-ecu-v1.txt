@@ -1,0 +1,316 @@
+TRITON ECU - v1 CARRIER BOARD
+1999 Ford F-150 4WD 5.4 V8 - engine AND transmission, one board
+===============================================================================
+
+  v1 is a CARRIER for a Nucleo-144, not a raw-chip board. The Nucleo plugs in
+  through the ST morpho headers (2 x 2x35) and brings ST-Link, USB console and
+  Ethernet with it, so the MCU section stops being a fabrication risk.
+  See carrier-board.md.
+
+  The design intent lives in docs/. This file is the wiring view of it; every
+  value here has a document behind it and the citations are inline.
+
+  ** PIN NAMES AND NUMBERS ARE FUNCTIONAL. ** Check them against each
+  datasheet before drawing. This is intent, not a transcription.
+
+
+CONTENTS
+--------
+   1. Power chain - protection, rails, VREF
+   2. The Nucleo, and what the carrier owes it
+   3. VR inputs - crank, cam, output shaft, transfer case
+   4. Analog inputs - ADS8588H
+   5. Ignition - 8 x COP
+   6. Injection - 8 x sequential
+   7. Solenoids and heaters
+   8. PWM loads
+   9. Relays and lamps
+  10. VREF output chain - the two 5 V sensor feeds
+  11. SCP / J1850 PWM - the only path to the dash
+  12. EEC-V connector
+  13. What is deliberately not on this board
+  14. Open
+
+
+1. POWER CHAIN
+--------------
+
+  Battery, key-switched, through the EEC-V connector:
+
+   VBAT o--[ fuse ]--+--[ TVS ]--+---------------------------+
+                                 |                           |
+                            LTC4364-2                    (protected rail)
+                          + pass FET                          |
+                          + ideal-diode FET                   |
+                                 |                            |
+                                 +--------------+-------------+
+                                                |             |
+                                          MAX25239AFFA    NCV8772CDT504RKG
+                                          buck-boost       5.00 V LDO
+                                          2.1 MHz, 2.2 uH       |
+                                          spread spectrum       |
+                                                |               +--> VREF chain, sec.10
+                                             +5.0 V
+                                                |
+                                       +--------+--------+
+                                       |                 |
+                                  TLV62085 buck      74HCT541 x3
+                                    -> +3.3 V        TBD62083A
+                                       |             DRV8837
+                                  Nucleo, ADC,       (all 5 V loads)
+                                  everything logic
+                                       |
+                                  MAX6070AAUT25
+                                  2.5 V reference, GATED
+                                       |
+                                       +--> ADS8588H REFIO
+
+  ** THE VREF LDO IS FED FROM THE PROTECTED RAIL, NOT THE 5 V SWITCHER. **
+  The switcher has no headroom above 5.0 V and is spread-spectrum; a sensor
+  reference wants neither. vref-supply.md.
+
+  MAX25239 `SYNC` is a GPIO, not a strap - fit a pulldown so cold power-up
+  lands in skip mode. power-supply.md.
+
+
+2. THE NUCLEO, AND WHAT THE CARRIER OWES IT
+-------------------------------------------
+
+  STM32F767ZI, ~114 I/O, 76 used, 36 spare after SWD. pin-budget.md.
+
+  ** Remove both CN2 jumpers ** to disconnect the on-board ST-Link, and
+  ** bring SWD out to a header on the carrier ** - four pins, and it means a
+  failed Nucleo does not take the debug path with it.
+  [CONFIRM] the CN2 designation against UM1974 for your board revision.
+
+  Pins to avoid on the morpho headers are listed in carrier-board.md - PA7 is
+  RMII_CRS_DV on this part, which rules out Arduino-header SPI.
+
+  The SD card is a module wired to the morpho headers; the Nucleo has no
+  socket. SDMMC, 4-bit - the 1-bit compromise was a 40-pin artefact and is
+  no longer needed.
+
+
+3. VR INPUTS - 2 x MAX9926, MODE A2
+-----------------------------------
+
+  Four channels, three used, one spare. No expander, no comparator discretes.
+
+    CKP  (crank, 36-1)  --+
+    CMP  (cam)          --+--> 2 x MAX9926 --> 4 x native EXTI
+    OSS  (output shaft) --+      Mode A2
+    TSS  (transfer case)--+
+
+  CMP is **VR, single-ended** - measured at 371 ohms, closing the open
+  question that had it down as a Hall part. review-vr-chain.md.
+
+  ** Terminate the CMP shield at EEC-V pin 25 ** - and note pin 25 was
+  mislabelled in an earlier revision of the pinout. review-vr-chain.md.
+
+
+4. ANALOG INPUTS - ADS8588H
+---------------------------
+
+  8 channels, 16-bit, 500 kSPS simultaneous, +/-10 V, 9 kV clamp.
+  Bench part is a Tokmas AD7606BSTZ in the same LQFP-64.
+
+    SPI   SCK, MISO, CS, CONVST, BUSY   5 native pins
+    static RESET, FRSTDATA, OS0-2, RANGE  6 native pins
+
+  ** The six static pins are NATIVE. ** They were going onto a 5 V expander,
+  whose output would have exceeded the ADC's DVDD+0.3 absolute maximum.
+  Dropping the chain removed the conflict rather than working around it.
+  review-expander-chain.md sections 2 and superseded header.
+
+  DVDD = 3.3 V. VIH = 0.8 x DVDD = 2.64 V, met by a 3.3 V GPIO with margin.
+
+  ** The ADS8588H is a 125 C part. ** An earlier note said 85 C and was being
+  used to rule out under-hood mounting; that was the AD7606B bench part.
+  review-expander-chain.md section 8.
+
+
+5. IGNITION - 8 x COIL ON PLUG
+------------------------------
+
+   GPIO x8 --> 74HCT541 #1 @ 5 V --> 470R --> ISL9V3040 x8 --> coils
+
+  470 ohm is the datasheet's own switching condition at VGE = 5 V, and 70 ohm
+  of that is already internal to the part. output-drivers.md.
+
+  ** THE BUFFER HAS TWO ENABLES, AND THEY MEAN DIFFERENT THINGS: **
+
+    OE1  (pin 1)   firmware GPIO      "engine position is known, ignition armed"
+    OE2  (pin 19)  hardware watchdog  "firmware is still alive"
+
+  Both active-low, ANDed internally. A supervisor (TPS3823-class) drives OE2.
+  ** If the watchdog is deferred, fit the footprint and strap OE2 LOW. **
+
+  Coil primary inductance is unmeasured and sets the dwell limit against the
+  ISL9V3040's 300 mJ rating. One of the two genuinely open items - sec.14.
+
+
+6. INJECTION - 8 x SEQUENTIAL
+-----------------------------
+
+   GPIO x8 --> ZXMS6005DGQ x8 --> injectors
+
+  Direct from GPIO, no buffer. Full sequential - the semi-sequential fallback
+  was a 40-pin compromise and is not needed.
+
+
+7. SOLENOIDS AND HEATERS
+------------------------
+
+   GPIO x8 --> 74HCT541 #3 @ 5 V --> NCV8405ASTT1G x8
+
+     IMCC, HO2S heater x4, SS1, SS2, CSS
+
+  ** The buffer is a VOLTAGE translator, not a pin saver. ** The NCV8405A's
+  RDS(on) is specified at VGS = 5 V and the STM32 is a 3.3 V part. This
+  buffer survived the expander chain's removal because it was never the
+  expander's to justify.
+
+  74HCT541 #3's `OE` shares the watchdog net that drives #1's `OE2` - one
+  net, no extra pin, and the shutdown path becomes redundant rather than
+  serial.
+
+  NCV8405A carries drain-sense diagnosis. The divider that reads it cannot be
+  sized against a 5 V VIH of 4.0 V - "there are no values that work" - which
+  is the same 0.8*VDD arithmetic that later killed the expander chain.
+  output-drivers.md.
+
+
+8. PWM LOADS
+------------
+
+   native timer pins x5 --> 74HCT541 #2 @ 5 V --> drivers
+
+     EVAP purge     NCV8405A
+     EGR regulator  NCV8405A
+     TCC            NCV8405A
+     EPC            NCV8408B, DPAK, >= 200 Hz
+     IAC            NCV8405A       freewheel to VPWR, no new pin
+
+  ** PWM CANNOT LIVE ON A BUS. ** An earlier revision put EVAP and EGR on the
+  expander because the split was made by current and criticality, and PWM is
+  neither. Every edge would have been a bus transaction. review-solenoid-chain.md.
+
+  74HCT541 #2's `OE` is a GPIO, not the watchdog - it has to be releasable
+  under software control, unlike #1 and #3.
+
+
+9. RELAYS AND LAMPS
+-------------------
+
+   GPIO x4 --> TBD62083AFNG --> fuel pump, fan 1, fan 2, A/C clutch
+
+  8-channel DMOS sink with clamps built in. VIN(ON) = 2.5 V at 100 uA, so it
+  takes a 3.3 V GPIO directly - no buffer, unlike the NCV8405A gates.
+
+  RON 1.14 ohm worst case, not a Darlington's 1.1 V saturation drop: 46 mW per
+  channel at a 200 mA coil, against 220 mW for a ULN2803. output-drivers.md.
+
+  Fan 2 is the second cooling fan - cooling-fans.md. Both relays are native
+  pins now.
+
+
+10. VREF OUTPUT CHAIN - TWO 5 V SENSOR FEEDS
+--------------------------------------------
+
+  Per feed, and there are two:
+
+   NCV8772 5.00 V --> TPS2H160B-Q1 --> LM74700-Q1 + DMN6040SVTQ-7 --> SMAJ24CA
+                      dual high-side     ideal diode                 bidirectional
+                      250 mA limit,      (breaks the reverse         TVS, INBOARD
+                      40 V, current      path rather than            of where the
+                      sense              surviving it)               PPTC was
+
+  Control: EN, IN1, IN2, DIAG_EN, SEL, FAULT - ** 6 native pins. ** These had
+  no home in any document: vref-supply.md charged "6 GPIO" and stopped, and
+  the 37-pin map never listed them. review-expander-chain.md section 3 found
+  them.
+
+  ** THER strapped HIGH - latch, not auto-retry. ** A sensor feed that
+  retries into a short chatters the whole rail.
+
+  R_CL 8.06k sets the current limit; R_CS 2.2k the sense ratio. ** The CS pin
+  needs ADC protection ** - it can swing above the ADC's input range under
+  fault. review-vref-chain.md.
+
+  The PPTC was REMOVED entirely rather than kept as belt-and-braces: it was
+  the slowest element in a chain whose whole point is speed.
+
+
+11. SCP / J1850 PWM - THE ONLY PATH TO THE DASH
+-----------------------------------------------
+
+   TX_P  --+
+   TX_N  --+--> DRV8837 H-bridge --> PWM+ / PWM-  (differential)
+   RX    <---- TLV7031 comparator <--+
+   nSLEEP ---> DRV8837                 5 V, no boost rail
+
+  ** FOUR GPIOs, not three. ** nSLEEP releases the bus and was missed in the
+  original budget. review-scp-chain.md section 1.
+
+  ** This is not a convenience. ** Ford's cluster diagrams show the cluster's
+  only connection to the PCM is SCP - the tachometer, speedometer and MIL have
+  no discrete PCM pins. The choice was never "SCP or discrete wires", it was
+  "SCP or no dash at all". schematic-findings.md section 10.
+
+  Bus access is EEC-V pins 15 and 16 - SCP- (PNK/LT BLU, circuit 915) and
+  SCP+ (TAN/ORG, circuit 914). The same wires as DLC pins 10 and 2, so one
+  connection serves the cluster and a scan tool.
+
+  ** Phase 0 must TRANSMIT into live traffic, not only listen. **
+  review-scp-chain.md section 2. The reference design warns the PWM side is
+  experimental and expects per-vehicle tuning; Phase 0 is where that happens.
+
+  [CONFIRM] automotive qualification on both parts. The DRV8837 has a Q1
+  variant; the TLV7031 wants checking.
+
+
+12. EEC-V CONNECTOR
+-------------------
+
+  104-pin, rusEFI footprint. Notable assignments established by review:
+
+    15, 16   SCP- / SCP+                        sec.11
+    25       CMP shield termination             sec.3, and pin 25 was mislabelled
+    48, 82   circuits 391 and 1138, brought in as FREEWEEL RETURNS rather
+             than left floating - factory wiring diagrams closed eight open
+             questions at once. See the commit and f150-1999-target.md.
+
+
+13. WHAT IS DELIBERATELY NOT ON THIS BOARD
+------------------------------------------
+
+  * ** No MCP23S17 expander chain. ** It existed because the ESP32-P4 had 40
+    GPIOs and needed 39. On ~114 the split stops being necessary, and five of
+    its six open findings evaporate with it.
+  * ** No Wi-Fi. ** Dropped, not deferred - an always-on radio on an engine
+    controller is a remote attack surface with a path to code execution via
+    OTA. Ethernet does the job and needs physical access.
+  * ** No second CPU and no CAN transmission node. ** That was an artefact of
+    a 25-pin carrier. One board does engine and transmission.
+  * No alternator control - the OEM alternator self-regulates.
+
+  Footprints only, because they are cheap and save a respin:
+    ADR4525 precision reference (+ REF SELECT strap), INA238-Q1 current
+    monitor (I2C, two pads), knock channel (one ADC channel routed),
+    watchdog supervisor on OE2.
+
+
+14. OPEN
+--------
+
+  1. ** Coil primary inductance is unmeasured. ** It sets the dwell limit
+     against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
+     measurement, not a decision.
+
+  2. ** Tach and VSS outputs have no driver assigned. ** Found by the
+     ignition/injection audit as a fourth load counted as handled when only a
+     pin had been reserved - and it is the only row in pin-budget.md's STM32
+     table with nothing in the "driven by" column.
+
+  3. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
+  4. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
