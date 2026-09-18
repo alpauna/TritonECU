@@ -249,7 +249,7 @@ BLK"*, from the MegaSquirt sheet. **Ford's `EngineControls6.png` shows
 through splices S199 and S101.
 
 They disagree on the function *and* the wire colour. **The diagram wins**, as it
-did on [pin 46](#2-the-connector-pin-conflict): the MegaSquirt sheet is one
+did on [pin 46](../cooling-fans.md#2-the-connector-pin-conflict): the MegaSquirt sheet is one
 install's mapping, not Ford's.
 
 This matters more than a label. Wiring pin 25 as a power ground would put
