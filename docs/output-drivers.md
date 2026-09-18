@@ -785,15 +785,31 @@ footprint and populate it only if measurement shows they need a driven high.
 That ordering is the point: driving 12 V into a module that pulls up to 5 V is
 the failure, and it is only reachable by populating first and measuring after.
 
-### Tach out — a reserved pin that stops on the board
+### TACH and SPEED out — two reserved pins that stop on the board
 
-There is no OEM discrete tach, so nothing consumes one. But a GPIO is cheap
-against 36 spare, so one is **reserved and brought to a test header at 3.3 V
-logic through a series resistor. It does not reach the EEC-V connector.**
+There is no OEM discrete tach, and the OEM road-speed signal already has its
+own driver and its own connector pin. Neither of these is that.
 
-Expanding it later costs: one channel on 74HCT541 #2 (**2 spare** after VSS),
-one NCV8405A, and a connector pin — and the connector pin is the part to check
-first, since the OEM pinout has no tach assignment to inherit.
+These are **two clean square-wave outputs on a test header** — engine speed and
+road speed — for a scope, a bench rig or an aftermarket gauge. GPIOs are cheap
+against 35 spare, so both are reserved now rather than requiring a respin later.
+
+```
+   GPIO --[ series R ]--> TACH  --+
+                                  |  4-pin header, 3.3 V logic
+   GPIO --[ series R ]--> SPEED --+  GND at both ends for probing
+                                     ** STOPS HERE **
+```
+
+**Neither reaches the EEC-V connector.** `SPEED` in particular is *not* the VSS
+output above — that one is `NCV8405A #13` to pin 68, open-drain, feeding three
+OEM modules. This is a separate signal at logic level that happens to carry the
+same information.
+
+Expanding either later costs: one channel on 74HCT541 #2 (**2 spare** after
+VSS), one NCV8405A, and a connector pin. The connector pin is the part to check
+first — the OEM pinout has no tach assignment to inherit, and pin 68 is already
+committed.
 
 ### Two cautions
 

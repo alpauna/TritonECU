@@ -36,7 +36,8 @@ That is a complete engine **and transmission** controller. Nothing in it is
 unresolved.
 
 **The wiring view is [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt)** —
-block by block, with the document behind each value cited inline.
+block by block, with the document behind each value cited inline. **77 native
+pins of ~114, 35 spare.**
 
 ### Correction: there is no separate transmission node
 
