@@ -44,7 +44,12 @@ lid_t    = 5;
    split between the 4 mm gap under the supply and the space over it. */
 clr_fan  = 10;   // plenum, fan end
 clr_grid =  3;   // exhaust end
-clr_side =  3;   // the wall the supply sits against
+/* The BACK long wall. It was 3 mm - the wall the supply was simply pressed
+   against, and the only wall with nothing in it. The mains inlet has moved
+   onto it, so it now has to hold 12 mm of intruding flange plus 12 mm of
+   booted terminals. 28 leaves 4 mm to the supply, the same margin the rest
+   of this box uses. */
+clr_side = 28;
 
 /* The wiring bay. The IEC module's rear flange stands 19 mm proud of the panel
    and the spade terminals and their boots add more, so the plug wall cannot be
@@ -122,22 +127,30 @@ grid_sq    =  6;   // side. Across the corners that is 8.49, leaving 1.5 of rib.
 grid_inset =  8;   // keep the grid inside the supply's shadow
 
 /* ---------------------------------------------------------------------------
-   IEC C14 inlet / switch / fuse module — LONG SIDE (y = out_w)
+   IEC C14 inlet / switch / fuse module — BACK WALL (y = 0)
    ---------------------------------------------------------------------------
-   Mounted with its 58 mm axis VERTICAL so the rocker sits at the top and the
-   fuse drawer pulls out below it. The panel cutout is the raised rear flange,
-   50 x 29; the two M3 ears straddle it on the SHORT axis at 40 mm centres,
-   which is why the pitch is larger than the cutout it flanks. */
+   Moved off the bay wall. The back wall was the only surface with nothing on
+   it, and it was blank precisely because it had no depth - the supply sat
+   3 mm behind it. clr_side is what buys the room.
+
+   Two things come out of the move. The mains gets a wall to itself and the
+   front wall stays all low voltage - screen, knob, outputs. And the bay wall
+   frees up exactly the room the wider LCD cutout needed, which is the other
+   change in this revision.
+
+   Mounted with its 58 mm axis VERTICAL, so the rocker is at the top and the
+   fuse drawer pulls out below it. The two M3 ears straddle the cutout on the
+   SHORT axis at 40 mm centres - wider than the 29 mm cutout they flank. */
 plug_cut_l     = 50;   // flange, along Z
 plug_cut_w     = 29;   // flange, along X
 plug_clr       =  0.6;
 plug_hole_pitch= 40;   // ear centres, along X
 plug_hole_d    =  3.2;
-plug_pad_x     = 54;   // bezel is 48 wide — pad it out
+plug_pad_w     = 54;   // along the wall. Bezel is 48 - pad it out
 plug_pad_z     = 64;   // bezel is 58 tall
 plug_pad_t     =  4;   // 4 + 3 = 7 mm of thread for the ear screws
 
-plug_x = out_l/2;      // slide this to land beside the supply's AC terminals
+plug_x = out_l/2;      // nothing else is on this wall; slide it freely
 plug_z = psu_z0 + psu_h/2;
 
 /* DC output. PG7 gland or a rubber grommet; same wall, same bay. */
@@ -162,7 +175,8 @@ gland_z = psu_z0 + psu_h/2;
 
    MEASURE every value marked below. The one that is a DECISION rather than a
    measurement is mod_boss, and it changes the shape of the box. */
-mod_cut_w   = 64;      // MEASURE: body through the panel, along X
+mod_cut_w   = 70.6;    // MEASURED: the display would not fit at 64 - it
+                       // needed 6.6 mm more in WIDTH. Height was fine.
 mod_cut_h   = 38.5;    // MEASURE: body through the panel, along Z
 mod_depth   = 25.4;    // MEASURE: how far it stands behind the panel
 mod_flange  = 4;       // MEASURE: bezel lip beyond the cutout, all round
@@ -213,10 +227,19 @@ mod_clear_behind = bay_w + mod_boss - mod_depth;
 
 assert(mod_clear_behind > 8,
        "DC-DC module: not enough bay left behind it for terminals. Raise mod_boss.");
-assert(mod_x + mod_bw/2 < plug_x - plug_pad_x/2,
-       "DC-DC boss runs into the IEC plug pad. Move mod_x toward END A.");
-assert(mod_x - mod_bw/2 > wall,
-       "DC-DC boss overhangs END A. Move mod_x toward the plug.");
+assert(mod_x + mod_bw/2 < out_l - wall && mod_x - mod_bw/2 > wall,
+       "DC-DC runs off the end of the bay wall. Move mod_x.");
+assert(abs(mod_x - gland_x) > mod_bw/2 + gland_d,
+       "DC-DC boss runs into the DC output gland. Move mod_x or gland_x.");
+/* --- the inlet, now on the back wall --- */
+assert(plug_x + plug_pad_w/2 <= out_l && plug_x - plug_pad_w/2 >= 0,
+       "Inlet pad overhangs the end of the back wall. Move plug_x.");
+assert(plug_hole_pitch < plug_pad_w,
+       "Inlet ear screws fall outside their own pad.");
+assert(plug_z - plug_pad_z/2 > 0 && plug_z + plug_pad_z/2 < out_h,
+       "Inlet pad runs off the wall in Z.");
+assert(wall + 24 < psu_y0,
+       "Inlet flange and terminals reach further in than clr_side allows.");
 /* The boss's cavity floor drafts up toward the panel at 45 degrees; it has to
    stay below the bottom of the module's body or it fouls it. */
 assert(mod_z - (mod_bh - 2*wall)/2 < mod_z - mod_cut_h/2 - 2,
@@ -308,23 +331,22 @@ module grid_cuts() {
 }
 
 module plug_pad_solid() {
-    x0 = plug_x - plug_pad_x/2;
+    x0 = plug_x - plug_pad_w/2;
     z0 = plug_z - plug_pad_z/2;
     hull() {
-        translate([x0, out_w - 0.01, z0]) cube([plug_pad_x, 0.01, plug_pad_z]);
-        translate([x0, out_w + plug_pad_t, z0 + plug_pad_t])
-            cube([plug_pad_x, 0.01, plug_pad_z - plug_pad_t]);
+        translate([x0, 0.01, z0]) cube([plug_pad_w, 0.01, plug_pad_z]);
+        translate([x0, -plug_pad_t, z0 + plug_pad_t])
+            cube([plug_pad_w, 0.01, plug_pad_z - plug_pad_t]);
     }
 }
 
 module plug_cuts() {
     d = wall + plug_pad_t + 2;
-    translate([plug_x - (plug_cut_w + plug_clr)/2,
-               out_w - wall - 1,
+    translate([plug_x - (plug_cut_w + plug_clr)/2, -plug_pad_t - 1,
                plug_z - (plug_cut_l + plug_clr)/2])
         cube([plug_cut_w + plug_clr, d, plug_cut_l + plug_clr]);
     for (dx = [-1, 1])
-        translate([plug_x + dx*plug_hole_pitch/2, out_w - wall - 1, plug_z])
+        translate([plug_x + dx*plug_hole_pitch/2, -plug_pad_t - 1, plug_z])
             rotate([-90, 0, 0]) cylinder(d = plug_hole_d, h = d, $fn = hole_fn);
 }
 
@@ -489,11 +511,10 @@ module lid() {
    plus the spade terminals and their boots is what set bay_w in the first
    place. */
 module ghost_plug() {
-    translate([plug_x, out_w + plug_pad_t, plug_z]) rotate([-90, 0, 0]) {
-        translate([-24, -29, -5]) cube([48, 58, 5]);          // bezel, outside
-        translate([-14.5, -25, -19]) cube([29, 50, 19]);      // flange, through
-        translate([-14.5, -25, -31]) cube([29, 50, 12]);      // terminals + boots
-    }
+    f = -plug_pad_t;                                          // the pad's face
+    translate([plug_x - 24, f - 5, plug_z - 29]) cube([48, 5, 58]);       // bezel
+    translate([plug_x - 14.5, f, plug_z - 25]) cube([29, 19, 50]);        // flange
+    translate([plug_x - 14.5, f + 19, plug_z - 25]) cube([29, 12, 50]);   // terminals
 }
 module ghost_fan() {
     translate([-fan_pad_t - 10, fan_cy - 20, fan_cz - 20]) cube([10, 40, 40]);
@@ -522,11 +543,13 @@ else {
 
 echo(str("external  ", out_l, " x ", out_w, " x ", out_h + lid_t,
          "   (bed footprint ", out_l + fan_pad_t, " x ",
-         out_w + max(plug_pad_t, mod_boss), ")"));
+         out_w + mod_boss + plug_pad_t, ")"));
 echo(str("interior  ", in_l, " x ", in_w, " x ", in_h,
-         "   clear for the supply ", in_l, " x ", psu_w + clr_side, " x ", psu_h + head));
-echo(str("bay       ", bay_w, " wide; plug flange eats ",
-         19 - wall - plug_pad_t, ", leaving ", bay_w - (19 - wall - plug_pad_t)));
+         "   clear for the supply ", in_l, " x ", psu_w, " x ", psu_h + head));
+echo(str("bays      back ", clr_side, " (mains only), front ", bay_w,
+         " (low voltage, clear end to end)"));
+echo(str("inlet     BACK wall, x ", plug_x, ", z ", plug_z,
+         "; reaches 24 inside, ", psu_y0 - (wall + 24), " clear of the supply"));
 echo(str("DC-DC     cutout ", mod_cut_w, " x ", mod_cut_h,
          " in a ", mod_panel_t, " panel; boss ", mod_boss,
          "; clear bay behind it ", bay_w + mod_boss - mod_depth));

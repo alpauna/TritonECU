@@ -2,8 +2,8 @@
 
 A printed box for the bench supply that feeds the ECU and the VR test rig:
 screw-down lid, 40 mm fan at one end, exhaust grid at the other, and a fused
-IEC C14 inlet/switch module on a long side. A small **two-rail DC-DC module**
-shares the same wall, fed from the 36 V supply inside — its fixed 5 V runs the
+IEC C14 inlet/switch module on the **back** wall. A small **two-rail DC-DC
+module** has the front wall to itself, fed from the 36 V supply inside — its fixed 5 V runs the
 VR rig's Pico, its adjustable rail is a bench output.
 
 **This box contains mains wiring.** Read [Safety](#safety) before energising it.
@@ -13,27 +13,29 @@ VR rig's Pico, its adjustable rail is a bench output.
 
      END A                                      END B
    +--------------------------------------------------+
-   |[FAN]                                       ######|
-   |         power supply  266 x 153 x 77       ######|  <- exhaust grid
-   |   intake -->  air over and under  -->  out ######|
+   +-------------------[ PLUG ]-----------------------+  <- BACK: mains only
+   |                            28 mm bay             |
    |--------------------------------------------------|
-   |(LV)              39 mm wiring bay                |
-   +------[ DC-DC ]---------[PLUG]--------[GLAND]-----+
-      5 V + adj              mains          36 V out
+   |[FAN]                                       ######|
+   |   intake -->  air over and under  -->  out ######|  <- exhaust grid
+   |--------------------------------------------------|
+   |(LV)                        39 mm bay             |
+   +--------[ DC-DC ]------------[GLAND]--------------+  <- FRONT: low voltage
+             5 V + adj            36 V out
 ```
 
-Low voltage at END A, mains in the middle, 36 V DC at END B — see [the second
-supply](#the-second-supply--a-dc-dc-module-not-a-second-mains-supply).
+**Mains on the back wall, low voltage on the front.** See [the inlet
+section](#the-inlet-is-on-the-back-wall).
 
 ## Dimensions
 
 | | |
 |---|---|
-| External | **285 × 201 × 106** mm |
-| Bed footprint, tub | **290 × 213** — the fan pad, the plug pad and the DC-DC boss stand proud of the walls |
-| Bed footprint, lid | 285 × 201 |
+| External | **285 × 226 × 106** mm |
+| Bed footprint, tub | **290 × 242** — the fan pad, the plug pad and the DC-DC boss all stand proud |
+| Bed footprint, lid | 285 × 226 |
 | Clear space for the supply | **279 × 156 × 79** (the 266 × 153 × 77 minimum, with room) |
-| Wiring bay | 39 mm wide alongside the supply, 51 mm behind the DC-DC boss |
+| Wiring bays | **back 28 mm** (mains only), **front 39 mm** (low voltage), 51 mm behind the DC-DC boss |
 
 `openscad` echoes all of these on every render, so they follow the parameters
 rather than this table. Re-read them after changing anything.
@@ -62,8 +64,10 @@ can get under it, and that is all they do. Measure the feet, edit
 `standoff_xy`, then set `standoff_hole = true` to get M4 clearance holes with
 head recesses on the underside of the floor.
 
-The `mod_*` defaults are the module actually in hand — **64 × 38.5 × 25.4 behind
-a 4 mm flange, with two 12.7 mm snap locks centred on the vertical edges.**
+The `mod_*` defaults are the module actually in hand — **70.6 × 38.5 × 25.4
+behind a 4 mm flange, with two 12.7 mm snap locks centred on the vertical
+edges.** The width was 64 until the display was offered up and would not go in
+lengthwise; it needed **6.6 mm more**. Height was right first time.
 Measure yours. Every clearance on that wall that was tight enough to be worth
 arithmetic is an `assert` in the `.scad`, so a wrong number stops the render
 rather than the print.
@@ -82,7 +86,7 @@ rather than the print.
 | 1 | **PG7 cable gland** or Ø12.5 rubber grommet | 36 V DC output, bay wall |
 | — | 16–14 AWG wire + insulated spade terminals | the inlet module ships with a set |
 | 4 | Stick-on rubber feet | the floor is flat by design |
-| 1 | **DC-DC module, two rails** — fixed 5 V + LCD-set adjustable | 64 × 38.5 face, 25.4 deep, 4 mm flange, snap-lock mount. **40 V DC input rating** — confirmed, against a 36 V bus. See below |
+| 1 | **DC-DC module, two rails** — fixed 5 V + LCD-set adjustable | **70.6 × 38.5** face, 25.4 deep, 4 mm flange, snap-lock mount. **40 V DC input rating** — confirmed, against a 36 V bus. See below |
 | 1 | **Fuse + holder, 1–2 A**, inline | the 36 V tap to the DC-DC. *Not optional* — see below |
 | 1 | **PG7 cable gland** or Ø12.5 grommet | low-voltage output, END A wall |
 | 1 | **Schottky, 1 A** (1N5819 or similar) | in the 5 V feed to the Pico's `VSYS` |
@@ -145,22 +149,45 @@ A square hole in a vertical wall has a flat top edge that has to bridge. A
 diamond has an apex, so every one of the 78 holes is self-supporting and nothing
 droops into the airstream.
 
-### The bay is why the plug fits at all
+### The inlet is on the back wall
 
-The inlet module's rear flange stands **19 mm** proud of the panel, and the
-spade terminals and their boots add more again. That cannot happen on the wall
-the supply is pressed against, so a 39 mm channel runs down one long side. The
-pad takes 7 mm of the flange, so it intrudes 12 mm, **leaving 27 mm** between
-the flange's back face and the supply for terminals and wire bends. The DC
-output gland shares the same channel.
+It used to be on the front, sharing that wall with the DC-DC and the output
+gland. Two things moved it.
+
+**The back wall was the only surface with nothing on it** — and it was blank
+precisely because it had no depth. The supply sat **3 mm** behind it, and the
+inlet's rear flange intrudes 12 mm with another 12 mm of booted terminals
+behind that. `clr_side` is what buys the room: **28 mm**, leaving 4 mm between
+the flange and the supply.
+
+**And it freed the front wall for a wider LCD.** The display needed 6.6 mm more
+than the cutout allowed, which would have run the DC-DC's boss into the plug
+pad. With the plug gone, it fits with room to spare.
+
+So the walls now read: **mains on the back, low voltage on the front** — the
+DC-DC's screen and knob, and the 36 V output. END A is the fan and the LV
+gland, END B is nothing but exhaust grid.
+
+It costs 25 mm of box width, 201 → **226**, and the bed footprint goes to
+290 × 242. Y was the tight axis when this was drawn against a 300 bed; on a 320
+it is the cheap one.
 
 The inlet module is mounted with its **58 mm axis vertical**, so the rocker is
-at the top and the fuse drawer pulls out below it. Note that the two M3 ears
-straddle the cutout on the *short* axis — which is why the 40 mm hole pitch is
-larger than the 29 mm cutout it flanks.
+at the top and the fuse drawer pulls out below it. Note the two M3 ears straddle
+the cutout on the *short* axis — which is why the 40 mm hole pitch is larger
+than the 29 mm cutout it flanks.
 
-`plug_x` and `gland_x` are parameters. Slide them along the wall to land beside
-the supply's own AC input and DC output terminals.
+The pad is a slab on the *outside* of the back wall, so `plug_pad_w` has to stay
+within the wall's length or it hangs in mid-air with nothing behind it. With
+285 mm of wall and a 54 mm pad there is no danger, and the `.scad` asserts it
+anyway.
+
+### The front bay is still why the DC-DC fits
+
+39 mm of channel alongside the supply. The DC-DC is 25.4 mm deep behind its
+panel and its boss steps 12 mm outward, so there is 25.6 mm behind it for
+terminals. `gland_x` slides the 36 V output along that wall; the `.scad` asserts
+it clears the DC-DC.
 
 ## The second supply — a DC-DC module, not a second mains supply
 
@@ -308,8 +335,9 @@ back, which on these modules they usually do. So the panel sits on a **boss that
 steps 12 mm outward**, giving **25.6 mm** of clear bay behind the module.
 
 It costs 12 mm of bed in Y and nothing else: the tub's footprint goes from
-290 × 205 to **290 × 213**, and X — the axis that was already tight against a
-300 bed — does not move. The boss's underside is drafted 45° like the fan and
+290 × 205 to 290 × 213 at the time, and X — the axis that was tight against a
+300 bed — did not move. (The back bay has since taken the footprint to
+290 × 242; see the inlet section.) The boss's underside is drafted 45° like the fan and
 plug pads, so it grows out of a vertical wall with nothing to support, and the
 bay simply carries on into it behind a 3 mm skin.
 
@@ -385,9 +413,11 @@ Re-run `render.sh` after any change and do not read anything into the diff.
 | `boss_d` | 9 | lid screw engagement. Heat-set inserts? 7 is enough |
 | `lid_screw` | 2.6 | M3 self-tapping pilot. Heat-set M3 insert: **4.2** |
 | `fan_guard` | true | concentric webs over the fan bore |
-| `plug_x`, `gland_x` | mid, −45 | where the inlet and output land along the wall |
+| `plug_x` | mid | where the inlet lands on the **back** wall |
+| `gland_x` | −45 | where the 36 V output leaves the front wall |
+| `clr_side` | **28** | back bay — mains only. Set by the inlet's 24 mm reach |
 | `grid_pitch`, `grid_sq` | 10, 6 | exhaust open area |
-| `mod_cut_w/h`, `mod_depth` | 64/38.5, 25.4 | the DC-DC's body — **measure yours** |
+| `mod_cut_w/h`, `mod_depth` | **70.6**/38.5, 25.4 | the DC-DC's body — **measure yours** |
 | `mod_boss` | 12 | how far the DC-DC's panel steps out. **0 = flat wall**; changes the box |
 | `mod_panel_t` | 2.0 | panel at the cutout. The snap locks grip 1–4 |
 | `mod_x` | 64 | where the DC-DC lands along the bay wall |
