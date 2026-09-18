@@ -316,6 +316,120 @@ making, not one it inherited.** Record it as such.
 
 ---
 
+## Resolved
+
+All eight findings are closed. The chain runs at **3.3 V with three
+MCP23S17s**, the eight NCV8405A gates go through a **third 74HCT541 at 5 V**,
+and `RESET` is on the watchdog.
+
+### The `[CONFIRM]` closes by arithmetic, not by measurement
+
+The recommendation flagged V<sub>OH</sub> against the ADS8588H as
+*specified-negative by 40 mV*. It is not a real margin — it comes from quoting
+a 3 mA figure against a 1 µA load:
+
+```
+  spec: VOH = VDD - 0.7 = 2.60 V  AT IOH = 3 mA
+        -> an output-stage resistance of 233 ohm
+
+   actual load         drop       VOH   vs ADS8588H VIH 2.64
+the spec point   700.000 mV    2.600 V             -0.040 V
+        100 uA    23.333 mV    3.277 V             +0.637 V
+   1 uA - real     0.233 mV    3.300 V             +0.660 V
+```
+
+The ADS8588H's static digital inputs draw leakage, about 1 µA, and the
+MCP23S17's output stage is push-pull CMOS. At 1 µA it sits a quarter of a
+millivolt from the rail. **The datasheet characterises one point; it does not
+describe this one.** No change needed, and the same reasoning covers the
+TBD62083A's 2.5 V with far more room.
+
+### And the mitigation this document offered would not have worked
+
+It suggested *"add a pull-up on the six ADC static lines … which removes the
+question outright."* **A pull-up cannot raise a push-pull output.** If
+V<sub>OH</sub> really were 2.6 V, the driver's own pull-up FET would be
+sourcing 3 mA to hold it there, and a 10 kΩ resistor adds 70 µA — 2.3 % of
+that. The node sits where the driver puts it either way.
+
+Worth recording because the suggestion looks prudent and is inert. The fix for
+a genuinely low V<sub>OH</sub> is a buffer or a different part, never a pull-up.
+
+### §3 — the bit count, with three chips
+
+```
+  3 x MCP23S17  =  48 bits
+         demand =  38 bits        10 spare
+```
+
+The third chip costs one package and **no pins** — the chain is addressed, not
+chip-selected. The finding was the count, not the shortage, and the count now
+lives here rather than being assumed in three documents.
+
+### §4 — `RESET` is watchdog-driven
+
+Tied to the same watchdog output that gates the ignition buffer's `OE2`, not to
+a pull-up. The power-on state is genuinely safe (§7: ports reset to inputs,
+both driver families default off with nothing driving them), so a reset that
+reaches the expander lands the fuel pump, the four O2 heaters, the A/C clutch
+and the shift solenoids in a known-off condition.
+
+Without it those latch through the several hundred milliseconds of MCU reboot —
+a fuel pump running with no injection and no spark.
+
+### The third 74HCT541's `OE` goes on the same watchdog net
+
+Its `OE` was listed as a *side benefit* of option B and never given a source.
+Tie it to the **same watchdog output** that drives the expander `RESET` and the
+ignition buffer's `OE2` — one net, three loads, no new pin and no expander bit.
+
+That makes the shutdown path redundant rather than serial: the watchdog kills
+the buffer directly *and* resets the expander behind it. Either alone would
+do, which is the point.
+
+Note this does not change the §3 count. `74HCT541 #2`'s `OE` is still one
+expander bit, because #2 buffers the PWM gates and has to be releasable under
+software control; #3 buffers the slow gates and does not.
+
+### §5 — HAEN, as a hardware constraint
+
+```
+   1. write IOCON.HAEN = 1     (opcode address 000, reaches all three)
+   2. only then address, configure or READ any device
+```
+
+Out of reset every chip is device 0 regardless of its strapping, so a read
+before HAEN is set puts three push-pull drivers on one `SO` net. Writes are
+harmless — all three receive the same IOCON byte, which is how HAEN gets set in
+the first place.
+
+**This belongs in the schematic notes as well as the driver.** It is invisible
+at the symbol level and it survives as a latent fault: the contention is brief
+and the parts usually live through it.
+
+### §6 — poll at 50 Hz; `INTA`/`INTB` stay unconnected
+
+Decided rather than left implied. Three chips is six register reads per poll;
+at 50 Hz on a 10 MHz bus that is about a millisecond of bus time per second.
+
+The deadline is the A/C cycling pressure switch. A 20 ms poll catches any state
+lasting longer than 20 ms, and **chatter shorter than that is filtered for
+free** — which is what the hold-on timer wants anyway. `MIRROR` would cost a
+native GPIO to buy a response time nothing here needs.
+
+### §8 — and the consequence the correction leaves behind
+
+The ADS8588H is a 125 °C part, so it never ruled out an under-hood mount. But
+the MCP23S17 is only rated to 125 °C at V<sub>DD</sub> ≥ 4.5 V, and at 3.3 V it
+is an **85 °C part**.
+
+**So the cabin mount is now a decision this design is making, not one it
+inherited.** Recorded as such. It matches the OEM PCM's own location and has
+always been the plan — but the reason changed, and the reason is what someone
+will check later.
+
+---
+
 ## Summary
 
 | # | Finding | Severity |
@@ -327,6 +441,10 @@ making, not one it inherited.** Record it as such.
 | 5 | Two chips on one `CS` with HAEN off at power-up: both are device 0, and a read before HAEN is set puts two drivers on `SO` | important |
 | 6 | `INTA`/`INTB` unassigned and no poll rate stated, against an A/C pressure switch whose chatter already needs a timer | moderate |
 | 8 | `adc-front-end.md`'s "−40 to +85 °C" for the ADS8588H is wrong — it is a 125 °C part, and the claim was being used to rule out under-hood mounting | correction |
+
+**All closed — see [Resolved](#resolved) above.** The chain runs at 3.3 V with
+three MCP23S17s, the gates go through a third 74HCT541, `RESET` is on the
+watchdog, inputs are polled at 50 Hz, and the `[CONFIRM]` closed by arithmetic.
 
 Findings 1, 2 and 3 are the same failure this session keeps turning up, in its
 third form. Not a budget spent elsewhere this time, but a **requirement** —
