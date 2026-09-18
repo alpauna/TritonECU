@@ -23,7 +23,8 @@ counted as handled when only a pin had been reserved.
 | TCC, EPC | 2 | NCV8405A / NCV8408B via 74HCT541 #2 |
 | EVAP purge, EGR regulator | 2 | via 74HCT541 #2 |
 | IAC | 1 | via 74HCT541 #2 |
-| Tach out, VSS out | 2 | **driver still unassigned — open** |
+| **VSS out** | 1 | **NCV8405A #13** via 74HCT541 #2, open-drain — EEC-V pin 68, circuit 679 |
+| **Tach out** — reserved | 1 | **none, deliberately.** 3.3 V to a test header; does not reach the connector |
 | I²C: SDA, SCL | 2 | — |
 | **subtotal, as previously budgeted** | **38** | *(39 less the expander CS)* |
 | Relays — fuel pump, fan 1, fan 2, A/C clutch | 4 | TBD62083AFNG, direct at 3.3 V |

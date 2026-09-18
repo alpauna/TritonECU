@@ -161,9 +161,16 @@ CONTENTS
 7. SOLENOIDS AND HEATERS
 ------------------------
 
-   GPIO x8 --> 74HCT541 #3 @ 5 V --> NCV8405ASTT1G x8
+   GPIO x8 --> 74HCT541 #3 @ 5 V --> NCV8405ASTT1G x8   ** FULL, 8 of 8 **
 
-     IMCC, HO2S heater x4, SS1, SS2, CSS
+     HO2S heater x4   pins 93, 94, 95, 96
+     canister vent    pin 67   - found reading Ford's diagrams; in no earlier list
+     IMCC             pin 46   [CONFIRM] leans on/off
+     SSA, SSB         pins 27, 1
+
+  [CONFIRM] ** CSS may not exist. ** The coast-clutch solenoid came from the
+  MegaSquirt sheet and is not on Ford's 4R70W diagram, which shows only SSA and
+  SSB at the transmission connector. output-drivers.md channel budget.
 
   ** The buffer is a VOLTAGE translator, not a pin saver. ** The NCV8405A's
   RDS(on) is specified at VGS = 5 V and the STM32 is a 3.3 V part. This
@@ -185,11 +192,13 @@ CONTENTS
 
    native timer pins x5 --> 74HCT541 #2 @ 5 V --> drivers
 
-     EVAP purge     NCV8405A
-     EGR regulator  NCV8405A
-     TCC            NCV8405A
-     EPC            NCV8408B, DPAK, >= 200 Hz
-     IAC            NCV8405A       freewheel to VPWR, no new pin
+     EVAP purge     NCV8405A      pin 56
+     EGR regulator  NCV8405A      pin 47
+     TCC            NCV8405A      pin 54
+     EPC            NCV8408B      pin 81, DPAK, >= 200 Hz
+     IAC            NCV8405A      pin 83, freewheel to VPWR, no new pin
+     VSS out        NCV8405A      pin 68 - see sec.8a
+                                  6 of 8 used, 2 spare
 
   ** PWM CANNOT LIVE ON A BUS. ** An earlier revision put EVAP and EGR on the
   expander because the split was made by current and criticality, and PWM is
@@ -197,6 +206,43 @@ CONTENTS
 
   74HCT541 #2's `OE` is a GPIO, not the watchdog - it has to be releasable
   under software control, unlike #1 and #3.
+
+
+8a. VSS OUT, AND A TACH PIN THAT STOPS HERE
+-------------------------------------------
+
+   GPIO --> 74HCT541 #2 ch6 --> NCV8405A #13 --> EEC-V pin 68 (679 GY/BK)
+                                  open drain          |
+                                                      +--> speed control servo C157
+      [ pull-up footprint, NOT POPULATED ]             +--> GEM C267
+                                                      +--> rear air suspension C277
+
+  ** NOT on 74HCT541 #3. ** #3 is full at 8, so the obvious home for a slow
+  output has no room. #2 has the space.
+
+  ** OPEN DRAIN, PULL-UP UNPOPULATED. ** The open [CONFIRM] is what those three
+  modules expect on 679 - 12 V, 5 V or open-drain. Open-drain with no pull-up
+  is safe under ALL THREE readings, because the receiving modules set their own
+  high level. Populate the pull-up only if measurement shows they need a driven
+  high.
+
+  The ordering is the point: driving 12 V into a module that pulls up to 5 V is
+  the failure mode, and it is only reachable by populating before measuring.
+
+  ~156 Hz at 8000 pulses/mile and 70 mph. [CONFIRM] the pulses-per-mile for
+  this truck - it sets the firmware scaling, not the driver choice.
+
+  ** THERE IS NO DISCRETE TACH OUTPUT. ** The cluster takes engine speed over
+  SCP and has no pin for it. schematic-findings.md section 12.
+
+   GPIO --> [ series R ] --> 2-pin test header, 3.3 V logic. STOPS HERE.
+
+  A GPIO is cheap against 36 spare, so one is reserved and brought to a header
+  for a scope or a bench gauge. ** It does not reach the EEC-V connector. **
+
+  Expanding it later costs one channel on #2 (2 spare after VSS), one NCV8405A,
+  and a connector pin - and the connector pin is the part to check first, since
+  the OEM pinout has no tach assignment to inherit.
 
 
 9. RELAYS AND LAMPS
@@ -307,10 +353,10 @@ CONTENTS
      against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
      measurement, not a decision.
 
-  2. ** Tach and VSS outputs have no driver assigned. ** Found by the
-     ignition/injection audit as a fourth load counted as handled when only a
-     pin had been reserved - and it is the only row in pin-budget.md's STM32
-     table with nothing in the "driven by" column.
-
-  3. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
-  4. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
+  2. [CONFIRM] what the speed control servo, GEM and rear air suspension
+     module expect on circuit 679 - sec.8a. The open-drain default is safe
+     whatever the answer; it decides only whether a pull-up gets populated.
+  3. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
+     not on Ford's 4R70W diagram - sec.7. It changes the channel count.
+  4. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
+  5. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.

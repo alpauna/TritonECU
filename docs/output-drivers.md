@@ -635,7 +635,12 @@ that channel. **It is probably unnecessary here:** battery voltage and **TFT are
 already inputs**, and current ≈ V<sub>bat</sub> × duty / R(T) is a compensation
 that costs nothing but arithmetic. Worth doing before adding hardware.
 
-Two channels short becomes **eleven NCV8405A channels plus one NCV8408B**.
+~~Two channels short becomes **eleven NCV8405A channels plus one NCV8408B**.~~
+
+**Superseded by the channel budget below: thirteen channels, twelve NCV8405A
+plus one NCV8408B.** This line predated the canister vent solenoid, which was
+found reading Ford's diagrams, and the IAC driver, assigned in a later review.
+A fourteenth channel — **VSS out** — is added below.
 
 This also bounds
 [`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
@@ -741,7 +746,8 @@ path.
 | 1 | **TCC** | 54 | PWM, SOT-223 |
 | 1 | **EPC** | 81 | PWM — **NCV8408B** DPAK |
 | 1 | **IAC valve** | **83** | **PWM, SOT-223 with a pour** — see below |
-| **13** | | | |
+| 1 | **VSS out** | **68** | frequency out, ~156 Hz — see below |
+| **14** | | | |
 
 Pin numbers and circuits are from Ford's own diagrams —
 [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md).
@@ -752,6 +758,42 @@ Two corrections fell out of reading them:
 - **Only two shift solenoids appear** at the transmission connector, SSA and
   SSB. The CSS coast-clutch channel came from the MegaSquirt sheet and is not on
   Ford's 4R70W diagram. **[CONFIRM]** — it changes the count.
+
+### VSS out — the fourth no-driver instance, closed
+
+`review-ignition-injection.md` found tach and VSS with no driver assigned.
+**Half of that was a phantom**: Ford's cluster diagrams show no discrete tach
+output at all — the cluster takes engine speed over SCP.
+[`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §12.
+
+What is real is **pin 68, circuit 679 GY/BK**, feeding the speed control servo
+(C157), the GEM (C267) and the rear air suspension module (C277).
+
+| | |
+|---|---|
+| Driver | **NCV8405A #13**, and it goes on **74HCT541 #2** |
+| Why not #3 | **#3 is full at 8** — HO2S ×4, CVS, IMCC, SSA, SSB. The obvious home for a slow output has no room |
+| Frequency | ~156 Hz at 8000 pulses/mile and 70 mph, against a part already running EPC at ≥200 Hz |
+
+**Drive it open-drain, and leave the pull-up unpopulated.**
+
+The open `[CONFIRM]` is what those three modules expect on 679 — 12 V, 5 V or
+open-drain. **Open-drain with no pull-up is safe under all three readings**,
+because the receiving modules set their own high level. Fit the pull-up
+footprint and populate it only if measurement shows they need a driven high.
+
+That ordering is the point: driving 12 V into a module that pulls up to 5 V is
+the failure, and it is only reachable by populating first and measuring after.
+
+### Tach out — a reserved pin that stops on the board
+
+There is no OEM discrete tach, so nothing consumes one. But a GPIO is cheap
+against 36 spare, so one is **reserved and brought to a test header at 3.3 V
+logic through a series resistor. It does not reach the EEC-V connector.**
+
+Expanding it later costs: one channel on 74HCT541 #2 (**2 spare** after VSS),
+one NCV8405A, and a connector pin — and the connector pin is the part to check
+first, since the OEM pinout has no tach assignment to inherit.
 
 ### Two cautions
 

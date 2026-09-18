@@ -154,3 +154,16 @@ So the row should read *VSS out | 1*, and the open question narrows to **what
 level those three modules expect**. See
 [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §10
 and §12.
+
+> **CLOSED.** VSS takes **NCV8405A #13 on 74HCT541 #2** — not #3, which is full
+> at 8. Driven **open-drain with the pull-up unpopulated**, which is safe
+> whatever those three modules expect, so the remaining `[CONFIRM]` decides only
+> whether a resistor gets fitted. A **tach GPIO is reserved** and brought to a
+> test header at 3.3 V; it does not reach the connector, because no OEM discrete
+> tach exists to reach.
+>
+> Closing it turned up that the driver count was stated three ways — `×10` in
+> `v1-scope.md`, *eleven* here in `output-drivers.md`, and **13** in that
+> document's own channel budget. The budget was right; the other two predated
+> the canister vent solenoid and the IAC assignment.
+> [`output-drivers.md`](output-drivers.md#vss-out--the-fourth-no-driver-instance-closed)

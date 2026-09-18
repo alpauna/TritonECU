@@ -25,7 +25,7 @@ ST-Link, USB console and Ethernet all come for free.
 | Slow I/O | ~~MCP23S17 expander chain~~ — **dropped. Every signal is native.** 76 of ~114 pins, 36 spare. Gates still buffered by a third 74HCT541 at 5 V, which was always a voltage question — [`review-expander-chain.md`](review-expander-chain.md) | ✅ |
 | **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
 | **PWM gate buffer** | 2nd **74HCT541** at 5 V — EVAP, EGR, TCC, EPC, **IAC** take native timer pins at 3.3 V (5 of 8 used) | ✅ |
-| **Solenoid / heater drivers** | **NCV8405ASTT1G** ×10 — self-protected low-side, drain-sense diagnosis | ✅ |
+| **Solenoid / heater drivers** | **NCV8405ASTT1G** ×**13** — self-protected low-side, drain-sense diagnosis. ~~×10~~ predated the canister vent solenoid, IAC and VSS | ✅ |
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native pins; TCC **NCV8405A**, EPC **NCV8408B** DPAK, ≥200 Hz), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
