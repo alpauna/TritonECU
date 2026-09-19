@@ -219,6 +219,29 @@ fastener, no clamp bar and no assembly torque**.
 **Keep the approach.** Reach for a gap pad where a specific part runs hot. Do not
 treat the tape as a compromise: it is the reason the OEM board worked.
 
+### ⚠ The tape is also the insulator — and the IGBT tabs sit at 400 V
+
+A D2Pak tab is the **collector**. On the ISL9V3040 that node is **self-clamped at
+400 V** during every spark event ([`output-drivers.md`](output-drivers.md)), so
+each of the eight tabs swings to 400 V, 8 times per two crank revolutions, a few
+millimetres from a **grounded metal case**.
+
+Bolting a live tab to a grounded case normally costs an insulating pad *and* a
+shoulder washer *and* a torque spec. **Double-sided thermal tape is the
+insulator**, so one part does both jobs and the fastener disappears entirely.
+That — not the thermal number — is why the OEM did it this way.
+
+Two things follow that a gap pad would not have forced:
+
+| | |
+|---|---|
+| **[CONFIRM] the tape's dielectric withstand** against 400 V repetitive, not just its bulk rating. Thermal tapes are usually specified in kV, so this should pass — but it must be *checked*, because it is now a safety-of-operation item rather than a thermal one |
+| **Creepage at the board edge.** The tab is at 400 V and the rail is at chassis. Mind the edge clearance and any conformal-coat holiday along that line |
+
+It also buys something a bolted joint does not: **compliance**. Tape accommodates
+board flex and CTE mismatch, where a rigid fastener would put that stress
+straight into the tab's solder joint — in a vehicle, under vibration, for years.
+
 ## ⚠ The tension this creates with daughterboards
 
 **A stacked daughterboard cannot reach the case edge.** Q1 on the power board
