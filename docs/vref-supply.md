@@ -1,8 +1,12 @@
 # VREF supply design
 
 The replacement ECU must source the buffered 5 V sensor reference the OEM PCM
-provides on two pins (A-20, C-20). See
-`1999-Ford-F150-4wd-5.42v/oem-connectors.md`.
+provides. **On this truck that is one pin — 90, circuit 351 BN/WH.** The
+~~two pins (A-20, C-20)~~ in Ford's power-pin chart belong to **a different,
+three-connector PCM**; see
+[`1999-Ford-F150-4wd-5.42v/oem-connectors.md`](1999-Ford-F150-4wd-5.42v/oem-connectors.md#-eec-v-pcm--power-ground-and-reference-pins--not-this-trucks-pcm).
+The dual-channel output stage below is built regardless, so the second feed is a
+stuffing option rather than a requirement.
 
 **Originally specified:** separate supply, isolated from the internal 5 V,
 outbound resettable fuse, **3 A** output.
@@ -32,9 +36,12 @@ dual-channel**, so both are built either way and the unused one is simply never
 enabled. Beyond that, the pinout sheet is the *MegaSquirt install's* record —
 it carries its own caveat that the flat 1–104 numbering does not map cleanly to
 Ford's connector-relative numbering, and a PNP install only connects the VREF
-it uses. Ford's sheet is authoritative, and its A-20 / C-20 pattern matches the
-SIGRTN A-17 / B-17 / C-17 pattern directly above it: one per connector.
-**[CONFIRM ON TRUCK]** remains worth doing, but nothing waits on it.
+it uses. ~~Ford's sheet is authoritative, and its A-20 / C-20 pattern matches the
+SIGRTN A-17 / B-17 / C-17 pattern directly above it: one per connector.~~
+**That reasoning was right about the pattern and wrong about the vehicle** — the
+A-20/C-20 and A-17/B-17/C-17 patterns do both mean "one per connector", which is
+exactly why they cannot describe a single-connector PCM. ~~**[CONFIRM ON
+TRUCK]**~~ **closed on paper.**
 
 ---
 

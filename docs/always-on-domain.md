@@ -1256,12 +1256,11 @@ battery becomes a no-start that looks like a dead ECU.
   a large sleep load otherwise, and nothing needs it while parked.
 - **Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
   hundreds of milliamps in a parked truck.
-- ~~**[CONFIRM] A-44's number in the 1–104 scheme.**~~ **Retired** — a dedicated
-  battery lead uses no EEC-V pin. The underlying gap is real and still open for
-  every *other* pin: the wiring diagrams give VPWR as *"pins 71 and 97"* while
-  `oem-connectors.md` gives it as *"A-32, A-33"*, and **no mapping between the
-  two schemes is recorded anywhere in this repo.** It simply no longer blocks
-  this drawing.
+- ~~**[CONFIRM] A-44's number in the 1–104 scheme.**~~ **Closed, twice over.**
+  A dedicated battery lead uses no EEC-V pin — and **there is no mapping to
+  find**: the A-xx chart describes a **three-connector PCM**, and this truck has
+  one 104-pin connector. See
+  [`1999-Ford-F150-4wd-5.42v/oem-connectors.md`](1999-Ford-F150-4wd-5.42v/oem-connectors.md#-eec-v-pcm--power-ground-and-reference-pins--not-this-trucks-pcm).
 - **[CONFIRM] the LTC4364 tolerates `OUT` held at battery while `IN` sits at 0 V.**
   That is the parked state *by construction* here. The ideal-diode FET blocks the
   current; what is unverified is the part's own rating for a reverse IN–OUT

@@ -7,10 +7,23 @@ which mapped this truck for an MS3Pro PNP + MicroSquirt install.
 Columns: the MegaSquirt PNP function, whether the '99 F-150 pin matches,
 the OEM wire colour, and the original notes.
 
-**Pin numbering caveat.** This sheet numbers 1–104 flat. The Ford power-pin
-sheet uses connector-relative numbering (A-13, A-20, B-17, C-17…). The two
-do not obviously line up and **[CONFIRM]** is needed before wiring a
-connector from these numbers alone.
+**~~Pin numbering caveat~~ — RESOLVED: this sheet is the authority.** It numbers
+1–104 flat. The Ford power-pin sheet uses connector-relative numbering (A-13,
+A-20, B-17, C-17…) ~~and the two do not obviously line up~~ — **because they
+describe different PCMs.** That chart's own text says *"Connector A / B / C
+signal return"*: **three connectors.** This truck has one.
+
+**There is no mapping to find.** The chart puts VPWR on A-32/A-33, *adjacent*;
+this truck's are 71 and 97, *26 apart*. And the flat numbering is a physical
+**4 × 26** layout — power grounds 25/51/77/103 are one full column, VPWR 71/97
+another, coils occupy two complete columns — which no three-connector scheme can
+produce. Verified in [`../calc/eec_v_numbering.py`](../calc/eec_v_numbering.py);
+see [`oem-connectors.md`](oem-connectors.md#-eec-v-pcm--power-ground-and-reference-pins--not-this-trucks-pcm).
+
+These numbers are corroborated independently by Ford's own EVTM pages in this
+directory — pins 15/16 = circuits 915/914, pin 25 = 567 LB/YE, pins 71/97 =
+361 RD, and `4R70W-PowertrainControlModule.png` showing pins 1/27/37/54/81 with
+no connector prefix. **Wire from this sheet.**
 
 | Pin | MS function | I/O | '99 F150 pin | Wire | Notes |
 |---|---|---|---|---|---|
@@ -196,12 +209,16 @@ See [`../output-drivers.md`](../output-drivers.md) and
    is the sensor's source impedance, which sits in series with the VR board's
    5 kΩ legs.
 
-2. **Only one VREF pin appears here.** Pin 90 (BRN/WHT) is the only VREF, but
-   the Ford power-pin sheet lists **two** (A-20 and C-20). Either the second is
-   unused on this application, or this sheet only records what the MegaSquirt
-   install connected. **[CONFIRM]** — but it no longer gates anything: the chosen
-   output stage is dual-channel, so both feeds are built either way and an unused
-   one is simply never enabled. See [`../vref-supply.md`](../vref-supply.md).
+2. ~~**Only one VREF pin appears here.**~~ **CLOSED — there is one, and the
+   "two" came from the wrong PCM.** Pin 90 (BRN/WHT) is this truck's only VREF,
+   and Ford's diagrams confirm it directly: **circuit 351 BN/WH to PCM pin 90**,
+   spliced at S136/S137 to the DPFE, the TP sensor and C150
+   ([`schematic-findings.md`](schematic-findings.md) §1). The power-pin sheet's
+   A-20 / C-20 describes a three-connector PCM, not this one.
+
+   It never gated anything anyway — the chosen output stage is dual-channel, so
+   the second feed is a **stuffing option** built either way and simply never
+   enabled. See [`../vref-supply.md`](../vref-supply.md).
 
 ---
 

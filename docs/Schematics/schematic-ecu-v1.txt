@@ -503,6 +503,11 @@ CONTENTS
 
   104-pin, rusEFI footprint. Notable assignments established by review:
 
+    ** Numbered FLAT 1-104, on a 4 x 26 physical layout. ** Do NOT wire from
+    EEC-V-Power-Pins.png - that chart is a three-connector PCM and is not this
+    vehicle. eec-v-pinout.md is the authority, corroborated by Ford's own EVTM
+    pages. calc/eec_v_numbering.py.
+
     15, 16   SCP- / SCP+                        sec.11
     25       CMP shield termination             sec.3, and pin 25 was mislabelled
     48, 82   circuits 391 and 1138, brought in as FREEWEEL RETURNS rather
@@ -546,11 +551,15 @@ CONTENTS
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
   5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
   6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
-  9. [CONFIRM] the A-xx / 1-104 pin numbering mapping - sec.12. The wiring
-     diagrams number VPWR 'pins 71 and 97'; oem-connectors.md numbers it
-     'A-32, A-33'. Two schemes coexist in the repo with NO MAPPING. The
-     always-on feed no longer depends on it - it is a dedicated battery
-     lead - but every other A-xx reference still does.
+  9. ~CLOSED~ the A-xx / 1-104 pin numbering question - sec.12. THERE IS NO
+     MAPPING: EEC-V-Power-Pins.png describes a THREE-CONNECTOR PCM ("Connector
+     A / B / C signal return", and VPWR on ADJACENT pins A-32/A-33 where this
+     truck's are 71 and 97, twenty-six apart). This truck has ONE 104-pin
+     connector, numbered flat, on a physical 4 x 26 layout - grounds
+     25/51/77/103 are one whole column, VPWR 71/97 another, coils occupy two
+     complete columns. eec-v-pinout.md is the authority. Two conclusions that
+     rested on the chart CHANGED: sensor returns are TWO branches (pins 36 and
+     91), not three; power grounds are FIVE (3, 24, 51, 77, 103), not four.
  10. [CONFIRM] the LTC4364 tolerates OUT held at battery while IN is at 0 V
      - sec.1. That is the parked state BY CONSTRUCTION now.
  11. [MEASURE] battery-to-protected-rail drop once running - sec.1. It is

@@ -141,9 +141,42 @@ data points establish the pattern but not its extent.
 
 ---
 
-## EEC-V PCM — power, ground and reference pins
+## ⛔ EEC-V PCM — power, ground and reference pins — **NOT THIS TRUCK'S PCM**
 
 Source: `EEC-V-Power-Pins.png`
+
+> ## ⛔ This chart describes a different PCM. Do not wire from it.
+>
+> The table below uses **connector-relative numbering** (A-32, B-17, C-20) and
+> its own description column gives the reason: *"Connector **A** signal return"*,
+> *"Connector **B** signal return"*, *"Connector **C** signal return"*. **Three
+> separate connectors.**
+>
+> **This truck has one 104-pin connector.** `4R70W-PowertrainControlModule.png`
+> — Ford's own EVTM page for this vehicle — draws the PCM as a single block with
+> flat pins **1, 27, 37, 54, 81** and no connector prefix anywhere.
+>
+> **And no mapping exists to be found.** The chart puts VPWR on **A-32 and A-33,
+> adjacent**. On this truck VPWR is **pins 71 and 97 — twenty-six apart**. No
+> offset maps two adjacent pins onto two pins 26 apart.
+>
+> **The flat numbering is a physical 4 × 26 layout**, which a three-connector
+> scheme cannot produce. Verified in
+> [`../calc/eec_v_numbering.py`](../calc/eec_v_numbering.py):
+>
+> | Group | Pins | Shape |
+> |---|---|---|
+> | Power grounds | 25, 51, 77, 103 | **one column**, residue 25, all four rows |
+> | VPWR | 71, 97 | **one column**, residue 19 |
+> | Coils 1–8 | 1, 26, 27, 52, 53, 78, 79, 104 | **two full columns**, four deep |
+> | Injectors 1–8 | 72–75, 98–101 | four columns, paired across two rows |
+>
+> **[`eec-v-pinout.md`](eec-v-pinout.md) is the authority for this vehicle**, and
+> it is independently corroborated by Ford's EVTM pages in this directory —
+> pins 15/16 = circuits 915/914, pin 25 = 567 LB/YE, pins 71/97 = 361 RD.
+>
+> The table is kept because **four of the five design conclusions below survive
+> on their own reasoning**, and it is worth recording which, and why.
 
 | Function | Description | Pin |
 |---|---|---|
@@ -185,29 +218,49 @@ Taking a channel for VREF sense means the earlier 8-channel allocation is now
 oversubscribed — something moves to the P4's native ADC. DPFE is the natural
 one to move: it is slow and not fuelling-critical.
 
-### 2. Signal return is per-connector, not one net
+### 2. Signal return is per-connector, not one net — ⚠ **two branches, not three**
 
-There are **three** SIGRTN pins — A-17, B-17, C-17 — one per harness connector.
-The PCM does not present a single sensor ground; it presents three branches
-that meet only inside the module. That is star grounding done at the source.
+~~There are **three** SIGRTN pins — A-17, B-17, C-17 — one per harness
+connector.~~ **That is the other PCM.** This truck has **two** sensor returns,
+and [`eec-v-pinout.md`](eec-v-pinout.md) confirms them independently:
 
-The replacement ECU should reproduce that: three separate return branches
-brought back to one internal star point, rather than commoning them at the
-connector. Commoning them turns three stars into one loop and re-creates the
-noise coupling the design was avoiding. Combined with the DLC sheet, this is
-the circuit-570 network seen from the other end.
+| Pin | | Circuit |
+|--:|---|---|
+| **36** | **MAF return** | 968, TAN/LT BLU |
+| **91** | **SGND / sensor ground** | GRY/RED |
 
-### 3. Four power ground pins
+**The principle survives and the count changes.** The PCM still does not present
+one sensor ground — it presents branches that meet only inside the module, which
+is star grounding done at the source. The replacement ECU should reproduce
+**two** separate return branches to one internal star point, not three, and still
+must not common them at the connector.
 
-`PWRGND` is split across A-24 through A-27 because injector and coil-driver
-return current is large and pulsed. Whatever the replacement ECU uses for
-low-side drivers needs comparable return capacity, kept off the SIGRTN
-branches entirely.
+That the MAF has its own dedicated return is the part worth keeping: it is what
+makes the differential-measurement argument for the ADC hold.
 
-`CSEGND` (A-43) is a separate case/shield ground — again not to be commoned
-with either of the above except at the star point.
+### 3. Four power ground pins — ⚠ **five, and they are a column, not a block**
 
-### 4. FEPS resolves the DLC pin 13 question
+~~`PWRGND` is split across A-24 through A-27~~ — again the other PCM. On this
+truck the power grounds are **pins 3, 24, 51, 77 and 103**, and
+25/51/77/103 form **one full column of the connector**, one per row. Ford put a
+ground at the same position in every row.
+
+**The conclusion is unchanged and if anything reinforced:** injector and
+coil-driver return current is large and pulsed, the OEM gave it five pins spread
+across the connector body, and whatever the replacement ECU uses for low-side
+drivers needs comparable return capacity kept off the sensor-return branches
+entirely.
+
+> **Pin 25 is contested.** The MegaSquirt sheet calls it power ground; **Ford's
+> diagram calls it 567 LB/YE, 0 V, the CMP cable shield.** Ford wins — see
+> [`schematic-findings.md`](schematic-findings.md) §15. It is still a ground, but
+> it is a *shield* ground and is already allocated.
+
+~~`CSEGND` (A-43) is a separate case/shield ground.~~ **No case-ground pin is
+identified on this truck**, and the CMP shield at pin 25 may be doing that job.
+**[CONFIRM]** against Ford's connector page before assuming one exists.
+
+### 4. FEPS resolves the DLC pin 13 question — **conclusion stands, corroboration did not**
 
 `FEPS` — Flash EPROM Programming Supply — is the line Ford pulls to roughly
 18 V to put the PCM into reflash mode. The DLC sheet showed pin 13 (circuit
@@ -215,8 +268,18 @@ with either of the above except at the star point.
 arrive from somewhere a tool can reach.
 
 So DLC pin 13 is almost certainly the FEPS line, **not** the self-test input as
-suggested earlier. **[CONFIRM]** against a wiring page that actually traces
-circuit 107 from C228-13 to A-13.
+suggested earlier.
+
+> ⚠ **The "A-13 ↔ DLC pin 13" number match was coincidence across two different
+> connectors**, and anyone reading this page would have taken it as confirmation.
+> **The conclusion survives on independent evidence:**
+> [`eec-v-pinout.md`](eec-v-pinout.md) records this truck's **pin 13 as "DLC,
+> VIO"** — violet, which is circuit 107 — reached from the MegaSquirt sheet
+> without reference to the A-xx chart at all. Two sources, one conclusion, and
+> the pin number matching was luck.
+>
+> **[CONFIRM]** against a wiring page that actually traces circuit 107 from
+> C228-13 to PCM pin 13.
 
 Practical effect: the replacement ECU should **leave this pin unconnected**.
 Nothing good happens if 18 V arrives on a 3.3 V system, and a scan tool
