@@ -162,7 +162,9 @@ Still in reserve: semi-sequential injection (+4) and tach/VSS over SCP (+2).
 
 ## What actually remains open
 
-Two things, and both are measurements rather than decisions:
+**Not the specification — that is complete.** What remains is *building* it: the
+carrier board has never been captured as a schematic or laid out. The two
+measurements this section used to list are both closed.
 
 1. ~~**Coil primary inductance**~~ — **MEASURED: 1.5 mH.** The 300 mJ rating is
    reached at exactly **20.0 A**; a healthy 80 mJ spark needs **10.3 A**, so the
@@ -171,7 +173,7 @@ Two things, and both are measurements rather than decisions:
    [`output-drivers.md`](output-drivers.md#-measured-l--148-mh-lcr-meter-2026-09-18).
    **Primary resistance measured too: 0.5 Ω** (DCR, good leads — a first 2-wire
    reading of 1.8 Ω was the leads). **Dwell is 1.33 ms at 14.4 V rising to
-   2.55 ms at 9 V cranking**, a 1.9× span that makes the dwell-vs-voltage table
+   2.56 ms at 9 V cranking**, a 1.9× span that makes the dwell-vs-voltage table
    mandatory. Overlap is irrelevant — it starts above 11 300 rpm.
    **Both measurements are closed.**
 

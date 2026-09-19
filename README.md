@@ -37,7 +37,9 @@ lives on `main`.
 | **M4** Cam sync | ◐ | logic proven — 6 native tests; **CMP sensor + pigtail ordered** — same connector as CKP |
 | **M5** Spark output | ◐ | scheduler proven — 12 native tests |
 | **M6+** Injection, closed loop, SCP, transmission | ○ | |
-| **Power board V1** | ✅ | schematic, BOM and Gerbers reviewed clean — **ready to fab** |
+| **ECU carrier board** | ○ | **the largest piece left.** Fully specified in [`schematic-ecu-v1.txt`](docs/Schematics/schematic-ecu-v1.txt) — 736 lines, every part chosen — but **not yet captured as a schematic or laid out** |
+| **Power board V1** | 🔒 | **released and frozen** — tagged `power-v1-released`, [`Schematics/README`](docs/Schematics/README.md) |
+| **Power board V2** | ✅ | V1 **+ one part**: `C1` 100 nF 1206 X7R **200 V** across B+/PGND at the connector — a 19 mm² loop against D1's 131. Reviewed clean, **ready to fab** |
 | **VR board V1** | ✅ | 4 channels, 2 × MAX9926 Mode A2 — reviewed clean, **fabricating** |
 | **VR test rig** | ◐ | all dimensions measured; 9 of 10 parts ready to print, [STLs](hardware/vr-test-rig/stl/) + [BOM](hardware/vr-test-rig/BOM.md). Parts ordered bar the stepper |
 | **VR rig firmware** | ✅ | RP2040 PIO step generator with a cranking profile — builds clean, [`firmware/`](hardware/vr-test-rig/firmware/) |
