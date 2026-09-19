@@ -23,6 +23,10 @@ Built from **TE drawing 770750-1**'s *Recommended P.C. Board Layout*
 | Pin field as a **slot** | 101.4 × 9.0 |
 | Board-edge line | 5.20 below the post centreline |
 
+> ⚠ **If a rusEFI PCB is to hand, use that instead.** It has been tested against
+> the salvaged connector and everything seats; real holes at real tolerance beat
+> a printed approximation. This gauge is for when that board is not available.
+
 **Two jobs at once:**
 
 1. **Go/no-go for the sanded post.** It mushroomed under a heat gun; sand the

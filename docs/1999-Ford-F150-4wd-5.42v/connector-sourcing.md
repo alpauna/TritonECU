@@ -135,24 +135,50 @@ LAYOUT** panel. It was in the repository the whole time.
 | Board edge | — | **5.20** below the datum |
 | Positional tolerance | — | **⊕ Ø0.10 Ⓜ | F | Ⓜ** on both hole types |
 
-### ⚠ The drill disagrees by 0.26 mm, and the drawing wins
+### ⚠ The drill disagrees by 0.26 mm — but a physical test says it is not fatal
 
-**1.143 mm (0.045″) against a specified Ø1.40 ±0.05 is not a rounding
-difference.** It is a hole the pin may not enter — 104 times, on a connector that
-cannot be bought.
+> ## ✅ TESTED: a rusEFI PCB fits over the salvaged connector
+>
+> **Everything seats** — all 104 pins, both posts, the centre boss — **except the
+> one post that mushroomed under the heat gun, which is ~1 mm oversize.**
+>
+> **That corrects two things this section said.**
+>
+> **1. "A hole the pin may not enter, 104 times" was overstated.** The pins enter
+> a 1.143 mm hole. TE's Ø1.40 is a *recommended* hole and recommendations carry
+> assembly margin; the pin itself is smaller than the recommendation implies.
+> **Still use Ø1.40** — it is the manufacturer's number and the margin is free on
+> our own board — but 1.143 is not a failure, it is a tighter fit.
+>
+> **2. "104 pads and nothing else" was wrong about the footprint, not about the
+> extraction.** The rusEFI board clearly has the post holes, because the
+> connector's posts go into it. **What was incomplete was the geometry table in
+> this document**, which recorded only the signal pads. The footprint was never
+> missing them.
+>
+> **A physical fit beats a document comparison**, and this is the second time
+> today that re-checking against the part has corrected a conclusion drawn from
+> paper.
 
-**Use the TE drawing as the footprint authority**, not the rusEFI extraction.
-It is the manufacturer's controlled document for this exact part number, it is
-toleranced, and it carries a positional datum. The rusEFI geometry agrees on
-pitch and stagger, which is reassuring — and it is silent on the three holes that
-matter mechanically.
+**Use the TE drawing as the footprint authority** — it is the manufacturer's
+controlled document for this exact part, toleranced, with a positional datum.
+The rusEFI geometry agrees on pitch and stagger, and now agrees in practice on
+everything else.
 
-### That also closes the posts question
+### The posts, and the one that needs sanding
 
-The **two Ø3.60 holes at 110.00 centres** are the posts seen on the donor board's
-underside. Together with the **Ø3.70 centre hole** they are the connector's
-mechanical retention into the PCB — the other half of the story from the case's
-metal lip.
+The **two Ø3.60 holes at 110.00 centres** take the connector's posts. Together
+with the **Ø3.70 centre hole** they are its mechanical retention into the PCB —
+the other half of the story from the case's metal lip.
+
+> **Sanding a mushroomed PBT post, ~1 mm oversize on diameter:**
+>
+> | | |
+> |---|---|
+> | **Rotate constantly** | a flat spot fails the hole as surely as oversize does. Wrap a strip of paper round it and work it like a shoe-shine |
+> | **Go slow — friction is heat** | PBT smears rather than cuts once it warms, and heat is what caused this. A power tool will make it worse |
+> | **0.5 mm of radius is not much material** | test-fit often and stop the moment it enters |
+> | ⭐ **Gauge against the rusEFI PCB, not a printed part** | it has real holes at real tolerance. [`conn_gauge`](../../hardware/carrier-template/) is a fallback for when that board is not to hand |
 
 > **Build the footprint from the drawing directly.** The row Y positions are
 > dimensioned from the post centreline (**6.00 / 3.05 / 0 / 2.85**, board edge at
