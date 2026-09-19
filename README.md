@@ -45,6 +45,7 @@ lives on `main`.
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 | **Enclosure** | ◐ | **cabin, behind the glovebox**, connector face through the firewall — vent on the cabin side, [`enclosure.md`](docs/enclosure.md) |
+| **Harness label** | ✅ | printed plate for the always-hot battery lead and the four added pins — [STL](hardware/harness-label/stl/label.stl) + [`README`](hardware/harness-label/README.md) |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -254,7 +255,9 @@ firmware/ecu/
   src/esp32/    ESP32-P4 platform layer (earlier target, still builds)
   test/         native unit tests
 hardware/       pin budget and supply calculators
-  vr-test-rig/  parametric OpenSCAD for the 36-1 + cam bench rig
+  vr-test-rig/    parametric OpenSCAD for the 36-1 + cam bench rig
+  psu-enclosure/  printed box for the bench supply
+  harness-label/  printed label - the always-hot lead and the added pins
 docs/           design documents and vehicle schematics
   Schematics/   board schematics, BOMs and Gerbers — fab-ready
   Datasheets/   every part datasheet the decisions were made against
