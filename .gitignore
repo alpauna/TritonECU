@@ -4,3 +4,8 @@ secrets.ini
 
 # Large downloaded binaries — GitHub rejects >100 MB
 *.AppImage
+
+# Office lock files - LibreOffice/Excel leave these behind
+.~lock.*#
+~$*
+.DS_Store
