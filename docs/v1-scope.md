@@ -20,7 +20,8 @@ ST-Link, USB console and Ethernet all come for free.
 | **VREF supply** | **NCV8772CDT504RKG** 5.00 V LDO off the **LTC4364 protected rail** — not the 5 V switcher, which has no headroom and is spread-spectrum. [`vref-supply.md`](vref-supply.md) | ✅ |
 | MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
 | Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, 9 kV clamp. Bench: Tokmas AD7606BSTZ, same LQFP-64 | ✅ |
-| Crank/cam/OSS/TC | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS, **transfer case speed**. No spare | ✅ |
+| Crank/cam/OSS/TC | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS, **transfer case speed**. No spare | ⚠ |
+| **⚠ VR count is one short** | **TSS — turbine shaft speed, EEC-V pin 59 — has no channel and appears in no document.** Five signals, four channels. A **third MAX9926** buys it plus the first real spare — [`review-vr-channel-count.md`](review-vr-channel-count.md) | **open** |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | ~~MCP23S17 expander chain~~ — **dropped. Every signal is native.** 76 of ~114 pins, 36 spare. Gates still buffered by a third 74HCT541 at 5 V, which was always a voltage question — [`review-expander-chain.md`](review-expander-chain.md) | ✅ |
