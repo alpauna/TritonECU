@@ -83,7 +83,7 @@ was always the point of the split, and it does not require two chips.
 | ~~**J1850 / SCP**~~ | **Moved onto the board** — see below | n/a |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
-| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1 | **yes** |
+| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Now quantified:** a stuck-on coil stores **1.0–5.7× the IGBT's 300 mJ rating** depending on primary resistance — [`output-drivers.md`](output-drivers.md) | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
 
 ### Why J1850 / SCP moved onto the board
@@ -164,8 +164,14 @@ Still in reserve: semi-sequential injection (+4) and tach/VSS over SCP (+2).
 
 Two things, and both are measurements rather than decisions:
 
-1. **Coil primary inductance** — sets the dwell limit against the ISL9V3040's
-   300 mJ rating. Measure one coil.
+1. ~~**Coil primary inductance**~~ — **MEASURED: 1.48 mH.** The 300 mJ rating is
+   reached at **20.1 A**; a healthy 80 mJ spark needs **10.4 A**, so the
+   operating point sits **3.7× under** and dwell lands at **1.3–1.6 ms**. The
+   ISL9V3040 is comfortably right. See
+   [`output-drivers.md`](output-drivers.md#-measured-l--148-mh-lcr-meter-2026-09-18).
+   **Still open: the primary *resistance*** — it barely moves the dwell but it
+   sets the stuck-on fault margin, which exceeds the rating at any plausible
+   value.
 
 ~~CMP sensor type~~ **Resolved: VR, single-ended.** Two MAX9926 packages,
 three channels used, one spare.

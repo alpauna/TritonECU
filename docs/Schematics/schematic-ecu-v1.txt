@@ -359,8 +359,20 @@ CONTENTS
   Both active-low, ANDed internally. A supervisor (TPS3823-class) drives OE2.
   ** If the watchdog is deferred, fit the footprint and strap OE2 LOW. **
 
-  Coil primary inductance is unmeasured and sets the dwell limit against the
-  ISL9V3040's 300 mJ rating. One of the two genuinely open items - sec.14.
+  ** COIL PRIMARY MEASURED: 1.48 mH ** (LCR meter, 2026-09-18). The 300 mJ
+  avalanche rating is reached at 20.1 A; a healthy 80 mJ spark wants 10.4 A.
+  So the operating point sits 3.7x under the rating and DWELL LANDS AT
+  1.3-1.6 ms, near enough independent of primary resistance because early in
+  the charge curve di/dt = V/L = 9.12 A/ms and R barely enters.
+
+  ** THE STUCK-ON CASE EXCEEDS THE RATING AT ANY PLAUSIBLE R. ** Current
+  saturates at V/R, not infinity - but that is 20.6 A at 0.7R (1.0x the
+  rating) and 48 A at 0.3R (5.7x), with the coil dissipating 300-700 W. That
+  is the number behind the OE2 watchdog above: firmware dwell limiting is the
+  first line, the hardware watchdog covers a firmware hang.
+
+  Still open: the primary RESISTANCE. It moves the dwell you would run by
+  ~10%; it moves the fault margin by 6x. calc/coil_dwell.py.
 
 
 6. INJECTION - 8 x SEQUENTIAL
@@ -600,9 +612,12 @@ CONTENTS
 
   MEASUREMENTS
 
-  1. ** Coil primary inductance is unmeasured. ** It sets the dwell limit
-     against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
-     measurement, not a decision.
+  1. ~DONE~ Coil primary inductance MEASURED at 1.48 mH (LCR, 2026-09-18).
+     300 mJ is reached at 20.1 A; an 80 mJ spark wants 10.4 A, so the
+     operating point is 3.7x under and dwell lands at 1.3-1.6 ms. Still open:
+     the primary RESISTANCE - it moves dwell by ~10% but it sets the stuck-on
+     fault margin, which exceeds the rating at ANY plausible value (1.0x at
+     0.7R, 5.7x at 0.3R). calc/coil_dwell.py, output-drivers.md.
   2. [MEASURE] the O2 heater's COLD resistance - sec.7. It sets the ramp
      start and decides whether the driver sees 16 W or 49 W if it is ever
      allowed into current limit.

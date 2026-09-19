@@ -32,18 +32,71 @@ the coil rather than the driver:
 E = ½ · L · I²
 ```
 
-A COP primary of ~5 mH at 8 A stores **160 mJ** — about 1.9× margin under the
-300 mJ rating. But 6 mH at 10 A is **300 mJ**, exactly at the limit and
-therefore not acceptable.
+### ✅ MEASURED: **L = 1.48 mH** (LCR meter, 2026-09-18)
 
-**[CONFIRM]** the primary inductance of the actual coils and set dwell for a
-peak current that keeps stored energy comfortably under 300 mJ. Dwell time is
-under firmware control, so this is a calibration constraint as much as a parts
-one — and `SparkScheduler::maxRpmForDwell()` already exposes the other end of
-the same tradeoff.
+> ~~A COP primary of ~5 mH at 8 A stores 160 mJ — about 1.9× margin. But 6 mH at
+> 10 A is 300 mJ, exactly at the limit and therefore not acceptable.~~
+> **That was a guess, and it was about 3.4× too high.** Energy goes as L, so the
+> whole concern evaporates. Numbers below from [`calc/coil_dwell.py`](calc/coil_dwell.py).
 
-If the measured energy is marginal, the EcoSPARK family has higher-energy
-members; staying within the family keeps the footprint and clamp behaviour.
+| Peak current | At 5 mH *(assumed)* | **At 1.48 mH *(measured)*** | Margin |
+|--:|--:|--:|--:|
+| 8 A | 160 mJ | **47.4 mJ** | **6.3×** |
+| **10.4 A** — 80 mJ, a healthy COP spark | 270 mJ | **80 mJ** | **3.7×** |
+| 12 A | 360 mJ | 106.6 mJ | 2.8× |
+| 16 A | 640 mJ | 189.4 mJ | 1.6× |
+| **20.1 A** | 1013 mJ | **299.9 mJ** | **1.0× — the rating** |
+
+**The 300 mJ rating is reached at 20.1 A.** The operating point sits **3.7×
+under it**. The ISL9V3040 is comfortably the right part and there is no need to
+reach for a higher-energy EcoSPARK member.
+
+### Dwell — and it barely depends on the primary resistance
+
+`I(t) = (V/R)(1 − e^(−tR/L))`. Early in the charge curve the rise is set by **L,
+not R**: `di/dt = V/L = ` **9.12 A/ms** at 13.5 V.
+
+| Target | Dwell at 13.5 V, R = 0.3 → 0.7 Ω |
+|---|---|
+| 8.2 A — 50 mJ | **1.00 → 1.17 ms** |
+| **10.4 A — 80 mJ** | **1.30 → 1.64 ms** |
+| 20.1 A — *the rating* | 2.93 → 5.56 ms |
+
+**Spread across the whole plausible range of R is ~10 % at the operating point**,
+so **dwell ≈ 1.3–1.6 ms** is the answer regardless. It is ~60 % at the rating,
+which is why R still matters for the *fault* margin.
+
+> **[MEASURE]** the coil's primary resistance. Same meter, same coil. It does not
+> move the dwell you would run; it moves how much margin you have when something
+> goes wrong.
+
+### ⚠ The fault case is stuck-on, and it exceeds the rating at any R
+
+A stuck-on output does not climb forever — current saturates at `V/R`:
+
+| R | I<sub>sat</sub> at 14.4 V | Stored | vs 300 mJ | Coil dissipates |
+|--:|--:|--:|--:|--:|
+| 0.3 Ω | 48.0 A | 1705 mJ | **5.7×** | 691 W |
+| 0.5 Ω | 28.8 A | 614 mJ | **2.0×** | 415 W |
+| 0.7 Ω | 20.6 A | 313 mJ | **1.0×** | 296 W |
+
+**At any plausible resistance a stuck-on coil stores more than the IGBT's
+avalanche rating**, and turning it off then dumps that into the device — by which
+point the coil is cooking at hundreds of watts anyway.
+
+**This is the number behind the `OE2` watchdog.** The firmware dwell limit is the
+first line; the hardware watchdog is what covers a firmware hang.
+[`v1-scope.md`](v1-scope.md) carries it as *"footprint yes, strap OE2 low for
+v1"* — that is still the right call for v1, but it is now a quantified risk
+rather than a principle.
+
+### Scheduler: dwell overlap is not a constraint
+
+At 8 cylinders the spark events are 90° apart — **2.50 ms at 6000 rpm** against a
+1.3–1.6 ms dwell, so **no overlap below ~10 700 rpm**. With COP each coil has its
+own driver so overlap would be legal anyway; it would only mean two coils
+charging at once, ~21 A from the harness for a few hundred microseconds.
+`SparkScheduler::maxRpmForDwell()` already exposes this end of the trade.
 
 ### Gate drive — resolved, and simpler than expected
 
