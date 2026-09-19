@@ -878,3 +878,86 @@ So §7's *"one is 3000 W and enough; paralleled TVS do not share"* is **already
 satisfied in copper**, and this document's own line *"D1, D2 are still two
 SMDJ43A"* was reading the BOM rather than the placement. **Correct the BOM to
 quantity 1** — as it stands you would order a part with nowhere to go.
+
+---
+
+# BOM revision 2 — checked against the placement, 2026-09-18
+
+Cross-checked designator by designator against `FlyingProbeTesting.json`.
+
+| | |
+|---|---|
+| BOM designators | **71** |
+| Real placements on the board | **71** |
+| In the BOM but not placed | **none** |
+| Placed but not in the BOM | **none** |
+
+**A clean match both ways**, which the previous BOM was not.
+
+## ✅ What this revision fixes
+
+| | |
+|---|---|
+| **`D2` removed** | It has no footprint. The old BOM asked for 2 × SMDJ43A and you would have had nowhere to put the second |
+| **`D4` added** — `ESD5Z5.0T1G` | It was **on the board and missing from the BOM** — you would have been one part short at assembly |
+| **Phantom `C1206` designator gone** | The old rows for C11–C14 were **column-shifted** — manufacturer in the part field, value in the footprint field — which leaked the footprint string `C1206` into the designator column as a 72nd "part" |
+| **C11–C14 now name a real part** | `HGC1206R7226K160NSPJ`, whose datasheet is already in [`Datasheets/`](Datasheets/) |
+| **`R1` footprint** | `R2512` → `RES-SMD_L6.4-W3.2-R2512`. **Rename only** — same 2512 |
+
+## ✅ Q1/Q2 — the old BOM had them backwards, and the board proves it
+
+The netlist is authoritative about what is on the copper:
+
+| Ref | Pads on the board | Footprint |
+|---|---|---|
+| **Q1** | 3 pads **+ an 8.40 × 10.57 mm tab** | **TO-263-2 (D2Pak)** |
+| **Q2** | 9 pads, 0.40 × 0.65 fine pitch + a 2.45 × 2.00 centre pad | **DFN-8** |
+
+| | Q1 | Q2 | |
+|---|---|---|---|
+| **New BOM** | `IRF540NSTRLPBF` / TO-263-2 | `YJQ40G10A` / DFN-8 | ✅ **matches** |
+| Old BOM | `YJQ40G10A` / DFN-8 | `IRF540NSTRLPBF` / TO-263-2 | ❌ backwards |
+
+So [`schematic-review-power.md`](schematic-review-power.md) summary item 6 —
+*"Q1 → IRF540NS (D2Pak); keep YJQ40G10A for Q2"* — **was already implemented in
+the layout**, and only the BOM had lagged. It has now caught up.
+
+> ⚠ **And that corrects this document.** The *"Gerber revision 3 — Q2 thermal
+> CLOSED"* section above analyses *"**Q2**'s tab pad (8.40 × 10.57 mm)"*. **That
+> tab is `Q1_4`.** The thermal work — 20 vias, 737 mm² of copper, RθJA ≈ 25–30 °C/W
+> — is all correct and all about **Q1**. The designator was taken from the old,
+> wrong BOM.
+
+## ⚠ Two changes worth confirming
+
+**`R1`: `FRM252WJR010TN` → `FPM253WFR010TM`.** This is the current-sense shunt
+feeding both the INA238 and the LTC4364's current limit, so it is not a
+like-for-like swap to wave through:
+
+- **Different series** — FRM252 → FPM253.
+- **Different tolerance code** — `…W**J**R010TN` → `…W**F**R010TM`. J is 5 %,
+  **F is 1 %**, which is an improvement for current sensing.
+- **[CONFIRM]** power rating and TCR. [`Datasheets/`](Datasheets/) holds
+  `FPM253WJR010TM` and `FRM252WJR010TN` — **the `F` variant now specified is not
+  on file.**
+
+**`Q4`: `BS170FTA` → `BSS123`.** Same SOT-23-3 footprint, and now identical to
+Q3 — one fewer line item. BSS123's V<sub>GS(th)</sub> is ≈ 1.3 V against BS170's
+up to 3 V, so this is the better part if Q4 is driven from **3.3 V** logic.
+**[CONFIRM]** that is what drives it.
+
+## ⚠ And a number that does not match: the shunt is 10 mΩ, not 8
+
+[`schematic-review-power.md`](schematic-review-power.md) §7 reasons from
+*"At 8 mΩ…"*; the BOM says **`R010` — 10 mΩ**, and so does this document
+elsewhere (*"the LTC4364's 10 mΩ shunt"*).
+
+**The conclusion survives, the arithmetic does not:**
+
+| R1 | ADCRANGE=1 (±40.96 mV) | ADCRANGE=0 (±163.84 mV) |
+|---|---|---|
+| 8 mΩ *(assumed)* | ±5.12 A — saturates under the 5.6 A limit | ±20.48 A |
+| **10 mΩ *(actual)*** | **±4.10 A — saturates harder** | **±16.38 A** ✓ |
+
+**`ADCRANGE=0` is still the right answer**, and at the real 10 mΩ the case for it
+is stronger, not weaker.
