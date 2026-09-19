@@ -629,7 +629,13 @@ for:
 The MegaSquirt pinout supports the hardwired reading: PCM pin 68 is *"VSS+ Out
 to Cruise"*, a discrete speed output rather than a bus message.
 
-**[CONFIRM]** what the GEM actually needs from the PCM, if anything. The likely
+~~**[CONFIRM]** what the GEM actually needs from the PCM, if anything.~~
+**✅ CLOSED by `GEM4.png`: one hardwired discrete, and it points at us.** GEM
+pin 16, *"4X4 LOW RANGE OUTPUT TO PCM"*, circuit `784 LB/BK`, into **PCM pin 14**.
+The GEM needs nothing *from* the PCM — it needs the PCM to **accept one input**.
+See [`gem-module.md`](gem-module.md).
+
+The likely
 answer is now "nothing over a bus", which would mean the GEM largely takes care
 of itself — but it is worth establishing rather than assuming twice in a row.
 

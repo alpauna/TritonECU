@@ -40,7 +40,7 @@ no connector prefix. **Wire from this sheet.**
 | 11 | -- | -- | Shift SOL(SS2) | VIO/ORG | MicroSquirt Pin 7 (Solenoid A) |
 | 12 | -- | -- | Trans Control Indicator | WHT/LT GRN | OD On/Off Light +12v when OD is off This is a ground switched LED with proper resistor by LEDMicroSquirt Pin 35 maybe used as LED driver here! |
 | 13 | -- | -- | DLC | VIO |  |
-| 14 | -- | -- | 4x4 Low Indicator Sw | LT BLU/BLK |  |
+| **14** | -- | -- | **4x4 Low Range, FROM THE GEM** | **LT BLU/BLK (784)** | `GEM4.png` labels the other end *"4X4 LOW RANGE OUTPUT TO PCM"*, GEM pin 16. **This is the entire GEM↔PCM interface** — [`gem-module.md`](gem-module.md) |
 | 15 | SCP- | J1850 Bus | Same | PNK/LT BLU |  |
 | 16 | SCP+ | J1850 Bus | Same | TAN/ORG |  |
 | 17 | -- | -- | Same |  |  |
