@@ -49,13 +49,42 @@ cross-reference them against Ford's `EEC-V-Power-Pins.png` — that chart is a
 ## Printing
 
 ```bash
-./render.sh          # -> stl/label.stl
+./render.sh          # -> stl/{label,plate,text,warn}.stl
 ```
+
+### Multi-material — the warning in red
+
+Four STLs come out. Use **one** of these two routes:
+
+| Route | Files | How |
+|---|---|---|
+| **Multi-material (AMS/MMU)** | `plate` + `text` + `warn` | Load **all three as one object**. They share an origin, so they land aligned. Assign `warn` red, `text` white, `plate` black |
+| Single extruder | `label` | One file, plus a colour change at **2.4 mm** |
+
+**Why the split exists.** A colour change at 2.4 mm colours *all* the text at
+once — including the URL, which does not matter, and the warning, which does.
+The three warning lines are the only reason this label exists, so they get their
+own filament:
+
+```
+   ! ALWAYS-HOT LEAD TO BATTERY +      <- warn
+        2 A FUSE AT THE POST           <- warn
+    ECU IS LIVE WITH THE KEY OFF       <- warn
+```
+
+Which rows belong to which group is the fourth field in `rows` — `"w"` for the
+warning, `"t"` for everything else. The horizontal rules stay `"t"` so they
+**bracket** the warning rather than joining it.
+
+**The glyphs sink `embed` = 0.2 mm into the plate.** Exactly coincident faces
+confuse some slicers; a small overlap makes the union unambiguous. It is buried,
+so it never shows.
 
 | | |
 |---|---|
 | **Material** | **PETG, ASA or ABS.** Not PLA |
 | Size | **98 × 78 × 3.2 mm** — verified off the STL, and the height follows the text, see below |
+| Colours | **red** warning, white text, black plate — see below |
 | Layer | 0.2 mm |
 | Supports | **none** — flat plate, raised text, nothing overhangs |
 | Infill | 20 % is plenty; this is a label, not a bracket |
@@ -64,17 +93,14 @@ cross-reference them against Ford's `EEC-V-Power-Pins.png` — that chart is a
 off its zip ties is *worse* than no label, because the next person will not know
 it was ever there.
 
-### Two-colour for free
+### Two-colour without multi-material
 
-**Every glyph sits in one Z plane.** The text starts exactly at `plate_t` and is
-`text_h` tall, so a single filament change at that height prints the whole label
-two-colour with no other work — no multi-material setup, no painting.
+**Every glyph sits in one Z plane** — text starts at `plate_t` and is `text_h`
+tall — so a single filament change at **2.4 mm** prints `label.stl` two-colour
+with no other setup. White or yellow on black reads well under a bonnet light.
 
-In PrusaSlicer/OrcaSlicer: add a colour change at **2.4 mm**. White or yellow on
-black reads well under a bonnet light.
-
-If you print it one colour, the raised text is still legible — it just relies on
-shadow, so pick a light filament.
+One colour works too; the raised text just relies on shadow, so pick a light
+filament.
 
 ## The plate sizes itself
 

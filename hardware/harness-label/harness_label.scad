@@ -15,12 +15,25 @@
 // label that has slumped off its zip ties is worse than no label, because the
 // next person will not know it was ever there.
 
-part = "label";            // label
+part = "label";            // label | plate | text | warn
+//
+// MULTI-COLOUR: render plate, text and warn separately and load all three
+// into the slicer as ONE multi-part object - they share an origin, so they
+// land aligned. Assign the warning its own filament.
+//   plate  the body
+//   text   everything except the warning block
+//   warn   the three warning lines, meant to be RED
+// "label" is all of it in one piece, for a single-colour print or a plain
+// filament change at plate_t.
 
 /* ---- plate ------------------------------------------------------------ */
 plate_w   = 98;            // long axis
 plate_t   = 2.4;           // base thickness
 text_h    = 0.8;           // raised height - one filament change at plate_t
+embed     = 0.2;           // glyphs sink this far INTO the plate. Exact
+                           // coincident faces confuse some slicers; a small
+                           // overlap makes the multi-part union unambiguous
+                           // and is buried, so it never shows.
 margin_x  = 7;             // side margin - must clear the zip slots, see assert
 margin_y  = 6;             // top and bottom margin
 corner_r  = 3;
@@ -35,26 +48,39 @@ slot_in   = 4.5;           // side edge to slot CENTRE
 
 /* ---- type ------------------------------------------------------------- */
 FONT      = "Liberation Sans:style=Bold";
-CHAR_W    = 0.62;          // width per point of size, Liberation Sans Bold.
+CHAR_W    = 0.80;          // width per point of size, Liberation Sans Bold.
                            // OpenSCAD 2021.01 has no textmetrics(), so the fit
-                           // assert below estimates. Conservative on purpose.
+                           // assert below can only ESTIMATE.
+                           //
+                           // CALIBRATED, not guessed. This was 0.62 and that
+                           // was wrong in the UNSAFE direction: three rows
+                           // passed the assert and overran the plate, one of
+                           // them into the zip-tie slots. Measured off the
+                           // rendered warn.stl - 30 chars at size 4.0 came out
+                           // 94.4 mm, so 94.4/(30*4.0) = 0.787. Rounded up.
+                           //
+                           // AN ESTIMATE IS NOT A CHECK. verify.py measures
+                           // the actual STLs and is what now guards this.
 
-// Each row is ["text", size, advance] or ["", 0, advance] for a rule.
-// ADVANCE is the distance to the next row's baseline, so the plate height
-// follows the content instead of being guessed.
+// Each row is ["text", size, advance, group], or ["", 0, advance, group]
+// for a rule. ADVANCE is the distance to the next row's baseline, so the
+// plate height follows the content instead of being guessed.
+// GROUP is "t" for ordinary text or "w" for the warning block - it is what
+// splits the STLs. The rules stay "t" so they bracket the warning rather
+// than joining it.
 rows = [
-  ["TRITON ECU",                        7.0, 10.0],
-  ["NOT A STOCK PCM - 99 F-150 5.4L",   3.6,  5.6],
-  ["",                                  0,    4.2],   // rule
-  ["! ALWAYS-HOT LEAD TO BATTERY +",    4.0,  6.0],
-  ["2 A FUSE AT THE POST",              3.6,  5.4],
-  ["ECU IS LIVE WITH THE KEY OFF",      3.6,  5.4],
-  ["",                                  0,    4.2],   // rule
-  ["ADDED PINS - unused on a stock truck", 3.1, 5.2],
-  ["18 FAN 2      19 FAN 1",            3.6,  5.4],
-  ["48 FRW 391    82 FRW 1138",         3.6,  5.4],
-  ["",                                  0,    4.2],   // rule
-  ["github.com/alpauna/TritonECU",      3.1,  5.0],
+  ["TRITON ECU",                        7.0, 10.0, "t"],
+  ["NOT STOCK - 1999 F-150 5.4L",       3.5,  5.6, "t"],
+  ["",                                  0,    4.2, "t"],   // rule
+  ["! ALWAYS-HOT BATTERY LEAD",         4.0,  6.0, "w"],
+  ["2 A FUSE AT THE POST",              3.6,  5.4, "w"],
+  ["ECU IS LIVE WITH KEY OFF",          3.6,  5.4, "w"],
+  ["",                                  0,    4.2, "t"],   // rule
+  ["ADDED PINS - unused by Ford",       3.1,  5.2, "t"],
+  ["18 FAN 2      19 FAN 1",            3.6,  5.4, "t"],
+  ["48 FRW 391    82 FRW 1138",         3.6,  5.4, "t"],
+  ["",                                  0,    4.2, "t"],   // rule
+  ["github.com/alpauna/TritonECU",      3.1,  5.0, "t"],
 ];
 
 function sum(v, i = 0) = i >= len(v) ? 0 : v[i][2] + sum(v, i + 1);
@@ -99,23 +125,36 @@ module body() {
     }
 }
 
-module engraving() {
-    for (i = [0 : len(rows) - 1]) {
-        y = plate_h/2 - margin_y - ytop(i) - rows[i][1];
-        if (rows[i][0] == "")
-            // rule: a thin bar across the text column
-            translate([-usable_w/2, y + rows[i][1]/2, plate_t])
-                cube([usable_w, 0.6, text_h]);
-        else
-            translate([0, y, plate_t])
-                linear_extrude(text_h)
-                    text(rows[i][0], size = rows[i][1], font = FONT,
-                         halign = "center", valign = "baseline", $fn = 24);
-    }
+// group = "t", "w", or "*" for everything
+module engraving(group = "*") {
+    for (i = [0 : len(rows) - 1])
+        if (group == "*" || rows[i][3] == group) {
+            y = plate_h/2 - margin_y - ytop(i) - rows[i][1];
+            if (rows[i][0] == "")
+                // rule: a thin bar across the text column
+                translate([-usable_w/2, y + rows[i][1]/2, plate_t - embed])
+                    cube([usable_w, 0.6, text_h + embed]);
+            else
+                translate([0, y, plate_t - embed])
+                    linear_extrude(text_h + embed)
+                        text(rows[i][0], size = rows[i][1], font = FONT,
+                             halign = "center", valign = "baseline", $fn = 24);
+        }
 }
 
-if (part == "label") { body(); engraving(); }
-else assert(false, str("unknown part: ", part));
+function n_in(g, i = 0) = i >= len(rows) ? 0 :
+    (rows[i][3] == g ? 1 : 0) + n_in(g, i + 1);
+
+assert(n_in("w") > 0, "no rows are in the warning group - nothing to print red");
+assert(n_in("t") > 0, "no rows are in the text group");
+
+if      (part == "label") { body(); engraving(); }
+else if (part == "plate")   body();
+else if (part == "text")    engraving("t");
+else if (part == "warn")    engraving("w");
+else assert(false, str("unknown part: ", part,
+                       " - expected label, plate, text or warn"));
 
 echo(str("label ", plate_w, " x ", plate_h, " x ", plate_t + text_h,
-         "  (widest line ", widest(), " of ", usable_w, " usable)"));
+         "  (widest line ", widest(), " of ", usable_w, " usable; ",
+         n_in("t"), " text rows, ", n_in("w"), " warning rows)"));
