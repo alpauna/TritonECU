@@ -69,9 +69,10 @@ None of this is OEM wiring in any case: **the truck has no fan wires at all**,
 because it has a clutch fan. Both fan drives are new harness from the ECU to the
 relays whatever pins they use.
 
-> **[CONFIRM]** the flat 1–104 numbering against Ford's connector-relative
-> numbering (A-13, B-17…) before crimping. That caveat is already on the pinout
-> document and applies here.
+> ~~**[CONFIRM]** the flat 1–104 numbering against Ford's connector-relative
+> numbering.~~ **CLOSED — there is nothing to map.** `EEC-V-Power-Pins.png`
+> describes a **three-connector** PCM; this truck has one 104-pin connector,
+> numbered flat. [`oem-connectors.md`](1999-Ford-F150-4wd-5.42v/oem-connectors.md#-eec-v-pcm--power-ground-and-reference-pins--not-this-trucks-pcm)
 
 ---
 
@@ -405,7 +406,7 @@ been proven on hardware.
 
 | | Where |
 |---|---|
-| **[CONFIRM]** EEC-V flat vs connector-relative pin numbering | §2 |
+| ~~**[CONFIRM]** EEC-V flat vs connector-relative pin numbering~~ **CLOSED — different PCMs, no mapping exists** | §2 |
 | **[CONFIRM ON TRUCK]** CHT curve and real operating temperatures | §3 |
 | **[CONFIRM]** A/C *request* vs *cycle switch* as the trigger | §4.2 |
 | **[CONFIRM]** whether A/C high-side pressure is fitted | §4.2 |

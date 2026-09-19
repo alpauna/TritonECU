@@ -364,10 +364,11 @@ the explicit requirement, and pin 55 cannot do that. But the choice is now a
 *trade* rather than a consequence of not being able to find the pin, and that is
 worth recording honestly.
 
-> **[DECIDE]** what the board does with pin 55. **It will be live at our
-> connector whether we use it or not**, and "we did not think about it" is not an
-> answer for a permanently hot 12 V pin. Leaving it unconnected is defensible;
-> leaving it undecided is not.
+> ~~**[DECIDE]** what the board does with pin 55.~~ **DECIDED: it is the
+> battery-voltage sense input.** The CJB objection applied to carrying *supply*
+> current; a sense-only divider draws 67 µA, at which the whole path costs 11 µV.
+> Power and measurement now sit on separately fused wires. See
+> [`schematic-findings.md`](schematic-findings.md) §19.
 
 **So "KAPWR is not required" was wrong twice.** It was reached from *where
 learned state is stored* — which stopped being the reason the moment the MCU
@@ -375,10 +376,10 @@ stopped powering down — and it was asserted about a pin number belonging to a
 different PCM, while this truck's actual keep-alive pin sat in the pinout under a
 different name.
 
-> **[CONFIRM] the A-xx ↔ 1–104 mapping.** This page numbers VPWR *"A-32, A-33"*;
-> the wiring diagrams number it *"pins 71 and 97"*. **Two numbering systems, no
-> mapping recorded anywhere in this repo.** No longer blocking the always-on
-> feed, but every other A-xx reference on this page still depends on it.
+> ~~**[CONFIRM] the A-xx ↔ 1–104 mapping.**~~ **CLOSED — no mapping exists.**
+> This page numbers VPWR *"A-32, A-33"*; the wiring diagrams number it *"pins 71
+> and 97"*, twenty-six apart. **Two different PCMs**, not two numberings of one.
+> See the stop header at the top of this section.
 
 ---
 

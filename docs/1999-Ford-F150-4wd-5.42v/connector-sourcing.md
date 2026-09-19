@@ -88,8 +88,13 @@ What remains valid from it is the *conceptual* content, which is what it was
 used for: that the PCM sources VREF, that signal return is separate from power
 ground, and that FEPS exists. The **pin numbers** in it do not apply here.
 
-**[CONFIRM]** VREF and SIGRTN against the flat numbering instead: the
-MegaSquirt sheet puts VREF at pin 90 and SGND at pin 91.
+~~**[CONFIRM]** VREF and SIGRTN against the flat numbering instead~~ —
+**CLOSED, both against Ford's own diagrams.** VREF is **circuit 351 BN/WH to
+pin 90** ([`schematic-findings.md`](schematic-findings.md) §1); SIGRTN is
+**circuit 359 GY/RD to pin 91**, spliced at S135/S138 (§2). The MegaSquirt
+sheet agreed on both. **And the chart is not a different numbering of this
+connector — it is a different, three-connector PCM** (§ the stop header in
+[`oem-connectors.md`](oem-connectors.md#-eec-v-pcm--power-ground-and-reference-pins--not-this-trucks-pcm)).
 
 ---
 
