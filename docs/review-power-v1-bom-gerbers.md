@@ -234,8 +234,10 @@ about 1.7 to 14. See [`power-supply.md`](power-supply.md).
 
 ## 7. Smaller items
 
-- **Two SMDJ43A (D1, D2).** One is 3000 W and enough; paralleled TVS do not
-  share, because the lower-V<sub>br</sub> part takes the surge.
+- ~~**Two SMDJ43A (D1, D2).**~~ **The board has one.** `D2` has no footprint —
+  the placement list is `D1`, `D3`, `D4`. One is 3000 W and enough anyway, since
+  paralleled TVS do not share. **The BOM's quantity 2 is wrong** — see the PGND
+  section at the end.
 - **L2 = CYA0650-2.2UH** — confirm I<sub>sat</sub> ≥ **4.3 A**.
 - **L1 = CR4015-R50N, 500 nH** — at 2.4 MHz, 5 → 3.3 V that is 0.94 A pk-pk,
   about 94 % ripple at a 1 A load. Check TI's recommended value for the
@@ -283,7 +285,8 @@ Routing and placement are unchanged between exports (top-layer draws 4543 →
 - **R1 = FRM252WJR010TN.** If the `J` is ±5 %, it wants replacing.
 - **C9–C12 are 10 V parts on the 5 V rail.** Not blocking — ~59° of estimated
   phase margin — but 16 V or 25 V returns it to the design assumption.
-- **D1, D2 are still two SMDJ43A.**
+- ~~**D1, D2 are still two SMDJ43A.**~~ **Wrong — that read the BOM, not the
+  placement. `D2` is not on the board.**
 - **L1 500 nH / L2 2.2 µH** unchanged.
 
 ### ⚠ Pouring Inner2 does not help Q2 without vias
@@ -768,3 +771,110 @@ changes:
 - **The 1206 DC-bias figure is an estimate**, since the loop cannot be measured
   in circuit with FB tied to VCC. If ripple or transient response looks wrong at
   bring-up, start there.
+
+---
+
+# PGND, D1, and the tie that was never confirmed
+
+`schematic-review-power.md` §8 said *"D1/D2 return to PGND, everything else to
+GND. Correct instinct. **Confirm the two are joined at exactly one point**, and
+that the TVS return is the shortest, widest path to the input connector."* It was
+filed as severity **low** and never closed. Measured off
+`FlyingProbeTesting.json` and the copper, here is what is actually there.
+
+## PGND is a two-node net
+
+| Net | Pins |
+|---|--:|
+| **GND** | **118** |
+| **PGND** | **2** — `D1_2` and `CN1_2`, each listed twice |
+
+**That is the entire net: D1's cathode to the input connector's ground pin.**
+Nothing else is on it.
+
+## And CN1 has only two pins, so PGND is not just a surge path
+
+```
+  CN1_1   B+     (12.19, 6.22)
+  CN1_2   PGND   (17.27, 6.22)
+```
+
+**There is no third pin.** GND never reaches CN1, which means **PGND is the
+board's only return to the vehicle** — every milliamp the board draws goes out
+through it, not merely the TVS surge. GND touches the outside world only through
+the four mounting pads (U2–U5, at the board corners) and the two headers.
+
+So the mental model of *"PGND for surge, GND for everything else"* is not what
+this board does. **PGND is the trunk and GND hangs off it.**
+
+> **The join is still unconfirmed, and the netlist cannot confirm it.** PGND and
+> GND are distinct nets with distinct names, so they are joined in *copper*
+> somewhere, not through a pin. That copper join is what §8 asked about.
+
+## Where the tie belongs: at `CN1_2`, not at D1
+
+Both choices are "one point". They are not equivalent:
+
+| Tie at | What GND rides on |
+|---|---|
+| **`CN1_2`** ✅ | the vehicle ground entry. Surge current enters at `CN1_1`, crosses D1, and leaves at `CN1_2` — GND sits at the *end* of that path and never carries any of it |
+| `D1_2` ❌ | the far end of the PGND run. Every volt the run develops appears across GND |
+
+**Tie at the connector.**
+
+## ⚠ D1 is 17.7 mm from the connector
+
+```
+  CN1_1  (12.19,  6.22)  ──────┐
+                               │   loop 17.7 x 7.4 mm
+  D1_1   (11.05, 23.88) ──[D1]─┤   area ~130 mm², perimeter ~50 mm
+  D1_2   (18.42, 23.88)        │   L ~ 20 nH over a plane, ~50 nH if traces
+                               │
+  CN1_2  (17.27,  6.22)  ──────┘
+```
+
+A TVS clamps to its own V<sub>clamp</sub> **plus whatever its loop develops**, so
+that inductance is part of the protection:
+
+| Transient | di/dt | L·di/dt at 20 nH | at 50 nH |
+|---|--:|--:|--:|
+| Load dump, 10/1000 µs | 4 A/µs | **0.1 V** | 0.2 V |
+| ISO 7637-2 **pulse 3a/3b**, 5 ns | 4000 A/µs | **80 V** | 201 V |
+| IEC 61000-4-2 **ESD**, 1 ns | 30 000 A/µs | **602 V** | 1506 V |
+
+**The slow surge does not care about the loop. The fast ones are nothing but
+loop.** So D1 is doing its advertised job against load dump — which is what it
+was chosen for — and much less than advertised against fast transients.
+
+That matters here specifically because **Q1 is a 100 V part**
+(`IRF540NS`, per §Q1). A pulse-3b edge arriving as an inductive spike rather
+than a clamped level is exactly the case the 100 V rating has to cover.
+
+## ⚠ There is no capacitor at the input at all
+
+`B+` touches **six** things: `CN1`, `D1`, `Q1`, and the divider resistors `R2`,
+`R6`, `R7`. The nearest component of any kind to CN1 is R13 at **8 mm**.
+
+**A TVS is a slow device dressed as a fast one.** Its companion is a small
+ceramic right at the entry, which handles the nanosecond edge while the TVS
+handles the energy. There isn't one.
+
+## What to do
+
+| | | |
+|---|---|---|
+| **1** | **Tie PGND to GND at `CN1_2`**, one point, and confirm in CAD that it is only one | v1, layout check |
+| **2** | **Add a ceramic across CN1** — 100 nF X7R ≥ 100 V, plus 1 nF C0G if there is room, as close to the pins as the footprint allows | **v1, and it needs no respin if there is pad space** |
+| **3** | **Move D1 to the connector** — target < 20 mm² instead of 130 | v2 |
+| **4** | **Do not split the Inner1 plane.** 3516 mm² solid is right; a split forces return current to detour and costs more than it saves | v2 |
+| **5** | **Decide about the four mounting pads on GND** — that is a chassis bond at four points, and four parallel paths through the enclosure is a loop if the enclosure is bonded elsewhere | [`enclosure.md`](enclosure.md) |
+
+## ✅ And one thing that is already right: there is only one TVS
+
+The BOM asks for **2 × SMDJ43A, designators `D1,D2`**. **`D2` is not on the
+board** — the placement list has `D1`, `D3` and `D4` and no `D2`.
+
+So §7's *"one is 3000 W and enough; paralleled TVS do not share"* is **already
+satisfied in copper**, and this document's own line *"D1, D2 are still two
+SMDJ43A"* was reading the BOM rather than the placement. **Correct the BOM to
+quantity 1** — as it stands you would order a part with nowhere to go.
