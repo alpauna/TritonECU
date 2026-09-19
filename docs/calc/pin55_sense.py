@@ -91,3 +91,38 @@ print(f"""
 
   Ratio stays {RATIO:.3f} (180k/30k). One LSB is {20/2**16*RATIO*1e3:.1f} mV referred to the
   battery against a 0.1 V target; {NOM/RATIO:.3f} V at {NOM:.0f} V nominal.""")
+
+print("\n"+"="*74)
+print("5. IF SOMETHING ELSE SHARES THE 5 A CJB FUSE  --  bounded, and tolerable")
+print("="*74)
+R_FUSE = (0.015, 0.025)   # 5 A ATO blade, cold
+print("""
+  A load sharing the fuse does NOT draw through 729 RD/WH - that is our own
+  run from the branch. It draws through the SHARED segment: the CJB busbar,
+  which is milliohms, and the FUSE, which is not.
+""")
+print(f"  {'other load':>12} {'error at 15 mohm':>18} {'error at 25 mohm':>18}")
+for I in (0.01,0.1,1.0,3.0,5.0):
+    print(f"  {I:>10.2f} A {I*R_FUSE[0]*1e3:>16.1f} mV {I*R_FUSE[1]*1e3:>16.1f} mV")
+import math
+Lc,Rc = 1.5e-3, 0.5
+def dwell(V):
+    I80 = math.sqrt(2*0.080/Lc); return -(Lc/Rc)*math.log(1-I80*Rc/V)
+d0, d1 = dwell(13.5), dwell(13.5-0.125)
+print(f"""
+  Worst case is the fuse at its rating: 125 mV. Both consumers tolerate it:
+
+  1. LOW-BATTERY SELF-DISABLE (11.5 V) operates PARKED, when anything else
+     on a hot-at-all-times fuse is quiescent - keep-alives and clocks, uA to
+     low mA. At 10 mA the error is 0.25 mV. Irrelevant exactly when it
+     matters.
+
+  2. THE DWELL TABLE. 125 mV of error is {abs(d1-d0)*1e6:.1f} us against a {d0*1e3:.2f} ms
+     dwell - {abs(d1-d0)/d0*100:.1f}%, below the ~2% that part-to-part coil spread moves
+     delivered energy anyway.
+
+  ** So this is not a gate on anything. ** Settle it on the truck when
+  convenient. And if it ever matters, it is observable: the section 3
+  cross-check already compares pin 55 against the protected rail, where a
+  shared-load drop appears as a small PERSISTENT offset rather than the
+  large disagreement that flags an open 729.""")

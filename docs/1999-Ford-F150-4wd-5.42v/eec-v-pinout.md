@@ -50,7 +50,7 @@ no connector prefix. **Wire from this sheet.**
 | 21 | CKP+ | CKP+ | Same | DK BLU |  |
 | 22 | CKP- | CKP- | Same | GRY |  |
 | 23 | -- | -- | Same |  |  |
-| 24 | GND | Power Ground | **-- no wire** |  | ⚠ MS lists a ground; the F-150 column is blank and Ford's sheet draws grounds on **3, 51, 77, 103 only**. **Not a ground on this truck** |
+| 24 | GND | Power Ground | **-- not on the 5.4L** |  | ⚠ **This is the 4.2L/4.6L ground pin.** `4R70W-Related-Power-Fuses and relays.png` marks it `**24` against a legend of `**` = 4.2L and 4.6L, while the 5.4L's fourth ground is `*3`. The MS sheet covers the whole family — see [`schematic-findings.md`](schematic-findings.md) §16 |
 | 25 | GND | Power Ground | **CMP shield drain** | **LB/YE (567)** | ⚠ MS sheet says power ground, BLK. **Ford's diagram says 567 LB/YE, 0 V, the CMP cable shield** — see [`schematic-findings.md`](schematic-findings.md) §15 |
 | 26 | Ign Coil 1 | IGNA | Same | LT GRN/WHT |  |
 | 27 | Ign Coil 5 | IGNF | Same | LT GRN/YEL |  |

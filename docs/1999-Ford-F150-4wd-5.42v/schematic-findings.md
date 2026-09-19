@@ -283,8 +283,38 @@ in one row. That is the PCM's complete ground complement.
 | Consequence | |
 |---|---|
 | **No `CSEGND`** | There is no case- or chassis-ground pin on this connector. The chart's `A-43` belongs to the other PCM. The ECU's shield bond is a *mechanical* question, not a connector pin |
-| **Four, not five** | `oem-connectors.md` §3 briefly said five, counting pin 24. **Pin 24 carries no wire on this truck** — the MegaSquirt sheet lists it, its F-150 column is blank, and Ford does not draw it |
+| **Four, not five** | `oem-connectors.md` §3 briefly said five, counting pin 24. **Pin 24 is a different engine's ground** — see below |
 | **Pin 25 is separate** | The CMP shield drains to `S199`/`S101`, a different path from `S100`/`G101`. §15 |
+
+### ✅ Why the MegaSquirt sheet listed pin 24 — it is the 4.2L/4.6L pin
+
+`4R70W-Related-Power-Fuses and relays.png` draws the same ground bundle with
+**engine-variant markers**, and its legend is explicit: **`*` = 5.4L**,
+**`**` = 4.2L and 4.6L**. The PCM's ground row reads:
+
+```
+   **24      51      *3 / 76      77      103
+```
+
+| | |
+|---|---|
+| `**24` | ground on the **4.2L and 4.6L only** |
+| `*3` / `76` | **pin 3 on the 5.4L**, pin 76 on the others |
+| 51, 77, 103 | all engines |
+
+**So the 5.4L's grounds are 3, 51, 77 and 103 — four — and pin 24 belongs to a
+different engine.** That is a second Ford sheet agreeing with `Engine-Controls.png`,
+and it *explains* the MegaSquirt sheet rather than merely contradicting it: the MS
+PnP product covers the whole family, so its pin 24 entry is real — for a 4.6L.
+
+Two more confirmations from the same sheet, both matching
+[`eec-v-pinout.md`](eec-v-pinout.md):
+
+| Pin | 5.4L | Confirms |
+|--:|---|---|
+| **59** | `*970 DG/WH` (`**1496 PK` on the others) | TSS, as `EngineControls2.png` showed |
+| **7** | `*1496 PK` | *"TC Speed Sense, PNK"* |
+| **14** | `784 LB/BK` → S142 → Electric Shift Control, and → C189 | *"4x4 Low Indicator Sw, LT BLU/BLK"* |
 
 ### The MAF is wired as a Kelvin measurement, and that is worth keeping
 
@@ -372,10 +402,38 @@ draws **66.7 µA**, and the CJB path stops mattering:
 **Even a fully corroded ohm of path costs 67 microvolts.** The reading *is*
 battery voltage. The objection applied to amps, and there are none.
 
-> **[CONFIRM]** nothing else sits on that 5 A CJB fuse. `Engine-Controls.png`
-> draws 729 RD/WH running C242 → C160 → pin 55 with no other load on it, so there
-> is no shared-segment current to create a drop — but the sheet shows one branch,
-> not the whole fuse.
+### What if something else *does* share that 5 A CJB fuse?
+
+The repo has no power-distribution sheet — `EngineControls2.png` points at
+*"SEE POWER DISTRIBUTION PAGE 13-14"* and those pages are not here — so this
+cannot be closed from the diagrams. **But it can be bounded, and the bound
+settles it.**
+
+A load sharing the fuse does **not** draw through 729 RD/WH; that is our own run
+from the branch. It draws through the **shared segment** — the CJB busbar, which
+is milliohms, and the **fuse**, which is not. A 5 A ATO blade is 15–25 mΩ cold:
+
+| Other load | Error at 15 mΩ | Error at 25 mΩ |
+|--:|--:|--:|
+| 10 mA | 0.1 mV | 0.2 mV |
+| 1 A | 15 mV | 25 mV |
+| **5 A — the fuse at its rating** | 75 mV | **125 mV** |
+
+**Worst case 125 mV, and both consumers tolerate it:**
+
+| Where the reading is used | Effect of 125 mV |
+|---|---|
+| **Low-battery self-disable**, 11.5 V | It operates **parked**, when anything else on a hot-at-all-times fuse is quiescent — keep-alives and clocks, µA to low mA. At 10 mA the error is **0.25 mV**. Irrelevant exactly when it matters |
+| **The dwell table** | **17 µs** against a 1.45 ms dwell — **1.2 %**, below the ~2 % that part-to-part coil spread moves delivered energy anyway |
+
+**So this gates nothing.** Downgraded from `[CONFIRM]` to a note: settle it on the
+truck when convenient — pull CJB fuse 2 and see what stops working — rather than
+before building.
+
+And **if it ever matters it is observable**: the cross-check above already
+compares pin 55 against the protected rail, where a shared-load drop appears as a
+small *persistent* offset rather than the large disagreement that flags an open
+729.
 
 ### Parked drain is unchanged — it moves, it does not grow
 
