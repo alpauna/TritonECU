@@ -573,7 +573,7 @@ so the only real question is dissipation.
 | | Part | |
 |---|---|---|
 | **TCC** | `NCV8405ASTT1G` SOT-223, **pour it** | **1.44 A worst case** (Ford spec 10–16 Ω) against 1.82 A on a minimum pad — see below |
-| **EPC** | **`NCV8408BDTRKG` DPAK** | **4.12 Ω measured** → 3.50 A full-on, 95 % of its 3.69 A limit — but current-regulated in use, so milliwatts. See below |
+| **EPC** | **`NCV8408BDTRKG` DPAK** | **4.12 Ω, 13.7 mH measured** → τ = 3.33 ms, 3.50 A full-on, but current-regulated in use so milliwatts. See below |
 
 Dissipation limits at a 60 °C in-cavity ambient, 150 °C junction, and the hot
 R<sub>DS(on)</sub> of 210 mΩ:
@@ -680,6 +680,48 @@ protection is silently defeated:
 
 **Drive EPC and TCC at ≥ 200 Hz.** That is a firmware constraint derived from
 the driver, and nothing else in the design would have surfaced it.
+
+#### ✅ EPC inductance measured: 13.7 mH — and it adds a second, compatible bound
+
+`L = 13.7 mH` against the measured `R = 4.12 Ω` gives **τ = L/R = 3.33 ms**,
+which is *longer than a 200 Hz period*. The coil never settles:
+
+| PWM | τ/T | Ripple p-p at I<sub>L</sub> = 1 A |
+|--:|--:|--:|
+| **200 Hz** | 0.67 | **1.07 A — 107 %** |
+| 500 Hz | 1.66 | 0.43 A — 43 % |
+| **1 kHz** | 3.33 | **0.21 A — 21 %** |
+| 2 kHz | 6.65 | 0.11 A — 11 % |
+
+**The two constraints do not fight.** 200 Hz was a **floor**, set by the
+NCV8408B's latch-clear time — below it, normal PWM off-time clears the latched
+thermal shutdown every cycle and defeats the protection. The inductance sets a
+requirement on the *other* side: **for current regulation rather than protection,
+1–2 kHz.** Both are satisfied together.
+
+> **Some ripple is wanted.** A pressure-control solenoid's valve has static
+> friction, and Ford dithers EPC deliberately to break it. So the target is a
+> *chosen* ripple, not the smallest achievable one — which makes the low-kHz
+> region the right place to be rather than a compromise.
+
+#### And it quantifies why the freewheel diode is not optional
+
+`E = ½LI² = ` **6.85 mJ** per cycle at 1 A. A single such pulse is **27× inside**
+the NCV8408B's 185 mJ avalanche rating — which is exactly the reasoning that
+makes "the integrated clamp will cope" sound plausible. It does not, because it
+is not a single pulse:
+
+| PWM | Clamp dissipation if there were no diode |
+|--:|--:|
+| 200 Hz | 1.37 W |
+| **1 kHz** | **6.85 W** |
+| 2 kHz | 13.70 W |
+
+**With the diode instead: 0.355 W**, conducting I<sub>L</sub> through a 0.5 V
+V<sub>f</sub> for the 71 % off-time. Schottky, as specified — no reverse recovery
+to pay for at kHz rates.
+
+**EPC is now fully characterised except its operating current.**
 
 #### Gate drive: a second 74HCT541, for the same reason as the first
 
