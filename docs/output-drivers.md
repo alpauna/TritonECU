@@ -915,7 +915,9 @@ A fourteenth channel — **VSS out** — is added below.
 This also bounds
 [`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
 clamp energy rising 4× in a load dump. Once the loads are classified, **only the
-~~three~~ two on/off shift solenoids can clamp at all** — the heaters store
+~~three~~ two on/off shift solenoids can clamp at all — ⚠ three again on a
+4R100**, whose coast clutch is a 20–30 Ω on/off load
+([`4r100-deltas.md`](4r100-deltas.md)) — the heaters store
 nothing, the PWM loads recirculate through their freewheel diodes, and **CSS does
 not exist on a 4R70W** (see below).
 
