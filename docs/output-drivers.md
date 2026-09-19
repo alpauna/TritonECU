@@ -632,7 +632,27 @@ wins: **the threshold moves from 2.9 A to 3.7 A RMS**, which clears a 3 A peak a
 > **Give TCC a pour**, as IAC already has — 2.44 A at 1 in² turns 26 % of margin
 > into 70 %. It costs copper, not parts.
 >
-> ⚠ **One sample, from a failed transmission, and it may be a low one.** 4.12 Ω
+> ✅ **NOT COOKED — Ford specs EPC at 2.48–5.66 Ω** (`4R70W_Ford_Transmission_Service_Manual[Helms].pdf`,
+> *Resistance/Continuity Tests — EPC Solenoid*). **4.12 Ω is mid-range.** The
+> second sample is no longer needed to validate this one, and the `L/R²`
+> shorted-turn test below is moot for EPC.
+>
+> ⚠ **But Ford's minimum moves the fault case the wrong way:**
+>
+> | R | Full-on at 14.4 V | P | T<sub>j</sub> |
+> |--:|--:|--:|--:|
+> | **2.48 Ω — Ford min** | **5.81 A** | **4.05 W** | **283 °C** |
+> | 4.12 Ω — ours | 3.50 A | 1.47 W | 141 °C |
+> | 5.66 Ω — Ford max | 2.54 A | 0.78 W | 103 °C |
+>
+> **At the low end of spec a stuck-on EPC does not trip the NCV8408B's 10 A
+> current limit** — 5.81 A is nowhere near it — so the **latched thermal
+> shutdown is the only thing that stops it.** That is precisely why this part was
+> chosen over the auto-restart sibling, and it is now load-bearing rather than
+> belt-and-braces. **Normal operation is unchanged: current-regulated,
+> milliwatts.**
+>
+> ~~One sample, from a failed transmission, and it may be a low one.~~ 4.12 Ω
 > sits at the **bottom** of the 3.5–6 Ω band, which is where a coil with shorted
 > turns would land. A second unit is being pulled. **There is a clean test**:
 > `R ∝ N` and `L ∝ N²`, so lost turns drop L faster than R and the ratio

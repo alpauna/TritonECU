@@ -26,11 +26,16 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 | ~~**SSB**~~ | — | 1 | ✅ **CLOSED — Ford spec 20–30 Ω** |
 | ~~**CSS — coast clutch**~~ | — | 20 | ✅ **CLOSED — it does not exist on a 4R70W.** It is a **4R100** part, and the MegaSquirt sheet was developed on a 4R100. Pin 20 is free |
 | ~~**TCC**~~ | — | 54 | ✅ **CLOSED — Ford spec 10–16 Ω → 1.44 A worst case.** Higher than assumed; **give it a pour** |
-| ~~**EPC**~~ | — | 81 | ✅ **MEASURED — 4.12 Ω, 13.7 mH.** Confirms the NCV8408B; τ = 3.33 ms puts the PWM at **1–2 kHz**. **Still open: its operating current** |
+| ~~**EPC**~~ | — | 81 | ✅ **4.12 Ω measured, 13.7 mH.** Ford specs **2.48–5.66 Ω**, so ours is mid-range and healthy. **Still open: operating current** |
 
 **Also note the part number and any markings on each solenoid** — a datasheet
 beats a measurement where one exists, and `4r70W-Test-Key-Solenoid.png` has just
 proved the point by closing three of these rows without a meter.
+
+> ⚠ **The manual does NOT publish inductance.** Searched: no henries anywhere.
+> Resistance, yes — SS-1/SS-2 20–30 Ω, TCC 10–16 Ω, **EPC 2.48–5.66 Ω**,
+> **OSS 450–750 Ω**, and the whole TFT curve. **Inductance stays a bench job**,
+> and it is the only thing the second transmission is still needed for.
 
 ## 2. Inductance — freewheel energy, and the clamp margin
 

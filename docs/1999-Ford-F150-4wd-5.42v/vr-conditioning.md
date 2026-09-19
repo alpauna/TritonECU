@@ -23,6 +23,10 @@ channels from two-channel parts, not designed margin.
 |---|---|--:|---|---|
 | 1 | **CKP** | 21 / 22 | DK BLU / GRY | **differential** — the only one |
 | 2 | **CMP** | 85 (+ SGND 91) | DK GRN | single-ended, **371 Ω measured**. Shield on pin 25 |
+
+> ✅ **OSS: 450–750 Ω**, from the 4R70W service manual's *Resistance/Continuity
+> Tests — Output Shaft Speed Sensor*. Same order as CMP's measured 371 Ω, so the
+> MAX9926 input network suits both without a per-channel change.
 | 3 | **OSS** | 84 | 136 DB/YE, C187 | transmission control: shift scheduling, TCC, EPC |
 | 4 | **Transfer case speed** | 7 | 1496 PK, C199 | **road speed** — downstream of the range box |
 
