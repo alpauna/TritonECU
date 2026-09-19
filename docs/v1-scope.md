@@ -83,7 +83,7 @@ was always the point of the split, and it does not require two chips.
 | ~~**J1850 / SCP**~~ | **Moved onto the board** — see below | n/a |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
-| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **On the measured 1.48 mH / 1.8 Ω it protects the *coil* (115 W stuck-on), not the IGBT**, which is 6.3× under its rating — [`output-drivers.md`](output-drivers.md) | **yes** |
+| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Quantified on the measured 1.48 mH / 0.5 Ω:** a stuck-on coil stores **614 mJ, 2.05× the IGBT's rating**, reached after 3.56 ms — ~2.7× nominal dwell — [`output-drivers.md`](output-drivers.md) | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
 
 ### Why J1850 / SCP moved onto the board
@@ -166,15 +166,14 @@ Two things, and both are measurements rather than decisions:
 
 1. ~~**Coil primary inductance**~~ — **MEASURED: 1.48 mH.** The 300 mJ rating is
    reached at **20.1 A**; a healthy 80 mJ spark needs **10.4 A**, so the
-   operating point sits **3.7× under** and dwell lands at **1.3–1.6 ms**. The
+   operating point sits **3.75× under**. The
    ISL9V3040 is comfortably right. See
    [`output-drivers.md`](output-drivers.md#-measured-l--148-mh-lcr-meter-2026-09-18).
-   **Primary resistance measured too: 1.8 Ω** — high enough that the coil
-   **current-limits itself at 8.0 A**, capping energy at **47 mJ, 6.3× under the
-   rating**, so the stuck-on case is no longer a threat to the IGBT. Dwell
-   becomes ~2.0–2.5 ms and overlap starts near **6100 rpm**.
-   **[CONFIRM]** that 1.8 Ω is DCR and not the LCR meter's ESR at its test
-   frequency — it is high for this coil family.
+   **Primary resistance measured too: 0.5 Ω** (DCR, good leads — a first 2-wire
+   reading of 1.8 Ω was the leads). **Dwell is 1.33 ms at 14.4 V rising to
+   2.55 ms at 9 V cranking**, a 1.9× span that makes the dwell-vs-voltage table
+   mandatory. Overlap is irrelevant — it starts above 11 300 rpm.
+   **Both measurements are closed.**
 
 ~~CMP sensor type~~ **Resolved: VR, single-ended.** Two MAX9926 packages,
 three channels used, one spare.

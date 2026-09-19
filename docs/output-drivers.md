@@ -42,12 +42,12 @@ E = ½ · L · I²
 | Peak current | At 5 mH *(assumed)* | **At 1.48 mH *(measured)*** | Margin |
 |--:|--:|--:|--:|
 | 8 A | 160 mJ | **47.4 mJ** | **6.3×** |
-| **10.4 A** — 80 mJ, a healthy COP spark | 270 mJ | **80 mJ** | **3.7×** |
+| **10.4 A** — 80 mJ, a healthy COP spark | 270 mJ | **80 mJ** | **3.75×** |
 | 12 A | 360 mJ | 106.6 mJ | 2.8× |
 | 16 A | 640 mJ | 189.4 mJ | 1.6× |
 | **20.1 A** | 1013 mJ | **299.9 mJ** | **1.0× — the rating** |
 
-**The 300 mJ rating is reached at 20.1 A.** The operating point sits **3.7×
+**The 300 mJ rating is reached at 20.1 A.** The operating point sits **3.75×
 under it**. The ISL9V3040 is comfortably the right part and there is no need to
 reach for a higher-energy EcoSPARK member.
 
@@ -62,63 +62,62 @@ not R**: `di/dt = V/L = ` **9.12 A/ms** at 13.5 V.
 | **10.4 A — 80 mJ** | **1.30 → 1.64 ms** |
 | 20.1 A — *the rating* | 2.93 → 5.56 ms |
 
-**Spread across the whole plausible range of R is ~10 % at the operating point**,
-so **dwell ≈ 1.3–1.6 ms** is the answer regardless. It is ~60 % at the rating,
-which is why R still matters for the *fault* margin.
+That sweep was made before R was known, and its conclusion held: **spread across
+the whole plausible range of R is ~10 % at the operating point** (all at 13.5 V),
+so the dwell was decided to within ten percent without the second measurement.
+It is ~60 % at the *rating*, which is why R still mattered for the fault margin —
+and that is what the measurement below settles.
 
-### ✅ MEASURED: **R = 1.8 Ω** — and it inverts the fault case
+**Note what dominates instead: battery voltage.** Across 9 → 14.4 V the dwell
+moves **1.9×**, against 10 % for the whole range of R. See the dwell table below.
 
-Same meter, same coil. **1.8 Ω is well above the 0.3–0.7 Ω the table above
-swept**, and at that value the coil **current-limits itself**:
+### ✅ MEASURED: **R = 0.5 Ω** (DCR, good leads)
+
+> ⚠ **A first 2-wire reading gave 1.8 Ω, and that was the leads.** At half an ohm
+> the test leads *are* most of a 2-wire reading. 0.5 Ω is also what published
+> DG508-family figures predict. **Worth remembering the next time a small
+> resistance is measured** — and it mattered here: 1.8 Ω would have meant the
+> coil current-limited itself at 8 A and could never reach the IGBT's rating.
 
 | At 14.4 V | |
 |---|---|
-| I<sub>sat</sub> = V/R | **8.00 A** |
-| τ = L/R | **0.822 ms** |
-| **Maximum energy, ever** | **47.4 mJ — 6.3× *under* the 300 mJ rating** |
+| I<sub>sat</sub> = V/R | 28.8 A |
+| τ = L/R | **2.96 ms** |
+| Stuck-on energy | **614 mJ — 2.05× the rating** |
+| Dwell to reach the rating | **3.56 ms**, ~2.7× nominal |
 
-| Dwell | Current | Energy |
+**The operating point is comfortable.** We charge to **10.4 A for 80 mJ**, which
+is **3.75× under** the rating, and τ = 2.96 ms means the ramp is still in its
+near-linear region — so dwell is predictable and insensitive to small errors in R.
+
+### The dwell table — this is the deliverable
+
+Target **10.4 A / 80 mJ**. Dwell must track battery voltage:
+
+| V<sub>batt</sub> | Dwell for 80 mJ | Dwell for 50 mJ |
 |--:|--:|--:|
-| 1.89 ms — 90 % of saturation | 7.20 A | 38.4 mJ |
-| 2.46 ms — 95 % | 7.60 A | 42.7 mJ |
-| 3.22 ms — 98 % | 7.84 A | 45.5 mJ |
+| 9.0 V — cranking | **2.55 ms** | 1.81 ms |
+| 10.0 V | 2.17 ms | 1.57 ms |
+| 12.0 V | 1.68 ms | 1.24 ms |
+| 12.6 V | 1.57 ms | 1.17 ms |
+| 13.5 V | 1.44 ms | 1.07 ms |
+| **14.4 V** | **1.33 ms** | 0.99 ms |
+| 15.0 V | 1.26 ms | 0.95 ms |
 
-**The stuck-on concern in the section below is retired.** At 0.3–0.7 Ω a
-stuck-on coil stored 1.0–5.7× the IGBT's rating. At 1.8 Ω it can never store
-more than 47 mJ however long it is left on. The coil still cooks at **115 W**,
-but the IGBT is never at risk.
+**2.55 ms at 9 V against 1.33 ms at 14.4 V — a 1.9× span.** A fixed dwell would
+either waste energy and heat the driver at high line, or miss the target while
+cranking — which is exactly when spark energy matters most. **The dwell-vs-voltage
+table is not optional.**
 
-**The cost is spark energy and rpm headroom.** 47 mJ is a hard ceiling — there is
-nothing above it to reach for — and 95 % of saturation needs **2.46 ms**, which
-collides with the 90° event spacing above **~6100 rpm** rather than the ~10 700
-that 0.5 Ω implied.
+> This is what `battery voltage` on the ADC is *for*, beyond diagnostics — and
+> [`review-ignition-injection.md`](review-ignition-injection.md) already requires
+> it to be **sampled away from injection events, not averaged through them**,
+> which is why [`adc-front-end.md`](adc-front-end.md) forbids a filter capacitor
+> at the divider.
 
-> ⚠ **[CONFIRM] that 1.8 Ω is DC resistance, not ESR at the meter's test
-> frequency.** It is high for a Ford 5.4L COP primary — published DG508-family
-> figures sit nearer 0.5 Ω — and an **LCR meter reports AC series resistance**,
-> which for an iron-cored ignition coil includes real core loss at 1 kHz. A coil
-> reading 0.5 Ω on a DC ohmmeter and several ohms on an LCR bridge is
-> unremarkable. Two checks, seconds each:
->
-> - **Change the test frequency.** If R moves, it is core loss — DCR does not
->   care about frequency.
-> - **Short the probes and subtract.** A 2-wire reading includes the leads, and
->   at half an ohm that is most of the reading.
->
-> The dwell ramp is DC, so **DCR is the number the model needs.**
-
-| If DCR is | I<sub>sat</sub> at 14.4 V | Max energy | Dwell for 80 mJ | Stuck-on vs rating |
-|--:|--:|--:|--:|--:|
-| 0.5 Ω | 28.8 A | 614 mJ | 1.33 ms | **2.05×** |
-| 0.8 Ω | 18.0 A | 240 mJ | 1.59 ms | 0.80× |
-| 1.2 Ω | 12.0 A | 107 mJ | 2.48 ms | 0.36× |
-| **1.8 Ω** *(as measured)* | **8.0 A** | **47 mJ** | **unreachable** | **0.16×** |
-
-**The part choice is unaffected either way.** At 1.8 Ω the ISL9V3040 sits 6.3×
-under its rating; at 0.5 Ω the stuck-on case is 2.0× over and the `OE2` watchdog
-is what covers it. **No resistance in this range argues for a different driver.**
-What the number decides is the **dwell constant** and whether **overlap bites
-inside the rev range**.
+**Overlap is not a constraint anywhere the engine runs.** At the 14.4 V dwell the
+90° event spacing collides above **11 300 rpm**. The 2.55 ms cranking dwell would
+collide at 5880 rpm — at 9 V, where the engine is turning 200.
 
 ### ⚠ The fault case is stuck-on, and it exceeds the rating at any R
 
@@ -130,23 +129,23 @@ A stuck-on output does not climb forever — current saturates at `V/R`:
 | 0.5 Ω | 28.8 A | 614 mJ | **2.0×** | 415 W |
 | 0.7 Ω | 20.6 A | 313 mJ | **1.0×** | 296 W |
 
-~~**At any plausible resistance a stuck-on coil stores more than the IGBT's
-avalanche rating**~~ — **true for the 0.3–0.7 Ω this table sweeps, and the
-measured 1.8 Ω is outside it.** See the measured section above: at 1.8 Ω the
-ceiling is 47 mJ and the IGBT is never at risk. **This table becomes the case to
-worry about only if the 1.8 Ω turns out to be ESR rather than DCR.**
+**At any plausible resistance a stuck-on coil stores more than the IGBT's
+avalanche rating**, and turning it off then dumps that into the device — by which
+point the coil is cooking at hundreds of watts anyway. **The measured 0.5 Ω is
+the middle row: 614 mJ, 2.05×.**
 
-**The `OE2` watchdog is still worth its footprint**, but on the measured
-resistance it is protecting the *coil* from cooking at 115 W rather than the IGBT
-from avalanche. The firmware dwell limit is the first line either way.
+**This is the number behind the `OE2` watchdog.** At the measured 0.5 Ω a
+stuck-on coil is **2.05× the IGBT's rating** and reaches it after 3.56 ms — about
+2.7× the nominal dwell. The firmware dwell limit is the first line; the hardware
+watchdog is what covers a firmware hang.
 [`v1-scope.md`](v1-scope.md) carries it as *"footprint yes, strap OE2 low for
 v1"* — that is still the right call for v1, but it is now a quantified risk
 rather than a principle.
 
 ### Scheduler: dwell overlap is not a constraint
 
-At 8 cylinders the spark events are 90° apart — **2.50 ms at 6000 rpm** against a
-1.3–1.6 ms dwell, so **no overlap below ~10 700 rpm**. With COP each coil has its
+At 8 cylinders the spark events are 90° apart — **2.50 ms at 6000 rpm** against
+the measured **1.33 ms** dwell at 14.4 V, so **no overlap below ~11 300 rpm**. With COP each coil has its
 own driver so overlap would be legal anyway; it would only mean two coils
 charging at once, ~21 A from the harness for a few hundred microseconds.
 `SparkScheduler::maxRpmForDwell()` already exposes this end of the trade.
