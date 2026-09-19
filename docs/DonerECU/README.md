@@ -123,7 +123,12 @@ them:
 | If the pan is… | Then it means | Consequence |
 |---|---|---|
 | **Recessed away from the board** | clearance for through-hole lead tips and bottom-side parts | tells you the **under-board budget** — how long leads may protrude, whether bottom-side placement is allowed |
-| **Raised toward the board** | a **thermal boss** the OEM pressed against a hot area | a **free heatsink**, and it says where Ford put the heat. Worth aligning our own hot parts to |
+| **Raised toward the board** | a **thermal boss** the OEM pressed against a hot area | a **free heatsink**, and it says where Ford put the heat |
+
+> **Expectation: recessed.** The donor's MOSFETs were **double-sided-taped to the
+> case at the board's outer edges**, so the heat path is edge-to-rail, not
+> centre-to-pan. The measurement still decides it, but the pan is most likely
+> clearance. See [`../carrier-envelope.md`](../carrier-envelope.md#-edge-cooling--the-oems-thermal-strategy-and-it-is-a-placement-rule).
 
 > **[MEASURE] the pan depth relative to the rail faces, and its sign.** Straight
 > edge across the rails, depth gauge to the pan. Positive or negative is the

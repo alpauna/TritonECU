@@ -148,3 +148,88 @@ a constraint, and lever 2 is free.
 box is a real load, and the cabin location is the thing that makes it tractable.
 Worth its own pass against [`output-drivers.md`](output-drivers.md) before the
 layout fixes where the heat sources sit.
+
+---
+
+# ⭐ Edge cooling — the OEM's thermal strategy, and it is a placement rule
+
+**The donor's MOSFETs were double-sided-taped to the case at the board's outer
+edges.** The case is the heatsink; the board edge is the path to it.
+
+This is the single most constraining thing known about the layout, and it was
+free — it comes off the donor rather than out of a datasheet.
+
+## It also answers the divot
+
+Heat leaves at the **edges**, to the side rails. So the centre pan is almost
+certainly **clearance, recessed away from the board** — not a thermal boss. The
+`[MEASURE]` on its sign still stands, but the expectation has flipped.
+
+## Is there enough perimeter? Yes, comfortably
+
+| | |
+|---|--:|
+| Perimeter of 158 × 174 | 664 mm |
+| Less the connector edge (pin field + body) | −110 mm |
+| **Usable edge** | **554 mm** |
+
+| Devices wanting the edge | | |
+|---|--:|--:|
+| 8 × ISL9V3040, D2Pak | 8 × 10.5 | 84.0 mm |
+| 8 × injector FETs, DPAK | 8 × 6.5 | 52.0 mm |
+| 13 × NCV8405A, SOT-223 | 13 × 7.0 | 91.0 mm |
+| Q1, on the power board | 1 × 10.5 | 10.5 mm |
+| **Bodies** | | **237.5 mm** |
+| **With 4 mm between parts** | | **357.5 mm of 554** |
+
+**196 mm to spare.** Edge is not scarce — but it has stopped being a free choice
+and become a **placement rule**.
+
+## Does it matter? The box sheds ~17 W, but only if the heat reaches it
+
+| | |
+|---|--:|
+| 8 × ISL9V3040, conduction + switching | 8.0 W |
+| 13 × NCV8405A (four are O2 heaters) | 4.5 W |
+| Q1 buck-boost pass | 2.7 W |
+| Logic, ADC, buffers, VREF | 2.0 W |
+| **Total** | **17.2 W** |
+
+At 35 mm tall the case has ~782 cm² of surface. Natural convection at
+~10 W/m²K gives **0.78 W/K → a 22 °C rise**, so a 40 °C cabin puts the case at
+about **62 °C**. Comfortable.
+
+**The case can shed it. The question is whether the heat reaches the case.** On
+FR4 alone a SOT-223 is ~130 °C/W on a minimum pad — 0.35 W is a 46 °C rise by
+itself, before any neighbour contributes. **Edge coupling is what makes the
+budget work**, not a refinement on top of it.
+
+## Thermal tape is worse than it looks, and Ford used it anyway
+
+| Interface | D2Pak tab | SOT-223 tab |
+|---|--:|--:|
+| **3M 8810-class tape**, 0.25 mm, 0.6 W/mK | **4.4 °C/W** | **9.2 °C/W** |
+| Silicone gap pad, 0.5 mm, 3 W/mK | 1.8 °C/W | 3.7 °C/W |
+| Thin gap pad, 0.25 mm, 6 W/mK | 0.4 °C/W | 0.9 °C/W |
+
+Tape is **5–10× worse than a gap pad** — and it was the right call, because even
+4–5 °C/W on a D2Pak beats 60–130 °C/W into still air, and tape needs **no
+fastener, no clamp bar and no assembly torque**.
+
+**Keep the approach.** Reach for a gap pad where a specific part runs hot. Do not
+treat the tape as a compromise: it is the reason the OEM board worked.
+
+## ⚠ The tension this creates with daughterboards
+
+**A stacked daughterboard cannot reach the case edge.** Q1 on the power board
+dissipates 2.7 W and would sit in mid-air, coupled to nothing.
+
+| Option | |
+|---|---|
+| **Put the power stage on the carrier** rather than on a daughterboard | its D2Pak reaches the edge like everything else. Costs the modularity |
+| **Bring a thermal path up to it** | a metal bracket or an L-shaped pad from the rail. Ugly, but it keeps the module |
+| **Accept 2.7 W on board copper alone** | [`review-power-v1-bom-gerbers.md`](review-power-v1-bom-gerbers.md) measured RθJA ≈ 25–30 °C/W with 737 mm² of copper and 20 vias — **that is ~81 °C of rise, which is already the design** |
+
+**The third is what the power board already does**, and it was reviewed as
+adequate. Worth re-checking once the box's internal air is known to sit near
+62 °C rather than at ambient.
