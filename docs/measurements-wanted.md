@@ -22,14 +22,15 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 | **EGR vacuum regulator (EVR)** | C121 | 47 | PWM driver current and freewheel sizing |
 | **EVAP canister purge** | C164 | 56 | same |
 | **IMCC** | C118 | — | **and [CONFIRM] whether it is on/off or PWM** — a PWM part will usually be lower resistance |
-| **SS1 / SSA** | C183 | 27 | marked ✗/marginal against the TBD62083 |
-| **SS2 / SSB** | C183 | 1 | same |
-| **CSS — coast clutch** | ? | 20 | ⭐ **and does it exist at all?** It is on the MegaSquirt sheet and absent from Ford's 4R70W diagram. **If the connector is not there, that closes the question** |
-| **TCC** | C183 | 54 | already NCV8405A; confirms the choice |
+| ~~**SSA**~~ | — | 27 | ✅ **CLOSED — Ford spec 20–30 Ω**, 0.72 A worst case |
+| ~~**SSB**~~ | — | 1 | ✅ **CLOSED — Ford spec 20–30 Ω** |
+| **CSS — coast clutch** | ? | 20 | ⭐ **and does it exist at all?** Now **two** Ford sources omit it where they would be expected to list it: the 4R70W wiring diagram, and test A7 which tests SSA, SSB and TCC and stops. Against one MegaSquirt sheet that lists it. **If the connector is not on the transmission, that closes it** |
+| ~~**TCC**~~ | — | 54 | ✅ **CLOSED — Ford spec 10–16 Ω → 1.44 A worst case.** Higher than assumed; **give it a pour** |
 | **EPC** | C183 | 81 | already NCV8408B DPAK; confirms |
 
 **Also note the part number and any markings on each solenoid** — a datasheet
-beats a measurement where one exists.
+beats a measurement where one exists, and `4r70W-Test-Key-Solenoid.png` has just
+proved the point by closing three of these rows without a meter.
 
 ## 2. Inductance of the PWM coils — freewheel energy per cycle
 

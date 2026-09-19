@@ -473,9 +473,11 @@ slow group:**
 | Load | Current | Verdict |
 |---|---|---|
 | HO2S heaters ×4 | **~1–2 A each** | ✗ far over. Needs its own driver |
-| SS1, SS2, CSS | ~0.5–1 A | ✗ / marginal |
+| ~~SS1, SS2, CSS~~ | *superseded — see SSA/SSB/TCC below* | |
 | EVAP purge, EGR regulator | ~0.5–1 A, PWM | ⚠ marginal — measure first |
 | IMCC | **[CONFIRM]** on/off or PWM, likely ~0.5 A | ⚠ measure first |
+| **SSA, SSB** | **0.48–0.72 A** — Ford spec 20–30 Ω | ✗ over the TBD62083. **NCV8405A, as chosen** |
+| **TCC** | **0.90–1.44 A** — Ford spec 10–16 Ω | ✗. NCV8405A **with a pour** |
 | A/C **clutch coil** driven directly | ~3–4 A | ✗ — drive a **relay**, not the clutch |
 
 The last row is the easy mistake: the A/C clutch itself is a several-amp
@@ -570,7 +572,7 @@ so the only real question is dissipation.
 
 | | Part | |
 |---|---|---|
-| **TCC** | `NCV8405ASTT1G` SOT-223 | ~1 A class — 1.82 A on a minimum pad |
+| **TCC** | `NCV8405ASTT1G` SOT-223, **pour it** | **1.44 A worst case** (Ford spec 10–16 Ω) against 1.82 A on a minimum pad — see below |
 | **EPC** | **`NCV8408BDTRKG` DPAK** | the sibling built for this, see below |
 
 Dissipation limits at a 60 °C in-cavity ambient, 150 °C junction, and the hot
@@ -608,8 +610,31 @@ Its Rθ<sub>JA</sub> is *worse*, but the on-resistance is nearly half, and that
 wins: **the threshold moves from 2.9 A to 3.7 A RMS**, which clears a 3 A peak at
 100 % duty rather than sitting on the edge of it.
 
-> **[MEASURE]** EPC and TCC solenoid resistance and EPC's operating current.
-> The threshold is now **3.7 A RMS**, not 2.9.
+> ✅ **TCC CLOSED from Ford's own spec** — `4r70W-Test-Key-Solenoid.png`, test
+> step A7, gives the shift-solenoid resistances outright:
+>
+> | Solenoid | Ford spec | I at 14.4 V | P in NCV8405A |
+> |---|---|--:|--:|
+> | SSA | **20–30 Ω** | 0.48–**0.72 A** | 0.109 W |
+> | SSB | **20–30 Ω** | 0.48–**0.72 A** | 0.109 W |
+> | **TCC** | **10–16 Ω** | 0.90–**1.44 A** | **0.435 W** |
+>
+> **TCC is the hot one, and it is worse than this document assumed.** The
+> channel-budget table guessed *"~0.5–1 A"* for the shift group. SSA and SSB land
+> inside that. **TCC reaches 1.44 A — half again over the top of the estimate —
+> because its coil is half the resistance.**
+>
+> It still fits: against the **1.82 A RMS** a SOT-223 on a minimum pad allows,
+> 1.44 A at 100 % duty is **79 % of the limit**. But 26 % of margin on a
+> *worst-case* coil is thinner than *"~1 A class"* implied, and a fully applied
+> TCC at 100 % duty is an ordinary cruising state, not an extreme.
+>
+> **Give TCC a pour**, as IAC already has — 2.44 A at 1 in² turns 26 % of margin
+> into 70 %. It costs copper, not parts.
+>
+> **[MEASURE]** still open for **EPC** — resistance and operating current. It is
+> a variable-force solenoid and is not in the A7 table. The threshold is
+> **3.7 A RMS**, not 2.9.
 
 **Latched thermal shutdown is the right behaviour**, and for the same reason the
 TPS2H160B's `THER` is strapped to latch: firmware owns the retry, the fault
