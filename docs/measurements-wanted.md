@@ -60,44 +60,15 @@ and it sized the NCV8772 regulator and the TPS2H160B current limit.
 ports open** — zero differential. That is the **zero offset** the firmware will
 subtract, and it costs nothing to capture now.
 
-## 3b. TFT thermistor — two fixed points, no thermometer needed ⭐
+## ~~3b. TFT thermistor~~ ✅ CLOSED — Ford publishes the table
 
-The transmission fluid temperature sensor is on the **inner pan harness**, out at
-**C183 pin 5** (`923 OG/BK`), returning on pin 2 (`359 GY/RD`). It is an **NTC
-thermistor** read against a pull-up inside the ECU, and **we have no curve for
-it at all** — `f150-1999-target.md` says only *"NTC, internal ADC"*.
+**No measurement needed.** The 4R70W service manual's *Resistance/Continuity
+Tests* gives the full curve, −40 to 150 °C. A single **β = 3987 K** fits it
+within a few percent, and the pull-up is sized: **2.2 kΩ to 3.3 V**, giving
+30 ADC counts per °C through the band that matters. [`tft-sensor.md`](tft-sensor.md)
 
-**Two physical fixed points beat any thermometer:**
-
-| | |
-|---|---|
-| **Ice + water slurry, stirred** | **0.0 °C**, by definition |
-| **Boiling water** | **~100 °C** — knock a degree off for altitude |
-
-From those two, β falls straight out:
-
-```
-  β = ln(R₀ / R₁₀₀) / (1/273.15 − 1/373.15)
-```
-
-and `R(T) = R₀ · exp(β(1/T − 1/T₀))` is the firmware conversion, done.
-
-**A third reading at room temperature, with a thermometer, validates the fit** —
-if it lands on the curve the two-point β is good; if not, the thermistor wants
-Steinhart–Hart instead of a single β.
-
-### What it decides
-
-| | |
-|---|---|
-| **Firmware curve** | counts → °C, without guessing at a lookup table |
-| **Pull-up value** | sized so the divider spans a useful ADC range across the *operating* band, not the full −40…150 °C survival range |
-| **Self-heating** | pull-up current through a low resistance at high temperature warms the sensor it is measuring |
-| **VREF budget** | its pull-up was **missing** from [`vref-supply.md`](vref-supply.md)'s load table — CHT and IAT were there, TFT was not |
-
-> **A wrong TFT curve is silent.** It does not set a code; it just shifts at the
-> wrong temperatures and locks the converter up when it should not. That makes it
-> worth getting right on the bench rather than discovering on the road.
+> **That is four measurements this manual has now closed** — SSA, SSB, TCC and
+> TFT. **Look there first.**
 
 ## 4. Already open elsewhere, same trip
 
