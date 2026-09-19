@@ -9,7 +9,10 @@ outline rather than the other way round — see
 
 > **The donor's *case bottom* is reused, not reproduced** — and it is now a
 > **requirement**: its metal flange wraps the 104-pin socket on all four sides
-> and takes the mating force, which the PCB therefore does not. That
+> and takes the mating force, which the PCB therefore does not.
+>
+> **And the upper shell should be metal too** — recreated rather than printed.
+> See [§ Why the lid wants to be metal](#-why-the-lid-wants-to-be-metal-and-it-is-not-mainly-the-flange). That
 > reframes these constraints: **X–Y is fixed because the bottom is fixed, and
 > height is adjustable because only the lid changes.** See
 > [`DonorECU/README.md`](DonorECU/README.md).
@@ -257,3 +260,59 @@ dissipates 2.7 W and would sit in mid-air, coupled to nothing.
 **The third is what the power board already does**, and it was reviewed as
 adequate. Worth re-checking once the box's internal air is known to sit near
 62 °C rather than at ambient.
+
+---
+
+# ⭐ Why the lid wants to be metal — and it is not mainly the flange
+
+Recreating the upper shell in metal rather than printing it. **Three independent
+reasons, and the usual one is the weakest.**
+
+## 1. The flange is probably split between the halves
+
+The base carries the lip that seats into the connector. But the socket is
+**supported on all four sides**, and a clamshell cannot do that from one half —
+**the lid closes the capture.** If so, reusing the base alone is not sufficient:
+a printed lid would be the weak side of a joint that takes 104-way insertion
+force.
+
+> **[MEASURE] how far the base's side wall rises relative to the board plane.**
+> That is what decides how the capture divides between the halves — and, below,
+> which half the heat goes into.
+
+## 2. ⭐ Edge cooling assumed the case. A plastic lid halves it.
+
+This is the one that was never stated. [§ Edge cooling](#-edge-cooling--the-oems-thermal-strategy-and-it-is-a-placement-rule)
+computed **554 mm of usable perimeter** against **357 mm of devices** — a
+comfortable margin — **on the assumption that the case takes the heat.**
+
+**A printed lid takes none of it.** Whether that matters turns on the same
+measurement as above: if the base's rails rise past the board plane, devices
+couple to the base and nothing changes. If the board sits high and the walls
+beside it are lid, **the perimeter available for edge cooling roughly halves** —
+and 357 mm of devices against ~277 mm of usable edge does not fit.
+
+**A metal lid removes the question entirely.** The 17.2 W budget keeps its whole
+perimeter regardless of where the split falls.
+
+## 3. Shielding, which the design already asked for
+
+[`enclosure.md`](enclosure.md) records *"no wireless, so no antenna window — the
+housing **may be metal**, which helps both shielding and the thermal path."*
+Eight IGBTs switching a **400 V** collector node and thirteen low-side drivers
+chopping inductive loads is not a quiet box. **A metal base with a plastic lid is
+a shield with the top missing.**
+
+## And it returns the height freedom
+
+The 35 mm target existed because the donor case is 31 mm and the Nucleo's RJ45
+needs 27.7 mm. **A fabricated lid can be any height** — folded sheet aluminium
+does not care. The **46.5 mm ceiling** stays the constraint; the OEM's 31 mm
+stops being one.
+
+## Practically
+
+**Folded sheet aluminium**, five faces, screw pattern matching the base's flange,
+mating to the same gasket land the OEM lid used. It is a simple part — one
+bending operation per edge — and far easier to source than the connector it
+protects.
