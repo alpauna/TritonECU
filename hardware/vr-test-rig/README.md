@@ -62,6 +62,20 @@ orientation* as the real block — horizontal and vertical bores do not shrink
 alike. Try a 6001 in each, and set `brg_press` to whichever slides in with a
 whisker of play. **Printers differ by more than the failure margin does.**
 
+### The rule this leaves behind
+
+Swept the rest of the rig: **every other fit is clearance** (`shaft_dia + clr`,
+`wheel_bore − clr`), and **every other load-carrying bore prints with its axis
+vertical** — hub, wheel hub, cam target, and the hub's split clamp all put their
+hoop or bending stress *in-layer*. The bearing block was the only part that got
+**both** wrong at once, which is why it was the only one that failed.
+
+> **Two questions for any new part that takes a bearing, a bush or a pressed pin:**
+> 1. Is the load **across layers**? A bore's hoop stress is in Z at its 3 and 9
+>    o'clock positions whenever the **bore axis is horizontal**.
+> 2. Is the interference **real**, or is it the modelled number? They are not the
+>    same, and the gap between them is bigger than the margin.
+
 > **The other lever, if you want belt and braces:** print the block with the
 > **bore axis vertical**. The hoop stress then lies entirely in-layer — ~50 MPa
 > instead of ~22, a **2.3× gain** — at the cost of support under the foot flange.
