@@ -49,6 +49,7 @@ lives on `main`.
 | **Enclosure** | ◐ | **cabin, behind the glovebox**, connector face through the firewall — vent on the cabin side, [`enclosure.md`](docs/enclosure.md) |
 | **Carrier template** | ✅ | printable measurement jig for the donor case floor — captures the mounting-boss pattern the layout is waiting on, [`hardware/carrier-template/`](hardware/carrier-template/) |
 | **Harness label** | ✅ | printed plate for the always-hot battery lead and the four added pins — [STL](hardware/harness-label/stl/label.stl) + [`README`](hardware/harness-label/README.md) |
+| **PSU platform** | ✅ | Z-bracket that stands the supply module off the surface — 74.5 × 92 × 51, [`hardware/psu-platform/`](hardware/psu-platform/) |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
 modules are `<stdint.h>`-only and testable without hardware — which is how M3–M5
@@ -268,6 +269,7 @@ hardware/       pin budget and supply calculators
   psu-enclosure/  printed box for the bench supply
   harness-label/  printed label - the always-hot lead and the added pins
   carrier-template/ measurement jig for the donor ECU case
+  psu-platform/   Z-bracket platform for the supply module
 docs/           design documents and vehicle schematics
   Schematics/   board schematics, BOMs and Gerbers — fab-ready
   Datasheets/   every part datasheet the decisions were made against
