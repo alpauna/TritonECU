@@ -17,7 +17,7 @@ counted as handled when only a pin had been reserved.
 |---|--:|---|
 | Coil drivers, COP | 8 | ISL9V3040 via 74HCT541 #1 |
 | Injector drivers | 8 | ZXMS6005DGQ, direct |
-| VR channels — CKP, CMP, OSS, TSS | 4 | 2 × MAX9926 |
+| VR channels — CKP, CMP, OSS, transfer case, **TSS (59)** | **5** | **3 × MAX9926**, one channel spare |
 | ADS8588H: SCK, MISO, CS, CONVST, BUSY | 5 | direct, 3.3 V |
 | J1850: TX_P, TX_N, RX, nSLEEP | 4 | DRV8837 + TLV7031 |
 | TCC, EPC | 2 | NCV8405A / NCV8408B via 74HCT541 #2 |
@@ -29,7 +29,8 @@ counted as handled when only a pin had been reserved.
 | I²C: SDA, SCL | 2 | — |
 | **subtotal, as previously budgeted** | **38** | *(39 less the expander CS)* |
 | Relays — fuel pump, fan 1, fan 2, A/C clutch | 4 | TBD62083AFNG, direct at 3.3 V |
-| NCV8405A — HO2S ×4, canister vent, IMCC, SSA, SSB | 8 | **74HCT541 #3 at 5 V** — list per [`output-drivers.md`](output-drivers.md) channel budget; ~~SS1/SS2/CSS~~ was a stale naming |
+| NCV8405A — HO2S ×4, canister vent, IMCC, SSA, SSB | 8 | **74HCT541 #3 at 5 V** |
+| **CCS — 4R100 coast clutch, pin 20** | **1** | NCV8405A #14 via **74HCT541 #2** (had 2 spare). Fitted for the 4R100 superset |
 | ADS8588H static — RESET, FRSTDATA, OS0–2, RANGE | 6 | direct, 3.3 V — now legal |
 | MAX25239 `SYNC` | 1 | direct, with a pulldown |
 | Inputs — **TR ×4** (pin 64 = TR3A also reads 12 V cranking), brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled**. TR is 4 bits as originally documented — confirmed against DTR connector C182, [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §21 |
@@ -38,8 +39,8 @@ counted as handled when only a pin had been reserved.
 | Watchdog kick | 1 | — |
 | 74HCT541 #2 `OE` | 1 | software-releasable |
 | Supervisory — `SHDN#`, `FLT#`, `PGOOD`, `ALERT` | 4 | — |
-| **subtotal, formerly on the expander** | **39** | *(38 + the O2 excitation DAC)* |
-| **TOTAL** | **78** | of ~114. **34 spare** after SWD |
+| **subtotal, formerly on the expander** | **40** | *(38 + the O2 excitation DAC + CCS)* |
+| **TOTAL** | **80** | of ~114. **32 spare** after SWD *(+1 TSS, +1 CCS for the 4R100 superset)* |
 
 74HCT541 **#3**'s `OE` costs no pin — it shares the watchdog net that drives
 `OE2` on #1.
@@ -65,7 +66,7 @@ excluded, because it costs nothing beyond the one chip-select already counted.
 |---|---|---|
 | Coil drivers, COP | **8** | hardware-timed to sub-degree accuracy |
 | Injector drivers | **8** | same |
-| VR channels — CKP, CMP, OSS, TSS | **4** | edge interrupts, 2 × MAX9926 |
+| VR channels — CKP, CMP, OSS, transfer case, TSS | **5** | edge interrupts, 3 × MAX9926 |
 | AD7606: SCK, MISO, CS, CONVST, BUSY | **5** | the other six pins are static, on the expander |
 | MCP23S17 chain chip-select | **1** | shares the SPI bus |
 | J1850: TX_P, TX_N, RX, **nSLEEP** | **4** | bit-timed at 41.6 kbps. nSLEEP releases the bus — [`review-scp-chain.md`](review-scp-chain.md) §1 |

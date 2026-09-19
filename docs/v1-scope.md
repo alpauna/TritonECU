@@ -20,14 +20,13 @@ ST-Link, USB console and Ethernet all come for free.
 | **VREF supply** | **NCV8772CDT504RKG** 5.00 V LDO off the **LTC4364 protected rail** — not the 5 V switcher, which has no headroom and is spread-spectrum. [`vref-supply.md`](vref-supply.md) | ✅ |
 | MCU | **STM32F767ZI** — see [`platform-decision.md`](platform-decision.md) | ✅ |
 | Analog in | **ADS8588H** — 8 ch, 16-bit, 500 kSPS simultaneous, ±10 V, 9 kV clamp. Bench: Tokmas AD7606BSTZ, same LQFP-64 | ✅ |
-| Crank/cam/OSS/TC | **2 × MAX9926**, Mode A2 — CKP, CMP, OSS, **transfer case speed**. No spare | ⚠ |
-| **⚠ VR count is one short** | **TSS — turbine shaft speed, EEC-V pin 59 — has no channel and appears in no document.** Five signals, four channels. A **third MAX9926** buys it plus the first real spare — [`review-vr-channel-count.md`](review-vr-channel-count.md) | **open** |
+| Crank/cam/OSS/TC/TSS | **3 × MAX9926**, Mode A2 — CKP, CMP, OSS, transfer case speed, **TSS (pin 59)**. **One spare at last** — [`review-vr-channel-count.md`](review-vr-channel-count.md) | ✅ |
 | Ignition | 8 × ISL9V3040 + 74HCT541 + 470 Ω gates | ✅ |
 | Injection | 8 × ZXMS6005DGQ, direct from GPIO | ✅ |
 | Slow I/O | ~~MCP23S17 expander chain~~ — **dropped. Every signal is native.** 76 of ~114 pins, 36 spare. Gates still buffered by a third 74HCT541 at 5 V, which was always a voltage question — [`review-expander-chain.md`](review-expander-chain.md) | ✅ |
 | **Relay / lamp drivers** | **TBD62083AFNG** — 8ch DMOS sink, clamps built in | ✅ |
 | **PWM gate buffer** | 2nd **74HCT541** at 5 V — EVAP, EGR, TCC, EPC, **IAC** take native timer pins at 3.3 V (5 of 8 used) | ✅ |
-| **Solenoid / heater drivers** | **NCV8405ASTT1G** ×**13** — self-protected low-side, drain-sense diagnosis. ~~×10~~ predated the canister vent solenoid, IAC and VSS | ✅ |
+| **Solenoid / heater drivers** | **NCV8405ASTT1G** ×**14** — the 14th is the **4R100 coast clutch** on pin 20, fitted because the board is built for the 4R100 and tested on the 4R70W. ~~×13~~ — self-protected low-side, drain-sense diagnosis. ~~×10~~ predated the canister vent solenoid, IAC and VSS | ✅ |
 | **VREF output stage** | **TPS2H160B-Q1** — dual high-side, 250 mA limit, 40 V, current sense | ✅ |
 | **Transmission I/O** | TCC + EPC PWM (native pins; TCC **NCV8405A**, EPC **NCV8408B** DPAK, ≥200 Hz), SS1/SS2/CSS + 4× TR (expander), TFT (analog), OSS (VR) | ✅ |
 | Storage | SD card, SDMMC | ✅ |
@@ -36,6 +35,13 @@ ST-Link, USB console and Ethernet all come for free.
 
 That is a complete engine **and transmission** controller. Nothing in it is
 unresolved.
+
+> **Built for the 4R100, tested on the 4R70W.** The truck has a 4R70W and that is
+> the test bed; the board carries the 4R100's superset — its **fifth solenoid**
+> (coast clutch, pin 20) and the **turbine shaft speed** channel both
+> transmissions want. Designing to the subset would have made the 4R70W the only
+> transmission this board could ever run well. See
+> [`review-vr-channel-count.md`](review-vr-channel-count.md).
 
 **The wiring view is [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt)** —
 block by block, with the document behind each value cited inline. **78 native

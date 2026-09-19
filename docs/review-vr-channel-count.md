@@ -1,5 +1,18 @@
 # ⚠ The VR channel count is one short — TSS was never counted
 
+> ## ✅ DECIDED — **build for the 4R100, run the 4R70W as the test bed**
+>
+> Design to the superset, validate on what is in the truck. Both questions below
+> are resolved in favour of fitting them:
+>
+> | | |
+> |---|---|
+> | **Third MAX9926** | ✅ **add it** — TSS plus the first genuine spare |
+> | **CCS solenoid channel** | ✅ **add it** — NCV8405A 13 → 14, on **pin 20** |
+>
+> Cost: **2 GPIOs of 34 spare, one QSOP-16, one SOT-223.** Pin 20 and the two
+> free `74HCT541 #2` channels were already there.
+
 Found while checking what multi-transmission support would cost.
 
 ## The gap
@@ -87,5 +100,29 @@ spare:
 | Driver | one more **NCV8405A**, 13 → 14 |
 | GPIO | 1 of 34 spare |
 
-**Decide before layout.** Adding a footprint now is free; adding it after is a
-respin.
+~~Decide before layout.~~ **Decided: fit it.**
+
+## ⭐ And the MegaSquirt sheet is rehabilitated
+
+That sheet has been the project's cautionary tale — it listed a coast clutch
+solenoid on **pin 20** that does not exist on a 4R70W, and
+[`output-drivers.md`](output-drivers.md) records the reason: **it was developed
+on a 4R100.**
+
+**Building for the 4R100 makes it the right reference again.** Its pin 20 CSS
+entry is not an error; it is the 4R100 pinout, and it is now the pin this design
+uses for exactly that purpose. The sheet goes from *the thing that misled us* to
+*the 4R100 mapping we are building to* — with the caveat unchanged: **every entry
+still wants a Ford source behind it.**
+
+## To extract from the 4R100 manual when it is read
+
+The [4R100 rebuild manual](https://www.powerstrokearmy.com/threads/4r100-rebuild-manual-for-the-diy.20642/)
+noted in the README should settle these:
+
+| | Why |
+|---|---|
+| **Solenoid resistances** | The 4R70W's are 20–30 Ω (SSA/SSB), 10–16 Ω (TCC), **2.48–5.66 Ω** (EPC). **If the 4R100's differ, the driver sizing moves** — and TCC is already at 79 % of its minimum-pad limit |
+| **Coast clutch solenoid resistance** | A new channel with no number behind it |
+| **Range sensor encoding** | Whether it is the same 4-bit digital TR |
+| **Anything the 4R70W does not have** | Beyond CCS. The assumption is nothing else; assumptions are what this document exists to catch |

@@ -149,15 +149,28 @@ CONTENTS
   no longer needed.
 
 
-3. VR INPUTS - 2 x MAX9926, MODE A2
+3. VR INPUTS - 3 x MAX9926, MODE A2
 -----------------------------------
 
-  Four channels, three used, one spare. No expander, no comparator discretes.
+  SIX channels, five used, ONE SPARE. No expander, no comparator discretes.
 
-    CKP  (crank, 36-1)  --+
-    CMP  (cam)          --+--> 2 x MAX9926 --> 4 x native EXTI
-    OSS  (output shaft) --+      Mode A2
-    TSS  (transfer case)--+
+    CKP  (crank, 36-1)       --+
+    CMP  (cam)               --+
+    OSS  (output shaft, 84)  --+--> 3 x MAX9926 --> 5 x native EXTI
+    TC speed (transfer, 7)   --+      Mode A2
+    TSS  (turbine shaft, 59) --+
+                               +--  one channel spare
+
+  ** THE COUNT WAS ONE SHORT AND A NAMING COLLISION HID IT. ** This section
+  used to label the fourth channel "TSS (transfer case)" - but in Ford's
+  terminology TSS is the TURBINE SHAFT sensor on pin 59, while the transfer
+  case sensor is 1496 PK on pin 7. Two different sensors, one abbreviation,
+  and pin 59 appeared in NO design document. Five signals, four channels.
+  review-vr-channel-count.md.
+
+  The third MAX9926 buys TSS and the first genuine spare this design has had.
+  Turbine speed against engine speed is CONVERTER SLIP - smooth TCC apply,
+  failing-converter detection, adaptive shift. A 4R100 has one too.
 
   CMP is **VR, single-ended** - measured at 371 ohms, closing the open
   question that had it down as a Hall part. review-vr-chain.md.
