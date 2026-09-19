@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Dwell limits from the MEASURED coil primary inductance.
+"""Dwell limits from the MEASURED coil primary.
 
-L = 1.48 mH, measured on an LCR meter, 2026-09-18.
+L = 1.48 mH and R = 1.8 ohm, measured on an LCR meter, 2026-09-18.
 Driver: ISL9V3040, E_AS = 300 mJ single-pulse avalanche.
 """
 import math
 L      = 1.48e-3          # MEASURED
+R_MEAS = 1.8              # MEASURED on the same meter - but see section 5:
+                          # DCR or ESR at the meter's test frequency?
 E_AS   = 0.300            # ISL9V3040 avalanche energy rating, J
 V_NOM, V_HI = 13.5, 14.4
 
@@ -90,3 +92,55 @@ print(f"""
   two coils charge at once, doubling the instantaneous supply draw. At
   {I_for(0.080):.1f} A that is ~21 A from the harness for a few hundred microseconds.
   SparkScheduler::maxRpmForDwell() already exposes this end of the trade.""")
+
+print("\n"+"="*74)
+print("5. THE MEASURED R = 1.8 OHM  --  and one check before trusting it")
+print("="*74)
+R = R_MEAS
+for V in (13.5, 14.4):
+    isat = V/R; tau = L/R
+    print(f"\n  at {V} V:  I_sat = V/R = {isat:.2f} A   tau = {tau*1e3:.3f} ms"
+          f"   max energy EVER {E_at(isat)*1e3:.1f} mJ  ({E_AS/E_at(isat):.1f}x under the rating)")
+    for frac,lab in ((0.90,"90%"),(0.95,"95%"),(0.98,"98%")):
+        I = isat*frac; t = -tau*math.log(1-frac)
+        print(f"      {lab:>4} of saturation: dwell {t*1e3:5.2f} ms -> {I:5.2f} A, {E_at(I)*1e3:5.1f} mJ")
+print(f"""
+  ** THE COIL CURRENT-LIMITS ITSELF, AND SECTION 3 IS RETIRED. ** At
+  0.3-0.7 ohm a stuck-on coil stored 1.0-5.7x the IGBT's rating. At 1.8 ohm
+  it can never store more than {E_at(14.4/R)*1e3:.0f} mJ however long it is left on -
+  {E_AS/E_at(14.4/R):.1f}x UNDER. The coil still cooks at {(14.4/R)**2*R:.0f} W; the IGBT never sees risk.
+
+  ** THE COST IS SPARK ENERGY AND RPM HEADROOM. ** {E_at(14.4/R)*1e3:.0f} mJ is the ceiling,
+  ~2 ms of dwell gets {E_at(0.9*14.4/R)*1e3:.0f} mJ, and 95% of saturation needs 2.46 ms - which
+  collides with the 90-degree event spacing above {90/360*60/0.00246:.0f} rpm.""")
+
+print(f"""
+  1.8 ohm is HIGH for a Ford 5.4L COP primary; published DG508-family figures
+  sit nearer 0.5 ohm. Two measurement effects explain that, and both take
+  seconds to rule out:
+
+  * AN LCR METER REPORTS AC SERIES RESISTANCE AT ITS TEST FREQUENCY, NOT
+    DCR. An iron-cored ignition coil has real core loss at 1 kHz and it shows
+    up as ESR. A coil reading 0.5 ohm on a DC ohmmeter reading several ohms
+    on an LCR bridge is unremarkable.
+      TEST: change the test frequency. If R moves, it is core loss. DCR does
+      not care about frequency.
+
+  * A 2-WIRE READING INCLUDES THE LEADS, and at half an ohm that is most of
+    the reading.
+      TEST: short the probes, note the reading, subtract.
+
+  The dwell ramp is DC, so DCR is what the model needs.
+""")
+print(f"  {'if DCR is':>10} {'I_sat 14.4V':>13} {'max energy':>12} {'dwell for 80 mJ':>17} {'stuck-on vs rating':>20}")
+I80 = I_for(0.080)
+for Rx in (0.5,0.8,1.2,1.8):
+    isat = 14.4/Rx; t = t_for(I80, Rx, 14.4)
+    ft = f"{t*1e3:.2f} ms" if t else "UNREACHABLE"
+    print(f"  {Rx:>8.1f}R {isat:>11.1f} A {E_at(isat)*1e3:>10.0f} mJ {ft:>17} {E_at(isat)/E_AS:>18.2f}x")
+print("""
+  ** THE PART CHOICE IS UNAFFECTED EITHER WAY. ** At 1.8 ohm the ISL9V3040 is
+  6.3x under its rating; at 0.5 ohm the stuck-on case is 2.0x over it and the
+  OE2 watchdog is what covers that. No resistance in this range argues for a
+  different driver. What the number decides is the DWELL CONSTANT and whether
+  overlap bites inside the rev range.""")

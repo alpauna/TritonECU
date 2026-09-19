@@ -66,9 +66,59 @@ not R**: `di/dt = V/L = ` **9.12 A/ms** at 13.5 V.
 so **dwell ≈ 1.3–1.6 ms** is the answer regardless. It is ~60 % at the rating,
 which is why R still matters for the *fault* margin.
 
-> **[MEASURE]** the coil's primary resistance. Same meter, same coil. It does not
-> move the dwell you would run; it moves how much margin you have when something
-> goes wrong.
+### ✅ MEASURED: **R = 1.8 Ω** — and it inverts the fault case
+
+Same meter, same coil. **1.8 Ω is well above the 0.3–0.7 Ω the table above
+swept**, and at that value the coil **current-limits itself**:
+
+| At 14.4 V | |
+|---|---|
+| I<sub>sat</sub> = V/R | **8.00 A** |
+| τ = L/R | **0.822 ms** |
+| **Maximum energy, ever** | **47.4 mJ — 6.3× *under* the 300 mJ rating** |
+
+| Dwell | Current | Energy |
+|--:|--:|--:|
+| 1.89 ms — 90 % of saturation | 7.20 A | 38.4 mJ |
+| 2.46 ms — 95 % | 7.60 A | 42.7 mJ |
+| 3.22 ms — 98 % | 7.84 A | 45.5 mJ |
+
+**The stuck-on concern in the section below is retired.** At 0.3–0.7 Ω a
+stuck-on coil stored 1.0–5.7× the IGBT's rating. At 1.8 Ω it can never store
+more than 47 mJ however long it is left on. The coil still cooks at **115 W**,
+but the IGBT is never at risk.
+
+**The cost is spark energy and rpm headroom.** 47 mJ is a hard ceiling — there is
+nothing above it to reach for — and 95 % of saturation needs **2.46 ms**, which
+collides with the 90° event spacing above **~6100 rpm** rather than the ~10 700
+that 0.5 Ω implied.
+
+> ⚠ **[CONFIRM] that 1.8 Ω is DC resistance, not ESR at the meter's test
+> frequency.** It is high for a Ford 5.4L COP primary — published DG508-family
+> figures sit nearer 0.5 Ω — and an **LCR meter reports AC series resistance**,
+> which for an iron-cored ignition coil includes real core loss at 1 kHz. A coil
+> reading 0.5 Ω on a DC ohmmeter and several ohms on an LCR bridge is
+> unremarkable. Two checks, seconds each:
+>
+> - **Change the test frequency.** If R moves, it is core loss — DCR does not
+>   care about frequency.
+> - **Short the probes and subtract.** A 2-wire reading includes the leads, and
+>   at half an ohm that is most of the reading.
+>
+> The dwell ramp is DC, so **DCR is the number the model needs.**
+
+| If DCR is | I<sub>sat</sub> at 14.4 V | Max energy | Dwell for 80 mJ | Stuck-on vs rating |
+|--:|--:|--:|--:|--:|
+| 0.5 Ω | 28.8 A | 614 mJ | 1.33 ms | **2.05×** |
+| 0.8 Ω | 18.0 A | 240 mJ | 1.59 ms | 0.80× |
+| 1.2 Ω | 12.0 A | 107 mJ | 2.48 ms | 0.36× |
+| **1.8 Ω** *(as measured)* | **8.0 A** | **47 mJ** | **unreachable** | **0.16×** |
+
+**The part choice is unaffected either way.** At 1.8 Ω the ISL9V3040 sits 6.3×
+under its rating; at 0.5 Ω the stuck-on case is 2.0× over and the `OE2` watchdog
+is what covers it. **No resistance in this range argues for a different driver.**
+What the number decides is the **dwell constant** and whether **overlap bites
+inside the rev range**.
 
 ### ⚠ The fault case is stuck-on, and it exceeds the rating at any R
 
@@ -80,12 +130,15 @@ A stuck-on output does not climb forever — current saturates at `V/R`:
 | 0.5 Ω | 28.8 A | 614 mJ | **2.0×** | 415 W |
 | 0.7 Ω | 20.6 A | 313 mJ | **1.0×** | 296 W |
 
-**At any plausible resistance a stuck-on coil stores more than the IGBT's
-avalanche rating**, and turning it off then dumps that into the device — by which
-point the coil is cooking at hundreds of watts anyway.
+~~**At any plausible resistance a stuck-on coil stores more than the IGBT's
+avalanche rating**~~ — **true for the 0.3–0.7 Ω this table sweeps, and the
+measured 1.8 Ω is outside it.** See the measured section above: at 1.8 Ω the
+ceiling is 47 mJ and the IGBT is never at risk. **This table becomes the case to
+worry about only if the 1.8 Ω turns out to be ESR rather than DCR.**
 
-**This is the number behind the `OE2` watchdog.** The firmware dwell limit is the
-first line; the hardware watchdog is what covers a firmware hang.
+**The `OE2` watchdog is still worth its footprint**, but on the measured
+resistance it is protecting the *coil* from cooking at 115 W rather than the IGBT
+from avalanche. The firmware dwell limit is the first line either way.
 [`v1-scope.md`](v1-scope.md) carries it as *"footprint yes, strap OE2 low for
 v1"* — that is still the right call for v1, but it is now a quantified risk
 rather than a principle.

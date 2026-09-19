@@ -365,14 +365,23 @@ CONTENTS
   1.3-1.6 ms, near enough independent of primary resistance because early in
   the charge curve di/dt = V/L = 9.12 A/ms and R barely enters.
 
-  ** THE STUCK-ON CASE EXCEEDS THE RATING AT ANY PLAUSIBLE R. ** Current
-  saturates at V/R, not infinity - but that is 20.6 A at 0.7R (1.0x the
-  rating) and 48 A at 0.3R (5.7x), with the coil dissipating 300-700 W. That
-  is the number behind the OE2 watchdog above: firmware dwell limiting is the
-  first line, the hardware watchdog covers a firmware hang.
+  ** PRIMARY RESISTANCE MEASURED: 1.8 OHM ** - and it is high enough to
+  change the answer. The coil CURRENT-LIMITS ITSELF at V/R = 8.0 A, so it can
+  never store more than 47 mJ however long it is left on: 6.3x UNDER the
+  300 mJ rating. The stuck-on case is no longer a threat to the IGBT.
 
-  Still open: the primary RESISTANCE. It moves the dwell you would run by
-  ~10%; it moves the fault margin by 6x. calc/coil_dwell.py.
+  Revised: tau = L/R = 0.82 ms, dwell ~2.0-2.5 ms for 90-95% of saturation,
+  38-43 mJ of spark. Overlap now starts near 6100 rpm, not 10700.
+
+  ** THE OE2 WATCHDOG IS STILL WORTH ITS FOOTPRINT ** - but on these numbers
+  it protects the COIL, which cooks at 115 W stuck on, rather than the IGBT.
+
+  [CONFIRM] that 1.8 ohm is DC RESISTANCE and not the LCR meter's ESR at its
+  test frequency. It is high for this coil family (DG508 figures sit nearer
+  0.5 ohm) and an iron-cored coil's core loss shows up as ESR at 1 kHz.
+  Change the test frequency - if R moves, it is core loss, not DCR. The part
+  choice is unaffected either way; the DWELL CONSTANT is not.
+  calc/coil_dwell.py.
 
 
 6. INJECTION - 8 x SEQUENTIAL
