@@ -261,11 +261,52 @@ hardware/       pin budget and supply calculators
   vr-test-rig/    parametric OpenSCAD for the 36-1 + cam bench rig
   psu-enclosure/  printed box for the bench supply
   harness-label/  printed label - the always-hot lead and the added pins
+  carrier-template/ measurement jig for the donor ECU case
 docs/           design documents and vehicle schematics
   Schematics/   board schematics, BOMs and Gerbers — fab-ready
   Datasheets/   every part datasheet the decisions were made against
+  1999-Ford-F150-4wd-5.42v/  Ford's own diagrams and service manual
+  DonorECU/     the scrap PCM the connector and case come from
 tools/          USB permission setup
 ```
+
+### What gets committed, and why the repo is big
+
+**~300 MB, and that is a deliberate trade.** The breakdown:
+
+| | MB | |
+|---|--:|---|
+| Vendor datasheets | 79.8 | re-downloadable, but manufacturers pull obsolete parts |
+| Ford service manual | 29.5 | **hard to re-source, and getting harder** |
+| Ford scans — diagrams, connectors | 24.4 | same |
+| Interactive BOMs | 22.9 | regenerable |
+| Board design files | 11.9 | |
+| STLs | 4.4 | regenerable from the `.scad` |
+| **Source and docs — the actual project** | **1.5** | **0.9 %** |
+
+**The thinking is 1.5 MB. Everything else is evidence.**
+
+**Keep the evidence.** Design decisions across these documents are justified by
+*"Ford's own sheet says X"*, and that phrase only means something if the sheet is
+here. The archive has been re-read repeatedly to *correct* conclusions, not just
+to support them — pin 64's function, the MAF's Kelvin wiring, the EPC resistance
+that showed a suspect part was healthy. A 1999 service manual gets harder to find
+every year.
+
+**Do not commit regenerable artifacts.** Interactive BOMs, build outputs, export
+by-products. The two BOM HTMLs predate this rule; they stay because removing them
+now would not reclaim anything.
+
+> **Why "not reclaim anything":** git keeps every blob ever committed. Deleting a
+> file from the working tree shrinks the checkout, not the history. Only
+> `git filter-repo` and a force-push reclaims space — and that rewrites shared
+> history, invalidates the `power-v1-released` tag's SHA, and breaks every
+> existing clone. **Not worth it at this size.**
+
+**Revisit at ~700 MB.** GitHub soft-warns near 1 GB and hard-limits *individual
+files* at 100 MB; the largest here is 30 MB. If it ever does need shrinking, the
+lever is the **vendor datasheets at 45 %** — not the Ford material, which is the
+least replaceable thing in the repository.
 
 ## Bench setup
 
