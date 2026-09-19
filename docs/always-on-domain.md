@@ -1061,7 +1061,7 @@ battery on its own. **Not worth it at 0.56 Ah/month.**~~
 
 | Document | Said |
 |---|---|
-| [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt) §1 | *"Battery, **key-switched**, through the EEC-V connector"* |
+| [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt) §1 | *"Battery, **key-switched**, through the EEC-V connector"* — **since confirmed at the relay coil**, which is energised from "hot in start or run" and grounded at G104 with no PCM output on it ([`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §17) |
 | [`review-ignition-injection.md`](review-ignition-injection.md), [`output-drivers.md`](output-drivers.md) | The only input is **VPWR = circuit 361 RD at pins 71 and 97**, fed from the **EEC power relay** |
 | **this document** | *"the LTC4364's 750 µA running **permanently**"* |
 | [`1999-Ford-F150-4wd-5.42v/oem-connectors.md`](1999-Ford-F150-4wd-5.42v/oem-connectors.md) §5 | *"**KAPWR is not required**"* |
@@ -1096,7 +1096,18 @@ Numbers below are reproduced by [`calc/kapwr_feed.py`](calc/kapwr_feed.py).
 
 **Two independent changes, and each fixes something the other exposed:**
 
-**1. The source is a dedicated lead off the battery post**, not EEC-V pin A-44.
+**1. The source is a dedicated lead off the battery post**, not an EEC-V pin.
+
+> **This truck does have a keep-alive pin — 55, circuit `729 RD/WH`**, Central
+> Junction Box, hot at all times, 5 A. It was in the pinout all along as *"B+
+> KAM"*, and nothing connected **K**eep **A**live **M**emory to **KAPWR**. See
+> [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §18.
+>
+> **The dedicated lead still wins on the requirement that drove it** — the
+> divider must read *true* battery voltage, and a feed through the CJB cannot
+> deliver that. But it is now a trade, not a workaround, and **[DECIDE]** remains
+> open on what the board does with pin 55, which is live at our connector either
+> way.
 That retires the `[CONFIRM]` that was blocking the drawing — A-44 has no number
 in the 1–104 scheme, because two numbering systems coexist in this repo with no
 mapping. **A dedicated lead uses no EEC-V pin, so the question never has to be

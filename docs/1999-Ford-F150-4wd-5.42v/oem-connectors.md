@@ -221,44 +221,66 @@ one to move: it is slow and not fuelling-critical.
 ### 2. Signal return is per-connector, not one net — ⚠ **two branches, not three**
 
 ~~There are **three** SIGRTN pins — A-17, B-17, C-17 — one per harness
-connector.~~ **That is the other PCM.** This truck has **two** sensor returns,
-and [`eec-v-pinout.md`](eec-v-pinout.md) confirms them independently:
+connector.~~ **That is the other PCM.** This truck has **one SIGRTN plus one
+dedicated MAF return**, both confirmed on Ford's own sheets:
 
-| Pin | | Circuit |
-|--:|---|---|
-| **36** | **MAF return** | 968, TAN/LT BLU |
-| **91** | **SGND / sensor ground** | GRY/RED |
+| Pin | | Circuit | Reaches |
+|--:|---|---|---|
+| **91** | **SIGRTN** | 359 GY/RD | TP, DPFE, IAT, CHT, knock, both HO2S pairs, OSS, TFT, transfer case — **spliced at S135/S138** |
+| **36** | **MAF return** | 968 TN/LB | the MAF alone |
 
-**The principle survives and the count changes.** The PCM still does not present
-one sensor ground — it presents branches that meet only inside the module, which
-is star grounding done at the source. The replacement ECU should reproduce
-**two** separate return branches to one internal star point, not three, and still
-must not common them at the connector.
+**The principle needs restating, because the count was not the only thing
+wrong.** There is **one** sensor ground, and the joining is done by *harness
+splices*, not inside the module — see
+[`schematic-findings.md`](schematic-findings.md) §2. So "three stars meeting
+inside the PCM" was never how this truck works.
 
-That the MAF has its own dedicated return is the part worth keeping: it is what
-makes the differential-measurement argument for the ADC hold.
+**Pin 36 is the part worth keeping, and it is not a second star.** The MAF's own
+0 V is `570 BK/WH` — the *power* ground net, to S100/G101 — and 968 is a **sense
+wire** back to the PCM. That is a **four-wire Kelvin measurement**, and tying
+pin 36 to our AGND at the connector would throw the entire benefit away. §16.
 
-### 3. Four power ground pins — ⚠ **five, and they are a column, not a block**
+### 3. Four power ground pins — **four is right, the pins are not**
 
-~~`PWRGND` is split across A-24 through A-27~~ — again the other PCM. On this
-truck the power grounds are **pins 3, 24, 51, 77 and 103**, and
-25/51/77/103 form **one full column of the connector**, one per row. Ford put a
-ground at the same position in every row.
+~~`PWRGND` is split across A-24 through A-27~~ — the other PCM. On this truck it
+is **pins 3, 51, 77 and 103**, circuit **570 BK/WH**, every one marked 0 V,
+joining at splice **S100** and going to body ground **G101**. Ford draws all four
+in a row on `Engine-Controls.png`.
 
-**The conclusion is unchanged and if anything reinforced:** injector and
-coil-driver return current is large and pulsed, the OEM gave it five pins spread
-across the connector body, and whatever the replacement ECU uses for low-side
-drivers needs comparable return capacity kept off the sensor-return branches
-entirely.
+**Four, not three and not five — the chart happened to be right about the
+count.** 51/77/103 sit in one full column of the connector (one per row) with
+pin 3 separate.
 
-> **Pin 25 is contested.** The MegaSquirt sheet calls it power ground; **Ford's
-> diagram calls it 567 LB/YE, 0 V, the CMP cable shield.** Ford wins — see
-> [`schematic-findings.md`](schematic-findings.md) §15. It is still a ground, but
-> it is a *shield* ground and is already allocated.
+> ⚠ **I said five in an earlier revision — 3, 24, 51, 77, 103. That was wrong.**
+> The MegaSquirt sheet lists pin 24 as a power ground, but its *'99 F-150* column
+> is blank and it gives no wire colour, which means **no wire on this truck**.
+> Ford's sheet draws four grounds and pin 24 is not among them. Reading a
+> populated MS column as a populated Ford pin is the same mistake the A-xx chart
+> caused, one level down.
 
-~~`CSEGND` (A-43) is a separate case/shield ground.~~ **No case-ground pin is
-identified on this truck**, and the CMP shield at pin 25 may be doing that job.
-**[CONFIRM]** against Ford's connector page before assuming one exists.
+**The conclusion is unchanged:** injector and coil-driver return current is large
+and pulsed, the OEM gave it four pins spread across the connector body into a
+single splice, and whatever the replacement ECU uses for low-side drivers needs
+comparable return capacity kept off the sensor-return branches entirely.
+
+> **Pin 25 is contested and Ford wins.** The MegaSquirt sheet calls it power
+> ground; **Ford calls it 567 LB/YE, 0 V, the CMP cable shield**, drained through
+> S199/S101 — a *different* path from the power grounds' S100/G101. See
+> [`schematic-findings.md`](schematic-findings.md) §15.
+
+### `CSEGND` — **CLOSED: this truck has no case-ground pin**
+
+~~`CSEGND` (A-43) is a separate case/shield ground.~~ **It does not exist here.**
+`Engine-Controls.png` shows the PCM's complete ground complement: four pins, one
+circuit, one splice, one body ground. There is no fifth ground and nothing
+labelled case or chassis.
+
+The only shield-type connection on this connector is **pin 25**, the CMP cable
+shield — and it drains to S199/S101, not to the PCM case.
+
+**So the ECU needs no case-ground pin**, and the enclosure's shield/chassis bond
+is a *mechanical* question — how the box is mounted and earthed —
+not a connector pin. See [`../enclosure.md`](../enclosure.md).
 
 ### 4. FEPS resolves the DLC pin 13 question — **conclusion stands, corroboration did not**
 
@@ -278,8 +300,10 @@ suggested earlier.
 > without reference to the A-xx chart at all. Two sources, one conclusion, and
 > the pin number matching was luck.
 >
-> **[CONFIRM]** against a wiring page that actually traces circuit 107 from
-> C228-13 to PCM pin 13.
+> ~~**[CONFIRM]** against a wiring page that actually traces circuit 107 from
+> C228-13 to PCM pin 13.~~ **CLOSED — `EngineControls2.png` traces exactly
+> that:** PCM **pin 13** → `107 VT` → C158M/C158F → C228F → **DLC pin 13**.
+> Ford's own sheet, end to end.
 
 Practical effect: the replacement ECU should **leave this pin unconnected**.
 Nothing good happens if 18 V arrives on a 3.3 V system, and a scan tool
@@ -300,7 +324,7 @@ on the SD card and in NVS, so KAPWR is unnecessary. What it does need instead
 is a clean power-down: detect loss of the run line and flush learned state
 before the rail collapses.~~
 
-**A-44 is not used — but not for the reason this section gave.**
+**A-44 is not used — but keep-alive power exists on this truck, at pin 55.**
 [`../always-on-domain.md`](../always-on-domain.md) specifies an MCU that never
 powers down — which retires the clean-power-down requirement above, and in
 exchange needs a source of permanent 12 V. **The board's only other input is
@@ -318,10 +342,38 @@ FET, through a 2 A fuse at the post, an SMDJ43A, a blocking diode, 470 Ω and an
 SMBJ30A — see
 [`../always-on-domain.md`](../always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
 
-**So the conclusion "KAPWR is not required" is right by accident.** It was
-reached from *where learned state is stored*, which stopped being the reason the
-moment the MCU stopped powering down. The pin is unused because a better source
-exists, not because nothing needs constant power.
+### ⚠ And this truck *does* have a keep-alive pin — **55, circuit 729 RD/WH**
+
+**It was in [`eec-v-pinout.md`](eec-v-pinout.md) the whole time**, listed as
+**"B+ KAM | 12V KAM | RED/WHT"**. Nobody — including every pass over these
+documents — connected **KAM** (Keep Alive Memory) to **KAPWR** (Keep Alive
+PoWeR). They are the same thing.
+
+Ford's `Engine-Controls.png` draws it: **Central Junction Box, "HOT AT ALL
+TIMES", 5 A fuse → C242 → 729 RD/WH → C160 → PCM pin 55, marked 12 V.**
+
+| | Pin 55 (729 RD/WH) | Dedicated battery lead |
+|---|---|---|
+| New wire | **none** — already in the harness | one, through the firewall |
+| Fuse | 5 A, **in a fuse box someone would look in** | 2 A, at the battery post |
+| Reads true battery? | **No** — through the CJB and its drops | **Yes** — which is why it was chosen |
+| Shares with | whatever else is on that CJB circuit | nothing |
+
+**The dedicated lead stands** — reading true battery voltage at the divider was
+the explicit requirement, and pin 55 cannot do that. But the choice is now a
+*trade* rather than a consequence of not being able to find the pin, and that is
+worth recording honestly.
+
+> **[DECIDE]** what the board does with pin 55. **It will be live at our
+> connector whether we use it or not**, and "we did not think about it" is not an
+> answer for a permanently hot 12 V pin. Leaving it unconnected is defensible;
+> leaving it undecided is not.
+
+**So "KAPWR is not required" was wrong twice.** It was reached from *where
+learned state is stored* — which stopped being the reason the moment the MCU
+stopped powering down — and it was asserted about a pin number belonging to a
+different PCM, while this truck's actual keep-alive pin sat in the pinout under a
+different name.
 
 > **[CONFIRM] the A-xx ↔ 1–104 mapping.** This page numbers VPWR *"A-32, A-33"*;
 > the wiring diagrams number it *"pins 71 and 97"*. **Two numbering systems, no

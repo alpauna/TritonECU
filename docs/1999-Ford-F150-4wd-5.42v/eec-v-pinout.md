@@ -50,7 +50,7 @@ no connector prefix. **Wire from this sheet.**
 | 21 | CKP+ | CKP+ | Same | DK BLU |  |
 | 22 | CKP- | CKP- | Same | GRY |  |
 | 23 | -- | -- | Same |  |  |
-| 24 | GND | Power Ground | -- |  |  |
+| 24 | GND | Power Ground | **-- no wire** |  | ⚠ MS lists a ground; the F-150 column is blank and Ford's sheet draws grounds on **3, 51, 77, 103 only**. **Not a ground on this truck** |
 | 25 | GND | Power Ground | **CMP shield drain** | **LB/YE (567)** | ⚠ MS sheet says power ground, BLK. **Ford's diagram says 567 LB/YE, 0 V, the CMP cable shield** — see [`schematic-findings.md`](schematic-findings.md) §15 |
 | 26 | Ign Coil 1 | IGNA | Same | LT GRN/WHT |  |
 | 27 | Ign Coil 5 | IGNF | Same | LT GRN/YEL |  |
@@ -81,7 +81,7 @@ no connector prefix. **Wire from this sheet.**
 | 52 | Ign Coil 3 | IGNB | Same | WHT/BLK |  |
 | 53 | Ign Coil 4 | IGNG | Same | DK GRN/VIO |  |
 | 54 | -- | -- | TCC SOL | VIO/YEL | MicroSquirt Pin 9 (TCC (LU) Solenoid) |
-| 55 | B+ KAM | 12V KAM | Same | RED/WHT |  |
+| **55** | **B+ KAM** | **12V KAM** | Same | **RED/WHT** | ⚠ **This is KAPWR.** Circuit **729 RD/WH**, Central Junction Box, **hot at all times**, 5 A. `Engine-Controls.png`. "KAM" = Keep Alive Memory = the keep-alive power `oem-connectors.md` spent two revisions saying this truck did not have |
 | 56 | -- | -- | VAPOR VALVE | LT GRN/BLK |  |
 | 57 | -- | -- | KNOCK SENSOR | YEL/RED |  |
 | 58 | -- | -- | Same |  |  |

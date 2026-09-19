@@ -269,3 +269,79 @@ Our design wires CMP *pseudo*-differentially (`IN2+` on pin 85, `IN2−` on sens
 ground, balanced 5 kΩ legs), which recovers rejection of noise **common to pins
 85 and 91**. It does nothing about noise picked up on the CMP conductor itself.
 **The shield still does real work.**
+
+---
+
+## 16. The PCM's grounds, and there is no case ground
+
+`Engine-Controls.png`, read for the first time in this pass.
+
+**Four ground pins — 3, 51, 77, 103 — all circuit `570 BK/WH`, all marked 0 V,
+all joining at splice `S100` and going to body ground `G101`.** Ford draws them
+in one row. That is the PCM's complete ground complement.
+
+| Consequence | |
+|---|---|
+| **No `CSEGND`** | There is no case- or chassis-ground pin on this connector. The chart's `A-43` belongs to the other PCM. The ECU's shield bond is a *mechanical* question, not a connector pin |
+| **Four, not five** | `oem-connectors.md` §3 briefly said five, counting pin 24. **Pin 24 carries no wire on this truck** — the MegaSquirt sheet lists it, its F-150 column is blank, and Ford does not draw it |
+| **Pin 25 is separate** | The CMP shield drains to `S199`/`S101`, a different path from `S100`/`G101`. §15 |
+
+### The MAF is wired as a Kelvin measurement, and that is worth keeping
+
+The MAF's own 0 V is **`570 BK/WH` — the same circuit, same splice `S100`, same
+ground `G101` as the PCM's power grounds.** Its return to the PCM, `968 TN/LB` on
+**pin 36**, is therefore a *sense* wire, not a current path: ground current goes
+to G101 on 570, and 968 lets the PCM measure the MAF signal against the sensor's
+**local** ground.
+
+**That is a four-wire measurement**, and it is the strongest evidence yet for the
+differential-measurement argument in [`../adc-front-end.md`](../adc-front-end.md).
+Tying pin 36 to our AGND at the connector would throw the whole benefit away.
+
+> Signal is `967 LB/RD` on **pin 88** — checked, because the sheet's pin label is
+> easy to misread as 38, and pin 38 is unused on this truck.
+
+---
+
+## 17. VPWR is key-switched — confirmed at the relay coil, not inferred
+
+The always-on work assumed VPWR dies at key-off. `Engine-Controls.png` proves it:
+
+```
+  BJB "HOT AT ALL TIMES" ── 554 YE/BK ──► PCM POWER RELAY pin 30
+  CJB "HOT IN START OR RUN" ── 16 RD/LG ──► PCM POWER DIODE ── 20 WH/LB ──► coil 86
+                                                          coil 85 ──► 57 BK ──► S106 ──► G104
+  relay 87 ──► 1140 VT ──► S1003 ──┬── BJB fuse 23, 15 A ──► 391 RD/YE ──► S155
+                                   ├── BJB fuse 18, 15 A ──► 361 RD    ──► S127   (VPWR)
+                                   └── BJB fuse 24, 15 A ──► 1138 VT/WH ──► C172
+```
+
+**The coil is energised straight from "hot in start or run" and grounded at
+G104. No PCM output touches it.** So the relay opens the moment the key does —
+there is no PCM-held afterrun on this circuit, and nothing keeps VPWR alive.
+
+**And the three circuits the output-driver work cared about all come off that one
+relay** through three *separate* 15 A fuses. `361 RD` (VPWR, pins 71/97),
+`391 RD/YE` and `1138 VT/WH` are siblings, which is exactly why a freewheel diode
+returned to VPWR inside the ECU would loop out across the Battery Junction Box —
+see [`../output-drivers.md`](../output-drivers.md).
+
+---
+
+## 18. Keep-alive power exists, on pin 55
+
+`Engine-Controls.png`: **Central Junction Box, "HOT AT ALL TIMES", 5 A fuse →
+C242 → `729 RD/WH` → C160 → PCM pin 55, marked 12 V.**
+
+[`eec-v-pinout.md`](eec-v-pinout.md) has had it all along as
+**"B+ KAM | 12V KAM | RED/WHT"**. **KAM is Keep Alive Memory — it is KAPWR**, and
+nothing in the repo made that connection while `oem-connectors.md` §5 asserted
+twice that this truck did not need it.
+
+It does not overturn the dedicated battery lead — that was chosen so the
+battery-sense divider reads **true** battery voltage, which a feed through the
+Central Junction Box cannot do. But it makes that a **trade** rather than a
+consequence of not finding the pin, and it leaves one thing open:
+
+> **[DECIDE]** what the board does with pin 55. It is a permanently hot 12 V pin
+> that will be present at our connector whether we use it or not.
