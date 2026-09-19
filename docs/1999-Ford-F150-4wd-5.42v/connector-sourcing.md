@@ -14,6 +14,23 @@ useful for building a jumper harness, not for mounting on a PCB.
 
 ## Options, roughly in order of practicality
 
+> ### ✅ Checked and closed: the TE part number is obsolete
+>
+> The drawing is **TE 770750-1**, revised **2009** — which looked like a live part
+> and a way around Ford Component Sales. **Digi-Key lists it obsolete.**
+>
+> **A revised drawing can outlive its product.** The 2009 revision says the
+> document was maintained, not that the part is orderable. Worth remembering
+> before the next controlled drawing raises hopes.
+>
+> **So salvage is the only route for a board-mount header**, which is what this
+> section already concluded — now with the alternative eliminated rather than
+> assumed away.
+>
+> **Practical consequence: take every one you can get.** If a donor PCM passes
+> through, pull the connector whether or not it is needed that week. They do not
+> become more available, and the labour to extract one does not get cheaper.
+
 **1. Salvage a scrap EEC-V PCM.** Cut the header off a dead junkyard PCM and
 transplant it. This is what most builders do, it is cheap, and the part is
 guaranteed correct for the truck. Downsides: desoldering a 104-pin header from
