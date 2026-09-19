@@ -1,6 +1,6 @@
 # Donor PCM — the source of the 104-pin connector
 
-![the donor board](1998-ExplorerECUBoard.jpg)
+![the donor board](2001-ExplorerECUBoard.jpg)
 
 The EEC-V board-mount header cannot be bought — see
 [`../1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](../1999-Ford-F150-4wd-5.42v/connector-sourcing.md).
@@ -17,16 +17,18 @@ EEC-V   MP2-113   00L08   KLB2
 
 | | |
 |---|---|
-| **`1L2F-12A650-ANC`** | Ford part number. `12A650` is the PCM family; **`1L2F`** is the prefix |
+| **`1L2F-12A650-ANC`** | Ford part number. `12A650` is the PCM family; **`1L2F`** dates it to **2001**, Explorer/Mountaineer |
 | `KLB2` | calibration / strategy code |
 | `MP2-113` | hardware variant |
 
-> ⚠ **The prefix and the filename disagree.** The file is named
-> `1998-ExplorerECUBoard.jpg`, but Ford's prefix scheme reads **`1L2F`** as
-> **2001 model year**, `L2` being the Explorer/Mountaineer platform. The board
-> may well carry a © 1998 design date while the assembly is later.
-> **[CONFIRM]** the donor year — it does not change the connector, but a
-> mis-named file will mislead later.
+> ✅ **Corrected: this is a 2001, not a 1998.** The file was first named
+> `1998-…` from memory; the part number is the authority. Ford's prefix scheme
+> reads **`1L2F`** as **2001 model year**, with `L2` the Explorer/Mountaineer
+> platform. A © 1998 date on the board is the *design* date — EEC-V hardware ran
+> for years — not the assembly.
+>
+> It does not change the connector either way. It was worth fixing because the
+> filename is what someone will trust later.
 
 ## Does an Explorer header fit an F-150 harness?
 
