@@ -12,7 +12,7 @@
 // jig, and PLA is the least warp-prone thing for a 158 x 174 flat plate. PETG
 // and ABS will curl at the corners and a curled datum is worthless.
 
-part = "template";         // template | ring
+part = "template";         // template | ring | conn_gauge
 
 /* ---- the envelope, known ------------------------------------------------ */
 plate_w   = 158;           // donor PCB width   - carrier-envelope.md
@@ -41,6 +41,28 @@ pin_edge  = 8.0;           // pin field centre to board edge ** ESTIMATED **
 // The zone where power devices MUST sit to reach the case rails.
 band      = 12;            // carrier-envelope.md, edge cooling
 band_d    = 0.4;
+
+/* ---- connector footprint gauge ------------------------------------------ */
+// Everything mechanical from TE drawing 770750-1's RECOMMENDED P.C. BOARD
+// LAYOUT. Drop the salvaged connector in: if it seats, the footprint is right
+// and the sanded post is back to size.
+//
+// The 104 pin holes are NOT reproduced - an FDM Ø1.40 prints 0.2-0.4 mm
+// undersize and would fail every pin for reasons that have nothing to do with
+// the footprint. The pin field is a SLOT, which proves clearance without
+// pretending to test fit.
+cg_post_d   = 3.60;   // TE: 3.60 +/-0.05, two of them
+cg_post_sp  = 110.00; // TE: 110.00 between centres
+cg_ctr_d    = 3.70;   // TE: 3.70 ref, 55.00 from each post
+cg_pin_w    = 101.4;  // pin field, as the slot
+cg_pin_h    = 9.0;
+cg_edge     = 5.20;   // TE: board edge below the post centreline
+cg_t        = 3.0;
+hole_comp   = 0.30;   /* FDM holes print UNDERSIZE. This is added to every
+                         modelled diameter so the printed result lands near
+                         nominal. ** CALIBRATE IT ** - the bearing block split
+                         because a fit was assumed rather than measured.
+                         Print, measure the post holes, adjust. */
 
 /* ---- ring variant ------------------------------------------------------- */
 ring_w    = 16;            // frame width - wide enough to span the rails
@@ -108,7 +130,31 @@ module plate_body(ring = false) {
     }
 }
 
-if (part == "template") {
+module conn_gauge() {
+    w = cg_post_sp + 24; h = cg_edge + 22;
+    difference() {
+        translate([-w/2, -(h - cg_edge), 0]) cube([w, h, cg_t]);
+        for (sx = [-1, 1])                                    // the two posts
+            translate([sx*cg_post_sp/2, 0, -1])
+                cylinder(d = cg_post_d + hole_comp, h = cg_t + 2, $fn = 48);
+        translate([0, 0, -1])                                 // centre hole
+            cylinder(d = cg_ctr_d + hole_comp, h = cg_t + 2, $fn = 48);
+        translate([0, 6.00 - (6.00 + 2.85)/2 + 1.575, -1])     // pin field slot
+            cube([cg_pin_w, cg_pin_h, cg_t + 2], center = true);
+        translate([0, -cg_edge - 1.5, -1])                    // board-edge line
+            cube([w - 20, 0.8, cg_t + 2], center = true);
+        for (i = [0:2])                                       // label
+            translate([-cg_post_sp/2 + 14, -cg_edge + 3, cg_t - 0.6])
+                linear_extrude(1) text("TE 770750-1", size = 4,
+                    font = "Liberation Sans", $fn = 16);
+    }
+}
+
+assert(cg_post_sp/2 + cg_post_d < (cg_post_sp + 24)/2, "post holes break the gauge edge");
+assert(hole_comp >= 0, "hole compensation cannot be negative");
+
+if      (part == "conn_gauge") conn_gauge();
+else if (part == "template") {
     difference() { plate_body(false); grid_lines(); axis_labels(); edge_band(); }
 } else if (part == "ring") {
     difference() { plate_body(true); grid_lines(); edge_band(); }

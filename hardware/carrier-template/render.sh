@@ -7,4 +7,4 @@ render() {
     printf '%-10s %9s B\n' "$1" "$(stat -c%s "stl/$1.stl" 2>/dev/null || echo FAIL)"
 }
 export -f render
-printf "%s\n" template ring | xargs -P "$(nproc)" -I{} bash -c 'render {}'
+printf "%s\n" template ring conn_gauge | xargs -P "$(nproc)" -I{} bash -c 'render {}'

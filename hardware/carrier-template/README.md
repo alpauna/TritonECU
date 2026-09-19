@@ -7,8 +7,39 @@ this in the case floor, read the boss centres off the grid, and the carrier can
 be drawn.
 
 ```
-./render.sh          # -> stl/template.stl, stl/ring.stl
+./render.sh          # -> stl/{template,ring,conn_gauge}.stl
 ```
+
+## ⭐ `conn_gauge` — validate the connector footprint before it reaches a PCB
+
+Built from **TE drawing 770750-1**'s *Recommended P.C. Board Layout*
+([`connector-sourcing.md`](../../docs/1999-Ford-F150-4wd-5.42v/connector-sourcing.md)).
+134 × 27 × 3 mm, prints in about twenty minutes.
+
+| On it | From the drawing |
+|---|---|
+| **2 × Ø3.60 post holes** | **110.00** between centres |
+| **Ø3.70 centre hole** | 55.00 from each post |
+| Pin field as a **slot** | 101.4 × 9.0 |
+| Board-edge line | 5.20 below the post centreline |
+
+**Two jobs at once:**
+
+1. **Go/no-go for the sanded post.** It mushroomed under a heat gun; sand the
+   *diameter*, not the length, until it enters the Ø3.60 hole cleanly.
+2. **Proves the footprint** before it goes on a PCB — the drill was just
+   corrected from 1.143 mm to **Ø1.40**, and this confirms the rest of the
+   geometry agrees with the physical part.
+
+> **The 104 pin holes are deliberately not reproduced.** An FDM Ø1.40 prints
+> 0.2–0.4 mm undersize and would fail every pin for reasons that have nothing to
+> do with the footprint. The pin field is a **slot** — it proves clearance
+> without pretending to test fit.
+
+> ⚠ **`hole_comp` = 0.30 mm is added to every modelled diameter**, because FDM
+> holes print undersize. **Calibrate it**: print, measure the post holes, adjust.
+> The VR rig's bearing blocks split because a fit was assumed rather than
+> measured — same trap, same fix.
 
 ## Two parts, print the ring first
 
