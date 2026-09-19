@@ -8,6 +8,65 @@ one at a time.
 
 ---
 
+## ⚠ Bearing blocks: print the fit gauge first
+
+**The first PETG set split.** Bearings pressed in, and all but one delaminated
+within the hour.
+
+`brg_press` was **−0.05**, which looks like 0.05 mm of interference and is
+harmless at 2.8 MPa. **But an FDM bore prints undersize** — extrusion overlaps
+on the inside of a curve, and a horizontal bore sags at its crown, so 0.2–0.4 mm
+on diameter is routine. That turns 0.05 into 0.25–0.45, and the hoop stress with
+it:
+
+| Real interference | Hoop stress | |
+|--:|--:|---|
+| 0.05 mm | 2.8 MPa | fine |
+| 0.35 mm | 19.3 MPa | marginal |
+| **0.45 mm** | **24.9 MPa** | **past PETG's ~22 MPa interlayer** |
+
+**And interlayer is the number that matters.** At the 3 and 9 o'clock positions
+of a *horizontal* bore the hoop stress runs in **Z**, and the radial crack plane
+there contains the bore axis and the radius — **which is the layer plane**. The
+block doesn't crack, it **delaminates**, splitting out through the 4 mm side wall
+at bore mid-height, right where the gusset root sits as a stress riser.
+
+**The one that survived is bore-diameter lottery, not margin** — it printed
+perhaps 0.05 mm looser than its siblings.
+
+### A thicker wall is the wrong fix
+
+Everyone reaches for it first. It doesn't work: a thicker hub is a **stiffer**
+hub and develops proportionally more contact pressure for the same interference.
+
+| Wall | Block width | Hoop stress |
+|--:|--:|--:|
+| 4 mm | 36 mm | 19.3 MPa |
+| 8 mm | 44 mm | **18.2 MPa** |
+
+Doubling the wall buys **6 %**, for 8 mm of extra width.
+
+### The fix: clearance plus retaining compound
+
+`brg_press` is now **+0.30** — the pocket is modelled *oversize*, aiming at a
+small clearance once the print shrinks it. The bearing is held by **Loctite
+638/609**, which wants 0.05–0.25 mm of gap and puts **zero hoop stress** into the
+plastic. The shoulder still locates it axially.
+
+```bash
+openscad --export-format binstl -o stl/fit_gauge.stl -D 'part="fit_gauge"' vr_rig.scad
+```
+
+**Print `fit_gauge` first.** Three pockets at +0.15 / +0.30 / +0.45, in the *same
+orientation* as the real block — horizontal and vertical bores do not shrink
+alike. Try a 6001 in each, and set `brg_press` to whichever slides in with a
+whisker of play. **Printers differ by more than the failure margin does.**
+
+> **The other lever, if you want belt and braces:** print the block with the
+> **bore axis vertical**. The hoop stress then lies entirely in-layer — ~50 MPa
+> instead of ~22, a **2.3× gain** — at the cost of support under the foot flange.
+
+
 ## ⚠ The wheel cannot be printed
 
 A VR sensor is a permanent magnet and a coil. It produces voltage from the

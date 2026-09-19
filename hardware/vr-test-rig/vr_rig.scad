@@ -108,7 +108,37 @@ nema_boss       =  22.0;
 nema_shaft      =   5.0;
 
 /* --- fit and print tuning -------------------------------------------------- */
-brg_press       =  -0.05; // bearing OD interference; loosen toward +0.10 if it will not seat
+brg_press       =  +0.30; /* Bearing pocket, OVERSIZE on the model.
+   ** THIS WAS -0.05 AND IT SPLIT THE BLOCKS. ** PETG, bearings pressed in,
+   all but one cracked within the hour.
+
+   -0.05 was never the real interference. AN FDM BORE PRINTS UNDERSIZE -
+   extrusion overlaps on the inside of a curve, and a horizontal bore also
+   sags at its crown - so 0.2-0.4 mm on diameter is normal. That turns a
+   harmless 0.05 into 0.25-0.45, and the hoop stress with it:
+
+       0.05 interference  ->   2.8 MPa       fine
+       0.35               ->  19.3 MPa       marginal
+       0.45               ->  24.9 MPa       ** past PETG's ~22 MPa INTERLAYER **
+
+   And it is the interlayer number that matters, because at the 3 and 9
+   o'clock positions of a HORIZONTAL bore the hoop stress runs in Z. The
+   radial crack plane there contains the bore axis and the radius - which
+   IS the layer plane. The block does not crack, it DELAMINATES, splitting
+   out through the 4 mm side wall at bore mid-height, right where the
+   gusset root sits as a stress riser.
+
+   Thickening the wall does NOT fix it: a thicker hub is a stiffer hub and
+   develops proportionally more contact pressure. 4 -> 8 mm takes the hoop
+   stress from 19.3 to 18.2 MPa. Six percent, for 8 mm of extra width.
+
+   THE FIT IS THE LEVER. +0.30 targets a small CLEARANCE after shrink; the
+   bearing is then held by RETAINING COMPOUND (Loctite 638/609), which
+   wants 0.05-0.25 mm of gap and puts zero hoop stress into the plastic.
+   The shoulder still locates it axially.
+
+   ** CALIBRATE THIS: print part="fit_gauge", measure, set this number. **
+   Printers differ by more than the failure margin does. */
 clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;
@@ -595,7 +625,34 @@ module base_half(lo, hi) {
 }
 
 /* =========================================================================== */
-if      (part == "bearing_block") bearing_block();
+/* ===========================================================================
+   FIT GAUGE — measure your printer's bore shrink instead of guessing it
+   ===========================================================================
+   Three pockets at different oversizes, in the SAME ORIENTATION as the real
+   block (bore horizontal), because horizontal and vertical bores do not
+   shrink alike. Print it, try a 6001 in each, and set brg_press to the one
+   that slides in with a whisker of play.                                   */
+gauge_steps = [0.15, 0.30, 0.45];
+module fit_gauge() {
+    pitch = brg_od + 6; n = len(gauge_steps);
+    w = n*pitch; h = brg_od + 2*wall; t = brg_w + 3;
+    difference() {
+        translate([-w/2, -t/2, 0]) cube([w, t, h]);
+        for (i = [0:n-1]) {
+            x = -w/2 + pitch*(i + 0.5);
+            translate([x, -t/2 - 1, brg_od/2 + wall]) rotate([-90,0,0])
+                cylinder(d = brg_od + gauge_steps[i], h = brg_w + 1, $fn = fit_fn);
+            translate([x, -t/2 - 2, brg_od/2 + wall]) rotate([-90,0,0])
+                cylinder(d = brg_od - 4, h = t + 4, $fn = fit_fn);
+            translate([x, -t/2 + 0.6, 3.5]) rotate([90,0,0])
+                linear_extrude(1) text(str(gauge_steps[i]), size = 5,
+                    halign = "center", valign = "baseline", $fn = 16);
+        }
+    }
+}
+
+if      (part == "fit_gauge")     fit_gauge();
+else if (part == "bearing_block") bearing_block();
 else if (part == "base_a")        base_half(-base_l/2 - 1, x_seam);
 else if (part == "base_b")        base_half(x_seam, base_l/2 + 1);
 else if (part == "motor_mount")   motor_mount();
