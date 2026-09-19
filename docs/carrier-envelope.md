@@ -310,10 +310,11 @@ needs 27.7 mm. **A fabricated lid can be any height** — folded sheet aluminium
 does not care. The **46.5 mm ceiling** stays the constraint; the OEM's 31 mm
 stops being one.
 
-## Practically: bend it, do not draw it
+## ✅ DECIDED: folded 5052-H32 aluminium, bent not drawn
 
-**Folded sheet aluminium**, five faces, screw pattern matching the base's flange,
-mating to the same gasket land the OEM lid used.
+**Folded 5052-H32 aluminium**, five faces, screw pattern matching the base's
+flange, mating to the same gasket land the OEM lid used. Bent on the 10-ton
+press with a shop-made V-block and punch bar — **no die.**
 
 ### A 10-ton press is four times what bending needs, and a quarter of what drawing needs
 
