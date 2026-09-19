@@ -180,6 +180,33 @@ the other half of the story from the case's metal lip.
 > | **0.5 mm of radius is not much material** | test-fit often and stop the moment it enters |
 > | ⭐ **Gauge against the rusEFI PCB, not a printed part** | it has real holes at real tolerance. [`conn_gauge`](../../hardware/carrier-template/) is a fallback for when that board is not to hand |
 
+### ⚠ The centre nut is not fitted — so what takes the mating force?
+
+TE's drawing shows a **NUT** at the centre with a `(2.05/1.15)` thread callout and
+a `(Ø3.70)` clearance — **both in parentheses, i.e. reference only**, which on a
+controlled drawing usually marks an optional or as-supplied feature.
+
+**On the donor it was never fitted.** The hole is there; the nut is not.
+
+**Keep the Ø3.70 hole anyway.** It costs nothing, it matches both TE's layout and
+the rusEFI board, and a connector *with* the nut still drops in. **Omitting it is
+the only choice that forecloses anything.**
+
+> **But the open question is the load path.** A 104-way connector is not pushed
+> home by hand. If there is no centre bolt into a nut, something else takes that
+> force — and the candidate is **the case's metal lip**, which seats into the
+> connector body.
+>
+> **That would make the lip structural, not merely locating** — and it changes
+> what the enclosure owes the design. A printed lid over a reused metal base is
+> fine if the base carries it; a fully printed enclosure would have to reproduce
+> a load path, not just a shape.
+>
+> **[CONFIRM] how the harness connector clamps on this truck** — centre bolt,
+> side latches, or the lip. It is a five-second look at the mating half, and it
+> decides whether [`../enclosure.md`](../enclosure.md) has a structural
+> requirement it does not currently know about.
+
 > **Build the footprint from the drawing directly.** The row Y positions are
 > dimensioned from the post centreline (**6.00 / 3.05 / 0 / 2.85**, board edge at
 > **5.20**) and are worth reading off the PDF at full zoom rather than from this

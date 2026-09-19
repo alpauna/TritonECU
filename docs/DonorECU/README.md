@@ -115,6 +115,13 @@ giving up any of the above.
 > **[CONFIRM] the lid joint** — flange width, screw positions and whether the OEM
 > sealed it with a gasket or RTV. That is what a printed lid has to mate to.
 
+> ⚠ **And the lip may be structural.** The connector's centre nut — TE's optional
+> retention — **is not fitted on this donor**, so something else takes the force
+> of mating a 104-way connector. The case's metal lip is the candidate. **If it
+> is carrying that load, reusing the metal base stops being a convenience and
+> becomes a requirement.** See
+> [`../1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](../1999-Ford-F150-4wd-5.42v/connector-sourcing.md).
+
 ## What the divot actually decides
 
 Which of these it is changes the board design, and one measurement separates
