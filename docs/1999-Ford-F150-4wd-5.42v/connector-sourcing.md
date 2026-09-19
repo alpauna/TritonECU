@@ -56,7 +56,50 @@ Note it is a **staggered** 4-row field, not a rectangular grid. Do not
 approximate it with a generic 4×26 header; the 1.7 mm offset is what makes it
 mate.
 
-## ⚠ The footprint above is 104 pads and nothing else
+## ✅ CLOSED — the TE controlled drawing has the board layout, with tolerances
+
+**[`ENG_CD_770750_C.pdf`](ENG_CD_770750_C.pdf)** — Tyco/TE drawing **770750-1**,
+*"Sleeve Assembly, Wire Connector Female"* — carries a **RECOMMENDED P.C. BOARD
+LAYOUT** panel. It was in the repository the whole time.
+
+![PCB layout panel](EEC-V-Connector-PCB-Layout.png)
+
+| | rusEFI extraction | **TE drawing 770750-1** |
+|---|---|---|
+| **Pin hole** | 1.143 mm drill | **Ø1.40 ±0.05**, 104 PLC ⚠ |
+| Pin pitch in a row | 3.4 mm | **3.40 TYP** ✓ |
+| Row stagger | 1.7 mm | **1.70 TYP** ✓ |
+| **Mounting posts** | *not recorded* | **2 × Ø3.60 ±0.05** |
+| **Post spacing** | — | **110.00** |
+| **Centre hole** | *not recorded* | **Ø3.70** ref, **55.00** from each post |
+| Board edge | — | **5.20** below the datum |
+| Positional tolerance | — | **⊕ Ø0.10 Ⓜ | F | Ⓜ** on both hole types |
+
+### ⚠ The drill disagrees by 0.26 mm, and the drawing wins
+
+**1.143 mm (0.045″) against a specified Ø1.40 ±0.05 is not a rounding
+difference.** It is a hole the pin may not enter — 104 times, on a connector that
+cannot be bought.
+
+**Use the TE drawing as the footprint authority**, not the rusEFI extraction.
+It is the manufacturer's controlled document for this exact part number, it is
+toleranced, and it carries a positional datum. The rusEFI geometry agrees on
+pitch and stagger, which is reassuring — and it is silent on the three holes that
+matter mechanically.
+
+### That also closes the posts question
+
+The **two Ø3.60 holes at 110.00 centres** are the posts seen on the donor board's
+underside. Together with the **Ø3.70 centre hole** they are the connector's
+mechanical retention into the PCB — the other half of the story from the case's
+metal lip.
+
+> **Build the footprint from the drawing directly.** The row Y positions are
+> dimensioned from the post centreline (**6.00 / 3.05 / 0 / 2.85**, board edge at
+> **5.20**) and are worth reading off the PDF at full zoom rather than from this
+> summary, because a scan is a poor place to resolve the second decimal.
+
+## ~~⚠ The footprint above is 104 pads and nothing else~~ — resolved above
 
 **The donor connector has posts through the PCB as well as pins**, and this
 extraction records **no mounting posts, no alignment features, no keepout.**
