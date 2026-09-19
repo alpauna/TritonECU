@@ -310,9 +310,49 @@ needs 27.7 mm. **A fabricated lid can be any height** — folded sheet aluminium
 does not care. The **46.5 mm ceiling** stays the constraint; the OEM's 31 mm
 stops being one.
 
-## Practically
+## Practically: bend it, do not draw it
 
 **Folded sheet aluminium**, five faces, screw pattern matching the base's flange,
-mating to the same gasket land the OEM lid used. It is a simple part — one
-bending operation per edge — and far easier to source than the connector it
-protects.
+mating to the same gasket land the OEM lid used.
+
+### A 10-ton press is four times what bending needs, and a quarter of what drawing needs
+
+`F/mm = K·t²·UTS / V`, air bend, K = 1.33, V = 8t:
+
+| Material | t | Longest bend (174 mm) |
+|---|--:|--:|
+| **5052-H32 alu** | 1.5 mm | **1.01 t** |
+| 5052-H32 alu | 2.0 mm | 1.34 t |
+| 6061-T6 alu | 1.5 mm | 1.37 t |
+| Mild steel | 2.0 mm | 2.18 t |
+
+**Under two tonnes for any of them.** Now the same box **drawn** in one hit —
+`F ≈ perimeter × t × UTS`, plus ~30 % blank-holder:
+
+| Material | t | Draw + holder |
+|---|--:|--:|
+| 5052-H32 alu | 1.5 mm | **30 t** |
+| 5052-H32 alu | 2.0 mm | 40 t |
+| Mild steel | 2.0 mm | **65 t** |
+
+**23–50 tonnes.** A 10-ton press will not draw this box, and a die capable of it
+is a serious piece of tooling in its own right.
+
+> ### ⭐ Which means no die is needed at all
+>
+> **Bending needs a V-block and a punch bar, one edge at a time.** That is a
+> shop-made fixture, not tooling. The press is already oversized for it.
+
+### The real design problems are not force
+
+| | |
+|---|---|
+| **Corners** | A five-sided box from one blank needs the corners notched, then **welded, riveted or overlapped with sealant**. This is a sealed enclosure behind a firewall penetration — an open corner is not an option |
+| **Bend allowance** | The flat pattern must account for stretch. K ≈ 0.4 for aluminium; get it wrong and the box is the wrong size in both axes |
+| **Material** | **5052-H32**, not 6061-T6. 6061 cracks at tight bend radii; 5052 is the sheet-metal alloy and bends without complaint |
+| ⚠ **The connector-end flange** | If the lid carries part of the four-sided capture, **that feature is not a simple bend** — it is the one part that might genuinely want a form die. Settle it with the side-wall measurement above before committing to a flat pattern |
+
+> **Worth pricing the alternative:** a laser-cut and folded one-off in 5052 from a
+> sheet-metal shop is typically modest money, and they will hold the bend
+> allowance for you. Making it yourself is a fair choice — just make it for the
+> right reason, not because 10 tons sounded marginal. It is not.
