@@ -120,7 +120,12 @@ Target **10.3 A / 80 mJ**. Dwell must track battery voltage:
 | **14.4 V** | **1.33 ms** | 1.00 ms |
 | 15.0 V | 1.27 ms | 0.95 ms |
 
-**2.56 ms at 9 V against 1.33 ms at 14.4 V — a 1.9× span.** A fixed dwell would
+**2.56 ms at 9 V against 1.33 ms at 14.4 V — a 1.9× span.**
+
+> **And the truck already tells us when it is cranking.** EEC-V **pin 64** is a
+> 12 V START signal — `199 LB/YE`, from the ignition switch via CJB fuse 20 — so
+> the cranking end of this table does not have to be inferred from voltage alone.
+> See [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §21. A fixed dwell would
 either waste energy and heat the driver at high line, or miss the target while
 cranking — which is exactly when spark energy matters most. **The dwell-vs-voltage
 table is not optional.**

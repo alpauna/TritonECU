@@ -32,7 +32,7 @@ counted as handled when only a pin had been reserved.
 | NCV8405A — HO2S ×4, canister vent, IMCC, SSA, SSB | 8 | **74HCT541 #3 at 5 V** — list per [`output-drivers.md`](output-drivers.md) channel budget; ~~SS1/SS2/CSS~~ was a stale naming |
 | ADS8588H static — RESET, FRSTDATA, OS0–2, RANGE | 6 | direct, 3.3 V — now legal |
 | MAX25239 `SYNC` | 1 | direct, with a pulldown |
-| Inputs — TR ×4, brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled** |
+| Inputs — TR ×3, **START (pin 64)**, brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled**. ⚠ TR is 3 bits not 4 — pin 64 is the cranking signal, [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §21. **Count unchanged**, and a START input is worth more than a fourth TR bit |
 | VREF — EN, IN1, IN2, DIAG_EN, SEL, FAULT | 6 | TPS2H160B-Q1 |
 | **O2 bias excitation** | **1** | **DAC out (PA4/PA5) → 1 kΩ → shared 455 mV bias node.** In-circuit cell-impedance measurement — [`o2-input-stage.md`](o2-input-stage.md) §7 |
 | Watchdog kick | 1 | — |

@@ -57,7 +57,7 @@ this line affects how *well* it runs, not whether it runs.
 | **Transfer case speed** | C199, 4x4 only | **[CONFIRM]** whether this or OSS feeds the speedometer |
 | **4x4 low/high switch** | C189 | Range state — shift points and line pressure differ in low range |
 | **OSS** — output shaft speed | **variable reluctance** | Road speed, cluster speedometer, and the cruise control feed (pin 68). The MegaSquirt build conditioned it with an LM1815 — it needs the same treatment as CKP |
-| **TR** — transmission range | **4-bit digital code** | Park/neutral/gear. Four digital inputs (pins 34/49/50/64), not an analog ladder — expander inputs, no ADC channel needed |
+| **TR** — transmission range | **digital code** | Park/neutral/gear on pins 34/49/50, not an analog ladder — no ADC channel needed. ⚠ **~~and 64~~ — pin 64 is the START signal**, per two Ford sheets. **[CONFIRM]** the bit count — [`schematic-findings.md`](schematic-findings.md) §21 |
 | **TFT** — trans fluid temperature | NTC | Blocks converter lockup when cold |
 
 ---

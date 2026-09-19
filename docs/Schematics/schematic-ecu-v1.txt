@@ -678,15 +678,20 @@ CONTENTS
      whatever the answer; it decides only whether a pull-up gets populated.
  11. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
- 12. ~DOWNGRADED~ what else sits on the 5 A CJB fuse feeding 729 RD/WH. The
-     repo has no power-distribution sheet, so it cannot be closed from the
-     diagrams - but it is BOUNDED and the bound settles it. A sharing load
-     draws through the fuse (15-25 mohm), not through 729, so worst case at
-     the fuse's 5 A rating is 125 mV. The self-disable runs PARKED when other
-     hot-at-all-times loads are quiescent (0.25 mV at 10 mA), and 125 mV is
-     17 us on a 1.45 ms dwell - 1.2%, under the coil's own spread. Settle it
-     on the truck when convenient: pull CJB fuse 2, see what stops.
-     findings sec.19, calc/pin55_sense.py.
+ 12. ~CLOSED~ what shares the 5 A CJB fuse feeding 729 RD/WH - sec.4c.
+     PowerDistubution8.png: CJB FUSE 2, 5 A, cavity 11 in / 32 out, then
+     splice S236 to THREE loads - the INSTRUMENT CLUSTER (C236-10), OUR
+     PIN 55 (C174), and the NGV MODULE (C196-1, a natural-gas fitment this
+     truck almost certainly does not have).
+
+     It does not matter: 729 is the cluster's KEEP-ALIVE feed, not its
+     operating feed - the cluster runs off 1002 BK/PK (acc/run) and 640
+     RD/YE (run) on pins 11 and 2. Memory retention is milliamps, so the
+     error is 0.2 mV at 10 mA against the 125 mV bound that assumed the
+     fuse at its full 5 A rating.
+
+     Mildly useful, even: if fuse 2 blows, battery sense dies AND the
+     cluster loses memory - a symptom a driver notices. findings sec.20.
 
 
 14a. CLOSED, AND WORTH KEEPING CLOSED

@@ -1,7 +1,8 @@
 # What the factory wiring diagrams settled
 
 Read from the Ford diagrams now in this directory — `4R70W-*.png`,
-`EngineControls2-8.png`, `Electronic-Shift-Control.png`. These are **Ford's own
+`EngineControls2-8.png`, `Electronic-Shift-Control.png`,
+`PowerDistubution1-17.png`. These are **Ford's own
 sheets**, so where they disagree with
 [`eec-v-pinout.md`](eec-v-pinout.md) — which is a transcription of a MegaSquirt
 PNP mapping — the diagrams win.
@@ -494,3 +495,109 @@ lead, so no new line item — which caps the node at 5.1 V.
 2.1 mV referred to the battery against a 0.1 V target.
 
 Reproduced by [`../calc/pin55_sense.py`](../calc/pin55_sense.py).
+
+---
+
+## 20. ✅ CLOSED — what shares the 5 A CJB fuse with pin 55
+
+`PowerDistubution8.png` is the Central Junction Box sheet, and it answers this
+outright. **CJB fuse 2, 5 A**, cavity 11 in / cavity 32 out, circuit
+**729 RD/WH**, then splice **S236**:
+
+```
+  CJB fuse 2, 5 A ── 729 RD/WH ── S236 ──┬── C236-10   INSTRUMENT CLUSTER
+                                         │
+                                         └── C160 ── S158 ──┬── C174-55  PCM
+                                                            └── C196-1   NGV MODULE
+```
+
+**So it is shared — with the instrument cluster, and with the NGV module on
+trucks that have one.**
+
+### It does not matter, and the reason is specific
+
+**729 is the cluster's *keep-alive* feed, not its operating feed.** The cluster
+has three supplies, and the other two carry the work:
+
+| Cluster pin | Circuit | From |
+|--:|---|---|
+| **10** | **729 RD/WH** | **CJB fuse 2 — hot at all times. Memory retention** |
+| 11 | 1002 BK/PK | CJB fuse 8, 5 A — 12 V acc or run (`PowerDistubution10.png`) |
+| 2 | 640 RD/YE | CJB fuse 29, 5 A — 12 V run (`PowerDistubution12.png`) |
+
+Memory retention is milliamps. Against [§19](#19-decided--pin-55-is-the-battery-voltage-sense-pin)'s
+bound — which assumed the fuse at its full 5 A rating and got **125 mV** — the
+real figure is three orders lower:
+
+| Cluster draw on 729 | Error in our reading |
+|--:|--:|
+| 10 mA | **0.2 mV** |
+| 100 mA | 2 mV |
+
+**The NGV module is a Natural Gas Vehicle fitment** — `PowerDistubution12.png`
+draws `5.4L NGV` as a distinct branch from the plain 5.4L. Almost certainly not
+on this truck, and it would be a keep-alive draw too.
+
+### And the sharing is mildly useful
+
+If CJB fuse 2 blows, **the battery sense dies and so does the cluster's memory**
+— a symptom the driver actually notices, rather than a silent failure. §19's
+cross-check against the protected rail catches it independently.
+
+> **Unrelated but worth having from the same sheet:** the DLC's battery feed
+> (pin 16, circuit `40 LB/WH`) is on **CJB fuse 3, 20 A** — a *different* fuse,
+> shared with the cigar lighter. Relevant to the SCP work, which reaches the bus
+> through the DLC.
+
+---
+
+## 21. What else the 17 power-distribution sheets settle
+
+### ⚠ Pin 64 is the START signal, not TR bit 3
+
+`eec-v-pinout.md` has pin 64 as *"Trans Pos Sensor 3, LT BLU/YEL"*, from the
+MegaSquirt sheet. **Two Ford sheets disagree, and they agree with each other:**
+
+- `EngineControls2.png` — pin 64, `199 LB/YE`, marked **12 V (START)**
+- `PowerDistubution14.png` — traces it: ignition switch **START** → `481 GY/YE`
+  → CJB fuse 20, 5 A → `1000 RD/BK` → C158 → C172 → **`199 LB/YE` → C174 pin 64**
+
+The colours match (LB/YE = LT BLU/YEL), so this is the familiar pattern: the
+MegaSquirt author saw LB/YE at pin 64, found TR bits on 34/49/50, and assumed the
+fourth. **A tell supports Ford:** pins 34, 49 and 50 each carry a MicroSquirt pin
+annotation (*"Selector pos A/B/C"*) and **pin 64 carries none** — the MS install
+wired three, not four.
+
+**This gains a genuinely useful input.** A cranking signal matters for
+cranking enrichment, for not firing injectors before sync, and for the dwell
+table — [`../output-drivers.md`](../output-drivers.md) puts cranking dwell at
+**2.56 ms against 1.33 ms hot**, and knowing you are cranking is how you pick it.
+
+> **[CONFIRM] how many bits the TR sensor actually has**, and where the fourth
+> lives if there is one. [`sensors-to-run.md`](sensors-to-run.md) and
+> [`transmission.md`](transmission.md) both state four on 34/49/50/64 and both
+> inherit this error. It changes an input count, not a driver.
+
+### The coil feed, and it has noise capacitors on it
+
+`PowerDistubution13.png` draws all eight coils explicitly:
+
+```
+  16 RD/LG ── S117 ──┬── S161 ──┬── C1011..C1014   COIL ON PLUG 1-4
+                     │          └── C115  RADIO NOISE CAPACITOR #1
+                     └── S162 ──┬── C1015..C1018   COIL ON PLUG 5-8
+                                └── C114  RADIO NOISE CAPACITOR #2
+```
+
+`16 RD/LG` is **"hot in start or run"** from the CJB — the same circuit that
+feeds the PCM power diode. **Two radio-noise capacitors sit on the coil feed**,
+one per bank, which is worth knowing before anyone wonders why the supply looks
+soft at the coil: those capacitors are the intended local reservoir.
+
+### Smaller confirmations
+
+| | |
+|---|---|
+| **G101 is a *body* ground** | `PowerDistubution1.png` labels it explicitly, against G100/G105 **(ENGINE)**. The PCM's four power grounds land on the body, not the block — §16 |
+| Fuel pump relay | BJB fuse 10, 20 A, `1059 LB/OG` to relay pin 30 (`PowerDistubution4.png`) |
+| Ignition switch | Full contact map on `PowerDistubution7.png` — START/RUN/ACC/OFF/LOCK against outputs A1–A4, I1, I2, STA, P1, P2 |

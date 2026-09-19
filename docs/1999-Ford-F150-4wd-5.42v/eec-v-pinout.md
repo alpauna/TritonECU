@@ -90,7 +90,7 @@ no connector prefix. **Wire from this sheet.**
 | 61 | -- | -- | LR HO2S Signal | VIO/LT GRN | Not used |
 | 62 | -- | -- | Fuel Tank Pressure | RED/PNK | May add this later… |
 | 63 | Fuel Press | AIN2 | -- |  | Will add fuel pressure to truck |
-| 64 | -- | -- | Trans Pos Sensor 3 | LT BLU/YEL |  |
+| **64** | -- | -- | ~~Trans Pos Sensor 3~~ **12 V START** | **LB/YE (199)** | ⚠ **Ford says START, twice.** `EngineControls2.png` marks pin 64 *12 V (START)*; `PowerDistubution14.png` traces it from the ignition switch START position via CJB fuse 20. Note pins 34/49/50 each have a MicroSquirt annotation and **this one does not** — see [`schematic-findings.md`](schematic-findings.md) §21 |
 | 65 | -- | -- | DPFE Sensor | BRN/LT GRN | EGR Valve Pressure Difference Sensor |
 | 66 | -- | -- | CYL Head Temp | YEL/LT GRN |  |
 | 67 | -- | -- | Canister Vent | VIO/WHT |  |
@@ -177,9 +177,11 @@ See [`../output-drivers.md`](../output-drivers.md) and
 
 - **CSS, Coast Clutch Solenoid (pin 20, BRN/ORG).** A *fourth* 4R70W solenoid.
   The inventory listed SSA, SSB, TCC and EPC. This is a fifth output.
-- **TR sensor is a 4-bit digital code**, not an analog ladder — Trans Pos
-  Sensor 1–4 on pins 34, 49, 50, 64. Four digital inputs, decoded as a gear
-  pattern. Cheaper than expected: expander inputs, not an ADC channel.
+- **TR sensor is a digital code**, not an analog ladder — Trans Pos Sensor on
+  pins 34, 49, 50 and ~~64~~. Digital inputs decoded as a gear pattern, not an
+  ADC channel. ⚠ **[CONFIRM] the bit count.** Pin 64 is the **START signal** per
+  two Ford sheets, so this list is one short — see
+  [`schematic-findings.md`](schematic-findings.md) §21.
 - **EPC needs a flyback diode to 12 V** (pin 81 note). Worth carrying into the
   driver design.
 - **VSS output feeds cruise control** (pin 68, "Out to Cruise").
