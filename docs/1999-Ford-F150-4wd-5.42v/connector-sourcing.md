@@ -31,6 +31,49 @@ useful for building a jumper harness, not for mounting on a PCB.
 > through, pull the connector whether or not it is needed that week. They do not
 > become more available, and the labour to extract one does not get cheaper.
 
+## Extracting the header — procedure, and one way that does not work
+
+One-shot operation on a part that cannot be bought, so the notes are cheap
+insurance.
+
+### ⚠ Not with a heat gun — and the drawing says why
+
+**Tried, and it melted the housing before any joint let go.**
+
+TE 770750-1's title block gives the material: **HOUSING: PBT**. Polybutylene
+terephthalate melts around **225 °C**. Eutectic leaded solder melts at
+**183 °C**. **That is only ~40 °C of margin** — and a heat gun applied from the
+connector side spends all of it in the wrong place:
+
+- The **housing is the near side**. It heats first, directly.
+- The **joints are on the far side**, soldered into a multilayer board whose
+  ground planes pull heat away as fast as it arrives.
+
+So the plastic reaches 225 °C while the joints are still short of 183 °C. **The
+geometry guarantees the failure** — it is not a matter of turning it down.
+
+> **Inspect the connector before relying on it.** Cosmetic scorching is
+> survivable; a housing that has *distorted* may have moved pin positions, and
+> the drawing's positional tolerance is **Ø0.10**. Check that the pins still sit
+> in a true 4 × 26 grid and that the sleeve is not deformed.
+
+### What does work: a vacuum desoldering gun
+
+| | |
+|---|---|
+| **1. Strip the conformal coating** over the joints | it clogs the nozzle and blocks flow. Ford's is usually acrylic — IPA or acetone. Silicone needs mechanical removal |
+| **2. ⭐ Add fresh leaded solder to every joint first** | the single biggest one, and counter-intuitive. Old joints flow badly; wicking 63/37 in lowers the melting point and gives the vacuum something that actually moves |
+| **3. Flux generously** | |
+| **4. Expect thermal mass** | automotive multilayer with heavy planes. More dwell than a hobby board, and find the setting on scrap first |
+| **5. Posts and centre boss last** | the two Ø3.60 posts and the Ø3.70 centre are large masses and **may be mechanically retained, not just soldered** — do not mistake that for a cold joint |
+| **6. Do not lever until all 104 are free** | one attached pin lifts a pad or **bends a pin**. On this part a bent pin is the expensive outcome; a lifted pad is on a board being scrapped anyway |
+
+**One piece of luck: a 2001 PCM is pre-RoHS**, so the joints are leaded. Lead-free
+would have been meaningfully worse — a higher melting point against the same
+225 °C housing.
+
+---
+
 **1. Salvage a scrap EEC-V PCM.** Cut the header off a dead junkyard PCM and
 transplant it. This is what most builders do, it is cheap, and the part is
 guaranteed correct for the truck. Downsides: desoldering a 104-pin header from
