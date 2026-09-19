@@ -7,6 +7,12 @@ outline rather than the other way round — see
 
 **Donor PCM envelope: 158 W × 174 L × 31 H mm.**
 
+> **The donor's *case bottom* may be reused rather than reproduced** — metal,
+> with the vehicle bolt pattern and the connector face already correct. That
+> reframes these constraints: **X–Y is fixed because the bottom is fixed, and
+> height is adjustable because only the lid changes.** See
+> [`DonerECU/README.md`](DonerECU/README.md).
+
 > ## ✅ DECIDED: 158 × 174 fixed · target 35 mm · **hard ceiling 46.5 mm**
 >
 > **X–Y stays exactly as it is** so the replacement mounts where the OEM PCM did.

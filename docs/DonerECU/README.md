@@ -82,3 +82,66 @@ What has to come out of it:
 | **Pin field position relative to the outline** | ⭐ **the datum everything else places from** |
 | Connector body height above the board | settles the question above |
 | Board thickness | probably 1.6 mm, worth confirming |
+
+
+---
+
+# The case bottom — and a better idea than copying it
+
+![case bottom](2001-ExplorerECUCaseBottom.jpg)
+
+Cast/stamped metal, with **raised side rails carrying the mounting holes** and a
+large **recessed centre pan** — the "divot". The board does not sit on a flat
+floor.
+
+## ⭐ Reuse the case bottom, don't reproduce it
+
+[`../enclosure.md`](../enclosure.md) already says *"no wireless, so no antenna
+window… the housing **may be metal**, which helps both shielding and the thermal
+path."* The donor supplies exactly that, and it solves four problems at once:
+
+| | |
+|---|---|
+| **Vehicle mounting** | The bolt pattern is *already correct* — nothing to measure, match or get wrong |
+| **Connector face** | The opening, its position and the gasket land come with it. `enclosure.md`: *"that face is the firewall penetration… the donor shell dictates the opening"* |
+| **Shielding** | A metal floor under eight IGBTs and thirteen switching low-side drivers, free |
+| **Thermal** | Metal, in contact with vehicle structure |
+
+**And it explains the envelope constraints exactly as they were given:** X–Y fixed
+because the *bottom* is fixed; height adjustable because only the **lid** has to
+change. A **printed lid on the donor bottom** gets the 35 mm target without
+giving up any of the above.
+
+> **[CONFIRM] the lid joint** — flange width, screw positions and whether the OEM
+> sealed it with a gasket or RTV. That is what a printed lid has to mate to.
+
+## What the divot actually decides
+
+Which of these it is changes the board design, and one measurement separates
+them:
+
+| If the pan is… | Then it means | Consequence |
+|---|---|---|
+| **Recessed away from the board** | clearance for through-hole lead tips and bottom-side parts | tells you the **under-board budget** — how long leads may protrude, whether bottom-side placement is allowed |
+| **Raised toward the board** | a **thermal boss** the OEM pressed against a hot area | a **free heatsink**, and it says where Ford put the heat. Worth aligning our own hot parts to |
+
+> **[MEASURE] the pan depth relative to the rail faces, and its sign.** Straight
+> edge across the rails, depth gauge to the pan. Positive or negative is the
+> whole question.
+
+## What to take off the case
+
+| | Why |
+|---|---|
+| **Bolt pattern** — centres and hole diameter | the real interface to the vehicle. **More important than the 158 × 174 outline**, which can flex if the bolt pattern is held |
+| Rail face height above the pan | sets the board plane |
+| Pan depth and sign | § above |
+| Internal clear height, board plane to lid | confirms whether the 31 mm was board-plus-connector |
+| Gasket land and lid screw pattern | what a printed lid mates to |
+
+## One caution
+
+The photo shows **corrosion and staining** on the flanges. Before committing to
+reuse: clean it, check the **gasket land is flat and uncorroded**, and check the
+mounting-hole bosses are not cracked. A firewall penetration that does not seal
+is worse than a printed box that does.
