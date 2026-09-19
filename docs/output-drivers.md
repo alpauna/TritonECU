@@ -32,35 +32,40 @@ the coil rather than the driver:
 E = ½ · L · I²
 ```
 
-### ✅ MEASURED: **L = 1.48 mH** (LCR meter, 2026-09-18)
+### ✅ MEASURED: **L = 1.5 mH** (LCR meter, 2026-09-18)
 
 > ~~A COP primary of ~5 mH at 8 A stores 160 mJ — about 1.9× margin. But 6 mH at
 > 10 A is 300 mJ, exactly at the limit and therefore not acceptable.~~
-> **That was a guess, and it was about 3.4× too high.** Energy goes as L, so the
+> **That was a guess, and it was about 3.3× too high.** Energy goes as L, so the
 > whole concern evaporates. Numbers below from [`calc/coil_dwell.py`](calc/coil_dwell.py).
+>
+> Read **1.48 mH** first and **1.50 mH** on a second pass with better leads. The
+> difference is **1.35 %**, nothing here is remotely that sensitive, and 1.48
+> implied three significant figures the measurement does not support. **1.5 mH**,
+> which also makes τ = L/R exactly **3.0 ms** and puts 300 mJ at exactly **20 A**.
 
-| Peak current | At 5 mH *(assumed)* | **At 1.48 mH *(measured)*** | Margin |
+| Peak current | At 5 mH *(assumed)* | **At 1.5 mH *(measured)*** | Margin |
 |--:|--:|--:|--:|
-| 8 A | 160 mJ | **47.4 mJ** | **6.3×** |
-| **10.4 A** — 80 mJ, a healthy COP spark | 270 mJ | **80 mJ** | **3.75×** |
-| 12 A | 360 mJ | 106.6 mJ | 2.8× |
-| 16 A | 640 mJ | 189.4 mJ | 1.6× |
-| **20.1 A** | 1013 mJ | **299.9 mJ** | **1.0× — the rating** |
+| 8 A | 160 mJ | **48 mJ** | **6.3×** |
+| **10.3 A** — 80 mJ, a healthy COP spark | 265 mJ | **80 mJ** | **3.75×** |
+| 12 A | 360 mJ | 108 mJ | 2.8× |
+| 16 A | 640 mJ | 192 mJ | 1.6× |
+| **20.0 A** | 1000 mJ | **300 mJ** | **1.0× — the rating** |
 
-**The 300 mJ rating is reached at 20.1 A.** The operating point sits **3.75×
+**The 300 mJ rating is reached at exactly 20.0 A.** The operating point sits **3.75×
 under it**. The ISL9V3040 is comfortably the right part and there is no need to
 reach for a higher-energy EcoSPARK member.
 
 ### Dwell — and it barely depends on the primary resistance
 
 `I(t) = (V/R)(1 − e^(−tR/L))`. Early in the charge curve the rise is set by **L,
-not R**: `di/dt = V/L = ` **9.12 A/ms** at 13.5 V.
+not R**: `di/dt = V/L = ` **9.0 A/ms** at 13.5 V.
 
 | Target | Dwell at 13.5 V, R = 0.3 → 0.7 Ω |
 |---|---|
-| 8.2 A — 50 mJ | **1.00 → 1.17 ms** |
-| **10.4 A — 80 mJ** | **1.30 → 1.64 ms** |
-| 20.1 A — *the rating* | 2.93 → 5.56 ms |
+| 8.2 A — 50 mJ | **1.01 → 1.18 ms** |
+| **10.3 A — 80 mJ** | **1.31 → 1.65 ms** |
+| 20.0 A — *the rating* | 2.95 → 5.54 ms |
 
 That sweep was made before R was known, and its conclusion held: **spread across
 the whole plausible range of R is ~10 % at the operating point** (all at 13.5 V),
@@ -75,36 +80,47 @@ moves **1.9×**, against 10 % for the whole range of R. See the dwell table belo
 
 > ⚠ **A first 2-wire reading gave 1.8 Ω, and that was the leads.** At half an ohm
 > the test leads *are* most of a 2-wire reading. 0.5 Ω is also what published
-> DG508-family figures predict. **Worth remembering the next time a small
-> resistance is measured** — and it mattered here: 1.8 Ω would have meant the
-> coil current-limited itself at 8 A and could never reach the IGBT's rating.
+> DG508-family figures predict, and it mattered: 1.8 Ω would have meant the coil
+> current-limited itself at 8 A and could never reach the IGBT's rating.
+>
+> **Why the inductance survived the same bad leads and the resistance did not** —
+> leads add roughly 1 mΩ/cm and tens of nH:
+>
+> | | Lead contribution | Effect on the reading |
+> |---|---|---|
+> | R = 0.5 Ω | ~1.3 Ω | **3.6× high** |
+> | L = 1.5 mH | ~50 nH | **0.003 % high** |
+>
+> A series error that swamps half an ohm is invisible against 1.5 mH. Worth
+> carrying as a habit: **under an ohm, null the leads or use four wires; for
+> millihenries, do not bother.**
 
 | At 14.4 V | |
 |---|---|
 | I<sub>sat</sub> = V/R | 28.8 A |
-| τ = L/R | **2.96 ms** |
-| Stuck-on energy | **614 mJ — 2.05× the rating** |
+| τ = L/R | **3.00 ms** |
+| Stuck-on energy | **622 mJ — 2.07× the rating** |
 | Dwell to reach the rating | **3.56 ms**, ~2.7× nominal |
 
-**The operating point is comfortable.** We charge to **10.4 A for 80 mJ**, which
-is **3.75× under** the rating, and τ = 2.96 ms means the ramp is still in its
+**The operating point is comfortable.** We charge to **10.3 A for 80 mJ**, which
+is **3.75× under** the rating, and τ = 3.00 ms means the ramp is still in its
 near-linear region — so dwell is predictable and insensitive to small errors in R.
 
 ### The dwell table — this is the deliverable
 
-Target **10.4 A / 80 mJ**. Dwell must track battery voltage:
+Target **10.3 A / 80 mJ**. Dwell must track battery voltage:
 
 | V<sub>batt</sub> | Dwell for 80 mJ | Dwell for 50 mJ |
 |--:|--:|--:|
-| 9.0 V — cranking | **2.55 ms** | 1.81 ms |
-| 10.0 V | 2.17 ms | 1.57 ms |
-| 12.0 V | 1.68 ms | 1.24 ms |
-| 12.6 V | 1.57 ms | 1.17 ms |
-| 13.5 V | 1.44 ms | 1.07 ms |
-| **14.4 V** | **1.33 ms** | 0.99 ms |
-| 15.0 V | 1.26 ms | 0.95 ms |
+| 9.0 V — cranking | **2.56 ms** | 1.81 ms |
+| 10.0 V | 2.18 ms | 1.57 ms |
+| 12.0 V | 1.69 ms | 1.25 ms |
+| 12.6 V | 1.58 ms | 1.17 ms |
+| 13.5 V | 1.45 ms | 1.08 ms |
+| **14.4 V** | **1.33 ms** | 1.00 ms |
+| 15.0 V | 1.27 ms | 0.95 ms |
 
-**2.55 ms at 9 V against 1.33 ms at 14.4 V — a 1.9× span.** A fixed dwell would
+**2.56 ms at 9 V against 1.33 ms at 14.4 V — a 1.9× span.** A fixed dwell would
 either waste energy and heat the driver at high line, or miss the target while
 cranking — which is exactly when spark energy matters most. **The dwell-vs-voltage
 table is not optional.**
@@ -115,8 +131,25 @@ table is not optional.**
 > which is why [`adc-front-end.md`](adc-front-end.md) forbids a filter capacitor
 > at the divider.
 
+### Part-to-part spread is larger than the measurement — and it self-cancels
+
+**One coil was measured; eight are fitted.** At the nominal 1.33 ms dwell:
+
+| Coil L | Peak current | Energy | vs 300 mJ |
+|--:|--:|--:|--:|
+| 1.35 mH (−10 %) | 11.22 A | 84.9 mJ | 3.5× |
+| **1.50 mH** | **10.33 A** | **80.0 mJ** | **3.8×** |
+| 1.65 mH (+10 %) | 9.57 A | 75.5 mJ | 4.0× |
+
+**±10 % of coil spread moves delivered energy by only ~2 %**, because a
+higher-inductance coil charges more slowly and the two effects oppose. Margin
+stays above 3.5× throughout.
+
+So the 1.48-vs-1.50 question is noise inside noise. **What the dwell calibration
+needs margin for is battery voltage — a 1.9× span — not the coil.**
+
 **Overlap is not a constraint anywhere the engine runs.** At the 14.4 V dwell the
-90° event spacing collides above **11 300 rpm**. The 2.55 ms cranking dwell would
+90° event spacing collides above **11 300 rpm**. The 2.56 ms cranking dwell would
 collide at 5880 rpm — at 9 V, where the engine is turning 200.
 
 ### ⚠ The fault case is stuck-on, and it exceeds the rating at any R
@@ -125,17 +158,17 @@ A stuck-on output does not climb forever — current saturates at `V/R`:
 
 | R | I<sub>sat</sub> at 14.4 V | Stored | vs 300 mJ | Coil dissipates |
 |--:|--:|--:|--:|--:|
-| 0.3 Ω | 48.0 A | 1705 mJ | **5.7×** | 691 W |
-| 0.5 Ω | 28.8 A | 614 mJ | **2.0×** | 415 W |
-| 0.7 Ω | 20.6 A | 313 mJ | **1.0×** | 296 W |
+| 0.3 Ω | 48.0 A | 1728 mJ | **5.8×** | 691 W |
+| **0.5 Ω** *(measured)* | 28.8 A | **622 mJ** | **2.07×** | 415 W |
+| 0.7 Ω | 20.6 A | 317 mJ | **1.1×** | 296 W |
 
 **At any plausible resistance a stuck-on coil stores more than the IGBT's
 avalanche rating**, and turning it off then dumps that into the device — by which
 point the coil is cooking at hundreds of watts anyway. **The measured 0.5 Ω is
-the middle row: 614 mJ, 2.05×.**
+the middle row: 622 mJ, 2.07×.**
 
 **This is the number behind the `OE2` watchdog.** At the measured 0.5 Ω a
-stuck-on coil is **2.05× the IGBT's rating** and reaches it after 3.56 ms — about
+stuck-on coil is **2.07× the IGBT's rating** and reaches it after 3.56 ms — about
 2.7× the nominal dwell. The firmware dwell limit is the first line; the hardware
 watchdog is what covers a firmware hang.
 [`v1-scope.md`](v1-scope.md) carries it as *"footprint yes, strap OE2 low for

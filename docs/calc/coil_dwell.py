@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Dwell limits from the MEASURED coil primary.
 
-L = 1.48 mH and R = 0.5 ohm (DCR, good leads), measured 2026-09-18.
+L = 1.5 mH and R = 0.5 ohm (DCR), both on good leads, measured 2026-09-18.
 Driver: ISL9V3040, E_AS = 300 mJ single-pulse avalanche.
 """
 import math
-L      = 1.48e-3          # MEASURED
+L      = 1.50e-3          # MEASURED, good leads. A first reading gave 1.48;
+                          # the difference is 1.35% and nothing is that sensitive.
 R_MEAS = 0.5              # MEASURED, DCR, with good leads. An earlier 2-wire
                           # reading gave 1.8 ohm - that was the leads. See s.5.
 E_AS   = 0.300            # ISL9V3040 avalanche energy rating, J
@@ -146,3 +147,37 @@ print(f"""
   engine is turning 200 rpm. At the 14.4 V dwell of {t_for(I_for(0.080),R,14.4)*1e3:.2f} ms it is
   {90/360*60/t_for(I_for(0.080),R,14.4):.0f} rpm. ** Overlap is not a constraint anywhere the engine
   actually runs. **""")
+
+print("\n"+"="*74)
+print("7. WHY L SURVIVED BAD LEADS AND R DID NOT")
+print("="*74)
+print(f"""  The first resistance reading was 3.6x high on the same leads that gave a
+  correct inductance. That is not luck - it falls straight out of the
+  magnitudes. Leads add roughly 1 mohm/cm and tens of nH:
+
+    R = {R_MEAS} ohm     + ~1.3 ohm of leads   ->  reading was 3.6x HIGH
+    L = {L*1e3:.1f} mH     + ~50 nH of leads     ->  reading {50e-9/L*100:.4f}% high
+
+  ** A series error that swamps half an ohm is invisible against 1.5 mH. **
+  Worth carrying as a habit: for anything under an ohm, null the leads or
+  use four wires. For millihenries, do not bother.""")
+
+print("\n"+"="*74)
+print("8. PART-TO-PART SPREAD IS BIGGER THAN THE MEASUREMENT, AND SELF-CANCELS")
+print("="*74)
+d144 = t_for(I_for(0.080), R_MEAS, 14.4)
+print(f"  ONE coil was measured; EIGHT are fitted. At the nominal {d144*1e3:.2f} ms dwell:\n")
+print(f"  {'coil L':>10} {'peak current':>14} {'energy':>10} {'vs 300 mJ':>11}")
+for dev in (-0.10,-0.05,0.0,0.05,0.10):
+    Lx = L*(1+dev)
+    I  = (14.4/R_MEAS)*(1-math.exp(-d144/(Lx/R_MEAS)))
+    e  = 0.5*Lx*I*I
+    print(f"  {Lx*1e3:>8.2f}mH {I:>12.2f} A {e*1e3:>8.1f} mJ {E_AS/e:>10.1f}x")
+print(f"""
+  ** +/-10% of coil spread moves delivered energy by only ~2%, ** because a
+  higher-inductance coil charges more slowly and the two effects oppose.
+  Margin stays above 3.5x across the whole range.
+
+  So the 1.48-vs-1.50 question is noise inside noise. What the dwell
+  calibration needs margin for is BATTERY VOLTAGE - a 1.9x span - not the
+  coil.""")

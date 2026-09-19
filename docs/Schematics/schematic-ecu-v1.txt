@@ -359,27 +359,31 @@ CONTENTS
   Both active-low, ANDed internally. A supervisor (TPS3823-class) drives OE2.
   ** If the watchdog is deferred, fit the footprint and strap OE2 LOW. **
 
-  ** COIL PRIMARY MEASURED: 1.48 mH ** (LCR meter, 2026-09-18). The 300 mJ
-  avalanche rating is reached at 20.1 A; a healthy 80 mJ spark wants 10.4 A.
+  ** COIL PRIMARY MEASURED: 1.5 mH ** (LCR meter, 2026-09-18). The 300 mJ
+  avalanche rating is reached at exactly 20.0 A; an 80 mJ spark wants 10.3 A.
   So the operating point sits 3.7x under the rating and DWELL LANDS AT
   1.3-1.6 ms, near enough independent of primary resistance because early in
   the charge curve di/dt = V/L = 9.12 A/ms and R barely enters.
 
   ** PRIMARY RESISTANCE MEASURED: 0.5 OHM ** (DCR, good leads). A first
-  2-wire reading gave 1.8 ohm - that was the LEADS. At half an ohm the leads
+  2-wire reading gave 1.8 ohm - that was the LEADS. The SAME leads gave a
+  correct inductance, and the asymmetry is worth keeping: leads add ~1
+  mohm/cm and tens of nH, so ~1.3 ohm of lead made R read 3.6x HIGH while
+  ~50 nH of it moved L by 0.003%. Under an ohm, null the leads or use four
+  wires; for millihenries, do not bother. At half an ohm the leads
   are most of a 2-wire reading, and 0.5 ohm is what DG508-family figures
   predict. It mattered: 1.8 ohm would have meant the coil current-limited
   itself at 8 A and could never reach the IGBT's rating.
 
-  tau = L/R = 2.96 ms, so the ramp is still near-linear at the operating
+  tau = L/R = 3.00 ms, so the ramp is still near-linear at the operating
   point and dwell is insensitive to small errors in R.
 
   ** DWELL MUST TRACK BATTERY VOLTAGE - 1.9x ACROSS THE RANGE. **
 
-      V_batt    dwell for 80 mJ (10.4 A)
-       9.0 V         2.55 ms      cranking
-      12.0 V         1.68 ms
-      13.5 V         1.44 ms
+      V_batt    dwell for 80 mJ (10.3 A)
+       9.0 V         2.56 ms      cranking
+      12.0 V         1.69 ms
+      13.5 V         1.45 ms
       14.4 V         1.33 ms
 
   A fixed dwell would waste energy and heat the driver at high line, or miss
@@ -389,7 +393,7 @@ CONTENTS
   divider: review-ignition-injection.md needs it SAMPLED AWAY FROM INJECTION
   EVENTS, not averaged through them.
 
-  ** THE STUCK-ON CASE IS REAL AT 0.5 OHM: 614 mJ, 2.05x THE RATING, **
+  ** THE STUCK-ON CASE IS REAL AT 0.5 OHM: 622 mJ, 2.07x THE RATING, **
   reached after 3.56 ms of dwell - about 2.7x nominal. So the OE2 watchdog
   above is protecting the IGBT, not just the coil. Firmware dwell limiting
   is the first line.
@@ -635,11 +639,11 @@ CONTENTS
 
   MEASUREMENTS
 
-  1. ~CLOSED~ Coil primary MEASURED: L = 1.48 mH, R = 0.5 ohm DCR
-     (2026-09-18). 300 mJ is reached at 20.1 A; an 80 mJ spark wants 10.4 A,
+  1. ~CLOSED~ Coil primary MEASURED: L = 1.5 mH, R = 0.5 ohm DCR
+     (2026-09-18). 300 mJ is reached at exactly 20.0 A; 80 mJ wants 10.3 A,
      so the operating point is 3.8x under. DWELL 1.33 ms at 14.4 V rising to
-     2.55 ms at 9 V cranking - a 1.9x span, so the dwell-vs-voltage table is
-     mandatory. Stuck-on is 614 mJ, 2.05x the rating, which is what the OE2
+     2.56 ms at 9 V cranking - a 1.9x span, so the dwell-vs-voltage table is
+     mandatory. Stuck-on is 622 mJ, 2.07x the rating, which is what the OE2
      watchdog covers. sec.5, calc/coil_dwell.py.
   2. [MEASURE] the O2 heater's COLD resistance - sec.7. It sets the ramp
      start and decides whether the driver sees 16 W or 49 W if it is ever

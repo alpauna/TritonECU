@@ -83,7 +83,7 @@ was always the point of the split, and it does not require two chips.
 | ~~**J1850 / SCP**~~ | **Moved onto the board** — see below | n/a |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
-| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Quantified on the measured 1.48 mH / 0.5 Ω:** a stuck-on coil stores **614 mJ, 2.05× the IGBT's rating**, reached after 3.56 ms — ~2.7× nominal dwell — [`output-drivers.md`](output-drivers.md) | **yes** |
+| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Quantified on the measured 1.5 mH / 0.5 Ω:** a stuck-on coil stores **622 mJ, 2.07× the IGBT's rating**, reached after 3.56 ms — ~2.7× nominal dwell — [`output-drivers.md`](output-drivers.md) | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
 
 ### Why J1850 / SCP moved onto the board
@@ -164,8 +164,8 @@ Still in reserve: semi-sequential injection (+4) and tach/VSS over SCP (+2).
 
 Two things, and both are measurements rather than decisions:
 
-1. ~~**Coil primary inductance**~~ — **MEASURED: 1.48 mH.** The 300 mJ rating is
-   reached at **20.1 A**; a healthy 80 mJ spark needs **10.4 A**, so the
+1. ~~**Coil primary inductance**~~ — **MEASURED: 1.5 mH.** The 300 mJ rating is
+   reached at exactly **20.0 A**; a healthy 80 mJ spark needs **10.3 A**, so the
    operating point sits **3.75× under**. The
    ISL9V3040 is comfortably right. See
    [`output-drivers.md`](output-drivers.md#-measured-l--148-mh-lcr-meter-2026-09-18).
