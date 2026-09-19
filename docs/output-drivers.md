@@ -573,7 +573,7 @@ so the only real question is dissipation.
 | | Part | |
 |---|---|---|
 | **TCC** | `NCV8405ASTT1G` SOT-223, **pour it** | **1.44 A worst case** (Ford spec 10–16 Ω) against 1.82 A on a minimum pad — see below |
-| **EPC** | **`NCV8408BDTRKG` DPAK** | the sibling built for this, see below |
+| **EPC** | **`NCV8408BDTRKG` DPAK** | **4.12 Ω measured** → 3.50 A full-on, 95 % of its 3.69 A limit — but current-regulated in use, so milliwatts. See below |
 
 Dissipation limits at a 60 °C in-cavity ambient, 150 °C junction, and the hot
 R<sub>DS(on)</sub> of 210 mΩ:
@@ -632,9 +632,33 @@ wins: **the threshold moves from 2.9 A to 3.7 A RMS**, which clears a 3 A peak a
 > **Give TCC a pour**, as IAC already has — 2.44 A at 1 in² turns 26 % of margin
 > into 70 %. It costs copper, not parts.
 >
-> **[MEASURE]** still open for **EPC** — resistance and operating current. It is
-> a variable-force solenoid and is not in the A7 table. The threshold is
-> **3.7 A RMS**, not 2.9.
+> ✅ **EPC MEASURED: 4.12 Ω.** That confirms it as the EPC (the 3.5–6 Ω band —
+> TCC is 10–16, SSA/SSB 20–30) and it clears the threshold, but not by much:
+>
+> | Driven | I | P in the FET | T<sub>j</sub> |
+> |---|--:|--:|--:|
+> | **Full-on, 14.4 V** | **3.50 A** — 95 % of the 3.69 A limit | 1.47 W | **141 °C** |
+> | I<sub>L</sub> = 0.5 A, 14 % duty | 0.50 A | 0.004 W | 60 °C |
+> | I<sub>L</sub> = 1.0 A, 29 % duty | 1.00 A | 0.034 W | 62 °C |
+>
+> **But EPC is never driven full-on.** It is a **variable-force** solenoid,
+> regulated to a commanded *current* rather than switched hard over. With the
+> inductance holding coil current roughly flat at I<sub>L</sub>, the FET conducts
+> only during the on-time: `P = I_L² · D · R_DS`, and `D = I_L·R / V`. **At a
+> 4R70W EPC's real operating range that is milliwatts.**
+>
+> So **4.12 Ω does not change the part.** The NCV8408B stays, and its margin at
+> the operating point is enormous rather than 5 %.
+>
+> **And the fault case is already covered by a choice made for this reason.** A
+> firmware hang at 100 % duty gives 1.47 W and 141 °C — 9 °C from the limit. That
+> is what the NCV8408B's **latched** thermal shutdown is for: it trips, latches,
+> and firmware owns the retry. *(§ Latched thermal shutdown is the right
+> behaviour.)*
+>
+> **[MEASURE]** still open: **EPC's operating current**. The resistance is
+> settled; the operating current is what actually sets the dissipation, and the
+> table above spans milliwatts to 1.47 W across it.
 
 **Latched thermal shutdown is the right behaviour**, and for the same reason the
 TPS2H160B's `THER` is strapped to latch: firmware owns the retry, the fault

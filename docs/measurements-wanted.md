@@ -26,7 +26,7 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 | ~~**SSB**~~ | — | 1 | ✅ **CLOSED — Ford spec 20–30 Ω** |
 | ~~**CSS — coast clutch**~~ | — | 20 | ✅ **CLOSED — it does not exist on a 4R70W.** It is a **4R100** part, and the MegaSquirt sheet was developed on a 4R100. Pin 20 is free |
 | ~~**TCC**~~ | — | 54 | ✅ **CLOSED — Ford spec 10–16 Ω → 1.44 A worst case.** Higher than assumed; **give it a pour** |
-| **EPC** | C183 | 81 | already NCV8408B DPAK; confirms |
+| ~~**EPC**~~ | — | 81 | ✅ **MEASURED 4.12 Ω.** Confirms the NCV8408B. **Still open: its operating current**, which is what sets dissipation |
 
 **Also note the part number and any markings on each solenoid** — a datasheet
 beats a measurement where one exists, and `4r70W-Test-Key-Solenoid.png` has just
