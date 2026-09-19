@@ -16,7 +16,7 @@ Checked against the MAX9924–MAX9927 datasheet and the repo's own
 | **10 kΩ in every input leg** | ✓ *"Add a series 10 kΩ resistor to each input"* |
 | **Filter cap between the op-amp inputs** | ✓ *"Add a filter capacitor between the operational amplifier inputs"* |
 | **VR pairs adjacent on U3, GND at both ends** | ✓ pairs stay together down the harness |
-| Four channels for crank, cam and two spare | ✓ |
+| Four channels for crank, cam and two spare | ✓ — **but the spares are now spent**: OSS and the transfer case speed sensor. [`review-vr-chain.md`](review-vr-chain.md) §2 |
 
 One thing Mode A2 gets for free and is worth knowing: the datasheet warns that
 *"the series resistors lower the gain of the input amplifier and should be

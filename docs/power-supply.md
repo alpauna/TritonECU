@@ -49,20 +49,102 @@
 
 ## Current budget first — it decides the topology
 
-| Load | 5 V rail draw |
+> ⚠ **The table below is the ESP32-P4-era budget and is wrong by ~3.5×.** It
+> counts an ESP32-C6 that was *dropped*, a P4 that was *replaced*, and VREF
+> which now has its own LDO on the protected rail. Superseded by the rebuild
+> underneath it — see [`review-power-chain.md`](review-power-chain.md) §1. Kept
+> because the conclusion it reached is still right, and more so.
+
+| ~~Load~~ | ~~5 V rail draw~~ |
 |---|---|
-| ESP32-P4 at 400 MHz + 32 MB PSRAM (via its 3.3 V regulator) | ~350–500 mA |
-| ESP32-C6 module, peak TX | ~300 mA |
+| ~~ESP32-P4 at 400 MHz + 32 MB PSRAM~~ | ~~~350–500 mA~~ — platform replaced |
+| ~~ESP32-C6 module, peak TX~~ | ~~~300 mA~~ — **Wi-Fi dropped** |
 | SD card, peak | ~100 mA |
-| AD7606 (110 mW) | ~25 mA |
+| ~~AD7606~~ → ADS8588H | ~25 mA |
 | MAX9926 ×2 | ~20 mA |
 | 74HCT541, MCP23S17 chain | ~20 mA |
-| Sensor pull-ups | ~50 mA |
-| **VREF** | **~25 mA** |
-| **Total, realistic peak** | **~1.5 A** |
+| ~~Sensor pull-ups~~ | ~~~50 mA~~ — sourced from **VREF**, not this rail |
+| ~~**VREF**~~ | ~~**~25 mA**~~ — its own LDO, on the protected rail |
+| ~~**Total, realistic peak**~~ | ~~**~1.5 A**~~ |
 
-**Not 3 A.** That matters, because it removes the only argument for
-interleaving.
+### Rebuilt, 2026-09-17
+
+| 3.3 V rail via TLV62085 | mA |
+|---|--:|
+| STM32F767ZI @ 216 MHz | 250 |
+| SD card, peak | 100 |
+| Ethernet PHY | 80 |
+| 3.3 V logic, TLV7031, misc | 20 |
+| **450** → reflected to 5 V at 90 % | **330** |
+
+| Direct 5 V | mA |
+|---|--:|
+| MCP23S17 ×2 **at 5 V** | 20 |
+| 74HCT541 ×2 — ignition + PWM gate buffer | 10 |
+| ADS8588H | 25 |
+| MAX9926 ×2 | 20 |
+| DRV8837, during SCP TX | 20 |
+| **O2 input stage** — 2 dual op-amps + 50 µA bias divider, [`o2-input-stage.md`](o2-input-stage.md) | **4** |
+| **Total** | **99** |
+
+**5 V rail: ~429 mA.**
+
+**Not 3 A — and not 1.5 A either.** That matters, because it removes the only
+argument for interleaving, and now removes it decisively.
+
+> **This section owns the current budget.** It was wrong by 3.5× because three
+> documents spent against it — the platform change, the Wi-Fi deletion and the
+> VREF LDO — and none of them came back here. Anything that adds or removes a
+> 5 V load edits *this table*, and the reviews that lean on the total cite it
+> rather than restating it.
+
+### DECIDED: keep the MAX25239 — but SYNC is a GPIO, not a strap
+
+The converter is a **6 A** part carrying **425 mA**, about **7 % loaded**. That
+is not a fault in itself; headroom on a supply is cheap and this one is already
+compensated, laid out and twice reviewed. What the oversizing does cost is
+subtler than efficiency, and it lands on the two things this rail was chosen
+for.
+
+**Where skip mode begins.** The part enters skip automatically at light load,
+and the boundary is half the inductor ripple:
+
+```
+buck mode, Vin 13.8 V, Vout 5.0 V, L 2.2 uH, fsw 2.1 MHz
+  D    = 5.0 / 13.8                      = 0.362
+  dIL  = Vout(1-D) / (L x fsw)           = 0.69 A
+  skip boundary = dIL / 2                = 345 mA
+```
+
+**425 mA sits 23 % above that line** — inside it at full running load, but only
+just. Key-on with the engine off, or the SD card idle, drops it straight back
+under. The rail therefore crosses the skip/CCM boundary during ordinary
+operation rather than staying one side of it.
+
+**Why that is worth a pin.** Spread spectrum was chosen here for EMI, and a
+skipping converter's switching frequency follows the load — the ±6 % dither is
+applied to a frequency that is itself wandering, which is not the spectrum the
+choice was made against. `SYNC` high selects forced fixed-frequency (FPWM) and
+fixes that, and **spread spectrum survives it**: `SPS` is a separate pin, so the
+two are independent.
+
+**But it cannot be strapped high.** The 95 µA standby figure the always-on
+architecture rests on is specified at **V<sub>SYNC</sub> = 0 V**. FPWM switches
+at 2.1 MHz into no load and would cost milliamps on a parked vehicle — and
+holding `SYNC` at a logic high draws **20–50 µA of its own leakage** on top.
+
+| `SYNC` | Mode | Cost |
+|---|---|---|
+| **Low — parked** | skip | 95 µA, no SYNC leakage; EMI irrelevant with nothing switching |
+| **High — running** | FPWM at 2.1 MHz ±6 % | ~50 µA leakage and light-load efficiency, both invisible against 425 mA |
+
+**Drive `SYNC` from an MCU GPIO**, low in Standby and high once the engine rail
+is wanted. `SYNC` is rated **−0.3 V to +6 V** with V<sub>HIGH</sub> = 1.3 V, so a
+3.3 V GPIO drives it directly with no level shift. One pin buys the parked
+current *and* the deterministic spectrum, instead of choosing between them.
+
+**[CONFIRM]** the skip boundary on the bench — the 2.2 µH is a nominal value and
+ripple scales inversely with it.
 
 Note this table is the *5 V-equivalent* load. Once the P4, C6 and SD card are
 fed by a 3.3 V buck rather than directly, the actual draw on the SEPIC falls

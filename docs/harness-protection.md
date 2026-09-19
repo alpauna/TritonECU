@@ -71,13 +71,17 @@ That single part is the one genuinely useful addition per output.
 |---|---|
 | **Coil outputs** | IGBT internal 400 V clamp + Schottky to ground |
 | **Injector outputs** | IntelliFET 60–70 V clamp, over-current and over-temp + Schottky to ground |
-| **Relay / solenoid outputs** (fuel pump, EVAP, EGR, IMCC, fan, A/C) | flyback diode across the load + TVS to ground; PTC acceptable, currents are low |
-| **VREF** | per-feed electronic current limit ~150 mA with fault flag, PTC as backstop — see [`vref-supply.md`](vref-supply.md) |
-| **Analog sensor inputs** | series resistance + clamp. The AD7606's own ±16.5 V clamps do most of this |
+| **Relay coils / lamp** (fuel pump, fans, A/C clutch, MIL) | **TBD62083AFNG** — clamp diodes integrated, to COMMON on permanent B+. No external flyback diode. **It has no current limit**, so a shorted coil draws until thermal shutdown: a PTC here is the only current-based protection, not a redundant one |
+| **Solenoids, on/off** (SS1/SS2/CSS) | **NCV8405A** — 42 V integrated clamp, self-limits at 6–11 A. **No external flyback**: fast release is wanted |
+| **Solenoids, PWM** (EVAP, EGR, EPC, TCC, IMCC if PWM) | **NCV8405A + an external freewheel diode to 12 V.** The integrated clamp is *not* a substitute — on a PWM load its fast decay creates the ripple it then dissipates, every cycle. [`output-drivers.md`](output-drivers.md#the-integrated-clamp-does-not-replace-a-freewheel-diode) |
+| **Heaters** (HO2S ×4) | **NCV8405A** — resistive, so no flyback path is needed at all |
+| **VREF** | per-feed: current limit **250 mA** with fault flag (TPS2H160B-Q1), **ideal diode** (LM74700-Q1) blocking reverse current, **bidirectional TVS standing off 24 V**, above every DC fault, so it clamps transients only and needs no series element — see [`vref-supply.md`](vref-supply.md) |
+| **Analog sensor inputs** | series resistance + clamp. The **ADS8588H's** 9 kV input clamp does most of this (the AD7606 is the bench part) |
+| **O2 inputs ×4** | **the ADC's clamp stops protecting these** once the buffer of [`review-o2-chain.md`](review-o2-chain.md) §2 goes in — the op-amp faces the harness instead. 10 kΩ series + rail clamps **ahead of the buffer**, sized for fault current now that series resistance no longer costs accuracy |
 | **VR inputs** | 2 × 5 kΩ series per leg into the MAX9926's internal ESD clamps — see the VR document |
 | **Digital switch inputs** (brake, A/C, TR, 4x4) | series resistor + TVS + pull-up; they see battery-level signals |
 | **Tach / VSS outputs** | series resistor + TVS; these drive the cluster and leave the box |
-| **J1850 bus** | already has its own protection network in the transceiver design |
+| **J1850 bus** | RX side is protected by 100 kΩ series resistors and clamps. **TX side is not** — the DRV8837's outputs connect straight to the harness on a low-voltage driver. The "already protected" claim inherited a *scan tool's* threat model — [`review-scp-chain.md`](review-scp-chain.md) §3 |
 
 ## Grounding, which matters more than any of it
 

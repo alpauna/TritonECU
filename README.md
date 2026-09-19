@@ -104,6 +104,7 @@ is [`schematic-review-power-v2.md`](docs/schematic-review-power-v2.md).
 | Barometric | **KP497** (Infineon) on I²C/SPI, AEC-Q100 −40…+105 °C, 3.3 V always-on rail — **requires a vented enclosure** |
 | Ignition | 8 × ISL9V3040 ignition IGBT + 74HCT541 |
 | Injection | 8 × ZXMS6005DGQ IntelliFET |
+| SCP / J1850 PWM | **DRV8837** differential TX + **TLV7031** comparator RX — the cluster's only link to the PCM |
 | Connector | EEC-V 104-pin |
 
 ### Decisions worth knowing

@@ -63,7 +63,14 @@ with an independent decoder. Jump targets are stored relative to program start �
 
 Each signal goes through its own [2N7002 driver board](../../2N7002%20Driver/):
 Pico GPIO → board `IN`, board `LOAD` → the DM542's **`−`** terminal. The DM542's
-**`+`** terminals go to +5 V (the Pico's `VBUS`).
+**`+`** terminals go to **+5 V from the DC-DC in the [PSU
+enclosure](../../psu-enclosure/README.md)** — the same rail that powers the
+Pico, so the 5 V, the Pico's ground and the FET sources are one node.
+
+**Not the Pico's `VBUS`.** `VBUS` is the USB connector's 5 V with nothing in
+between, so taking the opto commons from it means the rig only runs while a host
+is plugged in. The Pico itself is fed on **`VSYS` (pin 39)**, ground on pin 38 —
+see [the rig BOM](../BOM.md#powering-the-pico--vsys-never-vbus).
 
 | Pico | driver board | DM542 |
 |---|---|---|
@@ -71,7 +78,8 @@ Pico GPIO → board `IN`, board `LOAD` → the DM542's **`−`** terminal. The D
 | GP3 | board 2 `IN` | `DIR−` |
 | GP4 | board 3 `IN` | `ENA−` *(optional)* |
 | GND | both headers' pin 1 | — |
-| VBUS | — | `PUL+`, `DIR+`, `ENA+` |
+| `VSYS` (pin 39), `GND` (pin 38) | — | fed from the enclosure's 5 V rail |
+| — | — | `PUL+`, `DIR+`, `ENA+` ← that same +5 V |
 
 **The chain inverts twice and ends up non-inverting in intent:** a GPIO high
 turns the FET on, which pulls the DM542's `−` low and lights the optocoupler. So

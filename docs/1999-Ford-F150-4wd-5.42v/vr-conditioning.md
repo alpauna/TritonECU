@@ -5,7 +5,7 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 | Sensor | Pins | Confirmed by |
 |---|---|---|
 | **CKP** — crankshaft position | 21 (+, DK BLU), 22 (−, GRY) | two-wire differential coil |
-| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — confirmed by the owner |
+| **CMP** — camshaft position | 85 (DK GRN), returning on SGND | **VR, single-ended** — **measured 371 Ω 2026-09-17**, so settled beyond the owner's confirmation |
 | **OSS** — output shaft speed | 84 | MegaSquirt notes: *"DFIN1 via LM1850"* — the LM1815 VR amplifier |
 | ~~TSS~~ | 59 | **Not fitted.** C192 is 4R100-only — confirmed by the owner. The PCM pin exists for other applications |
 
@@ -13,12 +13,71 @@ Three sensors on this truck are variable-reluctance and cannot drive a GPIO:
 matching negative because it is a **single-ended VR**: the coil's other end
 returns on sensor ground (pin 91, SGND) rather than a dedicated wire.
 
+## Channel allocation — this document owns it
+
+Four VR inputs, two MAX9926 packages, **exact fit**. It is a fit rather than a
+shortage: the earlier "fourth channel spare" was a byproduct of needing three
+channels from two-channel parts, not designed margin.
+
+| Ch | Signal | PCM pin | Circuit | Notes |
+|---|---|--:|---|---|
+| 1 | **CKP** | 21 / 22 | DK BLU / GRY | **differential** — the only one |
+| 2 | **CMP** | 85 (+ SGND 91) | DK GRN | single-ended, **371 Ω measured**. Shield on pin 25 |
+| 3 | **OSS** | 84 | 136 DB/YE, C187 | transmission control: shift scheduling, TCC, EPC |
+| 4 | **Transfer case speed** | 7 | 1496 PK, C199 | **road speed** — downstream of the range box |
+
+**No spare.** This table is the count; anything that needs a VR channel adds a
+row here first.
+
+> The fourth was described as spare in three separate documents while
+> [`../cooling-fans.md`](../cooling-fans.md) §4.4 was spending it on road speed.
+> Nothing owned the number, which is how it got allocated twice. See
+> [`../review-vr-chain.md`](../review-vr-chain.md) §2.
+
+### The contention is temporal, not absolute
+
+Losing the spare costs **bring-up flexibility**, and
+[`../roadmap.md`](../roadmap.md) calls M3/M4 — crank and cam sync — the highest-
+risk phase in the project. That is less bad than it sounds:
+
+**M3 and M4 run on a bench with a trigger wheel.** OSS and the transfer case
+sensor are not connected then, so **two of the four channels are free for
+exactly the phase that most wants them** — a second scope tap, a known-good
+reference signal, a substitute sensor.
+
+The squeeze only arrives at M12, by which time crank sync is long proven.
+
+> If permanent margin is wanted, a **third MAX9926 as a DNP footprint** fits the
+> board's existing policy — [`../v1-scope.md`](../v1-scope.md): *"Footprints for
+> the 'yes' rows cost almost nothing and save a respin."* Two spare pins would
+> need routing to the connector. **Not specified**, because no fifth VR sensor
+> has been identified: TSS is 4R100-only and not fitted, and the wheel-speed
+> sensors belong to the ABS module.
+
 The MAX9926 handles single-ended VR sensors directly. Wire it as:
 
 | MAX9926 | Connect to |
 |---|---|
 | IN2+ | CMP signal (pin 85) via 2 × 5 kΩ |
 | IN2− | **sensor ground (pin 91)** via 2 × 5 kΩ |
+
+### Terminate the CMP shield — at pin 25, to case ground
+
+Ford brings the CMP cable's shield into the PCM on **pin 25** (circuit
+567 LB/YE, drained via S199/S101), and terminates it **only there** — the sensor
+end is just the shield around the cable. Reproduce that:
+
+| | |
+|---|---|
+| **Where** | **pin 25**, at the connector entry |
+| **To what** | the **case/chassis ground leg** of the star — what `CSEGND` exists for |
+| **Not to** | **sensor ground or analogue ground.** A shield carries the noise current it intercepted; dumping that into the reference the signal is measured against injects exactly what the shield was fitted to exclude |
+| **How many points** | **one.** A shield grounded at both ends is a loop, and this truck's chassis carries alternator and starter current — such a loop injects far more than it excludes |
+
+> ⚠ [`eec-v-pinout.md`](eec-v-pinout.md) lists pin 25 as a **power ground**, from
+> the MegaSquirt sheet. Ford's diagram says otherwise. Wiring it as a power
+> ground would put engine-bay ground current into the sensor cable shield — see
+> [`schematic-findings.md`](schematic-findings.md) §15.
 
 **Use the same series resistance in both legs.** The differential amplifier's
 common-mode rejection depends on the two paths being balanced — grounding IN2−
@@ -139,7 +198,10 @@ Note the series resistor sizing is **tighter**, not looser: at 3 mA design curre
 a 150 V peak wants ~50 kΩ, against the 5 kΩ used here.
 
 Three VR channels means **three LM1815s** and three sets of arming and peak-detect
-components, against two MAX9926s with the fourth channel spare.
+components, against two MAX9926s. **The fourth channel is no longer spare** —
+[`../cooling-fans.md`](../cooling-fans.md) §4.4 takes road speed from the
+transfer case speed sensor (pin 7), so all four are allocated. See
+[`../review-vr-chain.md`](../review-vr-chain.md) §2.
 
 ### RESOLVED — the timing advantage does not exist
 

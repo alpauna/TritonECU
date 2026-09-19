@@ -3,6 +3,59 @@
 Two questions, different answers: does the **Waveshare board** fit a full ECU
 (no), and does the **ESP32-P4 chip** (yes, comfortably).
 
+## The STM32F767ZI map — every signal native
+
+**The MCP23S17 expander chain is dropped.** It existed because the ESP32-P4 had
+40 GPIOs and needed 39; on ~114 the split stops being necessary. See
+[`review-expander-chain.md`](review-expander-chain.md), superseded header.
+
+This table carries the **driven by** column the old one was criticised for
+lacking — the omission that let TCC, EPC, IAC and the tach/VSS outputs be
+counted as handled when only a pin had been reserved.
+
+| Function | Pins | Driven by |
+|---|--:|---|
+| Coil drivers, COP | 8 | ISL9V3040 via 74HCT541 #1 |
+| Injector drivers | 8 | ZXMS6005DGQ, direct |
+| VR channels — CKP, CMP, OSS, TSS | 4 | 2 × MAX9926 |
+| ADS8588H: SCK, MISO, CS, CONVST, BUSY | 5 | direct, 3.3 V |
+| J1850: TX_P, TX_N, RX, nSLEEP | 4 | DRV8837 + TLV7031 |
+| TCC, EPC | 2 | NCV8405A / NCV8408B via 74HCT541 #2 |
+| EVAP purge, EGR regulator | 2 | via 74HCT541 #2 |
+| IAC | 1 | via 74HCT541 #2 |
+| **VSS out** | 1 | **NCV8405A #13** via 74HCT541 #2, open-drain — EEC-V pin 68, circuit 679 |
+| **TACH out** — reserved | 1 | **none, deliberately.** 3.3 V to a test header; does not reach the connector |
+| **SPEED out** — reserved | 1 | same. A clean square wave for a gauge — **not** the OEM VSS above |
+| I²C: SDA, SCL | 2 | — |
+| **subtotal, as previously budgeted** | **38** | *(39 less the expander CS)* |
+| Relays — fuel pump, fan 1, fan 2, A/C clutch | 4 | TBD62083AFNG, direct at 3.3 V |
+| NCV8405A — HO2S ×4, canister vent, IMCC, SSA, SSB | 8 | **74HCT541 #3 at 5 V** — list per [`output-drivers.md`](output-drivers.md) channel budget; ~~SS1/SS2/CSS~~ was a stale naming |
+| ADS8588H static — RESET, FRSTDATA, OS0–2, RANGE | 6 | direct, 3.3 V — now legal |
+| MAX25239 `SYNC` | 1 | direct, with a pulldown |
+| Inputs — TR ×4, brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled** |
+| VREF — EN, IN1, IN2, DIAG_EN, SEL, FAULT | 6 | TPS2H160B-Q1 |
+| **O2 bias excitation** | **1** | **DAC out (PA4/PA5) → 1 kΩ → shared 455 mV bias node.** In-circuit cell-impedance measurement — [`o2-input-stage.md`](o2-input-stage.md) §7 |
+| Watchdog kick | 1 | — |
+| 74HCT541 #2 `OE` | 1 | software-releasable |
+| Supervisory — `SHDN#`, `FLT#`, `PGOOD`, `ALERT` | 4 | — |
+| **subtotal, formerly on the expander** | **39** | *(38 + the O2 excitation DAC)* |
+| **TOTAL** | **78** | of ~114. **34 spare** after SWD |
+
+74HCT541 **#3**'s `OE` costs no pin — it shares the watchdog net that drives
+`OE2` on #1.
+
+Two things this table does *not* say are now settled by dropping the chain:
+there is no poll interval to state, because the inputs are edge interrupts; and
+there is no expander `RESET` to wire, because an STM32 GPIO goes high-Z on reset
+and both driver families default off unaided.
+
+---
+
+## Historical — the ESP32-P4 budget
+
+Everything below was written against the P4's 40 GPIOs and is kept for the
+reasoning, not the numbers. The expander split it describes no longer exists.
+
 ## What a full single-node ECU needs
 
 Native pins only. Anything that can live on the MCP23S17 expander chain is
@@ -15,22 +68,42 @@ excluded, because it costs nothing beyond the one chip-select already counted.
 | VR channels — CKP, CMP, OSS, TSS | **4** | edge interrupts, 2 × MAX9926 |
 | AD7606: SCK, MISO, CS, CONVST, BUSY | **5** | the other six pins are static, on the expander |
 | MCP23S17 chain chip-select | **1** | shares the SPI bus |
-| J1850: TX_P, TX_N, RX | **3** | bit-timed at 41.6 kbps |
+| J1850: TX_P, TX_N, RX, **nSLEEP** | **4** | bit-timed at 41.6 kbps. nSLEEP releases the bus — [`review-scp-chain.md`](review-scp-chain.md) §1 |
 | TCC, EPC | **2** | PWM |
+| **EVAP purge, EGR regulator** | **2** | **PWM — see the correction below** |
 | IAC | **1** | PWM |
 | Tach out, VSS out | **2** | frequency outputs |
 | I2C: SDA, SCL | **2** | |
-| **Total** | **36** | |
+| **Total** | **39** | |
 
-On the expander and costing nothing extra: fuel pump relay, EVAP purge, EGR
-regulator, IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
-four TR inputs, brake and A/C switches, and the AD7606's RESET / FRSTDATA /
-OS0-2 / RANGE.
+On the expander and costing nothing extra: fuel pump relay, ~~EVAP purge, EGR
+regulator,~~ IMCC, cooling fan, A/C clutch, MIL, HO2S heaters, SS1/SS2/CSS, the
+four TR inputs, brake and A/C switches, the AD7606's RESET / FRSTDATA /
+OS0-2 / RANGE, and the **MAX25239 `SYNC`** skip/FPWM select.
+
+> `SYNC` changes only at sleep entry and exit, so it is static in the sense this
+> split uses and needs no native pin. **Fit a pulldown**: at cold power-up the
+> expander's outputs are high-Z, and the safe default is skip mode.
+> [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap)
+
+> **Correction.** EVAP purge and EGR regulator are **PWM** loads and cannot
+> live on an SPI expander — every edge would be a bus transaction. They take
+> native timer pins. The split above was made by *current and criticality*,
+> and PWM is neither, which is how they landed here. See
+> [`review-solenoid-chain.md`](review-solenoid-chain.md) §1.
+
+> **This table allocates pins, not drivers — and three loads were missed because
+> it reads like both.** TCC, EPC and IAC each appeared here as `N | PWM` and
+> were taken as handled when only a pin had been reserved. The audit is in
+> [`review-ignition-injection.md`](review-ignition-injection.md), and it found a
+> fourth still open: **tach and VSS outputs have no driver assigned.**
+>
+> **Whatever replaces this table for the STM32 should carry a "driven by" column.**
 
 ## The Waveshare board is short by 11
 
 It breaks out **27** GPIOs, of which GPIO24/25 are the USB D−/D+ pair, leaving
-**25 usable**. Against 36, that is **11 short**.
+**25 usable**. Against 39, that is **14 short**.
 
 The rest of the chip's pins are committed on the carrier to things a truck has
 no use for:

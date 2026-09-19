@@ -61,7 +61,7 @@ carrier's placement is fixed — it is not something to retrofit.
 | MCU, SD, buses | digital |
 | All switchers | the noise source |
 | Injector and coil drivers | the other noise source |
-| 74HCT541, MCP23S17 | digital, and part of the driver chain |
+| 74HCT541 ×3 | digital, and part of the driver chain |
 
 ## What crosses the connector, and what it costs
 

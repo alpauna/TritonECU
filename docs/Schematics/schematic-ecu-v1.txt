@@ -1,0 +1,503 @@
+TRITON ECU - v1 CARRIER BOARD
+1999 Ford F-150 4WD 5.4 V8 - engine AND transmission, one board
+===============================================================================
+
+  v1 is a CARRIER for a Nucleo-144, not a raw-chip board. The Nucleo plugs in
+  through the ST morpho headers (2 x 2x35) and brings ST-Link, USB console and
+  Ethernet with it, so the MCU section stops being a fabrication risk.
+  See carrier-board.md.
+
+  The design intent lives in docs/. This file is the wiring view of it; every
+  value here has a document behind it and the citations are inline.
+
+  ** PIN NAMES AND NUMBERS ARE FUNCTIONAL. ** Check them against each
+  datasheet before drawing. This is intent, not a transcription.
+
+
+CONTENTS
+--------
+   1. Power chain - protection, rails, VREF
+   2. The Nucleo, and what the carrier owes it
+   3. VR inputs - crank, cam, output shaft, transfer case
+   4. Analog inputs - ADS8588H
+  4a. O2 signal path - four buffered channels
+  4b. The bias node is also the excitation source
+   5. Ignition - 8 x COP
+   6. Injection - 8 x sequential
+   7. Solenoids and heaters
+   8. PWM loads
+   9. Relays and lamps
+  10. VREF output chain - the two 5 V sensor feeds
+  11. SCP / J1850 PWM - the only path to the dash
+  12. EEC-V connector
+  13. What is deliberately not on this board
+  14. Open
+
+
+1. POWER CHAIN
+--------------
+
+  Battery, key-switched, through the EEC-V connector:
+
+   VBAT o--[ fuse ]--+--[ TVS ]--+---------------------------+
+                                 |                           |
+                            LTC4364-2                    (protected rail)
+                          + pass FET                          |
+                          + ideal-diode FET                   |
+                                 |                            |
+                                 +--------------+-------------+
+                                                |             |
+                                          MAX25239AFFA    NCV8772CDT504RKG
+                                          buck-boost       5.00 V LDO
+                                          2.1 MHz, 2.2 uH       |
+                                          spread spectrum       |
+                                                |               +--> VREF chain, sec.10
+                                             +5.0 V
+                                                |
+                                       +--------+--------+
+                                       |                 |
+                                  TLV62085 buck      74HCT541 x3
+                                    -> +3.3 V        TBD62083A
+                                       |             DRV8837
+                                  Nucleo, ADC,       (all 5 V loads)
+                                  everything logic
+                                       |
+                                  MAX6070AAUT25
+                                  2.5 V reference, GATED
+                                       |
+                                       +--> ADS8588H REFIO
+
+  ** THE VREF LDO IS FED FROM THE PROTECTED RAIL, NOT THE 5 V SWITCHER. **
+  The switcher has no headroom above 5.0 V and is spread-spectrum; a sensor
+  reference wants neither. vref-supply.md.
+
+  MAX25239 `SYNC` is a GPIO, not a strap - fit a pulldown so cold power-up
+  lands in skip mode. power-supply.md.
+
+
+2. THE NUCLEO, AND WHAT THE CARRIER OWES IT
+-------------------------------------------
+
+  STM32F767ZI, ~114 I/O, 76 used, 36 spare after SWD. pin-budget.md.
+
+  ** Remove both CN2 jumpers ** to disconnect the on-board ST-Link, and
+  ** bring SWD out to a header on the carrier ** - four pins, and it means a
+  failed Nucleo does not take the debug path with it.
+  [CONFIRM] the CN2 designation against UM1974 for your board revision.
+
+  Pins to avoid on the morpho headers are listed in carrier-board.md - PA7 is
+  RMII_CRS_DV on this part, which rules out Arduino-header SPI.
+
+  The SD card is a module wired to the morpho headers; the Nucleo has no
+  socket. SDMMC, 4-bit - the 1-bit compromise was a 40-pin artefact and is
+  no longer needed.
+
+
+3. VR INPUTS - 2 x MAX9926, MODE A2
+-----------------------------------
+
+  Four channels, three used, one spare. No expander, no comparator discretes.
+
+    CKP  (crank, 36-1)  --+
+    CMP  (cam)          --+--> 2 x MAX9926 --> 4 x native EXTI
+    OSS  (output shaft) --+      Mode A2
+    TSS  (transfer case)--+
+
+  CMP is **VR, single-ended** - measured at 371 ohms, closing the open
+  question that had it down as a Hall part. review-vr-chain.md.
+
+  ** Terminate the CMP shield at EEC-V pin 25 ** - and note pin 25 was
+  mislabelled in an earlier revision of the pinout. review-vr-chain.md.
+
+
+4. ANALOG INPUTS - ADS8588H
+---------------------------
+
+  8 channels, 16-bit, 500 kSPS simultaneous, +/-10 V, 9 kV clamp.
+  Bench part is a Tokmas AD7606BSTZ in the same LQFP-64.
+
+    SPI   SCK, MISO, CS, CONVST, BUSY   5 native pins
+    static RESET, FRSTDATA, OS0-2, RANGE  6 native pins
+
+  ** The six static pins are NATIVE. ** They were going onto a 5 V expander,
+  whose output would have exceeded the ADC's DVDD+0.3 absolute maximum.
+  Dropping the chain removed the conflict rather than working around it.
+  review-expander-chain.md sections 2 and superseded header.
+
+  DVDD = 3.3 V. VIH = 0.8 x DVDD = 2.64 V, met by a 3.3 V GPIO with margin.
+
+  ** The ADS8588H is a 125 C part. ** An earlier note said 85 C and was being
+  used to rule out under-hood mounting; that was the AD7606B bench part.
+  review-expander-chain.md section 8.
+
+
+4a. O2 SIGNAL PATH - FOUR BUFFERED CHANNELS
+-------------------------------------------
+
+  A HEGO is NOT a 0-5 V sensor. It is a galvanic cell with tens of kohm of
+  source impedance hot, rising into the megohms cold or aged, and both
+  converters LOAD it. review-o2-chain.md section 1. So these four channels
+  do not connect straight to the ADC the way TPS/MAP/MAF do.
+
+  Per channel, x4 (EEC-V pins 87, 60, 61, 35):
+
+    pin --[R1 10k]--+--[C1 1n]-- AGND
+                    |
+                    +--[D1 BAT54S]--+-- AGND
+                    |               +-- +5VA        clamp ~5.3 V
+                    |
+                    +--[R2 22M]----------> 455 mV BIAS NODE (shared)
+                    |
+                    |  << guarded high-Z node - guard ring off the buffer >>
+                    |
+                    +---->|+\
+                          |  >--+--[R3 1k]--+--[C2 1u]-- AGND    159 Hz
+                    +---->|-/   |           |
+                    |           |           +-----------> ADC channel
+                    +-----------+
+
+    U1, U2   OPA2376AQDRQ1  SOIC-8 x2, AEC-Q100 Grade 1, 4 amps total
+
+  ** D1 conducts at 5.3 V, BELOW the op-amp's internal 5.6 V ESD diode. **
+  That is the whole reason for Schottky here: on a short to battery the
+  BAT54S takes the current and the op-amp's ESD structure never turns on.
+  R1 bounds ISO 7637-2 pulse 1 at -100 V to 10.0 mA. o2-input-stage.md s.2.
+
+  ** R3 FIRST, then C2 to ground. ** The op-amp drives the resistor and
+  never sees the capacitor. Reversed, it oscillates. o2-input-stage.md s.6.
+
+  Where they land:
+
+    87  LF bank 1 upstream    ADS8588H ch 2
+    60  RF bank 2 upstream    ADS8588H ch 3
+    61  LR bank 1 downstream  STM32 internal ADC
+    35  RR bank 2 downstream  STM32 internal ADC
+
+  JP, a 0R pad NOT POPULATED, links the high-Z node to the ADC side and
+  bypasses the buffer for a fixed 0-5 V wideband module. It costs nothing
+  and it is why the wideband decision does not have to be made now.
+
+
+4b. THE BIAS NODE IS ALSO THE EXCITATION SOURCE
+-----------------------------------------------
+
+    +5VA --[91k 1%]--+--[9.1k 1%]-- AGND      455 mV, Zsrc 8.3k, 50 uA
+                     |
+     DAC --[R6 1k]---+--[100n]-- AGND
+                     |
+                     +---> R2 of all four channels
+
+  The 22M bias resistors exist for open-circuit detection. They are also a
+  known injection path into every cell at once. Move the bias node and:
+
+      dV / dVb = Rt / (R2 + Rt)        Rt = Rs + R1
+      Rt       = R2 . k / (1 - k)      k  = dV/dVb
+
+  ** The cell's own EMF cancels exactly. ** So does op-amp offset, offset
+  drift, and the divider's tolerance - they are common to both states.
+  No stable mixture, no warm engine and no known lambda required.
+
+    DAC 0.455 -> 3.000 V,  attenuated 8.3k/(1k+8.3k) = 0.8925
+    dVb = 2271 mV at the node,  ~115 nA peak into the cell
+
+    cell Rs      dV seen    disturbs a 1 V swing by
+      10k         2.06 mV        0.2 %
+      30k         4.12 mV        0.4 %     healthy, hot
+     100k        11.30 mV        1.1 %
+     300k        31.56 mV        3.2 %     the OBD-II failing row
+       1M        99.70 mV       10.0 %
+     open      2271    mV         -        unmistakable
+
+  ** The disturbance self-scales inversely with how much the reading is
+  worth ** - smallest on a healthy cell, largest on one whose reading was
+  already useless.
+
+  ** DAC at reset is high-Z, so the node sits at 455 mV exactly as it
+  would without it. ** Firmware that never touches the DAC changes nothing.
+  Fail-safe by omission.
+
+  Modulate at 50 Hz and demodulate synchronously - a single before/after
+  pair loses to the cell's own 50 V/s slewing by 24x. 50 Hz sits between
+  the cell's 1-10 Hz switching and the 159 Hz R3/C2 corner (4.6 % loss).
+  25 cycles = 0.5 s = 0.9 uV of noise against a 4.12 mV worst case.
+
+  ** MEASURE IN THE HEATER PWM's OFF-WINDOW. ** Heater current shares
+  harness ground with the cell. Section 7 PWMs the heaters for the
+  ceramic's sake; that is what creates the windows this needs, and this
+  is what lets that ramp close its loop. Neither was designed for the
+  other. o2-input-stage.md section 7.
+
+
+5. IGNITION - 8 x COIL ON PLUG
+------------------------------
+
+   GPIO x8 --> 74HCT541 #1 @ 5 V --> 470R --> ISL9V3040 x8 --> coils
+
+  470 ohm is the datasheet's own switching condition at VGE = 5 V, and 70 ohm
+  of that is already internal to the part. output-drivers.md.
+
+  ** THE BUFFER HAS TWO ENABLES, AND THEY MEAN DIFFERENT THINGS: **
+
+    OE1  (pin 1)   firmware GPIO      "engine position is known, ignition armed"
+    OE2  (pin 19)  hardware watchdog  "firmware is still alive"
+
+  Both active-low, ANDed internally. A supervisor (TPS3823-class) drives OE2.
+  ** If the watchdog is deferred, fit the footprint and strap OE2 LOW. **
+
+  Coil primary inductance is unmeasured and sets the dwell limit against the
+  ISL9V3040's 300 mJ rating. One of the two genuinely open items - sec.14.
+
+
+6. INJECTION - 8 x SEQUENTIAL
+-----------------------------
+
+   GPIO x8 --> ZXMS6005DGQ x8 --> injectors
+
+  Direct from GPIO, no buffer. Full sequential - the semi-sequential fallback
+  was a 40-pin compromise and is not needed.
+
+
+7. SOLENOIDS AND HEATERS
+------------------------
+
+   GPIO x8 --> 74HCT541 #3 @ 5 V --> NCV8405ASTT1G x8   ** FULL, 8 of 8 **
+
+     HO2S heater x4   pins 93, 94, 95, 96   - PWM them, see below
+     canister vent    pin 67   - found reading Ford's diagrams; in no earlier list
+     IMCC             pin 46   [CONFIRM] leans on/off
+     SSA, SSB         pins 27, 1
+
+  [CONFIRM] ** CSS may not exist. ** The coast-clutch solenoid came from the
+  MegaSquirt sheet and is not on Ford's 4R70W diagram, which shows only SSA and
+  SSB at the transmission connector. output-drivers.md channel budget.
+
+  ** The buffer is a VOLTAGE translator, not a pin saver. ** The NCV8405A's
+  RDS(on) is specified at VGS = 5 V and the STM32 is a 3.3 V part. This
+  buffer survived the expander chain's removal because it was never the
+  expander's to justify.
+
+  74HCT541 #3's `OE` shares the watchdog net that drives #1's `OE2` - one
+  net, no extra pin, and the shutdown path becomes redundant rather than
+  serial.
+
+  ** PWM THE O2 HEATERS - AND THE DRIVER IS NOT THE REASON. **
+
+  The driver copes unaided: current limit at 6 A IS a soft start, and firmware
+  must not read it as a fault. But while coping it drops whatever the cold PTC
+  does not - 16 W at a cold resistance 1/5 of hot, 49 W at 1/10 - in a SOT-223,
+  for hundreds of milliseconds, four channels, every cold start. Steady state
+  is 0.47 W.
+
+  The real reason is the SENSOR. A cold zirconia element with exhaust
+  condensation on it cracks when heated fast. So:
+
+    1. DELAY turn-on after a cold start (time or CHT)   protects the sensor
+    2. RAMP duty rather than stepping to 100%           keeps the driver out
+                                                        of current limit
+    3. STAGGER the four channels                        24 A becomes 10.5 A
+
+  None of it changes the hardware. output-drivers.md.
+
+  [MEASURE] the cold resistance of one sensor - 1/5 against 1/10 of hot is the
+  difference between 16 W and 49 W in the driver.
+
+  NCV8405A carries drain-sense diagnosis. The divider that reads it cannot be
+  sized against a 5 V VIH of 4.0 V - "there are no values that work" - which
+  is the same 0.8*VDD arithmetic that later killed the expander chain.
+  output-drivers.md.
+
+
+8. PWM LOADS
+------------
+
+   native timer pins x5 --> 74HCT541 #2 @ 5 V --> drivers
+
+     EVAP purge     NCV8405A      pin 56
+     EGR regulator  NCV8405A      pin 47
+     TCC            NCV8405A      pin 54
+     EPC            NCV8408B      pin 81, DPAK, >= 200 Hz
+     IAC            NCV8405A      pin 83, freewheel to VPWR, no new pin
+     VSS out        NCV8405A      pin 68 - see sec.8a
+                                  6 of 8 used, 2 spare
+
+  ** PWM CANNOT LIVE ON A BUS. ** An earlier revision put EVAP and EGR on the
+  expander because the split was made by current and criticality, and PWM is
+  neither. Every edge would have been a bus transaction. review-solenoid-chain.md.
+
+  74HCT541 #2's `OE` is a GPIO, not the watchdog - it has to be releasable
+  under software control, unlike #1 and #3.
+
+
+8a. VSS OUT, AND TWO RESERVED PINS THAT STOP HERE
+-------------------------------------------
+
+   GPIO --> 74HCT541 #2 ch6 --> NCV8405A #13 --> EEC-V pin 68 (679 GY/BK)
+                                  open drain          |
+                                                      +--> speed control servo C157
+      [ pull-up footprint, NOT POPULATED ]             +--> GEM C267
+                                                      +--> rear air suspension C277
+
+  ** NOT on 74HCT541 #3. ** #3 is full at 8, so the obvious home for a slow
+  output has no room. #2 has the space.
+
+  ** OPEN DRAIN, PULL-UP UNPOPULATED. ** The open [CONFIRM] is what those three
+  modules expect on 679 - 12 V, 5 V or open-drain. Open-drain with no pull-up
+  is safe under ALL THREE readings, because the receiving modules set their own
+  high level. Populate the pull-up only if measurement shows they need a driven
+  high.
+
+  The ordering is the point: driving 12 V into a module that pulls up to 5 V is
+  the failure mode, and it is only reachable by populating before measuring.
+
+  ~156 Hz at 8000 pulses/mile and 70 mph. [CONFIRM] the pulses-per-mile for
+  this truck - it sets the firmware scaling, not the driver choice.
+
+  ** THERE IS NO DISCRETE TACH OUTPUT. ** The cluster takes engine speed over
+  SCP and has no pin for it. schematic-findings.md section 12.
+
+  TWO RESERVED SQUARE-WAVE OUTPUTS, on a header, for a scope or a bench gauge:
+
+   GPIO --[ series R ]--> TACH  --+
+                                  |   4-pin header, 3.3 V logic
+   GPIO --[ series R ]--> SPEED --+   GND at both ends for probing
+                                      ** STOPS HERE **
+
+  ** NEITHER REACHES THE EEC-V CONNECTOR. ** And SPEED is NOT the VSS output
+  above - that one is NCV8405A #13 to pin 68, open-drain, feeding three OEM
+  modules. This is a separate signal at logic level carrying the same
+  information, for something that wants a clean edge rather than Ford's.
+
+  GPIOs are cheap against 34 spare, so both are reserved now rather than
+  needing a respin later. Expanding either costs one channel on #2 (2 spare
+  after VSS), one NCV8405A and a connector pin - and the connector pin is the
+  part to check first, since the OEM pinout has no tach assignment to inherit
+  and pin 68 is already committed.
+
+
+9. RELAYS AND LAMPS
+-------------------
+
+   GPIO x4 --> TBD62083AFNG --> fuel pump, fan 1, fan 2, A/C clutch
+
+  8-channel DMOS sink with clamps built in. VIN(ON) = 2.5 V at 100 uA, so it
+  takes a 3.3 V GPIO directly - no buffer, unlike the NCV8405A gates.
+
+  RON 1.14 ohm worst case, not a Darlington's 1.1 V saturation drop: 46 mW per
+  channel at a 200 mA coil, against 220 mW for a ULN2803. output-drivers.md.
+
+  Fan 2 is the second cooling fan - cooling-fans.md. Both relays are native
+  pins now.
+
+
+10. VREF OUTPUT CHAIN - TWO 5 V SENSOR FEEDS
+--------------------------------------------
+
+  Per feed, and there are two:
+
+   NCV8772 5.00 V --> TPS2H160B-Q1 --> LM74700-Q1 + DMN6040SVTQ-7 --> SMAJ24CA
+                      dual high-side     ideal diode                 bidirectional
+                      250 mA limit,      (breaks the reverse         TVS, INBOARD
+                      40 V, current      path rather than            of where the
+                      sense              surviving it)               PPTC was
+
+  Control: EN, IN1, IN2, DIAG_EN, SEL, FAULT - ** 6 native pins. ** These had
+  no home in any document: vref-supply.md charged "6 GPIO" and stopped, and
+  the 37-pin map never listed them. review-expander-chain.md section 3 found
+  them.
+
+  ** THER strapped HIGH - latch, not auto-retry. ** A sensor feed that
+  retries into a short chatters the whole rail.
+
+  R_CL 8.06k sets the current limit; R_CS 2.2k the sense ratio. ** The CS pin
+  needs ADC protection ** - it can swing above the ADC's input range under
+  fault. review-vref-chain.md.
+
+  The PPTC was REMOVED entirely rather than kept as belt-and-braces: it was
+  the slowest element in a chain whose whole point is speed.
+
+
+11. SCP / J1850 PWM - THE ONLY PATH TO THE DASH
+-----------------------------------------------
+
+   TX_P  --+
+   TX_N  --+--> DRV8837 H-bridge --> PWM+ / PWM-  (differential)
+   RX    <---- TLV7031 comparator <--+
+   nSLEEP ---> DRV8837                 5 V, no boost rail
+
+  ** FOUR GPIOs, not three. ** nSLEEP releases the bus and was missed in the
+  original budget. review-scp-chain.md section 1.
+
+  ** This is not a convenience. ** Ford's cluster diagrams show the cluster's
+  only connection to the PCM is SCP - the tachometer, speedometer and MIL have
+  no discrete PCM pins. The choice was never "SCP or discrete wires", it was
+  "SCP or no dash at all". schematic-findings.md section 10.
+
+  Bus access is EEC-V pins 15 and 16 - SCP- (PNK/LT BLU, circuit 915) and
+  SCP+ (TAN/ORG, circuit 914). The same wires as DLC pins 10 and 2, so one
+  connection serves the cluster and a scan tool.
+
+  ** Phase 0 must TRANSMIT into live traffic, not only listen. **
+  review-scp-chain.md section 2. The reference design warns the PWM side is
+  experimental and expects per-vehicle tuning; Phase 0 is where that happens.
+
+  [CONFIRM] automotive qualification on both parts. The DRV8837 has a Q1
+  variant; the TLV7031 wants checking.
+
+
+12. EEC-V CONNECTOR
+-------------------
+
+  104-pin, rusEFI footprint. Notable assignments established by review:
+
+    15, 16   SCP- / SCP+                        sec.11
+    25       CMP shield termination             sec.3, and pin 25 was mislabelled
+    48, 82   circuits 391 and 1138, brought in as FREEWEEL RETURNS rather
+             than left floating - factory wiring diagrams closed eight open
+             questions at once. See the commit and f150-1999-target.md.
+
+
+13. WHAT IS DELIBERATELY NOT ON THIS BOARD
+------------------------------------------
+
+  * ** No MCP23S17 expander chain. ** It existed because the ESP32-P4 had 40
+    GPIOs and needed 39. On ~114 the split stops being necessary, and five of
+    its six open findings evaporate with it.
+  * ** No Wi-Fi. ** Dropped, not deferred - an always-on radio on an engine
+    controller is a remote attack surface with a path to code execution via
+    OTA. Ethernet does the job and needs physical access.
+  * ** No second CPU and no CAN transmission node. ** That was an artefact of
+    a 25-pin carrier. One board does engine and transmission.
+  * No alternator control - the OEM alternator self-regulates.
+
+  Footprints only, because they are cheap and save a respin:
+    ADR4525 precision reference (+ REF SELECT strap), INA238-Q1 current
+    monitor (I2C, two pads), knock channel (one ADC channel routed),
+    watchdog supervisor on OE2.
+
+
+14. OPEN
+--------
+
+  1. ** Coil primary inductance is unmeasured. ** It sets the dwell limit
+     against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
+     measurement, not a decision.
+
+  2. [MEASURE] the O2 heater's COLD resistance - sec.7. It sets the ramp
+     start and decides whether the driver sees 16 W or 49 W if it is ever
+     allowed into current limit.
+  3. [CONFIRM] what the speed control servo, GEM and rear air suspension
+     module expect on circuit 679 - sec.8a. The open-drain default is safe
+     whatever the answer; it decides only whether a pull-up gets populated.
+  4. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
+     not on Ford's 4R70W diagram - sec.7. It changes the channel count.
+  5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
+  6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
+  7. [CONFIRM] the F767 DAC's output impedance and its true reset-state
+     leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k
+     divider makes the second benign, but neither is read off a datasheet
+     yet.
+  8. [MEASURE] cell impedance against temperature, to set the light-off
+     threshold - sec.4b. This is a calibration the board performs ON
+     ITSELF during the first warm-ups, not a bench task. It replaces the
+     old "characterise a sensor on the bench" item, which would have given
+     one number, from one sensor, on one day.

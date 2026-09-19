@@ -25,9 +25,10 @@ more than usual here.
 | 1 | **Stepper, NEMA 17 48 mm** | `17HS19-2004S1` — 2.0 A/phase, 0.59 N·m, **2.8 mH**, Ø5 D-shaft 24 mm, 4-lead bipolar | 15 |
 | 1 | **Driver** | `DM542` / `DM542T` — 20–50 V, to 4.2 A, step/dir, selectable microstep | 20 |
 | 1 | **PSU** | **36 V** — 360 W brick in hand (Aclorol 36 V 10 A). 24 V is the marginal choice, see below | 20 |
+| 1 | **5 V rail** | a two-rail DC-DC in the [PSU enclosure](../psu-enclosure/README.md), tapped off the 36 V — **40 V input rating, so it is the lowest-rated part on the bus**. Feeds the Pico and the opto commons | 10 |
 | 1 | **Fuse + holder, 4 A slow-blow** | **not optional with a 10 A supply** — see below | 3 |
 | 1 | Capacitor, **1000 µF / 63 V** | bulk at the driver's V+ | 2 |
-| 1 | **Step generator** | Raspberry Pi Pico (RP2040) — **3.3 V logic, needs the buffer below** | 4 |
+| 1 | **Step generator** | Raspberry Pi Pico (RP2040) — **3.3 V logic, needs the buffer below**. Powered on `VSYS` from the enclosure's 5 V rail, *not* `VBUS` — see below | 4 |
 | 3 | **2N7002 driver board** | purpose-built, [`hardware/2N7002 Driver/`](../2N7002%20Driver/) — 10.9 × 17.1 mm, M2 mount | 2 |
 | 1 | Coupling, **5 → 12 mm** | aluminium jaw/spider, D25 L30 | 8 |
 
@@ -159,6 +160,15 @@ The 1000 µF is still worth fitting as bulk near the driver's V+ — standard
 practice for stepper supplies, and it handles the residue. It is insurance, not
 the mitigation.
 
+**The ceiling this ramp protects has come down.** The numbers above are measured
+against the DM542's 50 V, but the bus now also carries the
+[DC-DC](../psu-enclosure/README.md#40-v-in-on-a-36-v-bus--which-makes-it-the-weakest-part-on-that-bus)
+that feeds the Pico, and **that part is rated 40 V** — so it is the first thing
+on the bus to die, and when it does it takes the step generator's supply with
+it. Nothing about the mitigation changes; there is simply 10 V less room for
+getting the ramp wrong, and a failure now stops the rig rather than just the
+motor.
+
 ### Why a stepper at all, and the one failure it hides
 
 Open-loop absolute position is exactly what makes this rig a calibration bench:
@@ -211,8 +221,15 @@ LOAD  -> H2_2, Q1_3              drain, open
 holds the gate defined while the Pico's GPIOs are high-impedance during boot.
 
 **Wiring:** `H1` takes GND and the GPIO from the Pico; `H2`'s `LOAD` pin goes to
-the DM542's **`PUL−`**; the DM542's **`PUL+` goes to +5 V** (the Pico's `VBUS`)
-separately. `H2`'s GND pin is not used for that connection.
+the DM542's **`PUL−`**; the DM542's **`PUL+` goes to +5 V** separately. `H2`'s
+GND pin is not used for that connection.
+
+**That +5 V comes from the DC-DC in the PSU enclosure, not from the Pico.** It
+used to be taken from the Pico's `VBUS`, which meant the opto commons died the
+moment the USB cable came out — the rig only ran while it was plugged into a
+host. The rail in the box removes that dependency, and it is the same rail that
+powers the Pico, so the 5 V, the Pico's GND and the 2N7002 sources are all one
+node by construction.
 
 **Keep `PUL+` at 5 V.** The driver accepts 5–24 V, but its internal resistor is
 sized for 5 V — at 24 V it would draw 84 mA and need external series resistance.
@@ -221,6 +238,28 @@ Nothing here wants more than 5 V.
 Margins are comfortable: **60 V and 115 mA** on the 2N7002 against **5 V and
 14 mA**.
 
+#### Powering the Pico — `VSYS`, never `VBUS`
+
+`VBUS` **is** the USB connector's 5 V pin, with nothing in between. Driving it
+back-feeds whatever host is plugged in. The Pico's external supply input is
+**`VSYS` (pin 39)**, ground on pin 38, rated 1.8–5.5 V; USB reaches `VSYS`
+through the on-board Schottky `D1`, so a cable can stay connected for
+programming and flashing while the rig's own 5 V holds `VSYS` up. `D1`
+reverse-blocks; nothing flows back into the port.
+
+Put a **Schottky in the feed** as well and the box's rail is protected in the
+other direction too. 5 V less the drop puts `VSYS` near 4.7 V, still well inside
+range.
+
+**One ground consequence.** The 5 V is a *non-isolated* buck off the 36 V rail,
+so the Pico's ground is now the supply's negative — the same node as the
+DM542's return, carrying 2 A/phase of chopper current. The optos were never
+isolating the Pico from it (both `PUL+` and `PUL−` sit in the Pico's domain; the
+barrier is inside the driver), but the reference has changed. **Take the DC-DC's
+input from the supply's output terminals directly, not daisy-chained off the
+DM542's `V+ / V−` screws** — then motor return current never flows in a
+conductor the Pico's ground shares.
+
 #### The topology, and why it works
 
 Tie **`PUL+ / DIR+ / ENA+` to +5 V** and put a logic-level N-FET on each **`−`**
@@ -228,7 +267,7 @@ terminal, source to ground, gate from a GPIO. This is how CNC breakout boards ha
 always driven these inputs, and it is comfortable in every direction:
 
 ```
-  +5V ──┬── PUL+   DIR+   ENA+
+  +5V ──┬── PUL+   DIR+   ENA+        (+5V from the enclosure's DC-DC)
         │     │      │      │
         │   [opto] [opto] [opto]     (internal, 270R + LED)
         │     │      │      │

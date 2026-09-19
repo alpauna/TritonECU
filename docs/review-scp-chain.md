@@ -1,0 +1,193 @@
+# SCP / J1850 PWM chain review — pre-schematic
+
+Review of the SCP front end now that it has
+[moved onto the v1 board](v1-scope.md), against the design in
+[`f150-1999-target.md`](f150-1999-target.md) §5.3 and its source,
+`~/Claude/LxScanner/docs/j1850_multiprotocol.md`.
+
+```
+STM32 TX_P ─┐
+STM32 TX_N ─┴─► DRV8837 H-bridge ─► SCP+ / SCP−  (EEC-V 16 / 15)
+                    ▲                    │
+                 nSLEEP              100k:100k divider
+                                          ▼
+STM32 RX ◄────────────────────── TLV7031 comparator @ 3.3 V
+```
+
+**The single most important thing about this chain is where it came from.** The
+reference is a **USB-powered scan tool that plugs into the DLC**. We are putting
+it in a harness, on a bus we transmit on continuously. Three of the four
+findings come straight out of that difference.
+
+---
+
+## 1. ~~IMPORTANT — `nSLEEP` is a fourth pin, and it is not optional~~ FIXED
+
+Every pin count in the tree says **three**: `pin-budget.md` has
+*"J1850: TX_P, TX_N, RX | 3"*, and `v1-scope.md` repeats *"only three GPIOs and
+a transceiver."*
+
+The reference is explicit that the DRV8837 has a fourth control:
+
+> `nSLEEP`/enable pin: **LOW = Hi-Z/RX-only, HIGH = driver enabled**
+
+On a point-to-point scanner that is a nicety. **On a multi-master bus it is the
+mechanism by which you release the bus** — without it the H-bridge drives the
+lines whenever it is powered, and no other node can talk.
+
+**Four pins, not three.** The budget absorbs it without comment; the count being
+wrong is the problem, not the pin.
+
+> **Fixed 2026-09-17.** `pin-budget.md` and `v1-scope.md` corrected, total
+> 38 → 39. And a requirement that was not there before:
+> **pull `nSLEEP` LOW with 10 kΩ**, so the bus is released at power-on before
+> firmware runs — the same discipline as the ignition buffer's `OE` pull-ups.
+> An ECU that holds the bus down while booting takes the cluster and the GEM
+> with it. Written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3.
+
+---
+
+## 2. ~~IMPORTANT — the H-bridge has no arbitration story~~ FIXED
+
+J1850 PWM is **multi-master CSMA/CD with bitwise arbitration**: nodes monitor
+the bus while transmitting and the loser backs off. That requires a driver where
+one node can **override** another — dominant over recessive.
+
+**A push-pull H-bridge cannot be overridden.** Two nodes driving opposite states
+short into each other through their output stages. The reference works anyway
+because a **scan tool transmits a request and then listens** — contention is
+rare and brief.
+
+**An ECU on this bus is a continuous periodic transmitter**, sharing it with the
+cluster, the GEM and anything a technician plugs in. Collisions stop being
+exceptional and become routine.
+
+The reference carries its own warning, which now reads differently:
+
+> *"PWM IMPLEMENTATION IS EXPERIMENTAL AND MAY REQUIRE FIRMWARE OR HARDWARE
+> TUNING FOR SPECIFIC VEHICLES."*
+
+**This is the risk that justifies Phase 0 existing**, and it should be Phase 0's
+explicit objective rather than a hoped-for side effect:
+
+> **[PHASE 0]** With the OEM PCM still installed and transmitting, **transmit
+> from our node into live traffic** and confirm arbitration behaves — not merely
+> that we can *listen*. Listening proves the RX path. It proves nothing about
+> whether we can share the bus.
+
+A likely mitigation, if it does not: drive `nSLEEP` **within the bit period** so
+the stage presents high-impedance during the window where arbitration is
+resolved, making it behave as open-drain. That is firmware, and it is why
+`nSLEEP` being a real pin (finding 1) matters beyond bookkeeping.
+
+> **Fixed 2026-09-17, and better than that mitigation.** `nSLEEP` would have
+> carried a wake-time penalty per bit. **The DRV8837's own truth table already
+> has the release: `IN1 = IN2 = LOW` is coast, both outputs Hi-Z** — a *logic*
+> state on pins we already have.
+>
+> So the fix is an encoding change: **the passive state is coast, not the
+> opposite drive.** The reference's *"drive TX_P/TX_N as complementary signals"*
+> is correct for a scan tool and wrong for a bus node. Written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3.
+>
+> Phase 0 still validates transmitting into live traffic — this makes
+> arbitration *possible*, it does not prove it works. And a new question falls
+> out: **[CONFIRM]** whether removing the OEM PCM removes the bus's bias or
+> termination, since every node releasing to Hi-Z leaves the passive level
+> undefined.
+
+---
+
+## 3. ~~IMPORTANT — the TX outputs face the harness~~ FIXED
+
+The DRV8837's `OUT1`/`OUT2` connect **directly to SCP+ and SCP−**, which run the
+length of the truck. The reference runs its `VM` from **5 V**, and the DRV8837
+family is a low-voltage motor driver — its supply and output ratings are in the
+**single digits**, not battery territory.
+
+`harness-protection.md` currently says of this bus:
+
+> *already has its own protection network in the transceiver design*
+
+**That claim inherits a scan tool's threat model.** A scanner sees the DLC, on a
+short cable, briefly. An ECU sees a harness that can chafe, and a
+short-to-battery on SCP+ puts 14 V onto a driver output rated for far less.
+
+**This is the same pattern as the VREF blind spot** —
+[`review-vref-chain.md`](review-vref-chain.md) — and the same one the
+[protection sweep](review-protection-sweep.md) went looking for: protection
+specified against the expected fault, not against the harness.
+
+> **[CONFIRM]** the DRV8837's `VM` and output absolute maximums, then decide:
+> series resistance ahead of the outputs, a clamp, or a different driver. The
+> 100 kΩ series resistors already protect the **RX** side; the **TX** side has
+> nothing, because a motor driver is meant to drive a motor, not a harness.
+>
+> **Fixed 2026-09-17: 100 Ω series per output, and the VREF lesson applied.**
+> Stand the clamp off *above* battery so it never conducts on a DC fault, and
+> let the series resistance bound what does get through: `(14 − 5.7)/100` =
+> **83 mA** into the body diode and thence the 5 V rail, which the board's own
+> load absorbs without noticing.
+>
+> It costs nothing in signalling — 100 Ω into ~500 pF is a **50 ns** time
+> constant, **0.6 %** of an 8 µs tic. The remaining `[CONFIRM]` is the
+> DRV8837's abs-max, and whether the bus needs more drive than 100 Ω allows,
+> which Phase 0 measures directly.
+
+---
+
+## 4. ~~Do not copy the upstream reference's RX divider — it has a known bug~~ FIXED
+
+`j1850_multiprotocol.md` records a **real functional defect** in the original
+OpenJ1850 circuit, found and fixed during that board's bring-up:
+
+> the original 10k:100k input divider only attenuated to ~91 %, so a normal ~5 V
+> PWM HIGH landed around **4.5 V** at the comparator — **over absolute max
+> during ordinary bit reception**, not just during faults.
+
+TLV7031's input abs-max is only V<sub>CC</sub> + 0.3 V ≈ **3.6 V** at 3.3 V.
+The fix is a symmetric **100 k : 100 k** divider, putting a 5 V bus HIGH at
+**2.5 V**.
+
+There is a second trap recorded alongside it: the reference's
+`R_PWM_P_BIAS` goes to **3.3 V, not ground**. That was harmless at the original
+10:1 ratio and becomes destructive at 1:1 — it pulls half the node instead of a
+tenth.
+
+**Carry the corrected values, not the reference schematic.** This is the most
+likely way to introduce a known-and-already-solved bug into a new board.
+
+> **Fixed 2026-09-17.** The corrected network is now written into
+> [`f150-1999-target.md`](f150-1999-target.md) §5.3 in full — 100 k : 100 k both
+> to ground, MM3Z3V3BW clamps, 4.7 MΩ hysteresis, 100 Ω + SMF3.3 on the output —
+> with **both traps recorded as traps**, so the design no longer depends on
+> anyone reading a sibling project's bring-up notes to avoid them.
+
+---
+
+## 5. Checked and clear
+
+| | |
+|---|---|
+| **Bus polarity** | The reference warns polarity varies and to swap DLC pins 2/10 if nothing decodes. **Not a risk here** — this truck is documented: EEC-V **pin 16 = SCP+** (TAN/ORG, circuit 914), **pin 15 = SCP−** (PNK/LT BLU, 915), matching DLC pins 2 and 10 |
+| **One connection serves both jobs** | The DLC and the cluster are the same bus, so wiring to EEC-V 15/16 reaches a scan tool *and* the cluster |
+| **Bit timing** | 41.6 kbps is a 24 µs bit. Against a 216 MHz STM32F767 with hardware capture/compare, unremarkable |
+| **Wake-on-bus falls out for free** | The **5 V rail is gated** but **3.3 V is always on**, so in sleep the DRV8837 is unpowered (bus released) while the TLV7031 still receives. A scan tool plugging in can wake the ECU — a capability, not a compromise, and it comes from the [always-on domain](always-on-domain.md) rather than from anything added here |
+| **Supply rails** | PWM needs no boost. The reference's +7 V rail is for **VPW**, the GM flavour, which this truck does not use |
+
+---
+
+## Summary
+
+| # | Finding | Action |
+|---|---|---|
+| 1 | ~~`nSLEEP` uncounted~~ | **FIXED** — four pins, and a 10 kΩ pulldown so the bus is released at power-on |
+| 2 | ~~H-bridge has no arbitration mechanism~~ | **FIXED** — passive state is `IN1=IN2=LOW` coast, not complementary drive |
+| 3 | ~~TX outputs face the harness~~ | **FIXED** — 100 Ω series; clamp stands off above battery, rail absorbs 83 mA |
+| 4 | ~~Upstream reference has a known RX abs-max bug~~ | **FIXED** — corrected network written into §5.3, both traps recorded |
+
+Findings 2 and 3 are the same observation in two places: **the reference design
+was validated as a scan tool, and we are using it as a node.** Its warning about
+being "experimental" was written about *vehicle variation*; for us it is also
+about *role*.

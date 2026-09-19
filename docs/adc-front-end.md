@@ -41,11 +41,18 @@ also 3.3 V, so **no level shifting is needed** — this is a wire-for-wire move.
 MOSI is not wired. In hardware mode range and oversampling are set by pins
 rather than registers, so the P4 opens SPI with MOSI as −1.
 
-**In the final ECU, six of these move to the MCP23S17 expander chain** —
+~~**In the final ECU, six of these move to the MCP23S17 expander chain**~~ — **the chain is dropped; they take native pins.** Which also removes the DVDD conflict that made them illegal there. Six static lines —
 RESET, FRSTDATA, OS0, OS1, OS2 and RANGE are static or near-static, so they do
-not deserve native pins. That leaves SCK, MISO, CS, CONVST and BUSY, which is
+not deserve native pins. *(Right about which pins; the chain they move to was
+specified at 5 V, and DVDD + 0.3 V is 3.6 V —
+[`review-expander-chain.md`](review-expander-chain.md) §2.)* That leaves SCK, MISO, CS, CONVST and BUSY, which is
 the five the pin budget in `f150-1999-target.md` assumes. The mapping above is
 the *bench* mapping, using native pins because nothing else is connected yet.
+
+> **A pre-schematic review of this chain is in
+> [`review-analog-chain.md`](review-analog-chain.md).** The eight precision
+> channels came out clean; the findings are all on the **internal** ADC, whose
+> running demand is **~22 channels** and had never been counted.
 
 ## Channel allocation
 
@@ -55,15 +62,87 @@ Eight channels, and they are all spoken for:
 |---|---|---|
 | 0 | MAF signal (+) / return (−) | **differential** — the whole reason for this part |
 | 1 | TPS | fast, and ratiometric to VREF |
-| 2 | O2 upstream bank 1 | |
-| 3 | O2 upstream bank 2 | |
+| 2 | O2 upstream bank 1 | **buffered** — [`review-o2-chain.md`](review-o2-chain.md) §5 |
+| 3 | O2 upstream bank 2 | **buffered** — same. These two are what a wideband conversion would reuse for CJ125 `UA` |
 | 4 | CHT — cylinder head temperature | |
 | 5 | IAT — intake air temperature | |
-| 6 | Battery voltage | via divider; injector dead-time compensation |
+| 6 | Battery voltage | via **150 k / 33 k** divider — see below; injector dead-time compensation |
 | 7 | **VREF sense** | sensors are ratiometric, and this ADC is not — see below |
 
-Moved to the P4's own ADC because they are slow and not fuelling-critical:
-DPFE, TFT, downstream O2 ×2, fuel pump monitor.
+Moved to the **STM32's own ADC** because they are slow and not fuelling-critical:
+DPFE, TFT, downstream O2 ×2, fuel pump monitor. *(The "P4" here is stale — the
+platform moved to the STM32F767ZI.)*
+
+**This document owns the channel allocation** — for both converters. Where
+[`f150-1999-target.md`](f150-1999-target.md) §3 lists signals, it is an
+inventory; the allocation lives here.
+
+## The internal ADC budget
+
+Not "plentiful". Counted:
+
+| | |
+|---|--:|
+| ADC1/2/3 shared inputs, PA0–PA7 / PB0–PB1 / PC0–PC5 | 16 |
+| ADC3-only inputs, PF3–PF10 | 8 |
+| **Total ADC-capable pins** | **24** |
+| Consumed by **Ethernet RMII** — PA1, PA2, PA7, PC1, PC4, PC5 | **−6** |
+| **Available** | **18** |
+
+The Ethernet collision is real and already visible in the firmware:
+`Board.h` lists the RMII pins, and six of them are `ADC123_IN1`, `IN2`, `IN7`,
+`IN11`, `IN14`, `IN15`.
+
+> **[CONFIRM]** the 24 against the F767ZI datasheet's pinout for this package,
+> and against anything else already claiming those pins.
+
+### Demand, after the reduction below
+
+| Demand | Ch |
+|---|--:|
+| DPFE, TFT, downstream O2 ×2, fuel pump monitor | 5 |
+| VREF `CS` current sense | 1 |
+| VREF feed short-to-battery sense — **one feed, not two** | 1 |
+| Output drain sense — **six, not thirteen** | 6 |
+| 1138 / 391 solenoid supply sense | 2 |
+| **Total** | **15** |
+
+**23 before, 15 after, against 18 available.**
+
+### Which outputs get drain sense, and what replaces it on the rest
+
+The first count put drain sense on all thirteen NCV8405A/NCV8408B channels.
+**Most of them already have better feedback than a drain voltage**, so sensing
+the drain was buying a second opinion at the cost of a channel and a pin:
+
+| Load | Drain sense | Why |
+|---|:--:|---|
+| **HO2S heaters ×4** | **yes** | OBD-II heater circuit monitor. Nothing else sees the heater |
+| **EVAP purge** | **yes** | OBD-II EVAP monitor |
+| **Canister vent** | **yes** | OBD-II EVAP monitor |
+| EGR regulator | no | **DPFE is the feedback** — measuring EGR flow is what it is for |
+| SSA, SSB | no | gear-ratio mismatch: commanded gear vs RPM vs OSS |
+| TCC | no | converter slip: RPM vs OSS |
+| EPC | no | the **NCV8408B's gate-current flag**, which needs no PWM-synchronised sample |
+| IAC | no | idle speed error is the feedback |
+| IMCC | no | no OBD requirement, and no cheap alternative — accepted, not solved |
+
+Only IMCC loses diagnosis outright, and it is the one load with neither a
+regulatory requirement nor a natural feedback path.
+
+**Four O2 sensors, and the split matches what each is for.** Ford's diagrams
+confirm four: **#11 / #21 upstream** on 391 RD/YE, **#12 / #22 downstream** on
+1138 VT/WH. The upstream pair is fuelling and sits on this converter; the
+downstream pair is catalyst monitoring and is slow enough for the internal ADC.
+
+> **All four need a unity-gain buffer**, which the split above does not change
+> but does not provide either — a zirconia cell is high-impedance and both
+> converters load it, the internal one worse because it is switched-capacitor.
+> [`review-o2-chain.md`](review-o2-chain.md) §1.
+>
+> **If the upstream pair goes wideband**, channels 2 and 3 carry CJ125 `UA`
+> instead, and `UR` ×2 comes out of the internal spare below — 17 of 18, one
+> spare. Recorded here because **this document owns both allocations**.
 
 Knock (C103) is **not** on this ADC as a routine channel — it is a piezo
 needing a charge amplifier and windowed sampling around each combustion event.
@@ -87,6 +166,11 @@ between the two conversions. That property is worth the channel.
 |---|---|
 | ±10 V | 305.18 µV |
 | ±5 V | 152.59 µV |
+
+**±10 V is forced, not chosen.** `RANGE` is one setting for all eight channels
+and **channel 7 carries VREF at 5.00 V** — on a ±5 V range that is exactly full
+scale, so any tolerance or overshoot clips the one signal that must never clip.
+Recorded so it is not later "optimised" to ±5 V.
 
 ±10 V takes 0–5 V sensors directly with headroom for overshoot. ±5 V doubles
 the resolution but leaves no margin — worth switching to only once every input
@@ -264,17 +348,66 @@ cheap part has it.
 
 Two things to weigh before ordering:
 
-1. **Temperature: −40 to +85 °C, not +125 °C.** This decides where the ECU can
-   mount. The OEM PCM on this truck sits in the cabin, not the engine bay, so
-   85 °C is very likely fine — but it rules out an under-hood enclosure, and
-   that is a decision better made now than after the board is built.
-   **[CONFIRM]** the intended mounting location.
+1. ~~**Temperature: −40 to +85 °C, not +125 °C.**~~ **Wrong — struck.** The
+   ADS8588H specifies min/max over **T<sub>A</sub> = −40 to +125 °C**, and
+   Recommended Operating Conditions gives the same. The only 85 °C limit is a
+   condition on I<sub>AVDD_PWR_DN</sub>, the power-down leakage spec. The
+   **AD7606B bench part** is the 85 °C device, which is the likely source of the
+   mix-up. **This ADC does not rule out an under-hood enclosure** —
+   [`review-expander-chain.md`](review-expander-chain.md) §8. **[CONFIRM]** the
+   intended mounting location anyway, because the MCP23S17 was 125 °C-rated only
+   at V<sub>DD</sub> ≥ 4.5 V and the review recommends running it at 3.3 V.
 2. **1 MΩ input impedance, not 5 MΩ.** It loads the source slightly. Irrelevant
    for low-impedance sensors, but the battery-voltage divider should be stiff
    enough that 1 MΩ across it does not shift the ratio — keep the divider
    resistances well under 100 kΩ.
 
 Neither is a reason to spend the extra $50.
+
+### The battery-sense divider
+
+**This document owns the divider value: 150 kΩ / 33 kΩ.**
+
+It has two masters that pull opposite ways, and neither document could see both.
+It sits on a **permanently powered** rail, so its current is pure parasitic drain
+and [`always-on-domain.md`](always-on-domain.md) wants it high-impedance. It
+feeds a **1 MΩ resistive** ADC input, so its source impedance becomes a gain
+error and the paragraph above wants it low-impedance. The value belongs here,
+next to the R<sub>IN</sub> spec that decides it.
+
+R<sub>IN</sub> is **0.85 / 1 / 1.15 MΩ** — ±15 %. That tolerance is what matters.
+The nominal loading error is a fixed gain term and can be calibrated out; the
+±15 % spread cannot, because it varies part to part:
+
+| Divider | Sleep at 14 V | Z<sub>src</sub> | Gain error | **Spread, uncalibratable** | at 14 V |
+|---|--:|--:|--:|--:|--:|
+| 47 k / 10 k — *as drawn* | 246 µA | 8.2 kΩ | −0.8 % | ±0.25 % | ±35 mV |
+| **150 k / 33 k** | **77 µA** | **27 kΩ** | −2.6 % | **±0.79 %** | **±111 mV** |
+| 220 k / 47 k | 52 µA | 39 kΩ | −3.7 % | ±1.10 % | ±154 mV |
+| 470 k / 100 k | 25 µA | 83 kΩ | −7.6 % | ±2.15 % | ±301 mV |
+
+**150 k / 33 k.** It removes 169 µA — the bulk of what the high-impedance
+argument was after — while staying inside the "well under 100 kΩ" rule two
+paragraphs up. The step beyond it saves a further 52 µA, which against a
+25–50 mA parked allowance is nothing, and costs 190 mV of accuracy, which is
+not: the resolution target for this channel is **0.1 V**, and ±301 mV misses it
+outright.
+
+Two things follow from the choice:
+
+- **Ratio is 5.545:1, not 5.700:1** — 33 k is the nearest E24 value and the
+  ratio is a calibration constant either way. At the LTC4364's 27 V clamp the
+  node sits at 4.87 V, comfortable on the forced ±10 V range.
+- **Do not add a filter capacitor here.**
+  [`review-ignition-injection.md`](review-ignition-injection.md) requires
+  battery voltage to be **sampled away from injection events, not averaged
+  through them**. A cap at a 27 kΩ node defeats exactly that. The ADC's own
+  22 kHz anti-aliasing filter is already present and is enough.
+
+> **Note the shape of this.** `review-power-chain.md` §2 proposed 470 k / 100 k,
+> and the "well under 100 kΩ" sentence ruling it out was already written in this
+> document. One more number that was correct where it lived and wrong where it
+> was spent. Hence the ownership line at the top of this section.
 
 ---
 

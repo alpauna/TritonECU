@@ -33,14 +33,37 @@ draws before ours.
 | Item | Sleep current |
 |---|---|
 | LTC4364 quiescent | **750 µA** |
+| **MAX25239, standby in skip mode** | **95 µA** |
+| TLV62085, quiescent | ~17 µA |
 | STM32F767 Standby + RTC + backup SRAM | **3 µA** |
-| Always-on 3.3 V converter, quiescent | ~20 µA |
 | INA238 in shutdown | ~2 µA |
-| **Total** | **≈ 780 µA** |
+| ADC battery-sense divider, **150 k / 33 k** on a **permanent** rail | **77 µA** |
+| **Total** | **≈ 944 µA** |
+
+> **This table is the owner of the sleep budget.** Every other drain figure in
+> this document and in [`power-supply.md`](power-supply.md) is working, and
+> defers to this one. Two entries were found missing while closing
+> [`review-power-chain.md`](review-power-chain.md) §2 — the divider, which that
+> review found, and the MAX25239 itself, which it did not.
+
+> ⚠ **The divider was missing from this table.** At the original 47 k / 10 k it
+> draws **246 µA — 31 % of the whole budget**, and unlike everything else here it
+> cannot be gated away by the 5 V rail going down: it is a resistor to ground on
+> a live rail. Raised to **150 k / 33 k** it is 77 µA. The value is chosen in
+> [`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider), which owns
+> it — this table only spends it. See
+> [`review-power-chain.md`](review-power-chain.md) §2.
+>
+> ⚠ **The MAX25239 was missing too**, and it is the larger of the two at 95 µA.
+> The line above said *"the MCU never fully powers down"* and then costed only
+> the MCU. Its 95 µA is a **skip-mode** figure — the datasheet specifies it at
+> V<sub>SYNC</sub> = 0 V — which is what makes the SYNC strap a firmware
+> decision rather than a pull-up. See
+> [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap).
 
 ```
-780 µA × 720 h  =  0.56 Ah/month
-group 65 battery ≈ 70 Ah  →  0.8 %/month,  ~5 % over six months
+944 µA × 720 h  =  0.68 Ah/month
+group 65 battery ≈ 70 Ah  →  1.0 %/month,  ~6 % over six months
 ```
 
 Comfortable. **Note what dominates: the LTC4364, at 250× the MCU's draw.**
@@ -112,6 +135,12 @@ LTC4364's 4.2 V cutoff remains the system floor — as intended.
 | **Total** | **≈ 853 µA** → 0.61 Ah/month |
 
 Unchanged conclusion: comfortable, and still dominated by the LTC4364.
+
+> **Superseded.** This table costs the *two*-converter sketch, which the
+> all-switched decision below replaced with a single MAX25239 at 5.0 V. It also
+> predates the battery-sense divider. **The budget that counts is the one at the
+> top of this document**; this one is kept only for the converter comparison it
+> was written for.
 
 ### Package is the practical objection
 
@@ -883,6 +912,12 @@ to 75 ppm/°C to save current that switching off saves anyway.
 | **Total** | **≈ 853 µA** → 0.61 Ah/month |
 
 Unchanged conclusion: comfortable, and still dominated by the LTC4364.
+
+> **Superseded.** This table costs the *two*-converter sketch, which the
+> all-switched decision below replaced with a single MAX25239 at 5.0 V. It also
+> predates the battery-sense divider. **The budget that counts is the one at the
+> top of this document**; this one is kept only for the converter comparison it
+> was written for.
 
 ### Package is the practical objection
 

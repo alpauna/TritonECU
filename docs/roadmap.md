@@ -57,7 +57,7 @@ deferred, regardless of how good an idea it is.
 | **M8** | Wi-Fi + status page | ESP32-C6 hosted link | Serves live engine state over Wi-Fi |
 | **M9** | Knock | piezo channel + DSP | Detects a tap on the block, windowed per cylinder |
 | **M10** | Closed loop | CJ125 / wideband | AFR correction converges |
-| **M11** | SCP bus | J1850 PWM | Reads the OEM PCM's traffic on the bench first, then the truck |
+| **M11** | SCP bus | J1850 PWM | Reads the OEM PCM's traffic on the bench first, then the truck. **Hardware is on the v1 board** — DRV8837 + TLV7031; without it the truck has no tach, speedo or MIL. **Phase 0 must transmit into live traffic, not only listen** — see [`review-scp-chain.md`](review-scp-chain.md) §2 |
 | **M12** | Transmission node | second board, TWAI link | 4R70W shifts under command |
 
 M3 is the one that matters. It is the highest-risk item in the whole project —
