@@ -632,6 +632,20 @@ wins: **the threshold moves from 2.9 A to 3.7 A RMS**, which clears a 3 A peak a
 > **Give TCC a pour**, as IAC already has — 2.44 A at 1 in² turns 26 % of margin
 > into 70 %. It costs copper, not parts.
 >
+> ⚠ **One sample, from a failed transmission, and it may be a low one.** 4.12 Ω
+> sits at the **bottom** of the 3.5–6 Ω band, which is where a coil with shorted
+> turns would land. A second unit is being pulled. **There is a clean test**:
+> `R ∝ N` and `L ∝ N²`, so lost turns drop L faster than R and the ratio
+> **L/R² stays constant** for a healthy part. Ours is **L/R² = 0.807**.
+> If the second sample comes out near 0.807 it is unit spread; **if its L/R² is
+> higher, this one has shorted turns.**
+>
+> **Keep both numbers either way, because they are worst-case for different
+> things:** the *lowest* resistance is worst for the driver (highest current),
+> and the *highest* inductance is worst for the PWM frequency (longest τ). So
+> size the thermals on 4.12 Ω even if it proves damaged, and take τ from the
+> healthy sample.
+>
 > ✅ **EPC MEASURED: 4.12 Ω.** That confirms it as the EPC (the 3.5–6 Ω band —
 > TCC is 10–16, SSA/SSB 20–30) and it clears the threshold, but not by much:
 >
