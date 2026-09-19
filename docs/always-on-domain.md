@@ -37,13 +37,13 @@ draws before ours.
 | TLV62085, quiescent | ~17 µA |
 | STM32F767 Standby + RTC + backup SRAM | **3 µA** |
 | INA238 in shutdown | ~2 µA |
-| ADC battery-sense divider, **150 k / 33 k** on a **permanent** rail | **77 µA** |
-| **Total** | **≈ 194 µA** |
+| ADC battery-sense divider, **180 k / 30 k**, **on the battery lead** | **67 µA** |
+| **Total** | **≈ 184 µA** |
 
 > ⚠ **This table read 944 µA until the feed was defined.** The LTC4364's 750 µA
 > was 80 % of it, and it is now zero — with KAPWR joining the **protected rail**
 > rather than the LTC4364's input, nothing powers the LTC4364 with the key off.
-> **4.9× better, from moving a junction rather than adding parts.**
+> **5.1× better, from moving a junction rather than adding parts.**
 
 > **This table is the owner of the sleep budget.** Every other drain figure in
 > this document and in [`power-supply.md`](power-supply.md) is working, and
@@ -54,7 +54,7 @@ draws before ours.
 > ⚠ **The divider was missing from this table.** At the original 47 k / 10 k it
 > draws **246 µA — 31 % of the whole budget**, and unlike everything else here it
 > cannot be gated away by the 5 V rail going down: it is a resistor to ground on
-> a live rail. Raised to **150 k / 33 k** it is 77 µA. The value is chosen in
+> a live rail. Raised to ~~150 k / 33 k~~ **180 k / 30 k** it is **67 µA**. The value is chosen in
 > [`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider), which owns
 > it — this table only spends it. See
 > [`review-power-chain.md`](review-power-chain.md) §2.
@@ -67,8 +67,8 @@ draws before ours.
 > [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap).
 
 ```
-194 µA × 720 h  =  0.14 Ah/month
-group 65 battery ≈ 70 Ah  →  0.20 %/month,  ~1.2 % over six months
+184 µA × 720 h  =  0.13 Ah/month
+group 65 battery ≈ 70 Ah  →  0.19 %/month,  ~1.1 % over six months
 ```
 
 Comfortable, and it now survives a long lay-up rather than merely tolerating a
@@ -1078,15 +1078,37 @@ Numbers below are reproduced by [`calc/kapwr_feed.py`](calc/kapwr_feed.py).
 
 ```
   VPWR 71,97 ──[F1]──[SMDJ43A]──┤ LTC4364-2        ├──┐
-                                │ pass FET         │  │
-                                │ ideal-diode FET ─┼──┴──┬──► PROTECTED RAIL
+  circuit 361 RD, EEC relay     │ pass FET         │  │
+  DIES AT KEY-OFF               │ ideal-diode FET ─┼──┴──┬──► PROTECTED RAIL
                                                          │
-  KAPWR A-44 ──[F2]──[SMDJ43A]──[D3]──[R7 470R]──────────┤
-                                       │                 ├──► MAX25239 → 5 V
-                                    [TVS3]               ├──► NCV8772 → VREF
-                                       │                 └──► 150k/33k divider
-                                      PGND
+  BATTERY POST                                           ├──► MAX25239 → 5 V
+      │                                                  └──► NCV8772 → VREF
+  [F2 2A, within 150-300 mm of the post]                  
+      │                                                  
+      ╎ 18 AWG, loomed, grommeted                        
+      │                                                  
+   [SMDJ43A]──┬──[D3]──[R7 470R]──┬───────────────────────┘
+      │       │                   │
+     PGND  [180k/30k]          [SMBJ30A]
+              │  └──► ADC ch      │
+             PGND                PGND
 ```
+
+**Two independent changes, and each fixes something the other exposed:**
+
+**1. The source is a dedicated lead off the battery post**, not EEC-V pin A-44.
+That retires the `[CONFIRM]` that was blocking the drawing — A-44 has no number
+in the 1–104 scheme, because two numbering systems coexist in this repo with no
+mapping. **A dedicated lead uses no EEC-V pin, so the question never has to be
+answered to build the board.** It also means the feed shares nothing with the
+truck's other keep-alive loads, and reads battery voltage without the BJB's drops
+in the way.
+
+**2. The battery-sense divider moves upstream of D3 and R7.** Downstream it read
+**0.51 V low when parked, with a load-dependent correction** — see the note
+below. Upstream it reads true battery voltage and the correction disappears.
+The value changed with the node: **180 k / 30 k**, re-sized in
+[`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider), which owns it.
 
 **KAPWR joins the protected rail, downstream of the ideal-diode FET** — not the
 LTC4364's input. Three things follow, and the first is the argument:
@@ -1101,8 +1123,9 @@ LTC4364's input. Three things follow, and the first is the argument:
 ### R7 = 470 Ω does three jobs
 
 **a) It makes the OR asymmetric without an OR controller.** This matters more
-than it looks: **KAPWR is if anything *higher* than VPWR**, because VPWR arrives
-through a relay contact. A plain diode-OR would therefore run the whole ECU off
+than it looks, and **a direct battery lead makes it matter more, not less** — a
+lead off the post has *less* drop than the OEM keep-alive circuit would have, so
+it sits even further above VPWR, which arrives through a relay contact. A plain diode-OR would therefore run the whole ECU off
 the keep-alive fuse. R7 is 23 500× the LTC4364 path's ~20 mΩ:
 
 | Rail sags | KAPWR contributes |
@@ -1112,9 +1135,9 @@ the keep-alive fuse. R7 is 23 500× the LTC4364 path's ~20 mΩ:
 
 **Run current can never flow through the keep-alive fuse.**
 
-**b) It limits KAPWR fault current** to 30 mA at 14 V into a dead short, so a
-failure on our side cannot open the keep-alive fuse and take the truck's other
-keep-alive loads down with it.
+**b) It limits fault current** to 30 mA at 14 V into a dead short — which is now
+what lets the board carry no fuse of its own, the lead's 2 A at the post being
+the only one needed.
 
 **c) It makes TVS3 work** — a shunt clamp with no series impedance has to absorb
 the whole surge.
@@ -1150,26 +1173,58 @@ what makes that case survivable.
 
 **Decided: SMBJ30A, R7 = 470 Ω 1206, D3 silicon (not Schottky).**
 
-### ⚠ The consequence nobody would look for: the voltmeter now reads low
+### ⚠ Why the divider is upstream — the offset it avoids
 
-The 150k/33k battery-sense divider hangs on the protected rail, which **when
-parked is KAPWR minus D3 minus R7**:
+Had the divider stayed on the protected rail, it would read **KAPWR minus D3
+minus R7** whenever the key was off:
 
 ```
-  D3 forward drop at 194 µA    0.42 V
-  R7 drop                      0.09 V
+  D3 forward drop at 184 µA    0.42 V
+  R7 drop                      0.06 V
   ---------------------------------
-  total offset                 0.51 V    low, and only when parked
+  total offset                 0.48 V    low, and only when parked
 ```
 
-The low-battery self-disable below trips at 11.5 V. **Uncorrected it would
-actually trip at 12.01 V of real battery — giving up on a healthy battery.**
+The low-battery self-disable below trips at 11.5 V. **Uncorrected it would have
+tripped at ~11.98 V of real battery — giving up on a healthy battery** — and the
+offset is **load-dependent, not a constant**, because R7's drop tracks the sleep
+current. That is the kind of error that reads as a weak battery for a year before
+anyone questions the ECU.
 
-Firmware must add the offset back whenever VPWR is absent, and **the offset is
-load-dependent, not a constant**, because R7's drop tracks the sleep current.
+**Putting the divider on the battery side of D3 and R7 removes it by
+construction**, which is better than correcting for it in firmware. R7 then
+carries only the converter chain — **117 µA, 55 mV** — and that drop is
+downstream of the measurement, so it no longer appears in any reading.
 
-This is the kind of error that reads as a weak battery for a year before anyone
-questions the ECU.
+### The diagnostic that falls out of it
+
+Once the divider is on the battery and the INA238 is on the protected rail,
+**the two readings straddle the EEC relay**:
+
+| Reads | |
+|---|---|
+| 180k/30k divider | **battery voltage**, at the post |
+| INA238 | **protected rail**, after F1, the relay contact and the 361 RD run |
+
+Their difference, under whatever load the ECU is drawing, is **the drop across
+the relay contact and the harness**. Corroded contacts and a tired feed become
+*measurable* rather than inferred. Neither reading gave that before, because both
+sat on the same side of the relay.
+
+### The lead itself is a safety item
+
+It is **always hot, and it bypasses every switch in the vehicle.**
+
+| | |
+|---|---|
+| **Fuse** | **2 A blade, within 150–300 mm of the battery post.** The fuse protects the *wire*; the run between post and fuse is unprotected by definition, so it must be short |
+| **No board fuse** | Once that fuse exists, a second one on the board protects nothing — **R7 already caps fault current at 30 mA** |
+| **Gauge** | Set by **mechanical durability, not ampacity** — the lead carries 184 µA. **18 AWG minimum**, loomed, grommeted at the firewall, clear of heat and edges |
+| **Ground** | **Stays single-point on the EEC-V PWRGND pins.** Do *not* run a second ground to the battery negative — that makes a loop with PWRGND |
+
+The ground choice has one visible consequence: the reading includes the
+ground-path drop, so it **reads low while cranking**. That is the right thing to
+measure — it is what the ECU's own supply actually sees.
 
 ## The new requirement this creates: low-battery self-disable
 
@@ -1201,15 +1256,18 @@ battery becomes a no-start that looks like a dead ECU.
   a large sleep load otherwise, and nothing needs it while parked.
 - **Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
   hundreds of milliamps in a parked truck.
-- **[CONFIRM] A-44's number in the 1–104 scheme.** The wiring diagrams give VPWR
-  as *"pins 71 and 97"*; `oem-connectors.md` gives it as *"A-32, A-33"*. **Two
-  numbering systems coexist in this repo with no mapping recorded anywhere**, and
-  the KAPWR feed cannot be drawn until that is settled.
+- ~~**[CONFIRM] A-44's number in the 1–104 scheme.**~~ **Retired** — a dedicated
+  battery lead uses no EEC-V pin. The underlying gap is real and still open for
+  every *other* pin: the wiring diagrams give VPWR as *"pins 71 and 97"* while
+  `oem-connectors.md` gives it as *"A-32, A-33"*, and **no mapping between the
+  two schemes is recorded anywhere in this repo.** It simply no longer blocks
+  this drawing.
 - **[CONFIRM] the LTC4364 tolerates `OUT` held at battery while `IN` sits at 0 V.**
   That is the parked state *by construction* here. The ideal-diode FET blocks the
   current; what is unverified is the part's own rating for a reverse IN–OUT
   differential with the die unpowered.
-- **[CONFIRM] the keep-alive fuse rating on this truck**, to size F2 below it.
+- ~~**[CONFIRM] the keep-alive fuse rating on this truck.**~~ **Retired** — the
+  lead carries its own 2 A fuse at the post and shares nothing with the vehicle.
 - **[CONFIRM] D3 reverse leakage at 125 °C.** It is reverse-biased only with the
   key on and the MCU awake, so it costs nothing in the sleep budget — but a
   Schottky would leak tens of µA and is the wrong part here for exactly that

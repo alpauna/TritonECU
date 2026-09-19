@@ -366,10 +366,20 @@ Neither is a reason to spend the extra $50.
 
 ### The battery-sense divider
 
-**This document owns the divider value: 150 kΩ / 33 kΩ.**
+**This document owns the divider value: ~~150 kΩ / 33 kΩ~~ 180 kΩ / 30 kΩ,
+and it now hangs on the battery lead, not the protected rail.**
+
+> ⚠ **Both the value and the node changed**, and the node is what forced the
+> value. See [`always-on-domain.md`](always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
+> Placed downstream of the always-on feed's blocking diode and 470 Ω, this
+> divider read **0.51 V low when parked, with a load-dependent correction** — an
+> error that reads as a weak battery for a year. Moved **upstream**, to the
+> battery lead itself, it reads true battery voltage and the correction vanishes.
+> But upstream also means it **leaves the LTC4364's 27 V clamp behind**, and the
+> sizing below was done against that clamp.
 
 It has two masters that pull opposite ways, and neither document could see both.
-It sits on a **permanently powered** rail, so its current is pure parasitic drain
+It sits on a **permanently powered** node, so its current is pure parasitic drain
 and [`always-on-domain.md`](always-on-domain.md) wants it high-impedance. It
 feeds a **1 MΩ resistive** ADC input, so its source impedance becomes a gain
 error and the paragraph above wants it low-impedance. The value belongs here,
@@ -379,25 +389,38 @@ R<sub>IN</sub> is **0.85 / 1 / 1.15 MΩ** — ±15 %. That tolerance is what mat
 The nominal loading error is a fixed gain term and can be calibrated out; the
 ±15 % spread cannot, because it varies part to part:
 
-| Divider | Sleep at 14 V | Z<sub>src</sub> | Gain error | **Spread, uncalibratable** | at 14 V |
-|---|--:|--:|--:|--:|--:|
-| 47 k / 10 k — *as drawn* | 246 µA | 8.2 kΩ | −0.8 % | ±0.25 % | ±35 mV |
-| **150 k / 33 k** | **77 µA** | **27 kΩ** | −2.6 % | **±0.79 %** | **±111 mV** |
-| 220 k / 47 k | 52 µA | 39 kΩ | −3.7 % | ±1.10 % | ±154 mV |
-| 470 k / 100 k | 25 µA | 83 kΩ | −7.6 % | ±2.15 % | ±301 mV |
+**The new constraint is headroom.** On the protected rail the worst case was the
+LTC4364's **27 V** clamp. On the battery lead it is the **SMDJ43A's clamping
+voltage, 69.4 V** — and the channel is on the forced **±10 V** range:
 
-**150 k / 33 k.** It removes 169 µA — the bulk of what the high-impedance
-argument was after — while staying inside the "well under 100 kΩ" rule two
-paragraphs up. The step beyond it saves a further 52 µA, which against a
-25–50 mA parked allowance is nothing, and costs 190 mV of accuracy, which is
-not: the resolution target for this channel is **0.1 V**, and ±301 mV misses it
-outright.
+| Divider | Ratio | At 14 V | **At 69.4 V** | Sleep at 14 V | Z<sub>src</sub> | **Spread** | at 14 V |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| ~~150 k / 33 k~~ | 5.545 | 2.525 V | **12.52 V — over range** | 76.5 µA | 27.0 kΩ | ±0.79 % | ±110 mV |
+| 160 k / 27 k | 6.926 | 2.021 V | **10.02 V — over range** | 74.9 µA | 23.1 kΩ | ±0.68 % | ±95 mV |
+| **180 k / 30 k** | **7.000** | **2.000 V** | **9.914 V ✓** | **66.7 µA** | **25.7 kΩ** | **±0.75 %** | **±105 mV** |
+| 200 k / 30 k | 7.667 | 1.826 V | 9.052 V ✓ | 60.9 µA | 26.1 kΩ | ±0.76 % | ±106 mV |
+| 220 k / 33 k | 7.667 | 1.826 V | 9.052 V ✓ | 55.3 µA | 28.7 kΩ | ±0.83 % | ±116 mV |
+
+**180 k / 30 k, ratio exactly 7.000.** Unusually, it beats the incumbent on
+*every* axis rather than trading one against another — more headroom, less drain,
+lower Z<sub>src</sub> and therefore a smaller uncalibratable spread.
+
+The headroom column is the one that decides it. **At 150 k / 33 k the channel
+would go over range at 12.5 V during a load dump — losing the measurement during
+exactly the event you would want it for.** The old value was not wrong; it was
+sized against a 27 V worst case that no longer applies.
+
+It also **clips at 70 V, just above where the SMDJ43A clamps** — so the ADC range
+covers the whole survivable envelope and nothing beyond it.
 
 Two things follow from the choice:
 
-- **Ratio is 5.545:1, not 5.700:1** — 33 k is the nearest E24 value and the
-  ratio is a calibration constant either way. At the LTC4364's 27 V clamp the
-  node sits at 4.87 V, comfortable on the forced ±10 V range.
+- **Ratio is exactly 7.000**, which is a pleasant calibration constant, and one
+  LSB is **2.1 mV** referred to the battery against a **0.1 V** resolution
+  target — not close to binding.
+- **Reverse battery reads as −1.71 V**, inside the bipolar range. The ±10 V
+  setting, chosen for other reasons, makes a reversed-battery condition
+  *diagnosable* rather than merely survivable.
 - **Do not add a filter capacitor here.**
   [`review-ignition-injection.md`](review-ignition-injection.md) requires
   battery voltage to be **sampled away from injection events, not averaged
@@ -408,6 +431,11 @@ Two things follow from the choice:
 > and the "well under 100 kΩ" sentence ruling it out was already written in this
 > document. One more number that was correct where it lived and wrong where it
 > was spent. Hence the ownership line at the top of this section.
+
+> **And it happened again, one level up.** This section then sized the divider
+> against *"the LTC4364's 27 V clamp"* — correct for where the divider sat, and
+> wrong the moment the always-on feed moved it to the battery lead. **The
+> ownership line does not protect a value whose *node* changes underneath it.**
 
 ---
 

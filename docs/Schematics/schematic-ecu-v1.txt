@@ -46,11 +46,15 @@ CONTENTS
                           + pass FET                          |
                           + ideal-diode FET                   |
                                  |                            |
-   KAPWR o--[ F2 ]--[SMDJ43A]--[D3]--[R7 470R]--+-------------+
-   pin A-44 [CONFIRM number]                    |             |
-   CONSTANT 12 V                             [SMBJ30A]        |
-                                                |             |
-                                               PGND           |
+   BATTERY POST                                               |
+   |                                                          |
+   [F2 2A, within 150-300 mm of the post - protects the WIRE]  |
+   |  18 AWG, loomed, grommeted at the firewall               |
+   [SMDJ43A]--+--[D3]--[R7 470R]--+--------------+------------+
+              |                   |              |
+        [180k/30k]            [SMBJ30A]          |
+              |  +--> ADC, TRUE BATTERY          |
+             PGND                PGND            |
                                  +--------------+-------------+
                                                 |             |
                                           MAX25239AFFA    NCV8772CDT504RKG
@@ -94,11 +98,35 @@ CONTENTS
       470R against the LTC4364 path's ~20 mohm is 23500:1 - at 1 A of load
       KAPWR contributes 43 uA. It also caps KAPWR fault current at 30 mA.
 
-  ** THE VOLTMETER READS 0.51 V LOW WHEN PARKED. ** The 150k/33k battery
-  divider sits downstream of D3 and R7. The low-battery self-disable set at
-  11.5 V would really trip at 12.01 V - giving up on a healthy battery.
-  Firmware adds the offset back when VPWR is absent, and it is LOAD
-  DEPENDENT, not a constant. always-on-domain.md.
+  ** THE ALWAYS-ON FEED IS A DEDICATED BATTERY LEAD, NOT EEC-V PIN A-44. **
+  It shares nothing with the truck's keep-alive loads, reads battery
+  voltage without the BJB's drops in the way, and - usefully - uses no
+  EEC-V pin at all, which retires the A-xx / 1-104 numbering [CONFIRM]
+  that was blocking this drawing.
+
+  ** THE BATTERY DIVIDER IS UPSTREAM OF D3 AND R7. ** Downstream it would
+  read 0.48 V LOW when parked, with a LOAD-DEPENDENT correction - the
+  low-battery self-disable set at 11.5 V would really trip near 11.98 V,
+  giving up on a healthy battery. Upstream, the error does not exist.
+
+  ** THE VALUE CHANGED WITH THE NODE: 180k/30k, ratio 7.000. ** On the
+  battery lead the worst case is the SMDJ43A's 69.4 V clamp, not the
+  LTC4364's 27 V. At the old 150k/33k the channel would go OVER RANGE at
+  12.5 V during a load dump. 180k/30k lands at 9.914 V, clips at 70 V just
+  above where the TVS clamps, and is better on drain AND Zsrc too.
+  adc-front-end.md owns the value.
+
+  ** THE TWO READINGS NOW STRADDLE THE EEC RELAY. ** Divider = battery,
+  INA238 = protected rail. The difference under load is the drop across the
+  relay contact and the 361 RD harness run - corroded contacts become
+  measurable instead of inferred. always-on-domain.md.
+
+  ** THE LEAD IS ALWAYS HOT AND BYPASSES EVERY SWITCH IN THE VEHICLE. **
+  Fuse at the post, not on the board: the fuse protects the WIRE, and R7
+  already caps board fault current at 30 mA. Ground stays single-point on
+  the EEC-V PWRGND pins - do NOT run a second ground to the battery
+  negative. The reading therefore includes the ground-path drop and reads
+  low while cranking, which is what the ECU's supply actually sees.
 
 
 2. THE NUCLEO, AND WHAT THE CARRIER OWES IT
@@ -518,13 +546,15 @@ CONTENTS
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
   5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
   6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
-  9. [CONFIRM] A-44's pin number in the 1-104 scheme - sec.1. The wiring
+  9. [CONFIRM] the A-xx / 1-104 pin numbering mapping - sec.12. The wiring
      diagrams number VPWR 'pins 71 and 97'; oem-connectors.md numbers it
-     'A-32, A-33'. Two schemes coexist in the repo with NO MAPPING, and the
-     KAPWR feed cannot be drawn until it is settled.
+     'A-32, A-33'. Two schemes coexist in the repo with NO MAPPING. The
+     always-on feed no longer depends on it - it is a dedicated battery
+     lead - but every other A-xx reference still does.
  10. [CONFIRM] the LTC4364 tolerates OUT held at battery while IN is at 0 V
      - sec.1. That is the parked state BY CONSTRUCTION now.
- 11. [CONFIRM] the keep-alive fuse rating on this truck, to size F2 under it.
+ 11. [MEASURE] battery-to-protected-rail drop once running - sec.1. It is
+     the EEC relay contact plus the 361 RD run, and it is now observable.
   7. [CONFIRM] the F767 DAC's output impedance and its true reset-state
      leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k
      divider makes the second benign, but neither is read off a datasheet

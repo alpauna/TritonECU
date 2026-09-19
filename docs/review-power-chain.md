@@ -105,7 +105,13 @@ the 5 V rail going down: it is a resistor to ground on a live rail.
 - **Or gate it**, with a FET to ground — but that costs a part and a pin to save
   what the resistors already save for free.
 
-### RESOLVED — **150 k / 33 k**, and the suggestion above was wrong
+### RESOLVED — ~~**150 k / 33 k**~~ **180 k / 30 k**, and the suggestion above was wrong
+
+> **Superseded once more, and by the node rather than the arithmetic.** The
+> always-on feed moved this divider off the protected rail and onto the battery
+> lead, where the worst case is the SMDJ43A's 69.4 V clamp instead of the
+> LTC4364's 27 V — at which 150 k / 33 k goes over range. **180 k / 30 k**, in
+> [`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider).
 
 **470 k / 100 k is too high**, and the sentence ruling it out was already written
 in [`adc-front-end.md`](adc-front-end.md): *"keep the divider resistances well
@@ -117,7 +123,7 @@ out; the ±15 % spread does not. At 470 k / 100 k that spread is **±301 mV at
 14 V**, against a **0.1 V** resolution target for the channel — it misses
 outright. At 150 k / 33 k it is ±111 mV.
 
-**150 k / 33 k** takes 246 µA down to **77 µA**, which is most of what the
+**150 k / 33 k** took 246 µA down to **77 µA** (180 k / 30 k, 67 µA), which is most of what the
 high-impedance argument wanted. The last 52 µA is nothing against a 25–50 mA
 parked allowance, and buying it would cost the accuracy.
 

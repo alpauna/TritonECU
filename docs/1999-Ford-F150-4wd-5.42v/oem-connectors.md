@@ -237,21 +237,33 @@ on the SD card and in NVS, so KAPWR is unnecessary. What it does need instead
 is a clean power-down: detect loss of the run line and flush learned state
 before the rail collapses.~~
 
-**A-44 is required, and it is now the board's only constant feed.**
+**A-44 is not used — but not for the reason this section gave.**
 [`../always-on-domain.md`](../always-on-domain.md) specifies an MCU that never
 powers down — which retires the clean-power-down requirement above, and in
 exchange needs a source of permanent 12 V. **The board's only other input is
 VPWR (pins 71 and 97, circuit 361 RD), which comes from the EEC power relay and
 dies at key-off.**
 
-So the always-on decision **revives this pin rather than retiring it**. The feed
-joins the *protected rail*, downstream of the LTC4364's ideal-diode FET, through
-a fuse, a blocking diode, 470 Ω and an SMBJ30A — see
+The always-on decision **revived the keep-alive *function*** — but it is served
+by a **dedicated fused lead off the battery post**, not by this pin. That is
+better on three counts: it shares nothing with the truck's other keep-alive
+loads, it reads battery voltage without the BJB's drops in the way, and it uses
+no EEC-V pin, so the A-xx ↔ 1–104 numbering gap below does not block it.
+
+The feed joins the *protected rail*, downstream of the LTC4364's ideal-diode
+FET, through a 2 A fuse at the post, an SMDJ43A, a blocking diode, 470 Ω and an
+SMBJ30A — see
 [`../always-on-domain.md`](../always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
 
-> **[CONFIRM] A-44's number in the 1–104 scheme.** This page numbers VPWR
-> *"A-32, A-33"*; the wiring diagrams number it *"pins 71 and 97"*. **Two
-> numbering systems, no mapping recorded.**
+**So the conclusion "KAPWR is not required" is right by accident.** It was
+reached from *where learned state is stored*, which stopped being the reason the
+moment the MCU stopped powering down. The pin is unused because a better source
+exists, not because nothing needs constant power.
+
+> **[CONFIRM] the A-xx ↔ 1–104 mapping.** This page numbers VPWR *"A-32, A-33"*;
+> the wiring diagrams number it *"pins 71 and 97"*. **Two numbering systems, no
+> mapping recorded anywhere in this repo.** No longer blocking the always-on
+> feed, but every other A-xx reference on this page still depends on it.
 
 ---
 
