@@ -76,14 +76,21 @@ Source: `data-link-connector.png`
 | Pin | Circuit | Colour | Function |
 |---|---|---|---|
 | 2 | 914 | TN/OG | **J1850 BUS (+)** |
-| 4 | 57 | BK | Ground (chassis) |
-| 5 | 570 | BK/WH | Ground (signal return) |
+| 4 | 57 | BK | Ground (chassis) — **→ S202 → G200** |
+| 5 | 570 | BK/WH | Ground (signal return) — **→ G101** |
 | 7 | 70 | LB/WH | **ISO 9141 link** |
 | 10 | 915 | PK/LB | **J1850 BUS (−)** |
 | 13 | 107 | VT | PCM input |
 | 16 | 40 | LB/WH | Power (hot at all times) |
 
 1, 3, 6, 8, 9, 11, 12, 14, 15 not used.
+
+> **Ground destinations from `CommunicationNetwork.png`.** Note where pin 5
+> lands: **circuit 570 to G101 — the same circuit and the same ground point as
+> the PCM's own four power grounds** (`schematic-findings.md` §16). So a scan
+> tool's signal reference and our power return are the same net. J1850 PWM is
+> differential and largely immune, but it is worth knowing which ground the
+> tool is measuring against.
 
 ### What this confirms
 
@@ -594,6 +601,18 @@ Spliced at S157 (914) and S156 (915). The only other device shown is the **NGV
 module**, which is a natural-gas option this truck does not have.
 
 So the SCP bus is **PCM ↔ instrument cluster**, and nothing else.
+
+> ✅ **Confirmed on a single sheet.** `CommunicationNetwork.png` draws both
+> networks together and agrees with every fragment this section was assembled
+> from: SCP is PCM pin 16 (`914 TN/OG`) and pin 15 (`915 PK/LB`) through S157 and
+> S156, via the optional NGV module, to the cluster at C237 and out to DLC pins 2
+> and 10 — **three nodes, one of them optional.** ISO 9141 is circuit 70 LB/WH
+> from S229 to DLC pin 7, carrying the RCM, RAP, 4WABS and GEM — **four modules,
+> none of them the PCM.**
+>
+> Nothing here is new. That is the point: the picture was assembled from the DLC
+> sheet, five cluster sheets and the power-distribution set, and a dedicated
+> network sheet now says the same thing in one place.
 
 This cross-confirms the MegaSquirt pinout exactly: it lists PCM pin 15 as SCP−
 (PNK/LT BLU) and pin 16 as SCP+ (TAN/ORG). Two independent sources, same
