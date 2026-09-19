@@ -49,11 +49,11 @@ none.
 ## DTR is confirmed digital
 
 C182 is the **Digital** Transmission Range sensor — the name is explicit, and it
-matches the MegaSquirt pinout showing separate "Trans Pos Sensor" inputs
-(pins 34, 49, 50 — ⚠ and **not** 64, which two Ford sheets show as the **12 V
-START** signal; **[CONFIRM]** the bit count, see
-[`schematic-findings.md`](schematic-findings.md) §21). It is a gear-position code
-on digital lines,
+matches the MegaSquirt pinout showing four separate "Trans Pos Sensor" inputs
+(pins 34, 49, 64, 50 — ✅ all four confirmed against DTR connector C182; pin 64
+is **TR3A**, and it also carries 12 V while cranking because the DTR is the
+neutral safety switch — [`schematic-findings.md`](schematic-findings.md) §21).
+It is a 4-bit gear-position code on digital lines,
 not an analog ladder.
 
 Four expander inputs, no ADC channel. Decode the pattern to PRNDL.

@@ -678,6 +678,16 @@ CONTENTS
      whatever the answer; it decides only whether a pull-up gets populated.
  11. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
+ 11a. ~CLOSED~ the TR sensor bit count. It is FOUR - TR1/TR2/TR3A/TR4 on PCM
+     pins 34/49/64/50 - confirmed against DTR connector C182
+     (4R70W-Shift-Connector.png). ** A PREVIOUS PASS SAID PIN 64 WAS THE
+     START SIGNAL INSTEAD OF TRANS POS SENSOR 3. IT IS BOTH. ** The DTR is
+     also the NEUTRAL SAFETY SWITCH (its pins 10 and 12 carry starter
+     control and the starter motor relay), so circuit 199 LB/YE is fed from
+     the start circuit THROUGH the range switch. 12 V on pin 64 therefore
+     means CRANKING IN PARK OR NEUTRAL - a better gate for cranking
+     enrichment than a bare start signal, and still what the dwell table's
+     2.56 ms cranking end keys off. findings sec.21.
  12. ~CLOSED~ what shares the 5 A CJB fuse feeding 729 RD/WH - sec.4c.
      PowerDistubution8.png: CJB FUSE 2, 5 A, cavity 11 in / 32 out, then
      splice S236 to THREE loads - the INSTRUMENT CLUSTER (C236-10), OUR

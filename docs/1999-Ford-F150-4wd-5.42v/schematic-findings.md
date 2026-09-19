@@ -553,30 +553,66 @@ cross-check against the protected rail catches it independently.
 
 ## 21. What else the 17 power-distribution sheets settle
 
-### ⚠ Pin 64 is the START signal, not TR bit 3
+### ⚠️ CORRECTED — pin 64 is TR3A **and** the start signal. It is both.
 
-`eec-v-pinout.md` has pin 64 as *"Trans Pos Sensor 3, LT BLU/YEL"*, from the
-MegaSquirt sheet. **Two Ford sheets disagree, and they agree with each other:**
+> **An earlier revision of this section said "pin 64 is the START signal, not
+> Trans Pos Sensor 3", and swept that through four documents. That was wrong,
+> and it was wrong in the worst way: it overrode a source that was right.**
 
-- `EngineControls2.png` — pin 64, `199 LB/YE`, marked **12 V (START)**
-- `PowerDistubution14.png` — traces it: ignition switch **START** → `481 GY/YE`
-  → CJB fuse 20, 5 A → `1000 RD/BK` → C158 → C172 → **`199 LB/YE` → C174 pin 64**
+`4R70W-Shift-Connector.png` — the **DTR sensor, C182** — gives the four range
+bits and settles it:
 
-The colours match (LB/YE = LT BLU/YEL), so this is the familiar pattern: the
-MegaSquirt author saw LB/YE at pin 64, found TR bits on 34/49/50, and assumed the
-fourth. **A tell supports Ford:** pins 34, 49 and 50 each carry a MicroSquirt pin
-annotation (*"Selector pos A/B/C"*) and **pin 64 carries none** — the MS install
-wired three, not four.
+| DTR pin | Circuit | | PCM pin | MegaSquirt sheet says | |
+|--:|---|---|--:|---|---|
+| 4 | `1144 YE/BK` | **TR1** | **34** | *Trans Pos Sensor 1, YEL/BLK* | ✓ |
+| 5 | `1145 LB/BK` | **TR2** | **49** | *Trans Pos Sensor 2, LT BLU/BLK* | ✓ |
+| **3** | **`199 LB/YE`** | **TR3A** | **64** | *Trans Pos Sensor 3, LT BLU/YEL* | ✅ |
+| 6 | `1143 WH/BK` | **TR4** | **50** | *Trans Pos Sensor 4, WHT/BLK* | ✓ |
 
-**This gains a genuinely useful input.** A cranking signal matters for
-cranking enrichment, for not firing injectors before sync, and for the dwell
-table — [`../output-drivers.md`](../output-drivers.md) puts cranking dwell at
-**2.56 ms against 1.33 ms hot**, and knowing you are cranking is how you pick it.
+**All four match, including pin 64.** The TR sensor is 4-bit, as originally
+documented, on pins 34 / 49 / 64 / 50.
 
-> **[CONFIRM] how many bits the TR sensor actually has**, and where the fourth
-> lives if there is one. [`sensors-to-run.md`](sensors-to-run.md) and
-> [`transmission.md`](transmission.md) both state four on 34/49/50/64 and both
-> inherit this error. It changes an input count, not a driver.
+### And both readings were true — the DTR is the neutral safety switch
+
+`EngineControls2.png` and `PowerDistubution14.png` really do show `199 LB/YE`
+arriving at pin 64 marked **12 V (START)**. That is not a contradiction, and the
+same connector explains it:
+
+| DTR pin | | |
+|--:|---|---|
+| 10 | `325 DB/OG` | **Starter control** |
+| 12 | `1093 TN/RD` | **Starter motor relay** |
+
+**Circuit 199 is fed from the start circuit *through* the range switch.** So the
+PCM sees 12 V on pin 64 **only when cranking in Park or Neutral** — which is
+simultaneously a crank indication *and* a range bit. That is precisely what TR3A
+is for.
+
+**What survives from the wrong version:** the signal is still useful as a crank
+indication — arguably more so, because it is *gated by range*, which is exactly
+when cranking enrichment should apply. The dwell table's cranking end
+([`../output-drivers.md`](../output-drivers.md), 2.56 ms at 9 V) can still key
+off it.
+
+**What I should have noticed:** the "tell" I leaned on — that pins 34/49/50 carry
+MicroSquirt annotations and 64 does not — is evidence about *what that install
+wired*, not about *what the pin is*. Weak evidence, over-weighted against two
+Ford sheets that were describing the same wire from a different direction.
+
+### The rest of the DTR connector
+
+| Pin | Circuit | |
+|--:|---|---|
+| 2 | `359 GY/RD` | **Signal return** — the same SIGRTN as PCM pin 91 |
+| 7 | `57 BK` | Chassis ground, *separate from* signal return |
+| 8 | `463 RD/WH` | **Electronic shift control module feed** → the GEM's pin 22 *neutral sense* ([`gem-module.md`](gem-module.md)) |
+| 9 | `295 LB/PK` | Power, hot in run |
+| 11 | `140 BK/PK` | Reversing lamps feed |
+
+**So the DTR is a multi-function switch pack**, not just a range encoder: four
+range bits to the PCM, neutral-safety for the starter, reversing lamps, and a
+neutral sense to the GEM. Replacing the PCM touches only the four range bits —
+everything else on that connector bypasses us entirely.
 
 ### The coil feed, and it has noise capacitors on it
 
