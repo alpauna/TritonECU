@@ -7,8 +7,9 @@ outline rather than the other way round — see
 
 **Donor PCM envelope: 158 W × 174 L × 31 H mm.**
 
-> **The donor's *case bottom* may be reused rather than reproduced** — metal,
-> with the vehicle bolt pattern and the connector face already correct. That
+> **The donor's *case bottom* is reused, not reproduced** — and it is now a
+> **requirement**: its metal flange wraps the 104-pin socket on all four sides
+> and takes the mating force, which the PCB therefore does not. That
 > reframes these constraints: **X–Y is fixed because the bottom is fixed, and
 > height is adjustable because only the lid changes.** See
 > [`DonorECU/README.md`](DonorECU/README.md).

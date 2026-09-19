@@ -192,20 +192,37 @@ controlled drawing usually marks an optional or as-supplied feature.
 the rusEFI board, and a connector *with* the nut still drops in. **Omitting it is
 the only choice that forecloses anything.**
 
-> **But the open question is the load path.** A 104-way connector is not pushed
-> home by hand. If there is no centre bolt into a nut, something else takes that
-> force — and the candidate is **the case's metal lip**, which seats into the
-> connector body.
+### ✅ ANSWERED — the case takes it, on all four sides
+
+**The enclosure's metal flange wraps the entire 104-pin socket. All four sides
+are supported.**
+
+So the load path is settled:
+
+| | |
+|---|---|
+| **Mating force** | **the case flange**, in every direction |
+| Posts | alignment and anti-rotation |
+| Solder joints | **electrical only** — they carry no insertion load |
+
+That is why the centre nut is optional and why 104 ways can be mated without
+tearing pads: the connector is *captured*, not merely soldered.
+
+> ### ⭐ Which makes reusing the metal base a requirement, not a convenience
 >
-> **That would make the lip structural, not merely locating** — and it changes
-> what the enclosure owes the design. A printed lid over a reused metal base is
-> fine if the base carries it; a fully printed enclosure would have to reproduce
-> a load path, not just a shape.
+> [`DonorECU/README.md`](../DonorECU/README.md) argued for reusing the donor's
+> case bottom on grounds of mounting, connector face, shielding and thermal
+> path — all good reasons, none of them forcing. **This one forces it.**
 >
-> **[CONFIRM] how the harness connector clamps on this truck** — centre bolt,
-> side latches, or the lip. It is a five-second look at the mating half, and it
-> decides whether [`../enclosure.md`](../enclosure.md) has a structural
-> requirement it does not currently know about.
+> A fully printed enclosure would have to reproduce **a four-sided metal flange
+> carrying repeated 104-way insertion force**, in a vehicle, under vibration.
+> Possible; not worth attempting when a correct one comes free with the donor.
+
+> **[MEASURE] the flange's inner dimensions.** It defines a **PCB keepout at the
+> connector end** — nothing can be placed where the flange sits, and its inner
+> boundary fixes how the board edge relates to the connector. Combined with TE's
+> **board edge at 5.20 below the post centreline**, that is the last geometric
+> unknown at that end of the board.
 
 > **Build the footprint from the drawing directly.** The row Y positions are
 > dimensioned from the post centreline (**6.00 / 3.05 / 0 / 2.85**, board edge at

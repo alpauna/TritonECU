@@ -115,11 +115,20 @@ giving up any of the above.
 > **[CONFIRM] the lid joint** — flange width, screw positions and whether the OEM
 > sealed it with a gasket or RTV. That is what a printed lid has to mate to.
 
-> ⚠ **And the lip may be structural.** The connector's centre nut — TE's optional
-> retention — **is not fitted on this donor**, so something else takes the force
-> of mating a 104-way connector. The case's metal lip is the candidate. **If it
-> is carrying that load, reusing the metal base stops being a convenience and
-> becomes a requirement.** See
+> ## ⭐ CONFIRMED — the base is a requirement, not a convenience
+>
+> **The metal flange wraps the entire 104-pin socket, supported on all four
+> sides.** So the case — not the PCB — takes the force of mating a 104-way
+> connector. The posts align it; the solder joints are electrical only.
+>
+> The four reasons above (mounting, connector face, shielding, thermal) were all
+> good and none of them forcing. **This one forces it.** A fully printed
+> enclosure would have to reproduce a four-sided metal flange carrying repeated
+> insertion force in a vehicle under vibration — possible, and not worth
+> attempting when a correct one comes free with the donor.
+>
+> **[MEASURE] the flange's inner dimensions**: it is a **PCB keepout** at the
+> connector end. See
 > [`../1999-Ford-F150-4wd-5.42v/connector-sourcing.md`](../1999-Ford-F150-4wd-5.42v/connector-sourcing.md).
 
 ## What the divot actually decides
