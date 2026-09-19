@@ -46,7 +46,7 @@ no connector prefix. **Wire from this sheet.**
 | 17 | -- | -- | Same |  |  |
 | 18 | -- | -- | Same |  |  |
 | 19 | Low Cool Fan | HC3 Inverted | -- |  | Electric Fan 1 |
-| 20 | -- | -- | CSS | BRN/ORG | MicroSquirt Pin 16 (Solenoid D) |
+| 20 | -- | -- | ~~CSS~~ **FREE** | ~~BRN/ORG~~ | ✅ **The coast clutch solenoid is a 4R100 part.** This sheet was developed on a 4R100, not the 4R70W in this truck — [`../output-drivers.md`](../output-drivers.md) |
 | 21 | CKP+ | CKP+ | Same | DK BLU |  |
 | 22 | CKP- | CKP- | Same | GRY |  |
 | 23 | -- | -- | Same |  |  |
@@ -175,8 +175,9 @@ See [`../output-drivers.md`](../output-drivers.md) and
 
 ### New — things not in the design yet
 
-- **CSS, Coast Clutch Solenoid (pin 20, BRN/ORG).** A *fourth* 4R70W solenoid.
-  The inventory listed SSA, SSB, TCC and EPC. This is a fifth output.
+- ~~**CSS, Coast Clutch Solenoid (pin 20, BRN/ORG).** A *fourth* 4R70W solenoid.~~
+  ✅ **CLOSED — it is a 4R100 part and does not exist on a 4R70W.** This sheet
+  was developed on a 4R100. The inventory of SSA, SSB, TCC and EPC was right.
 - **TR sensor is a 4-bit digital code**, not an analog ladder — TR1/TR2/TR3A/TR4
   on pins **34, 49, 64, 50**. Digital inputs decoded as a gear pattern, not an
   ADC channel. ✅ **Confirmed against the DTR connector C182**

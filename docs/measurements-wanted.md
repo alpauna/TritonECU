@@ -24,7 +24,7 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 | **IMCC** | C118 | — | **and [CONFIRM] whether it is on/off or PWM** — a PWM part will usually be lower resistance |
 | ~~**SSA**~~ | — | 27 | ✅ **CLOSED — Ford spec 20–30 Ω**, 0.72 A worst case |
 | ~~**SSB**~~ | — | 1 | ✅ **CLOSED — Ford spec 20–30 Ω** |
-| **CSS — coast clutch** | ? | 20 | ⭐ **and does it exist at all?** Now **two** Ford sources omit it where they would be expected to list it: the 4R70W wiring diagram, and test A7 which tests SSA, SSB and TCC and stops. Against one MegaSquirt sheet that lists it. **If the connector is not on the transmission, that closes it** |
+| ~~**CSS — coast clutch**~~ | — | 20 | ✅ **CLOSED — it does not exist on a 4R70W.** It is a **4R100** part, and the MegaSquirt sheet was developed on a 4R100. Pin 20 is free |
 | ~~**TCC**~~ | — | 54 | ✅ **CLOSED — Ford spec 10–16 Ω → 1.44 A worst case.** Higher than assumed; **give it a pour** |
 | **EPC** | C183 | 81 | already NCV8408B DPAK; confirms |
 
@@ -32,9 +32,14 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 beats a measurement where one exists, and `4r70W-Test-Key-Solenoid.png` has just
 proved the point by closing three of these rows without a meter.
 
-## 2. Inductance of the PWM coils — freewheel energy per cycle
+## 2. Inductance — freewheel energy, and the clamp margin
 
 Same meter, same parts: **EVR, EVAP purge, IMCC (if PWM), TCC, EPC**.
+
+⭐ **And SSA/SSB**, whose resistance Ford specifies but whose **inductance is what
+the clamp-energy margin actually turns on** — that margin just moved from 7.3× to
+**3.5×** when the honest end of Ford's 20–30 Ω range was used
+([`output-drivers.md`](output-drivers.md)).
 
 Resistance gives the steady current; **inductance gives the energy the freewheel
 diode has to absorb every cycle** (`½LI²`) and the decay time. Those set the

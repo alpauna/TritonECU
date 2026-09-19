@@ -473,7 +473,7 @@ slow group:**
 | Load | Current | Verdict |
 |---|---|---|
 | HO2S heaters ×4 | **~1–2 A each** | ✗ far over. Needs its own driver |
-| ~~SS1, SS2, CSS~~ | *superseded — see SSA/SSB/TCC below* | |
+| ~~SS1, SS2, CSS~~ | *superseded — and **CSS does not exist on a 4R70W**, see below* | |
 | EVAP purge, EGR regulator | ~0.5–1 A, PWM | ⚠ marginal — measure first |
 | IMCC | **[CONFIRM]** on/off or PWM, likely ~0.5 A | ⚠ measure first |
 | **SSA, SSB** | **0.48–0.72 A** — Ford spec 20–30 Ω | ✗ over the TBD62083. **NCV8405A, as chosen** |
@@ -815,17 +815,24 @@ A fourteenth channel — **VSS out** — is added below.
 This also bounds
 [`review-protection-sweep.md`](review-protection-sweep.md) §A1, which found
 clamp energy rising 4× in a load dump. Once the loads are classified, **only the
-three on/off shift solenoids can clamp at all** — the heaters store nothing and
-the PWM loads recirculate. At a Ford shift solenoid's real ~0.5 A rather than
-the 1 A assumed, the energy is 4× lower again:
+~~three~~ two on/off shift solenoids can clamp at all** — the heaters store
+nothing, the PWM loads recirculate through their freewheel diodes, and **CSS does
+not exist on a 4R70W** (see below).
 
-| | Clamp energy | Margin on E<sub>AS</sub> = 275 mJ |
+| At 14.4 V | Clamp energy | Margin on E<sub>AS</sub> = 275 mJ |
 |---|--:|--:|
-| Normal, 14 V | 9.4 mJ | 29× |
-| Load dump, 35 V | **37.5 mJ** | **7.3×** |
+| **0.5 A** — Ford's 30 Ω end | 37.5 mJ | 7.3× |
+| **0.72 A** — Ford's 20 Ω end, **worst case** | **77.8 mJ** | **3.5×** |
 
-The margin is restored, and the `[MEASURE]` narrows from every inductive load to
-**the three shift solenoids only**.
+> ⚠ **Corrected.** This said *"a Ford shift solenoid's real ~0.5 A"* and quoted
+> **7.3×**. 0.5 A is the **30 Ω end** of Ford's specified 20–30 Ω — the
+> optimistic one. **Energy goes as I², so at 20 Ω the margin more than halves,
+> to 3.5×.** Still comfortable, and now a specified range rather than a single
+> assumed value.
+
+The `[MEASURE]` narrows to **SSA and SSB only**, and their *resistance* is now
+specified by Ford — what remains is their **inductance**, which is what the
+energy above actually turns on.
 
 ### Drain-voltage sense — the load diagnoses itself
 
@@ -1140,3 +1147,35 @@ has failed.
 
 All four keep the rule from `custom-board.md`: **clamp both, dissipate
 neither**, with the clamp voltage chosen for what the load is meant to do.
+
+---
+
+## ✅ CSS — it does not exist on a 4R70W, and that explains the MegaSquirt sheet
+
+**The coast clutch solenoid is a 4R100 part.** The MegaSquirt mapping this
+project has been cross-checking against **was developed on a 4R100**, not the
+4R70W in this truck — which is why `CSS` appears on pin 20 of that sheet and
+nowhere in Ford's 4R70W material.
+
+That closes the `[CONFIRM]`, and it explains a pattern rather than just one
+entry:
+
+| | |
+|---|---|
+| **Ford's 4R70W wiring diagram** | no coast clutch solenoid |
+| **Ford test step A7** | tests SSA, SSB, TCC — and stops |
+| **MegaSquirt sheet** | lists CSS on pin 20 |
+
+Two silences and one mention, now with a reason for the mention.
+
+**Nothing on the board changes.** CSS was never in the thirteen NCV8405A
+channels — the channel budget is HO2S ×4, EVAP purge, EGR regulator, canister
+vent, IMCC, SSA, SSB, TCC, IAC and VSS out — and `pin-budget.md` was corrected
+away from the `SS1/SS2/CSS` naming earlier. **EEC-V pin 20 is simply free.**
+
+> **The wider lesson, and it is worth carrying.** The MegaSquirt sheet is a
+> *different transmission's* mapping applied to this truck. Every transmission
+> entry taken from it needs a Ford source behind it — and every one that matters
+> now has: TR1/TR2/TR3A/TR4 against connector C182, TFT/TCC/EPC/SSA/SSB against
+> the 4R70W diagram. **CSS was the only one left unconfirmed, and it was the one
+> that was wrong.**
