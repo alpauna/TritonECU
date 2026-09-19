@@ -220,8 +220,49 @@ Tape is **5–10× worse than a gap pad** — and it was the right call, because
 4–5 °C/W on a D2Pak beats 60–130 °C/W into still air, and tape needs **no
 fastener, no clamp bar and no assembly torque**.
 
-**Keep the approach.** Reach for a gap pad where a specific part runs hot. Do not
-treat the tape as a compromise: it is the reason the OEM board worked.
+**Keep the approach.** Do not treat the tape as a compromise: it is the reason
+the OEM board worked.
+
+### ✅ Candidate part — and it beats the assumption by 3×
+
+**HPFIX thermal tape**: 0.2 mm, **1.5 W/m·K**, **fiberglass mesh carrier**,
+**4 kVAC** breakdown, −30 to +120 °C (180 °C short).
+
+| Interface | Assumed 3M 8810-class | **This tape** | Silicone gap pad |
+|---|--:|--:|--:|
+| D2Pak tab | 4.41 °C/W | **1.41 °C/W** | 1.76 °C/W |
+| DPAK tab | 9.86 °C/W | **3.16 °C/W** | 3.94 °C/W |
+| SOT-223 tab | 9.16 °C/W | **2.93 °C/W** | 3.66 °C/W |
+
+**Level with a gap pad, with none of the fastening.** Every edge-cooling figure
+above was computed on the pessimistic number, so **the thermal margin is better
+than recorded, not worse** — and the "reach for a gap pad where a part runs hot"
+note largely goes away.
+
+**The dielectric is the spec that matters most, and it is comfortable.** IGBT
+tabs sit at **400 V** every spark event against a **4 kVAC** withstand — 10×.
+And the **fiberglass mesh carrier is why that number is trustworthy**: an
+unreinforced acrylic tape thins under clamping pressure and the withstand thins
+with it. Mesh holds the bond line at 0.2 mm.
+
+> ### ⚠ Two things to check before committing
+>
+> **−30 °C is short of automotive −40 °C.** The ECU is cabin-mounted, so it
+> cold-soaks to ambient. The consequence is a brittle adhesive losing grip —
+> **thermal degradation, not a short, and not a mechanical failure**, because the
+> tape is not structural. Acceptable, but know it.
+>
+> **The O2 heater cold-start transient would exceed it.** 16–49 W in a SOT-223
+> against 2.93 °C/W is far past 180 °C. **That is exactly what the PWM ramp
+> exists to prevent** — so the tape's rating is one more reason the ramp is not
+> optional.
+
+> ### ⛔ Not for holding the PCB down
+>
+> The tape is for the **thermal path** — device tab to case, as the OEM did.
+> **The board is retained by its mounting screws.** Adhesive as primary PCB
+> retention in a vibration environment is a different proposition from adhesive
+> as a thermal interface, and this product is specified for the second.
 
 ### ⚠ The tape is also the insulator — and the IGBT tabs sit at 400 V
 
