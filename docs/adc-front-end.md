@@ -369,8 +369,12 @@ Neither is a reason to spend the extra $50.
 **This document owns the divider value: ~~150 kΩ / 33 kΩ~~ 180 kΩ / 30 kΩ,
 and it now hangs on the battery lead, not the protected rail.**
 
-> ⚠ **Both the value and the node changed**, and the node is what forced the
-> value. See [`always-on-domain.md`](always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
+> ⚠ **Both the value and the node changed**, and the node moved twice. **It now
+> hangs on EEC-V pin 55** — circuit 729 RD/WH, Central Junction Box, hot at all
+> times — not on the always-on lead. A sense-only divider draws 67 µA, at which
+> the CJB path that ruled pin 55 out as a *power* source costs 11 µV. See
+> [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §19.
+> The headroom sizing below is unchanged and still governs. See [`always-on-domain.md`](always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
 > Placed downstream of the always-on feed's blocking diode and 470 Ω, this
 > divider read **0.51 V low when parked, with a load-dependent correction** — an
 > error that reads as a weak battery for a year. Moved **upstream**, to the
@@ -418,6 +422,11 @@ Two things follow from the choice:
 - **Ratio is exactly 7.000**, which is a pleasant calibration constant, and one
   LSB is **2.1 mV** referred to the battery against a **0.1 V** resolution
   target — not close to binding.
+- **This channel stays unbuffered**, so unlike the four O2 channels it keeps the
+  ADS8588H's **9 kV input clamp**. The 180 kΩ top leg limits the harness to
+  ≤ 0.5 mA at any plausible transient, so the clamp is never stressed —
+  [`o2-input-stage.md`](o2-input-stage.md) §2 had to add a BAT54S only because a
+  buffer moved that boundary.
 - **Reverse battery reads as −1.71 V**, inside the bipolar range. The ±10 V
   setting, chosen for other reasons, makes a reversed-battery condition
   *diagnosable* rather than merely survivable.

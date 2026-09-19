@@ -343,5 +343,96 @@ battery-sense divider reads **true** battery voltage, which a feed through the
 Central Junction Box cannot do. But it makes that a **trade** rather than a
 consequence of not finding the pin, and it leaves one thing open:
 
-> **[DECIDE]** what the board does with pin 55. It is a permanently hot 12 V pin
-> that will be present at our connector whether we use it or not.
+> ~~**[DECIDE]** what the board does with pin 55.~~ **DECIDED — §19.**
+
+---
+
+## 19. DECIDED — pin 55 is the battery-voltage sense pin
+
+**Power and measurement split, on separately fused wires.**
+
+| | Supplies | Senses | Fuse |
+|---|---|---|---|
+| **Dedicated battery lead** | the always-on rail | — | 2 A at the post |
+| **Pin 55**, circuit 729 RD/WH | — | **battery voltage** | 5 A in the CJB |
+
+### The objection to pin 55 does not survive the current
+
+Pin 55 was ruled out as a *power* source because it reaches the PCM through the
+Central Junction Box, and the divider has to read true battery. **That reasoning
+was about carrying supply current.** As a sense-only input the 180 k/30 k divider
+draws **66.7 µA**, and the CJB path stops mattering:
+
+| Assumed path resistance | Drop at 66.7 µA |
+|---|--:|
+| 0.05 Ω — fuse alone | 3.3 µV |
+| 0.16 Ω — fuse, contacts and wire, realistic | **10.7 µV** |
+| 1.0 Ω — absurdly corroded | 66.7 µV |
+
+**Even a fully corroded ohm of path costs 67 microvolts.** The reading *is*
+battery voltage. The objection applied to amps, and there are none.
+
+> **[CONFIRM]** nothing else sits on that 5 A CJB fuse. `Engine-Controls.png`
+> draws 729 RD/WH running C242 → C160 → pin 55 with no other load on it, so there
+> is no shared-segment current to create a drop — but the sheet shows one branch,
+> not the whole fuse.
+
+### Parked drain is unchanged — it moves, it does not grow
+
+| | |
+|---|--:|
+| Dedicated lead | **117 µA** — the converter chain only |
+| Pin 55 | **67 µA** — the divider |
+| **Total** | **184 µA**, exactly as before |
+
+### ⚠ The failure mode this creates, and handling it *is* the design
+
+Sense and supply are now independent, **so one can fail without the other**:
+
+```
+  CJB fuse blows, or 729 opens
+    -> pin 55 floats, the 30k leg pulls the node to 0 V
+    -> battery reads 0.0 V
+    -> THE ECU IS STILL RUNNING, off the dedicated lead
+```
+
+Left alone, the low-battery self-disable sees 0 V and **parks the ECU on a
+perfectly good battery** — the exact failure the divider was moved upstream to
+avoid, reintroduced by a different route.
+
+**The cross-check is already on the board.** The INA238 reads the *protected
+rail*, fed by our lead when parked and by VPWR when the key is on. **It is never
+fed by 729.**
+
+| Pin 55 | Protected rail | Diagnosis |
+|---|---|---|
+| > 11 V | > 11 V | normal |
+| **< 2 V** | **> 11 V** | **729 open / CJB fuse blown** — *not* a flat battery |
+| < 11.5 V | < 11.5 V | genuinely low battery → self-disable |
+| > 11 V | < 2 V | our lead's fuse — but then nothing is running to notice |
+
+**The self-disable must require agreement, not merely a low reading.**
+Disagreement is a wiring fault: set a code, do not park the ECU. Allow ~1 V of
+slack — parked, the rail sits 0.48 V below the lead through D3 and R7.
+
+### Protection: this channel keeps what the O2 channels lost
+
+| | At the pin | Into the node | Node |
+|---|--:|--:|--:|
+| ISO 7637-2 pulse 5b, suppressed | 35 V | 167 µA | 5.00 V |
+| SMDJ43A clamp equivalent | 69.4 V | 331 µA | 9.91 V |
+| ISO 7637-2 pulse 1 | −100 V | −476 µA | −14.3 V |
+
+**The 180 kΩ top leg is the protection** — nothing in the harness can push more
+than half a milliamp into this node. And because this channel is **unbuffered**,
+it still sits behind the **ADS8588H's 9 kV input clamp**:
+[`../o2-input-stage.md`](../o2-input-stage.md) had to add a BAT54S precisely
+because a buffer relocated that boundary, and here it never moved.
+
+Add an **SMBJ30A** at the pin anyway — **the same part as TVS3** on the always-on
+lead, so no new line item — which caps the node at 5.1 V.
+
+**Divider unchanged: 180 kΩ / 30 kΩ, ratio 7.000**, 2.000 V at 14 V, one LSB =
+2.1 mV referred to the battery against a 0.1 V target.
+
+Reproduced by [`../calc/pin55_sense.py`](../calc/pin55_sense.py).

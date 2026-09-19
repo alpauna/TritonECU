@@ -1103,11 +1103,13 @@ Numbers below are reproduced by [`calc/kapwr_feed.py`](calc/kapwr_feed.py).
 > KAM"*, and nothing connected **K**eep **A**live **M**emory to **KAPWR**. See
 > [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §18.
 >
-> **The dedicated lead still wins on the requirement that drove it** — the
-> divider must read *true* battery voltage, and a feed through the CJB cannot
-> deliver that. But it is now a trade, not a workaround, and **[DECIDE]** remains
-> open on what the board does with pin 55, which is live at our connector either
-> way.
+> **DECIDED: pin 55 becomes the battery-voltage sense pin**, and the dedicated
+> lead becomes power-only. The CJB objection applied to carrying *supply*
+> current; a sense-only divider draws 67 µA, at which even a corroded ohm of path
+> costs 67 **micro**volts. Power and measurement now sit on separately fused
+> wires — see
+> [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §19,
+> including the failure mode it creates and the cross-check that handles it.
 That retires the `[CONFIRM]` that was blocking the drawing — A-44 has no number
 in the 1–104 scheme, because two numbering systems coexist in this repo with no
 mapping. **A dedicated lead uses no EEC-V pin, so the question never has to be
@@ -1115,11 +1117,13 @@ answered to build the board.** It also means the feed shares nothing with the
 truck's other keep-alive loads, and reads battery voltage without the BJB's drops
 in the way.
 
-**2. The battery-sense divider moves upstream of D3 and R7.** Downstream it read
-**0.51 V low when parked, with a load-dependent correction** — see the note
-below. Upstream it reads true battery voltage and the correction disappears.
-The value changed with the node: **180 k / 30 k**, re-sized in
-[`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider), which owns it.
+**2. The battery-sense divider is not on this lead at all — it is on pin 55.**
+Downstream of D3 and R7 it read **0.48 V low when parked, with a load-dependent
+correction**. Upstream it read true battery. **On pin 55 it reads true battery
+*and* leaves this lead carrying nothing but supply current**, on a separate fuse.
+The value is **180 k / 30 k**, owned by
+[`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider); §19 of the
+findings covers the move.
 
 **KAPWR joins the protected rail, downstream of the ideal-diode FET** — not the
 LTC4364's input. Three things follow, and the first is the argument:
@@ -1214,7 +1218,7 @@ Once the divider is on the battery and the INA238 is on the protected rail,
 
 | Reads | |
 |---|---|
-| 180k/30k divider | **battery voltage**, at the post |
+| 180k/30k divider on **pin 55** | **battery voltage** |
 | INA238 | **protected rail**, after F1, the relay contact and the 361 RD run |
 
 Their difference, under whatever load the ECU is drawing, is **the drop across

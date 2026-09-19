@@ -22,6 +22,7 @@ CONTENTS
    4. Analog inputs - ADS8588H
   4a. O2 signal path - four buffered channels
   4b. The bias node is also the excitation source
+  4c. Battery voltage sense - EEC-V pin 55
    5. Ignition - 8 x COP
    6. Injection - 8 x sequential
    7. Solenoids and heaters
@@ -50,11 +51,11 @@ CONTENTS
    |                                                          |
    [F2 2A, within 150-300 mm of the post - protects the WIRE]  |
    |  18 AWG, loomed, grommeted at the firewall               |
-   [SMDJ43A]--+--[D3]--[R7 470R]--+--------------+------------+
-              |                   |              |
-        [180k/30k]            [SMBJ30A]          |
-              |  +--> ADC, TRUE BATTERY          |
-             PGND                PGND            |
+   [SMDJ43A]-----[D3]--[R7 470R]--+--------------+------------+
+                                  |              |
+                              [SMBJ30A]          |
+                                  |              |
+                                 PGND            |
                                  +--------------+-------------+
                                                 |             |
                                           MAX25239AFFA    NCV8772CDT504RKG
@@ -104,10 +105,11 @@ CONTENTS
   EEC-V pin at all, which retires the A-xx / 1-104 numbering [CONFIRM]
   that was blocking this drawing.
 
-  ** THE BATTERY DIVIDER IS UPSTREAM OF D3 AND R7. ** Downstream it would
-  read 0.48 V LOW when parked, with a LOAD-DEPENDENT correction - the
-  low-battery self-disable set at 11.5 V would really trip near 11.98 V,
-  giving up on a healthy battery. Upstream, the error does not exist.
+  ** THE BATTERY DIVIDER IS NOT ON THIS LEAD AT ALL - IT IS ON PIN 55. **
+  See sec.4c. Downstream of D3 and R7 it would read 0.48 V LOW when parked
+  with a LOAD-DEPENDENT correction; upstream it reads true battery but ties
+  the measurement to the supply's own fuse. Pin 55 gives true battery on a
+  SEPARATE fuse and leaves this lead carrying supply current only.
 
   ** THE VALUE CHANGED WITH THE NODE: 180k/30k, ratio 7.000. ** On the
   battery lead the worst case is the SMDJ43A's 69.4 V clamp, not the
@@ -280,6 +282,65 @@ CONTENTS
   ceramic's sake; that is what creates the windows this needs, and this
   is what lets that ramp close its loop. Neither was designed for the
   other. o2-input-stage.md section 7.
+
+
+4c. BATTERY VOLTAGE SENSE - EEC-V PIN 55
+---------------------------------------
+
+  Circuit 729 RD/WH, Central Junction Box, HOT AT ALL TIMES, 5 A. This
+  truck's keep-alive pin. The pinout calls it "B+ KAM", which is why it went
+  unnoticed for so long - KAM is Keep Alive Memory, which is KAPWR.
+
+   pin 55 --+--[SMBJ30A]-- PGND         same part as the lead's TVS3
+            |
+            +--[180k 1%]--+--[30k 1%]-- AGND
+                          |
+                          +------------> ADS8588H       ratio 7.000
+
+  ** PIN 55 SENSES, THE BATTERY LEAD SUPPLIES. ** Separately fused - 5 A in
+  the CJB, 2 A at the post - so measurement and power do not share a single
+  failure. It also gives a permanently hot pin a job, and "unconnected" was
+  always the weaker answer for a pin that is live at our connector whether
+  we use it or not.
+
+  ** THE CJB OBJECTION APPLIED TO AMPS AND THERE ARE NONE. ** Pin 55 was
+  ruled out as a POWER source because it reaches the PCM through the Central
+  Junction Box. As a sense-only input the divider draws 66.7 uA:
+
+      0.16 ohm of fuse + contacts + wire  ->  10.7 uV
+      1.00 ohm, absurdly corroded         ->  66.7 uV
+
+  Parked drain does not grow, it moves: 117 uA on the lead, 67 uA on pin 55,
+  184 uA total as before.
+
+  ** THE FAILURE MODE, AND HANDLING IT IS THE DESIGN. ** Sense and supply
+  are independent now, so ONE CAN FAIL WITHOUT THE OTHER. If the CJB fuse
+  blows, pin 55 floats, the 30k leg pulls the node to 0 V, and BATTERY READS
+  ZERO WHILE THE ECU IS STILL RUNNING off the dedicated lead. Left alone,
+  the low-battery self-disable parks the ECU on a good battery - the exact
+  failure the divider was moved to avoid, by a different route.
+
+  Cross-check against the INA238, which reads the PROTECTED RAIL and is
+  never fed by 729:
+
+      pin 55    rail     diagnosis
+      >11 V     >11 V    normal
+      <2 V      >11 V    ** 729 OPEN / CJB FUSE BLOWN ** - not a flat battery
+      <11.5 V   <11.5 V  genuinely low battery -> self-disable
+
+  ** THE SELF-DISABLE REQUIRES AGREEMENT, NOT JUST A LOW READING. **
+  Disagreement is a wiring fault: set a code, do not park the ECU. Allow
+  ~1 V of slack - parked, the rail sits 0.48 V below the lead through D3
+  and R7.
+
+  ** THIS CHANNEL KEEPS THE ADS8588H's 9 kV CLAMP ** because it is
+  UNBUFFERED, unlike the four O2 channels of sec.4a. The 180k top leg holds
+  the harness to <= 0.5 mA at any plausible transient (-100 V pulse 1 gives
+  -476 uA), so the clamp is never stressed. o2-input-stage.md had to add a
+  BAT54S only because a buffer relocated that boundary; here it never moved.
+
+  adc-front-end.md owns the divider value. findings sec.19.
+  calc/pin55_sense.py.
 
 
 5. IGNITION - 8 x COIL ON PLUG
@@ -537,39 +598,84 @@ CONTENTS
 14. OPEN
 --------
 
+  MEASUREMENTS
+
   1. ** Coil primary inductance is unmeasured. ** It sets the dwell limit
      against the ISL9V3040's 300 mJ rating. Measure one coil. This is a
      measurement, not a decision.
-
   2. [MEASURE] the O2 heater's COLD resistance - sec.7. It sets the ramp
      start and decides whether the driver sees 16 W or 49 W if it is ever
      allowed into current limit.
-  3. [CONFIRM] what the speed control servo, GEM and rear air suspension
-     module expect on circuit 679 - sec.8a. The open-drain default is safe
-     whatever the answer; it decides only whether a pull-up gets populated.
-  4. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
-     not on Ford's 4R70W diagram - sec.7. It changes the channel count.
+  3. [MEASURE] cell impedance against temperature, to set the light-off
+     threshold - sec.4b. This is a calibration the board performs ON ITSELF
+     during the first warm-ups, not a bench task. It replaces the old
+     "characterise a sensor on the bench" item, which would have given one
+     number, from one sensor, on one day.
+  4. [MEASURE] battery-to-protected-rail drop once running - sec.1 and 4c.
+     It is the EEC relay contact plus the 361 RD run, and the pin 55 / INA238
+     split makes it observable for the first time.
+
+  DATASHEET CONFIRMATIONS
+
   5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
   6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
-  9. ~CLOSED~ the A-xx / 1-104 pin numbering question - sec.12. THERE IS NO
-     MAPPING: EEC-V-Power-Pins.png describes a THREE-CONNECTOR PCM ("Connector
-     A / B / C signal return", and VPWR on ADJACENT pins A-32/A-33 where this
-     truck's are 71 and 97, twenty-six apart). This truck has ONE 104-pin
-     connector, numbered flat, on a physical 4 x 26 layout - grounds
-     25/51/77/103 are one whole column, VPWR 71/97 another, coils occupy two
-     complete columns. eec-v-pinout.md is the authority. Two conclusions that
-     rested on the chart CHANGED: sensor returns are TWO branches (pins 36 and
-     91), not three; power grounds are FIVE (3, 24, 51, 77, 103), not four.
- 10. [CONFIRM] the LTC4364 tolerates OUT held at battery while IN is at 0 V
-     - sec.1. That is the parked state BY CONSTRUCTION now.
- 11. [MEASURE] battery-to-protected-rail drop once running - sec.1. It is
-     the EEC relay contact plus the 361 RD run, and it is now observable.
   7. [CONFIRM] the F767 DAC's output impedance and its true reset-state
-     leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k
-     divider makes the second benign, but neither is read off a datasheet
-     yet.
-  8. [MEASURE] cell impedance against temperature, to set the light-off
-     threshold - sec.4b. This is a calibration the board performs ON
-     ITSELF during the first warm-ups, not a bench task. It replaces the
-     old "characterise a sensor on the bench" item, which would have given
-     one number, from one sensor, on one day.
+     leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k divider
+     makes the second benign, but neither is read off a datasheet yet.
+  8. [CONFIRM] the LTC4364 tolerates OUT held at battery while IN is at 0 V
+     - sec.1. That is the parked state BY CONSTRUCTION now.
+  9. [CONFIRM] D3 reverse leakage at 125 C - sec.1. Reverse-biased only with
+     the key on and the MCU awake, so it costs nothing in the sleep budget -
+     but a Schottky would leak tens of uA and is the wrong part here for
+     exactly that reason. Silicon, and take the 0.42 V.
+
+  VEHICLE CONFIRMATIONS
+
+ 10. [CONFIRM] what the speed control servo, GEM and rear air suspension
+     module expect on circuit 679 - sec.8a. The open-drain default is safe
+     whatever the answer; it decides only whether a pull-up gets populated.
+ 11. [CONFIRM] CSS - the coast-clutch solenoid is on the MegaSquirt sheet and
+     not on Ford's 4R70W diagram - sec.7. It changes the channel count.
+ 12. [CONFIRM] nothing else sits on the 5 A Central Junction Box fuse feeding
+     729 RD/WH - sec.4c. Engine-Controls.png draws one branch to pin 55, not
+     the whole fuse. Anything else on it would put shared current in the
+     sense path. At 66.7 uA our own contribution is 11 uV.
+
+
+14a. CLOSED, AND WORTH KEEPING CLOSED
+-------------------------------------
+
+  * THE A-xx / 1-104 PIN MAPPING DOES NOT EXIST. EEC-V-Power-Pins.png
+    describes a THREE-CONNECTOR PCM - its own text says "Connector A / B / C
+    signal return" - and puts VPWR on ADJACENT pins A-32/A-33 where this
+    truck's are 71 and 97, twenty-six apart. This truck has ONE 104-pin
+    connector on a physical 4 x 26 layout: grounds 51/77/103 plus 3, VPWR
+    71/97 in one column, coils in two complete columns.
+    eec-v-pinout.md is the authority. calc/eec_v_numbering.py.
+
+    Two conclusions that rested on that chart CHANGED:
+      - Sensor returns are ONE SIGRTN (pin 91, circuit 359, spliced at
+        S135/S138) PLUS a dedicated MAF return (pin 36, circuit 968). Not
+        three branches meeting inside the module - the joining is done by
+        harness splices. And pin 36 is a KELVIN SENSE wire, not a second
+        star: the MAF's own 0 V is 570 BK/WH on the POWER ground net.
+        Tying pin 36 to AGND at the connector throws that away.
+      - Power grounds are FOUR: pins 3, 51, 77, 103, circuit 570 BK/WH, all
+        0 V, joining at S100 and going to body ground G101. NOT five - an
+        earlier revision counted pin 24, which the MegaSquirt sheet lists
+        but which carries NO WIRE on this truck.
+
+  * THERE IS NO CASE GROUND (CSEGND) ON THIS TRUCK. Those four pins are the
+    PCM's complete ground complement. The chart's A-43 belongs to the other
+    PCM. The ECU's shield bond is a MECHANICAL question - how the box is
+    mounted and earthed - not a connector pin. enclosure.md.
+
+  * FEPS / DLC PIN 13. EngineControls2.png traces it end to end: PCM pin 13
+    -> 107 VT -> C158 -> C228F -> DLC pin 13. Leave it unconnected; nothing
+    good happens if 18 V arrives on a 3.3 V system.
+
+  * VPWR IS KEY-SWITCHED, PROVEN AT THE RELAY COIL. Fed from "hot in start
+    or run" (16 RD/LG) through the PCM power diode, grounded at G104. No PCM
+    output touches it, so there is no afterrun hold. findings sec.17.
+
+  * PIN 55 IS THE BATTERY VOLTAGE SENSE PIN - sec.4c. findings sec.19.
