@@ -111,10 +111,17 @@ with R2, and a plain divider off the analog rail is smaller by three orders:
 ```
    +5VA ──[ 91k 1% ]──┬──[ 9.1k 1% ]── AGND
                       │
-                   [ 100n ]        455 mV, Zsrc 8.3k, draws 50 uA
+     DAC ──[ 1k 1% ]──┤              455 mV, Zsrc 8.3k, draws 50 uA
+                      │
+                   [ 100n ]
                       │
                      AGND
 ```
+
+**The DAC leg is §7** — it turns this node into the excitation source for
+in-circuit cell-impedance measurement. With the DAC at reset (high-Z) the node
+sits at 455 mV exactly as it would without it, so nothing in the rest of this
+section changes.
 
 | | |
 |---|---|
@@ -366,7 +373,152 @@ climbs steeply after 100 pF. Two things follow:
   ring, not a pour: tens of pF is ~10 % overshoot, which the 159 Hz filter
   removes anyway, but a large guard *plane* would be a different matter.
 
-## 7. Bill of materials
+---
+
+## 7. Measuring the cell's impedance in circuit
+
+**Decided: yes, and it costs one DAC pin, one resistor and one capacitor.**
+
+The question was why sensor condition should be judged from a bench
+characterisation at all, when sensors change over time and the accurate answer
+is the one taken in circuit, at temperature, on the sensor actually fitted.
+
+That is right, and it is what a CJ125 does — the `UR` pin is a Nernst-cell
+*resistance* measurement, and it is what the legacy firmware read through the
+ADS1115 to run the wideband heater PID. §1's stage turns out to already contain
+everything needed to do the same for narrowband.
+
+Numbers below are reproduced by [`calc/o2_impedance.py`](calc/o2_impedance.py).
+
+### 7.1 The stage already has the injection path
+
+**R2 is the excitation resistor.** Each channel has a known 22 MΩ from its
+high-impedance node to a bias node that is *shared by all four*. Move that node
+and a known current flows into every cell at once.
+
+```
+   node = (E/Rt + Vb/R2) / (1/Rt + 1/R2),    Rt = Rs + R1
+```
+
+Take two bias states and subtract:
+
+```
+   ΔV / ΔVb  =  Rt / (R2 + Rt)                     ← E has gone
+   Rt        =  R2 · k / (1 − k),      k = ΔV/ΔVb
+```
+
+**The sensor's own EMF cancels exactly.** So the measurement needs no stable
+mixture, no warm engine and no known lambda — only that `E` does not move much
+between the two samples, which §7.4 handles. Op-amp offset, offset drift and
+the bias divider's tolerance cancel with it, because they are common to both
+states. What is left is R2, which is a 1 % resistor, and ΔVb, which is measured.
+
+### 7.2 Driving it: one DAC pin, zero per-channel parts
+
+**The divider stays.** A DAC output joins the node through R6 = 1 kΩ:
+
+| | |
+|---|---|
+| DAC at reset (high-Z) | node sits at **455 mV**, the behaviour §3 specifies. **Fail-safe by omission** — firmware that never touches the DAC changes nothing |
+| DAC driving | divider attenuates by a known constant, **8.3k/(1k+8.3k) = 0.8925** |
+| DAC 0.455 → 3.000 V | **ΔVb = 2271 mV** at the node |
+| R6 ‖ divider | ~900 Ω, still **24 000× below R2** — §3's requirement is met with three orders to spare |
+
+Nothing is added per channel. The bias node is already shared and the ADS8588H
+samples **simultaneously**, so all four cells are excited and measured in the
+same window. The two downstream sensors on the F767's internal ADC hang off the
+same bias node and come along for free.
+
+### 7.3 Resolution and disturbance scale the right way
+
+ΔVb = 2271 mV, R2 = 22 MΩ, R1 = 10 kΩ, LSB = 305 µV:
+
+| Cell R<sub>s</sub> | | ΔV seen | LSBs | Current into cell | Disturbs a 1 V swing by | Node τ |
+|---|---|--:|--:|--:|--:|--:|
+| **10 kΩ** | hot, new | 2.06 mV | 7 | 103 nA | **0.2 %** | 0.02 ms |
+| **30 kΩ** | hot, typical | 4.12 mV | 14 | 103 nA | **0.4 %** | 0.04 ms |
+| 100 kΩ | warm or aged | 11.30 mV | 37 | 103 nA | 1.1 % | 0.11 ms |
+| **300 kΩ** | **§1's row that fails OBD-II** | 31.56 mV | 103 | 102 nA | 3.2 % | 0.31 ms |
+| 1 MΩ | cool or failing | 99.70 mV | 327 | 99 nA | 10.0 % | 0.97 ms |
+| 10 MΩ | cold | 710 mV | 2327 | 71 nA | 71 % | 6.88 ms |
+| **open** | **unplugged** | **2271 mV** | 7443 | 0 | — | 22 ms |
+
+Read the last two columns together, because that is the whole argument:
+
+- **The disturbance self-scales inversely with how much the reading is worth.**
+  It is smallest — 0.4 % of a 1 V swing, and transient — on a healthy cell, and
+  largest on a sick one whose reading §1 already showed to be unusable.
+- **Peak injected current is ~115 nA.** A zirconia cell does not notice 115 nA.
+  There is no polarisation mechanism at that level and nothing to damage.
+- **An unplugged channel saturates**, giving the full 2271 mV. That is a positive
+  signature rather than the present inference from *"it is sitting near 455 mV
+  with no activity"* — which a sensor stuck at stoich also produces.
+
+### 7.4 The one real problem: `E` drifts while you measure
+
+`E` cancels only if it is the same in both samples, and a switching narrowband
+slews about **1 V in 20 ms = 50 V/s**. Two samples 2 ms apart see **100 mV** of
+drift — **24× the 4.12 mV signal at 30 kΩ.** A single before/after pair is not
+good enough, and this is the thing that would have made a naive implementation
+produce confident nonsense.
+
+**Square-wave the bias node and detect synchronously.** Drift becomes a
+common-mode term that ±1 demodulation rejects. The frequency is boxed in from
+both sides:
+
+| | Post-filter gain | |
+|--:|--:|---|
+| 5–10 Hz | 1.000 | **too close to the cell's own 1–10 Hz switching** |
+| **50 Hz** | **0.954** | **4.6 % loss — picked** |
+| 100 Hz | 0.846 | |
+| 200 Hz | 0.622 | §4's 159 Hz filter is eating it |
+| 500 Hz | 0.303 | |
+
+50 Hz sits in the gap: 5–50× above anything the cell does, and only 4.6 % down
+through the R3/C2 filter, which is a fixed constant and calibrates out.
+
+Budget inside one 10 ms half-period:
+
+| | |
+|---|---|
+| Settle R3/C2 (τ = 1.00 ms) | discard **5 ms** |
+| Settle the node (τ ≤ 0.96 ms up to R<sub>s</sub> = 1 MΩ) | covered by the same wait |
+| Sample the remaining 5 ms at 500 kSPS | **2497 samples** |
+| 25 cycles = **0.5 s** | 124 850 samples → noise ÷ 353 → **0.9 µV** |
+
+Against the 4.12 mV worst case — which is the *healthiest* cell, and so the
+smallest signal — that is **0.02 %**. The measurement is better than the sensor.
+
+### 7.5 Above 1 MΩ the time constant is itself the signal
+
+Node τ = (R<sub>t</sub> ‖ R2)·C1 reaches 6.9 ms at 10 MΩ and 22 ms open, so a
+10 ms half-period stops fully settling. That is not a failure mode: incomplete
+settling at a *known* excitation is still monotonic in R<sub>t</sub>, and the
+regime where it happens is the one where amplitude has already saturated.
+**Report "> 1 MΩ" and stop.** Nothing downstream needs to distinguish 4 MΩ from
+9 MΩ — both mean the same thing.
+
+### 7.6 What this buys
+
+| | |
+|---|---|
+| **Light-off, measured** | Cell impedance falls steeply with temperature, so *"hot enough to believe"* becomes a threshold on R<sub>s</sub> instead of a timer or a coolant-temperature proxy. Closed loop starts when the sensor says so |
+| **Heater ramp, closed loop** | The PWM ramp in [`output-drivers.md`](output-drivers.md) exists to spare the ceramic from thermal shock. Ramping against measured impedance targets the ceramic's actual temperature rather than an assumed heating curve |
+| **Ageing, trended** | [`review-o2-chain.md`](review-o2-chain.md) §1 **is an impedance table** — 300 kΩ is the row that fails the 0.7 V OBD-II amplitude threshold. Logging R<sub>s</sub> per sensor per trip converts that row from a hazard into a scheduled replacement |
+| **Fault discrimination** | A lean-looking reading separates into *lean mixture* (R<sub>s</sub> normal), *tired sensor* (R<sub>s</sub> high), *unplugged* (open) and *shorted* (R<sub>s</sub> ≈ 0) without anyone moving a wire |
+
+### 7.7 The firmware constraint
+
+**Measure in the heater PWM's off-window.** Heater current shares harness ground
+with the cell, and 50 Hz modulation against a PWM'd heater will otherwise beat
+against it and produce a slow spurious drift in the demodulated result.
+
+PWMing the heaters was decided separately, for the ceramic's sake — and it is
+what makes the off-windows exist. **The two decisions reinforce each other**:
+the heater PWM gives §7 its quiet windows, and §7 gives the heater ramp its
+feedback. Neither was designed for the other.
+
+## 8. Bill of materials
 
 Per channel, ×4:
 
@@ -388,13 +540,15 @@ Shared:
 | R4 | 91 kΩ 1 % 0603 | bias divider top |
 | R5 | 9.1 kΩ 1 % 0603 | bias divider bottom |
 | C3 | 100 nF X7R 0603 | bias decoupling |
+| **R6** | **1 kΩ 1 % 0603** | **DAC → bias node, §7** |
 | C4, C5 | 100 nF X7R 0603 | op-amp supply decoupling, one per package |
 
-**28 passives, 4 diodes and 2 op-amps** for all four channels.
+**29 passives, 4 diodes and 2 op-amps** for all four channels — R6 is the
+only part §7 adds, and it is shared by all of them.
 
 ---
 
-## 8. What this changes elsewhere
+## 9. What this changes elsewhere
 
 | Document | Change |
 |---|---|
@@ -403,11 +557,15 @@ Shared:
 | [`adc-front-end.md`](adc-front-end.md) | Channels 2 and 3 are marked buffered. **No channel count changes** |
 | [`power-supply.md`](power-supply.md) | Four amplifiers at 950 µA max plus a 50 µA divider — **3.85 mA worst case**, booked as **4 mA** against a 425 mA budget. Noted, not material |
 | [`always-on-domain.md`](always-on-domain.md) | **Nothing.** Every element here is on the switched analog rail and draws zero when parked |
+| [`output-drivers.md`](output-drivers.md) | The heater PWM decided there acquires a second job: its **off-windows are when §7 measures**, and its ramp can close the loop on measured impedance instead of running on a timer |
+| [`pin-budget.md`](pin-budget.md) | **+1 pin** — one DAC output (PA4 or PA5) for §7. 78 of ~114 |
 
-## 9. Open items
+## 10. Open items
 
 | | |
 |---|---|
 | ~~**[DECIDE]** the op-amp~~ | **Closed** — `OPA2376AQDRQ1`, §6 |
 | **[CONFIRM]** | the F767's maximum external ADC impedance, for the two downstream channels. The buffer makes it moot — output impedance there is 1 kΩ, far inside any plausible limit — but the number was never established and is worth having |
-| **[MEASURE]** | source impedance of the truck's actual HO2S at operating temperature, once one is on the bench. Every error figure here is quoted against an assumed 100 kΩ, and the real number would let the residual 4.5 mV be stated rather than estimated |
+| ~~**[MEASURE]** source impedance on the bench~~ | **Superseded by §7.** The board measures it in circuit, on every sensor, continuously. A bench figure would have been one number from one sensor on one day; §7 gives four numbers per trip for the life of the truck |
+| **[CONFIRM]** | the F767 DAC's output impedance and its true reset-state leakage, for §7. The 1 kΩ series resistor makes the first moot and the 91k/9.1k divider makes the second benign, but neither is yet read off the datasheet |
+| **[MEASURE]** | cell impedance against temperature for the sensors actually fitted, to set the §7 light-off threshold. This is a calibration the board performs on itself during the first warm-ups, not a bench task |

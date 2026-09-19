@@ -59,6 +59,12 @@ This is the same 1 MΩ loading arithmetic
 [`adc-front-end.md`](adc-front-end.md#the-battery-sense-divider) works through
 for the battery divider. It was applied there and not here.
 
+> **This table is now instrumentation, not just a warning.** The buffer removes
+> the loading, and [`o2-input-stage.md`](o2-input-stage.md) §7 goes on to
+> **measure the source impedance in circuit**, on every sensor, using the 22 MΩ
+> bias resistor the buffer needed anyway. The 300 kΩ row stops being a hazard
+> you hope to avoid and becomes a number the ECU reports per trip.
+
 ### Correcting what I said about this last turn
 
 I described this as *"it biases low, which reads as lean, which adds fuel."*
@@ -372,6 +378,7 @@ forecloses wideband. §5 shows that costs nothing to avoid.
 | 1b | The downstream pair have it worse: a **switched-cap** input makes it a settling error, plus mux crosstalk from six drain-sense channels sharing the scan | important |
 | 2 | Adding a buffer **relocates the protection boundary** off the ADS8588H's 9 kV clamp onto the op-amp. Series resistance and rail clamps must move in front of it — and behind a buffer the series value stops trading against accuracy, closing `review-analog-chain.md` §4 | important |
 | 3 | A picoamp input with no bias network has **no open-circuit diagnostic**. ~~10 MΩ~~ **22 MΩ** to a 455 mV divider. ~~*and op-amp bias current at +125 °C becomes the part-selection criterion*~~ — **that part was wrong**, see the correction in §3: bias current contributes 20 µV with a sensor connected, and leakage sets the limit on R<sub>bias</sub> instead | important |
+| 3b | **Follow-on, and it is the best thing to come out of this review.** The 22 MΩ bias resistor finding 3 adds for open-circuit detection is also an **excitation path**: modulate the shared bias node and the cell's EMF cancels, leaving its source impedance. §1's table becomes a live measurement — sensor ageing, light-off, closed-loop heater ramp and four-way fault discrimination, for one DAC pin and one resistor. [`o2-input-stage.md`](o2-input-stage.md) §7 | improvement |
 | — | Corrected from last turn: I called this a lean-bias fuelling error. It is not; it is a diagnostic-amplitude error | correction |
 
 **Wideband:** all three architectures present a low-impedance output, so none of

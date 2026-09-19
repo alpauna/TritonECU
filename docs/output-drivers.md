@@ -792,7 +792,7 @@ own driver and its own connector pin. Neither of these is that.
 
 These are **two clean square-wave outputs on a test header** — engine speed and
 road speed — for a scope, a bench rig or an aftermarket gauge. GPIOs are cheap
-against 35 spare, so both are reserved now rather than requiring a respin later.
+against 34 spare, so both are reserved now rather than requiring a respin later.
 
 ```
    GPIO --[ series R ]--> TACH  --+
@@ -855,6 +855,21 @@ hardware.
 | **1. Delay** turn-on after a cold start — time or CHT based | protects the sensor. The part that actually matters |
 | **2. Ramp** duty from cold rather than stepping to 100 % | keeps the driver out of current limit entirely, turning a 16–49 W transient into nothing |
 | **3. Stagger** the four channels | 24 A becomes 10.5 A. The firmware is sequencing them anyway |
+
+#### The ramp does not have to run open loop
+
+Rows 1 and 2 above are both guesses about the sensor's temperature — a timer, or
+coolant temperature standing in for exhaust temperature.
+[`o2-input-stage.md`](o2-input-stage.md) §7 measures the **cell's own
+impedance** in circuit, and cell impedance falls steeply with temperature. So
+the ramp can target the ceramic's actual state instead of an assumed heating
+curve, and closed loop can start when the sensor says it is hot rather than when
+a timer expires.
+
+**It runs the other way too:** that measurement has to happen while the heater is
+off, or heater current sharing harness ground beats against it. PWM is what
+creates the off-windows. The two decisions were reached independently and each
+turns out to supply what the other needs.
 
 > **[MEASURE]** the **cold resistance of one sensor**. 1/5 against 1/10 of hot
 > is the difference between 16 W and 49 W in the driver, and it sets where the

@@ -20,6 +20,8 @@ CONTENTS
    2. The Nucleo, and what the carrier owes it
    3. VR inputs - crank, cam, output shaft, transfer case
    4. Analog inputs - ADS8588H
+  4a. O2 signal path - four buffered channels
+  4b. The bias node is also the excitation source
    5. Ignition - 8 x COP
    6. Injection - 8 x sequential
    7. Solenoids and heaters
@@ -127,6 +129,103 @@ CONTENTS
   ** The ADS8588H is a 125 C part. ** An earlier note said 85 C and was being
   used to rule out under-hood mounting; that was the AD7606B bench part.
   review-expander-chain.md section 8.
+
+
+4a. O2 SIGNAL PATH - FOUR BUFFERED CHANNELS
+-------------------------------------------
+
+  A HEGO is NOT a 0-5 V sensor. It is a galvanic cell with tens of kohm of
+  source impedance hot, rising into the megohms cold or aged, and both
+  converters LOAD it. review-o2-chain.md section 1. So these four channels
+  do not connect straight to the ADC the way TPS/MAP/MAF do.
+
+  Per channel, x4 (EEC-V pins 87, 60, 61, 35):
+
+    pin --[R1 10k]--+--[C1 1n]-- AGND
+                    |
+                    +--[D1 BAT54S]--+-- AGND
+                    |               +-- +5VA        clamp ~5.3 V
+                    |
+                    +--[R2 22M]----------> 455 mV BIAS NODE (shared)
+                    |
+                    |  << guarded high-Z node - guard ring off the buffer >>
+                    |
+                    +---->|+\
+                          |  >--+--[R3 1k]--+--[C2 1u]-- AGND    159 Hz
+                    +---->|-/   |           |
+                    |           |           +-----------> ADC channel
+                    +-----------+
+
+    U1, U2   OPA2376AQDRQ1  SOIC-8 x2, AEC-Q100 Grade 1, 4 amps total
+
+  ** D1 conducts at 5.3 V, BELOW the op-amp's internal 5.6 V ESD diode. **
+  That is the whole reason for Schottky here: on a short to battery the
+  BAT54S takes the current and the op-amp's ESD structure never turns on.
+  R1 bounds ISO 7637-2 pulse 1 at -100 V to 10.0 mA. o2-input-stage.md s.2.
+
+  ** R3 FIRST, then C2 to ground. ** The op-amp drives the resistor and
+  never sees the capacitor. Reversed, it oscillates. o2-input-stage.md s.6.
+
+  Where they land:
+
+    87  LF bank 1 upstream    ADS8588H ch 2
+    60  RF bank 2 upstream    ADS8588H ch 3
+    61  LR bank 1 downstream  STM32 internal ADC
+    35  RR bank 2 downstream  STM32 internal ADC
+
+  JP, a 0R pad NOT POPULATED, links the high-Z node to the ADC side and
+  bypasses the buffer for a fixed 0-5 V wideband module. It costs nothing
+  and it is why the wideband decision does not have to be made now.
+
+
+4b. THE BIAS NODE IS ALSO THE EXCITATION SOURCE
+-----------------------------------------------
+
+    +5VA --[91k 1%]--+--[9.1k 1%]-- AGND      455 mV, Zsrc 8.3k, 50 uA
+                     |
+     DAC --[R6 1k]---+--[100n]-- AGND
+                     |
+                     +---> R2 of all four channels
+
+  The 22M bias resistors exist for open-circuit detection. They are also a
+  known injection path into every cell at once. Move the bias node and:
+
+      dV / dVb = Rt / (R2 + Rt)        Rt = Rs + R1
+      Rt       = R2 . k / (1 - k)      k  = dV/dVb
+
+  ** The cell's own EMF cancels exactly. ** So does op-amp offset, offset
+  drift, and the divider's tolerance - they are common to both states.
+  No stable mixture, no warm engine and no known lambda required.
+
+    DAC 0.455 -> 3.000 V,  attenuated 8.3k/(1k+8.3k) = 0.8925
+    dVb = 2271 mV at the node,  ~115 nA peak into the cell
+
+    cell Rs      dV seen    disturbs a 1 V swing by
+      10k         2.06 mV        0.2 %
+      30k         4.12 mV        0.4 %     healthy, hot
+     100k        11.30 mV        1.1 %
+     300k        31.56 mV        3.2 %     the OBD-II failing row
+       1M        99.70 mV       10.0 %
+     open      2271    mV         -        unmistakable
+
+  ** The disturbance self-scales inversely with how much the reading is
+  worth ** - smallest on a healthy cell, largest on one whose reading was
+  already useless.
+
+  ** DAC at reset is high-Z, so the node sits at 455 mV exactly as it
+  would without it. ** Firmware that never touches the DAC changes nothing.
+  Fail-safe by omission.
+
+  Modulate at 50 Hz and demodulate synchronously - a single before/after
+  pair loses to the cell's own 50 V/s slewing by 24x. 50 Hz sits between
+  the cell's 1-10 Hz switching and the 159 Hz R3/C2 corner (4.6 % loss).
+  25 cycles = 0.5 s = 0.9 uV of noise against a 4.12 mV worst case.
+
+  ** MEASURE IN THE HEATER PWM's OFF-WINDOW. ** Heater current shares
+  harness ground with the cell. Section 7 PWMs the heaters for the
+  ceramic's sake; that is what creates the windows this needs, and this
+  is what lets that ramp close its loop. Neither was designed for the
+  other. o2-input-stage.md section 7.
 
 
 5. IGNITION - 8 x COIL ON PLUG
@@ -268,7 +367,7 @@ CONTENTS
   modules. This is a separate signal at logic level carrying the same
   information, for something that wants a clean edge rather than Ford's.
 
-  GPIOs are cheap against 35 spare, so both are reserved now rather than
+  GPIOs are cheap against 34 spare, so both are reserved now rather than
   needing a respin later. Expanding either costs one channel on #2 (2 spare
   after VSS), one NCV8405A and a connector pin - and the connector pin is the
   part to check first, since the OEM pinout has no tach assignment to inherit
@@ -393,3 +492,12 @@ CONTENTS
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
   5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
   6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
+  7. [CONFIRM] the F767 DAC's output impedance and its true reset-state
+     leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k
+     divider makes the second benign, but neither is read off a datasheet
+     yet.
+  8. [MEASURE] cell impedance against temperature, to set the light-off
+     threshold - sec.4b. This is a calibration the board performs ON
+     ITSELF during the first warm-ups, not a bench task. It replaces the
+     old "characterise a sensor on the bench" item, which would have given
+     one number, from one sensor, on one day.
