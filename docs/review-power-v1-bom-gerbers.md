@@ -864,7 +864,7 @@ handles the energy. There isn't one.
 | | | |
 |---|---|---|
 | **1** | **Tie PGND to GND at `CN1_2`**, one point, and confirm in CAD that it is only one | v1, layout check |
-| **2** | **Add a ceramic across CN1** — 100 nF X7R ≥ 100 V, plus 1 nF C0G if there is room, as close to the pins as the footprint allows | **v1, and it needs no respin if there is pad space** |
+| **2** | **Add a ceramic across CN1** — **100 nF X7R, 100 V**, at the connector pads. ~~plus 1 nF C0G if there is room~~ — **that part was wrong, see below** | **v1, and it needs no respin if there is pad space** |
 | **3** | **Move D1 to the connector** — target < 20 mm² instead of 130 | v2 |
 | **4** | **Do not split the Inner1 plane.** 3516 mm² solid is right; a split forces return current to detour and costs more than it saves | v2 |
 | **5** | **Decide about the four mounting pads on GND** — that is a chassis bond at four points, and four parallel paths through the enclosure is a loop if the enclosure is bonded elsewhere | [`enclosure.md`](enclosure.md) |
@@ -961,3 +961,85 @@ elsewhere (*"the LTC4364's 10 mΩ shunt"*).
 
 **`ADCRANGE=0` is still the right answer**, and at the real 10 mΩ the case for it
 is stronger, not weaker.
+
+
+---
+
+# The input capacitor — 100 nF across B+ and PGND
+
+**Decided.** The nets are right; the rating and the placement are what decide
+whether it does anything.
+
+## 100 V, not 50 V — and D1 sets that, not the battery
+
+The cap sits on the **connector side** of D1, so it sees whatever D1 lets
+through:
+
+| | |
+|---|--:|
+| Normal charging | 14.4 V |
+| **Jump start / LTC4364 clamp — *sustained*** | **27 V** |
+| **D1 clamping at full rated current** | **69.4 V** |
+
+**A 50 V part is wrong here**, and not only on transient margin: a jump start
+holds 27 V for minutes, which is a **DC rating** question. At 100 V an X7R loses
+~10–15 % to DC bias at 14 V, which for a decoupling cap is irrelevant. At 50 V it
+would lose 40–60 % *and* have no margin left.
+
+## What it buys, and why placement decides it
+
+The cap's own ESL is about **1 nH**. The loop it sits in is **10–25 nH**. So the
+layout, not the part, sets the result:
+
+| | Total L | Pulse 3a/3b, 5 ns | ESD, 1 ns |
+|---|--:|--:|--:|
+| **At the connector pads** | **11 nH** | **44 V** | 330 V |
+| 10 mm away | 26 nH | 104 V | 780 V |
+| *D1 alone, for comparison* | 20–50 nH | 80–200 V | 600–1500 V |
+
+**Ten millimetres of placement is the difference between halving the fast-edge
+overshoot and not improving on D1 at all.**
+
+The division of labour is the point: **D1 does nothing until 43 V and then has to
+turn on; the cap has no threshold and is already conducting at every frequency.**
+The capacitor takes the **edge**, the TVS takes the **energy**.
+
+## ⚠ The one thing that would waste it
+
+**PGND is a two-node net** — `D1_2` at (18.42, 23.88) and `CN1_2` at
+(17.27, 6.22), **17.7 mm apart**.
+
+> **Tie the cap at the `CN1_1` / `CN1_2` pads**, not at D1's end of either net.
+> Routed back to D1 it inherits exactly the 17.7 mm loop that limits D1, and buys
+> **nothing**.
+
+## ⚠ Correction: do *not* add a 1 nF alongside it
+
+The v1 recommendation above said *"plus 1 nF C0G if there is room."* **That was
+wrong**, and it is wrong in a way worth recording because it is standard advice.
+
+Both caps sit in the **same loop**, so both have the same ~11 nH. Above the
+100 nF's 4.8 MHz self-resonance it is inductive while the 1 nF is still
+capacitive — and the two form a **parallel LC that peaks**:
+
+| Freq | 100 nF alone | **100 nF + 1 nF** | 100 nF + 100 nF |
+|--:|--:|--:|--:|
+| 10 MHz | 0.53 Ω | 0.55 Ω | 0.27 Ω |
+| 20 MHz | 1.30 Ω | 1.63 Ω | 0.65 Ω |
+| **30 MHz** | 2.02 Ω | **5.39 Ω — worse than one** | 1.01 Ω |
+
+**"Add a small cap in parallel" stopped being good advice once ESL began to
+dominate.** The benefit of a second capacitor is a second **path**, not a second
+**value**:
+
+> **If there is room for two, make the second one another 100 nF**, on the other
+> side of the connector pins. Two of the same value halve the inductance
+> everywhere and produce no peak.
+
+## A second-order effect for the bench, not the schematic
+
+100 nF at the connector with ~10 nH of trace to the bulk is a **5 MHz pole with a
+Q of 16** at 20 mΩ. The 1120 µF of aluminium electrolytic already on the input
+(C2, C3 at 560 µF; C4, C5 at 47 µF) has the ESR to damp it, and the stored energy
+is tiny. **Look for it on the scope during transient testing** rather than
+designing around it.
