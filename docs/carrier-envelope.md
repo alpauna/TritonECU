@@ -7,6 +7,12 @@ outline rather than the other way round — see
 
 **Donor PCM envelope: 158 W × 174 L × 31 H mm.**
 
+> ## ✅ DECIDED: 158 × 174 is fixed. Height is free.
+>
+> **X–Y stays exactly as it is** so the replacement mounts where the OEM PCM
+> did. **Z is adjustable**, which retires the RJ45 problem below and changes
+> the layout strategy — see [§ Height, now that it is free](#-height-now-that-it-is-free).
+
 ## Area is not the problem
 
 | | | |
@@ -40,15 +46,54 @@ partly because *"ST-Link, USB console and **Ethernet** all come for free."* **In
 a 31 mm case, Ethernet is the most expensive thing on the board.** And Wi-Fi was
 dropped deliberately, so Ethernet is the only remote path there is.
 
-### Three levers, cheapest first
+~~Three levers~~ — **none of them needed. Height is free, so take it.**
+The RJ45 still has to reach a **wall opening** to be usable, which constrains
+where the Nucleo sits, but that is orientation rather than height.
 
-| | | Buys |
-|---|---|--:|
-| **1. Lower the board-to-board stack** | 8 mm instead of 11 mm headers, if the Nucleo's underside and whatever sits beneath it allow | **3 mm** |
-| **2. Raise the lid locally** | A bump over the jack only. The enclosure is being **printed** ([`enclosure.md`](enclosure.md)), so this costs nothing but a feature | as much as wanted |
-| **3. Put the RJ45 at a wall opening** | Its top sits at 27.7 mm, so it clears — but it must reach an opening to be *usable*, which constrains where the Nucleo can sit | orientation, not height |
+## ✅ Height, now that it is free
 
-**1 and 3 together are probably the answer**, with 2 held in reserve.
+**The cheap move is to stop stacking boards on boards.** One level only:
+daughterboards sit *beside* each other on the carrier, never above. Height is
+then the **tallest single stack**, not the sum:
+
+| | |
+|---|--:|
+| **Nucleo-144 + RJ45** | **27.7 mm** |
+| Power board V2 + 560 µF can | 24.7 mm |
+| VR board V1 | 18.2 mm |
+| *Power board stacked **on** the Nucleo* | *37.3 mm — don't* |
+
+### And it all fits side by side
+
+| | |
+|---|--:|
+| Four big blocks (Nucleo, connector, power, VR) | 17 489 mm² |
+| 8 × ISL9V3040 D2Pak | 1 200 mm² |
+| 8 × injector DPAK | 640 mm² |
+| 13 × NCV8405A SOT-223 | 650 mm² |
+| ADS8588H, 3 × 74HCT541, TBD62083, SCP, VREF chain | 1 100 mm² |
+| **Components** | **21 079 mm² — 77 %** |
+| **Left for routing and clearance** | **6 413 mm² — 23 %** |
+
+**Comfortable**, with nothing stacked above anything else. That is worth more
+than the millimetres it costs: better thermals, and every board stays reachable
+for service.
+
+### Recommended: 35 mm outside
+
+| Outside | Internal | Margin over the RJ45 | |
+|--:|--:|--:|---|
+| 31 mm | 28 | **+0.3 mm** | zero — not a design |
+| 33 mm | 30 | +2.3 mm | |
+| **35 mm** | **32** | **+4.3 mm** | ✅ |
+| 38 mm | 35 | +7.3 mm | buys nothing more |
+
+**4 mm of margin** absorbs header tolerance, a taller capacitor if one gets
+substituted, and conformal coat. Past ~38 mm it stops helping and starts
+mattering wherever the box mounts.
+
+> **[CONFIRM] the clearance at the mounting location before fixing 35 mm.**
+> Growing 4 mm in Z is free on paper and not free in a vehicle.
 
 ## The measurement that actually decides the layout
 
