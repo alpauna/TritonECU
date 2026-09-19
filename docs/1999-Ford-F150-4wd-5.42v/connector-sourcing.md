@@ -56,6 +56,30 @@ Note it is a **staggered** 4-row field, not a rectangular grid. Do not
 approximate it with a generic 4×26 header; the 1.7 mm offset is what makes it
 mate.
 
+## ⚠ The footprint above is 104 pads and nothing else
+
+**The donor connector has posts through the PCB as well as pins**, and this
+extraction records **no mounting posts, no alignment features, no keepout.**
+Either rusEFI's footprint has them and the extraction missed them, or it does
+not have them at all.
+
+**And the case has a metal lip that seats into the connector.** So the OEM
+retention is mechanical in two directions — posts into the board, lip from the
+case — which is how a 104-way insertion force is taken without loading the
+solder joints.
+
+> **[CONFIRM] before layout**, from the donor board's underside:
+>
+> | | |
+> |---|---|
+> | **How many posts**, and their diameter | holes we do not currently have |
+> | **Where they sit relative to the pin field** | ⭐ the datum. Pin field position is already `[MEASURE]`d; the posts are measured *from it* |
+> | Whether they are plated, and whether the OEM tied them to anything | a plated post landing on a plane is a decision, not an accident |
+> | **Where the case lip lands** relative to the connector body | it constrains the enclosure, not the PCB — but it sets how the two locate to each other |
+>
+> **Getting this wrong means the connector will not sit down on the board.**
+> Cheap to check now, a respin to discover later.
+
 **4. Copy what the MS3Pro PNP does.** DIYAutoTune built exactly this product
 for exactly this truck. Their PNP unit mates to the OEM connector, so they
 solved the sourcing problem. Whether they will say how is another matter, but
