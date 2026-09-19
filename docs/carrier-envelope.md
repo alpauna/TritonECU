@@ -11,7 +11,7 @@ outline rather than the other way round — see
 > with the vehicle bolt pattern and the connector face already correct. That
 > reframes these constraints: **X–Y is fixed because the bottom is fixed, and
 > height is adjustable because only the lid changes.** See
-> [`DonerECU/README.md`](DonerECU/README.md).
+> [`DonorECU/README.md`](DonorECU/README.md).
 
 > ## ✅ DECIDED: 158 × 174 fixed · target 35 mm · **hard ceiling 46.5 mm**
 >

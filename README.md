@@ -47,6 +47,7 @@ lives on `main`.
 | **Knock front end** | ◐ | **next build after the VR board** — schematic, net list and BOM drawn, [`knock-front-end-schematic.md`](docs/Schematics/knock-front-end-schematic.md) |
 | **EEC-V connector** | ✅ | sourcing solved — Ranger donor + the TE controlled drawing |
 | **Enclosure** | ◐ | **cabin, behind the glovebox**, connector face through the firewall — vent on the cabin side, [`enclosure.md`](docs/enclosure.md) |
+| **Carrier template** | ✅ | printable measurement jig for the donor case floor — captures the mounting-boss pattern the layout is waiting on, [`hardware/carrier-template/`](hardware/carrier-template/) |
 | **Harness label** | ✅ | printed plate for the always-hot battery lead and the four added pins — [STL](hardware/harness-label/stl/label.stl) + [`README`](hardware/harness-label/README.md) |
 
 **28 native unit tests passing.** The decode, cam-sync and spark-scheduling
