@@ -7,11 +7,12 @@ outline rather than the other way round — see
 
 **Donor PCM envelope: 158 W × 174 L × 31 H mm.**
 
-> ## ✅ DECIDED: 158 × 174 is fixed. Height is free.
+> ## ✅ DECIDED: 158 × 174 fixed · target 35 mm · **hard ceiling 46.5 mm**
 >
-> **X–Y stays exactly as it is** so the replacement mounts where the OEM PCM
-> did. **Z is adjustable**, which retires the RJ45 problem below and changes
-> the layout strategy — see [§ Height, now that it is free](#-height-now-that-it-is-free).
+> **X–Y stays exactly as it is** so the replacement mounts where the OEM PCM did.
+> **Z is adjustable up to 150 % of the original 31 mm**, which retires the RJ45
+> problem below and changes the layout strategy — see
+> [§ Height, now that it is free](#-height-now-that-it-is-free).
 
 ## Area is not the problem
 
@@ -94,6 +95,27 @@ mattering wherever the box mounts.
 
 > **[CONFIRM] the clearance at the mounting location before fixing 35 mm.**
 > Growing 4 mm in Z is free on paper and not free in a vehicle.
+
+### The ceiling: 46.5 mm — and what it quietly buys back
+
+**150 % of the original 31 mm.** The target sits 11.5 mm inside it, and that gap
+is a *reserve* rather than slack:
+
+| Configuration | Internal | Outside | vs ceiling |
+|---|--:|--:|--:|
+| **One level — the plan** | 27.7 | **30.7** | +15.8 |
+| One level, power board alone | 24.7 | 27.7 | +18.8 |
+| **Two levels: power board *on* the Nucleo** | 37.3 | **40.3** | **+6.2** |
+
+**The ceiling makes two-level stacking legal.** At 31 mm it was ruled out at
+37.3 mm internal; at 46.5 it lands at 40.3 outside with 6.2 mm to spare.
+
+That matters because **X–Y is the thing being held constant.** If the driver
+section ever needs area back, the power board can go *above* the Nucleo instead
+of beside it and **3 579 mm² returns** — without touching 158 × 174.
+
+**Keep it in reserve, do not design to it.** One level is better thermally and
+every board stays reachable for service.
 
 ## The measurement that actually decides the layout
 
