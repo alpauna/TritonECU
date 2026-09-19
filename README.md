@@ -249,6 +249,12 @@ PATS is a non-issue: the anti-theft logic lives in the instrument cluster and
 authorises *the PCM* over SCP. A replacement ECU never asks, so there is
 nothing to defeat.
 
+## External references — to read, not yet read
+
+| | |
+|---|---|
+| [4R100 rebuild manual for the DIY](https://www.powerstrokearmy.com/threads/4r100-rebuild-manual-for-the-diy.20642/) | ⚠ **4R100, not 4R70W** — this truck has the 4R70W. Worth having anyway: the **MegaSquirt pinout this project cross-checks against was developed on a 4R100**, which is why it listed a coast clutch solenoid that does not exist here ([`output-drivers.md`](docs/output-drivers.md)). If another MS-sheet entry ever looks wrong, this is where the explanation will be |
+
 ## Layout
 
 ```
