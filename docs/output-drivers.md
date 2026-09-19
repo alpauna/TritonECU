@@ -1162,11 +1162,14 @@ entry:
 
 | | |
 |---|---|
+| **Connector C183** | ⭐ **ten cavities, four solenoids, and pins 1/9/10 empty** |
 | **Ford's 4R70W wiring diagram** | no coast clutch solenoid |
 | **Ford test step A7** | tests SSA, SSB, TCC — and stops |
 | **MegaSquirt sheet** | lists CSS on pin 20 |
 
-Two silences and one mention, now with a reason for the mention.
+**C183 is the one that settles it** — a connector sheet listing every cavity,
+with three of them empty. A fifth solenoid would have somewhere to go and does
+not. See [`1999-Ford-F150-4wd-5.42v/transmission.md`](1999-Ford-F150-4wd-5.42v/transmission.md).
 
 **Nothing on the board changes.** CSS was never in the thirteen NCV8405A
 channels — the channel budget is HO2S ×4, EVAP purge, EGR regulator, canister

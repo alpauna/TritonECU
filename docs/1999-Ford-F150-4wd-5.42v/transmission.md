@@ -84,3 +84,61 @@ points and line pressure.
 | TCC — torque converter clutch (PWM) | 54 | VIO/YEL |
 | EPC — electronic pressure control (PWM) | 81 | WHT/YEL — needs a flyback diode to 12 V |
 | TFT — transmission fluid temperature | 37 | ORG/BLK |
+
+---
+
+# ✅ C183 — the transmission connector, and it settles the solenoid count
+
+`4R70W-Solenoid-Temp-Connector.png`. **This is the definitive sheet**, and it was
+the hard one to find in the service documentation.
+
+| Pin | Circuit | Function | PCM pin |
+|--:|---|---|--:|
+| 1 | — | **NOT USED** | |
+| 2 | `359 GY/RD` | Signal return | **91** (SIGRTN) |
+| 3 | `480 VT/YE` | **Torque converter clutch solenoid** | **54** |
+| 4 | `1138 VT/WH` | **Vehicle power** | — *(not from us)* |
+| 5 | `923 OG/BK` | **Transmission fluid temperature (TFT)** | **37** |
+| 6 | `925 WH/YE` | **Electronic pressure control solenoid** | **81** |
+| 7 | `237 OG/YE` | **Shift solenoid A** | **27** |
+| 8 | `315 VT/OG` | **Shift solenoid B** | **1** |
+| 9, 10 | — | **NOT USED** | |
+
+## Four solenoids, and three unused cavities
+
+**Pins 1, 9 and 10 are empty.** A fifth solenoid would have somewhere to go and
+does not. That is **independent confirmation** that the 4R70W has exactly
+**TCC, EPC, SSA and SSB** — and that CSS is a 4R100 part, as
+[`../output-drivers.md`](../output-drivers.md) records.
+
+Every circuit matches what was already assembled from Ford's 4R70W diagram, so
+nothing moves. **What changes is the standard of proof**: this is a connector
+sheet listing every cavity, not an inference from which wires happened to appear.
+
+## ⭐ And it validates the freewheel decision precisely
+
+**Pin 4 is `1138 VT/WH` — "Vehicle Power" — *at the transmission*.** That is the
+common supply for all four solenoids.
+
+[`../output-drivers.md`](../output-drivers.md) brought `1138` into the ECU on
+**pin 82** so the PWM freewheel diodes for TCC and EPC return to it rather than
+to VPWR. This sheet shows why that was right: **the return lands on the
+solenoids' own feed rail**, so the recirculation loop is the solenoid and its
+diode — not a path out through the connector, across the Battery Junction Box
+and back.
+
+## The transmission interface, complete
+
+With C183 settled, every wire between the ECU and the transmission is now
+enumerated:
+
+| | Where | |
+|---|---|---|
+| TCC, EPC, SSA, SSB | **C183** | four drives out |
+| TFT | **C183** | one analog in |
+| Signal return | **C183** pin 2 | shared SIGRTN |
+| TR1 / TR2 / TR3A / TR4 | **C182** (DTR) | four digital in — [`schematic-findings.md`](schematic-findings.md) §21 |
+| TSS — turbine shaft speed | C192, `970 DG/WH` | PCM pin 59, VR |
+| OSS — output shaft speed | separate | PCM pin 84, VR |
+
+**Nothing over a bus, and nothing left unaccounted for.**
