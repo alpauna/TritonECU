@@ -33,7 +33,7 @@ counted as handled when only a pin had been reserved.
 | **CCS — 4R100 coast clutch, pin 20** | **1** | NCV8405A #14 via **74HCT541 #2** (had 2 spare). Fitted for the 4R100 superset |
 | ADS8588H static — RESET, FRSTDATA, OS0–2, RANGE | 6 | direct, 3.3 V — now legal |
 | MAX25239 `SYNC` | 1 | direct, with a pulldown |
-| Inputs — **TR ×4** (pin 64 = TR3A also reads 12 V cranking), brake, A/C pressure, 4×4 low | 7 | conditioned; **edge interrupts, not polled**. TR is 4 bits as originally documented — confirmed against DTR connector C182, [`schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md) §21 |
+| Inputs — **TR ×4**, brake, A/C pressure, 4×4 low | 7 | conditioned; edge interrupts, not polled. ⚠ **TR3A (pin 64) must land on an ADC-capable pin** — the 4R100 codes it with an internal 270 Ω, so it has three states, not two. Count unchanged — [`4r100-deltas.md`](4r100-deltas.md) |
 | VREF — EN, IN1, IN2, DIAG_EN, SEL, FAULT | 6 | TPS2H160B-Q1 |
 | **O2 bias excitation** | **1** | **DAC out (PA4/PA5) → 1 kΩ → shared 455 mV bias node.** In-circuit cell-impedance measurement — [`o2-input-stage.md`](o2-input-stage.md) §7 |
 | Watchdog kick | 1 | — |

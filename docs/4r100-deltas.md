@@ -70,14 +70,45 @@ So on the 4R100, TR3A appears to be **resistively coded**: open, short, or
 and with a 10 kΩ pull-up to 5 V, 270 Ω gives **0.13 V** against a short's 0 V.
 Both read as a low.
 
-> **[CONFIRM] whether the PCM actually decodes the 270 Ω, or only switch
-> closure.** If it decodes it, TR3A wants an **ADC channel rather than a digital
-> input** — one channel, and the ADS8588H has the range.
->
-> Two reasons to think it may not matter: on the 4R70W, TR3A's other job is the
-> **start signal**, where 270 Ω in series with a logic input is irrelevant. And
-> the resistor may exist for the *start circuit's* benefit rather than the PCM's.
-> **But this is exactly the kind of assumption that has been wrong twice today.**
+### ✅ CONFIRMED — the 4R100 handles the range switch differently. TR3A becomes an analog input.
+
+**Three states on one wire: open, 270 Ω, short.** A digital input cannot see the
+middle one — with a 10 kΩ pull-up, 270 Ω reads 0.087 V against a short's 0 V, and
+both are a logic low.
+
+| Pull-up | Open | 270 Ω | Short | Separation | I when shorted |
+|--:|--:|--:|--:|--:|--:|
+| 1 kΩ | 3.30 V | 0.702 V | 0 V | 871 LSB | 3.3 mA |
+| **2.2 kΩ** | 3.30 V | **0.361 V** | 0 V | **448 LSB** | **1.5 mA** |
+| 4.7 kΩ | 3.30 V | 0.179 V | 0 V | 223 LSB | 0.7 mA |
+
+**2.2 kΩ.** 360 mV between the middle state and a short — 450 counts on a 12-bit
+ADC, nowhere near marginal — and only 1.5 mA through a harness switch. A 270 Ω
+pull-up would centre the middle state at mid-rail but draws **12 mA** for no
+benefit.
+
+> Harness-facing, so it keeps the usual series resistance and clamp. **The series
+> resistor adds to the measured value** — 1 kΩ in series makes the middle state
+> read 1270 Ω. That is a calibration constant, not a problem, but it has to be in
+> the firmware's thresholds rather than assumed away.
+
+**Budget:**
+
+| | |
+|---|---|
+| Internal ADC | 15 used of 18 → **16 of 18**, two spare |
+| **Moving all four TR to analog** | 19 of 18 — **one over. Do not** |
+| Pin count | **unchanged** — TR3A was already one of the seven conditioned inputs; it just has to land on an **ADC-capable** pin |
+
+**Only TR3A is resistively coded.** The ATSG manual tests TR1 across pins 2 and 4
+as plain continuity, so **TR1, TR2 and TR4 stay digital**.
+
+### ⭐ And it makes the input transmission-agnostic
+
+A 4R70W's plain switches read **open or short**. A 4R100's read **open, 270 Ω or
+short**. **Both decode in firmware off the same pin, with no hardware change** —
+which is precisely what "build for the 4R100, test on the 4R70W" is supposed to
+buy.
 
 ## The DTR's other jobs — unchanged from the 4R70W
 

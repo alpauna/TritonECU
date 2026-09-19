@@ -101,13 +101,14 @@ The Ethernet collision is real and already visible in the firmware:
 | Demand | Ch |
 |---|--:|
 | DPFE, TFT, downstream O2 ×2, fuel pump monitor | 5 |
+| **TR3A** — three-state, 4R100 codes it with an internal 270 Ω ([`4r100-deltas.md`](4r100-deltas.md)) | **1** |
 | VREF `CS` current sense | 1 |
 | VREF feed short-to-battery sense — **one feed, not two** | 1 |
 | Output drain sense — **six, not thirteen** | 6 |
 | 1138 / 391 solenoid supply sense | 2 |
-| **Total** | **15** |
+| **Total** | **16** |
 
-**23 before, 15 after, against 18 available.**
+**23 before, 16 after, against 18 available** — two spare.
 
 ### Which outputs get drain sense, and what replaces it on the rest
 
