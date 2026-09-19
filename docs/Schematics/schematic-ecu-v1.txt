@@ -37,14 +37,20 @@ CONTENTS
 1. POWER CHAIN
 --------------
 
-  Battery, key-switched, through the EEC-V connector:
+  TWO feeds, and only one of them is key-switched:
 
-   VBAT o--[ fuse ]--+--[ TVS ]--+---------------------------+
-                                 |                           |
+   VPWR  o--[ F1 ]--[SMDJ43A]--+---------------------------+
+   pins 71, 97, circuit 361 RD |                           |
+   EEC relay - DIES AT KEY-OFF |                           |
                             LTC4364-2                    (protected rail)
                           + pass FET                          |
                           + ideal-diode FET                   |
                                  |                            |
+   KAPWR o--[ F2 ]--[SMDJ43A]--[D3]--[R7 470R]--+-------------+
+   pin A-44 [CONFIRM number]                    |             |
+   CONSTANT 12 V                             [SMBJ30A]        |
+                                                |             |
+                                               PGND           |
                                  +--------------+-------------+
                                                 |             |
                                           MAX25239AFFA    NCV8772CDT504RKG
@@ -73,6 +79,26 @@ CONTENTS
 
   MAX25239 `SYNC` is a GPIO, not a strap - fit a pulldown so cold power-up
   lands in skip mode. power-supply.md.
+
+  ** KAPWR JOINS THE PROTECTED RAIL, NOT THE LTC4364's INPUT. ** That one
+  choice is the whole always-on design:
+
+    - the LTC4364 is UNPOWERED when parked, so its 750 uA - 80% of the old
+      sleep budget - is gone. 944 uA becomes 194 uA, 0.2%/month of a group
+      65 battery instead of 1.0%.
+    - back-feed out through pins 71/97 into the open relay contact is
+      blocked by the ideal-diode FET that is already there.
+    - R7 makes the OR asymmetric without an OR controller. KAPWR is if
+      anything HIGHER than VPWR (which comes through a relay contact), so a
+      plain diode-OR would run the whole ECU off the keep-alive fuse.
+      470R against the LTC4364 path's ~20 mohm is 23500:1 - at 1 A of load
+      KAPWR contributes 43 uA. It also caps KAPWR fault current at 30 mA.
+
+  ** THE VOLTMETER READS 0.51 V LOW WHEN PARKED. ** The 150k/33k battery
+  divider sits downstream of D3 and R7. The low-battery self-disable set at
+  11.5 V would really trip at 12.01 V - giving up on a healthy battery.
+  Firmware adds the offset back when VPWR is absent, and it is LOAD
+  DEPENDENT, not a constant. always-on-domain.md.
 
 
 2. THE NUCLEO, AND WHAT THE CARRIER OWES IT
@@ -492,6 +518,13 @@ CONTENTS
      not on Ford's 4R70W diagram - sec.7. It changes the channel count.
   5. [CONFIRM] DRV8837 / TLV7031 automotive qualification - sec.11.
   6. [CONFIRM] Nucleo CN2 jumper designation against UM1974 - sec.2.
+  9. [CONFIRM] A-44's pin number in the 1-104 scheme - sec.1. The wiring
+     diagrams number VPWR 'pins 71 and 97'; oem-connectors.md numbers it
+     'A-32, A-33'. Two schemes coexist in the repo with NO MAPPING, and the
+     KAPWR feed cannot be drawn until it is settled.
+ 10. [CONFIRM] the LTC4364 tolerates OUT held at battery while IN is at 0 V
+     - sec.1. That is the parked state BY CONSTRUCTION now.
+ 11. [CONFIRM] the keep-alive fuse rating on this truck, to size F2 under it.
   7. [CONFIRM] the F767 DAC's output impedance and its true reset-state
      leakage - sec.4b. R6's 1k makes the first moot and the 91k/9.1k
      divider makes the second benign, but neither is read off a datasheet

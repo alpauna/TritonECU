@@ -223,13 +223,35 @@ Nothing good happens if 18 V arrives on a 3.3 V system, and a scan tool
 attempting a reflash has nothing to talk to anyway. If it is left wired, it
 needs clamping.
 
-### 5. KAPWR is not required
+### 5. KAPWR ~~is not required~~ — **REVERSED: it is the always-on feed**
 
-Keep-alive power (A-44) is constant 12 V holding the OEM PCM's volatile RAM —
+> ⚠ **This section was written before the always-on domain existed and its
+> conclusion is now wrong.** It is kept because the reasoning shows exactly how
+> the gap opened: KAPWR was retired on the strength of *where state is stored*,
+> which is a real argument, and nothing later re-examined it when the design
+> stopped powering down at all.
+
+~~Keep-alive power (A-44) is constant 12 V holding the OEM PCM's volatile RAM —
 adaptive fuel trims, DTCs — with the key off. The replacement ECU stores that
 on the SD card and in NVS, so KAPWR is unnecessary. What it does need instead
 is a clean power-down: detect loss of the run line and flush learned state
-before the rail collapses.
+before the rail collapses.~~
+
+**A-44 is required, and it is now the board's only constant feed.**
+[`../always-on-domain.md`](../always-on-domain.md) specifies an MCU that never
+powers down — which retires the clean-power-down requirement above, and in
+exchange needs a source of permanent 12 V. **The board's only other input is
+VPWR (pins 71 and 97, circuit 361 RD), which comes from the EEC power relay and
+dies at key-off.**
+
+So the always-on decision **revives this pin rather than retiring it**. The feed
+joins the *protected rail*, downstream of the LTC4364's ideal-diode FET, through
+a fuse, a blocking diode, 470 Ω and an SMBJ30A — see
+[`../always-on-domain.md`](../always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
+
+> **[CONFIRM] A-44's number in the 1–104 scheme.** This page numbers VPWR
+> *"A-32, A-33"*; the wiring diagrams number it *"pins 71 and 97"*. **Two
+> numbering systems, no mapping recorded.**
 
 ---
 

@@ -12,7 +12,8 @@ ST-Link, USB console and Ethernet all come for free.
 
 | Block | Parts | Decided |
 |---|---|---|
-| Input protection | LTC4364-2 + pass FET + ideal-diode FET, fuse, TVS | ✅ |
+| Input protection | LTC4364-2 + pass FET + ideal-diode FET, fuse, TVS — on **VPWR** (pins 71/97, key-switched) | ✅ |
+| **Always-on feed** | **KAPWR** (A-44, constant) → F2 + SMDJ43A + D3 + **470 Ω** + **SMBJ30A**, joining the **protected rail** downstream of the ideal diode. Leaves the LTC4364 unpowered when parked — **194 µA**, not 944 — [`always-on-domain.md`](always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from) | ✅ |
 | Main supply | **MAX25239AFFA buck-boost → 5.0 V**, 2.1 MHz, spread spectrum, 2.2 µH | ✅ |
 | Rails | **TLV62085 buck → 3.3 V** from 5 V; ADC reference MAX6070AAUT25 2.5 V, gated | ✅ |
 | **VREF output chain** | **TPS2H160B-Q1** dual switch → **LM74700-Q1** + **DMN6040SVTQ-7** ideal diode → **SMAJ24CA** TVS, per feed | ✅ |

@@ -32,13 +32,18 @@ draws before ours.
 
 | Item | Sleep current |
 |---|---|
-| LTC4364 quiescent | **750 µA** |
+| ~~LTC4364 quiescent~~ | **0 µA** — **unpowered when parked**, see [§ The KAPWR feed](#the-kapwr-feed-where-the-constant-12-v-comes-from) |
 | **MAX25239, standby in skip mode** | **95 µA** |
 | TLV62085, quiescent | ~17 µA |
 | STM32F767 Standby + RTC + backup SRAM | **3 µA** |
 | INA238 in shutdown | ~2 µA |
 | ADC battery-sense divider, **150 k / 33 k** on a **permanent** rail | **77 µA** |
-| **Total** | **≈ 944 µA** |
+| **Total** | **≈ 194 µA** |
+
+> ⚠ **This table read 944 µA until the feed was defined.** The LTC4364's 750 µA
+> was 80 % of it, and it is now zero — with KAPWR joining the **protected rail**
+> rather than the LTC4364's input, nothing powers the LTC4364 with the key off.
+> **4.9× better, from moving a junction rather than adding parts.**
 
 > **This table is the owner of the sleep budget.** Every other drain figure in
 > this document and in [`power-supply.md`](power-supply.md) is working, and
@@ -62,11 +67,15 @@ draws before ours.
 > [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap).
 
 ```
-944 µA × 720 h  =  0.68 Ah/month
-group 65 battery ≈ 70 Ah  →  1.0 %/month,  ~6 % over six months
+194 µA × 720 h  =  0.14 Ah/month
+group 65 battery ≈ 70 Ah  →  0.20 %/month,  ~1.2 % over six months
 ```
 
-Comfortable. **Note what dominates: the LTC4364, at 250× the MCU's draw.**
+Comfortable, and it now survives a long lay-up rather than merely tolerating a
+short one. ~~**Note what dominates: the LTC4364, at 250× the MCU's draw.**~~
+**That was true of the 944 µA version. What dominates now is the MAX25239 at
+95 µA and the battery-sense divider at 77 µA — 89 % of the budget between
+them, and both are already at their practical floor.**
 
 ### Standby, not Stop
 
@@ -1025,14 +1034,142 @@ LTC4364's 750 µA.
 
 ## Tapping point: after the LTC4364, not before
 
-Simplest and protected. The cost is the LTC4364's 750 µA running permanently,
-which the budget above absorbs.
+Simplest and protected. ~~The cost is the LTC4364's 750 µA running permanently,
+which the budget above absorbs.~~ **There is no such cost — see below. Taking
+this sentence literally for the *input* as well as the output is what removed
+it.**
 
-The alternative — tapping raw B+ so the MCU can shut the LTC4364 down via SHDN#
-— would cut the parasitic to tens of microamps, but it needs a **second
+~~The alternative — tapping raw B+ so the MCU can shut the LTC4364 down via
+SHDN# — would cut the parasitic to tens of microamps, but it needs a **second
 transient-protection chain** for a rail that must survive load dump and reverse
-battery on its own. **Not worth it at 0.56 Ah/month.** Revisit only if the truck
-sits for many months at a time.
+battery on its own. **Not worth it at 0.56 Ah/month.**~~
+
+> ⚠ **That paragraph weighed the wrong thing, and it nearly cost the design its
+> power source.** It priced a second protection chain against a *drain saving*
+> and found the trade not worth making. But this document never said where the
+> constant 12 V arrives from at all, and the rest of the board has only one
+> input — **VPWR, which is key-switched**. The second chain does not buy a lower
+> parasitic. **It buys the existence of the always-on rail.** And because that
+> branch carries microamps rather than amps, it is a resistor and a TVS, not a
+> second LTC4364.
+
+---
+
+## The KAPWR feed: where the constant 12 V comes from
+
+**This was undefined until now**, and three documents disagreed about it:
+
+| Document | Said |
+|---|---|
+| [`Schematics/schematic-ecu-v1.txt`](Schematics/schematic-ecu-v1.txt) §1 | *"Battery, **key-switched**, through the EEC-V connector"* |
+| [`review-ignition-injection.md`](review-ignition-injection.md), [`output-drivers.md`](output-drivers.md) | The only input is **VPWR = circuit 361 RD at pins 71 and 97**, fed from the **EEC power relay** |
+| **this document** | *"the LTC4364's 750 µA running **permanently**"* |
+| [`1999-Ford-F150-4wd-5.42v/oem-connectors.md`](1999-Ford-F150-4wd-5.42v/oem-connectors.md) §5 | *"**KAPWR is not required**"* |
+
+With the board as drawn, **the EEC relay opens at key-off, VPWR dies, and the
+always-on domain has nothing to be on from.** The 944 µA was budgeted against a
+rail that did not exist. The always-on decision **revives KAPWR rather than
+retiring it** — `oem-connectors.md` §5 retired A-44 before this domain existed,
+and A-44 is exactly the pin that supplies it.
+
+Numbers below are reproduced by [`calc/kapwr_feed.py`](calc/kapwr_feed.py).
+
+### The topology, and why the junction point is the whole design
+
+```
+  VPWR 71,97 ──[F1]──[SMDJ43A]──┤ LTC4364-2        ├──┐
+                                │ pass FET         │  │
+                                │ ideal-diode FET ─┼──┴──┬──► PROTECTED RAIL
+                                                         │
+  KAPWR A-44 ──[F2]──[SMDJ43A]──[D3]──[R7 470R]──────────┤
+                                       │                 ├──► MAX25239 → 5 V
+                                    [TVS3]               ├──► NCV8772 → VREF
+                                       │                 └──► 150k/33k divider
+                                      PGND
+```
+
+**KAPWR joins the protected rail, downstream of the ideal-diode FET** — not the
+LTC4364's input. Three things follow, and the first is the argument:
+
+- **The LTC4364 is unpowered when parked.** 750 µA, 80 % of the old budget, gone.
+- **Back-feed into VPWR is blocked for free** by the ideal-diode FET already in
+  the design. Joining at the LTC4364's *input* would push KAPWR back out through
+  pins 71/97 into an open relay contact and whatever else shares that branch.
+- **The "second transient chain" is two parts**, because this branch carries
+  microamps.
+
+### R7 = 470 Ω does three jobs
+
+**a) It makes the OR asymmetric without an OR controller.** This matters more
+than it looks: **KAPWR is if anything *higher* than VPWR**, because VPWR arrives
+through a relay contact. A plain diode-OR would therefore run the whole ECU off
+the keep-alive fuse. R7 is 23 500× the LTC4364 path's ~20 mΩ:
+
+| Rail sags | KAPWR contributes |
+|---|---|
+| 10 mV at 0.5 A | **21 µA** |
+| 20 mV at 1.0 A | **43 µA** |
+
+**Run current can never flow through the keep-alive fuse.**
+
+**b) It limits KAPWR fault current** to 30 mA at 14 V into a dead short, so a
+failure on our side cannot open the keep-alive fuse and take the truck's other
+keep-alive loads down with it.
+
+**c) It makes TVS3 work** — a shunt clamp with no series impedance has to absorb
+the whole surge.
+
+The cost is **91 mV** of drop when parked. The MAX25239 runs down to 2 V, so this
+is irrelevant to operation — and *not* irrelevant to the voltmeter, below.
+
+### TVS3: the window is narrower than it looks
+
+| Must | |
+|---|---|
+| Stand **off** a jump start / the LTC4364's regulated output | **27 V** |
+| Clamp **below** the MAX25239's transient absolute maximum | **42 V** |
+
+| Part | Standoff | V<sub>BR</sub> min | |
+|---|--:|--:|---|
+| SMBJ24A | 24 V | 26.7 V | **no** — conducts at a 27 V jump start |
+| SMBJ26A | 26 V | 28.9 V | **no** — same |
+| **SMBJ30A** | **30 V** | **33.3 V** | ✓ |
+| SMBJ33A | 33 V | 36.7 V | ✓, less margin to 42 V |
+
+| Case | At the pin | Through R7 | R7 | TVS3 |
+|---|--:|--:|--:|--:|
+| ISO 7637-2 pulse 5b, **suppressed alternator** | 35 V | 1.1 mA | ~0 W | 0.04 W |
+| SMDJ43A clamping at full current, **unsuppressed** | 69.4 V | 74.3 mA | 2.59 W | 2.56 W |
+
+400 ms of the worst case is **1.04 J in R7** — a 1206, or two 1 kΩ in parallel.
+
+**Note the realistic case does nothing at all.** A modern alternator's
+centralised suppression holds pulse 5b to 35 V, which is already inside the
+MAX25239's own 42 V rating. **TVS3 exists for the unsuppressed case**, and R7 is
+what makes that case survivable.
+
+**Decided: SMBJ30A, R7 = 470 Ω 1206, D3 silicon (not Schottky).**
+
+### ⚠ The consequence nobody would look for: the voltmeter now reads low
+
+The 150k/33k battery-sense divider hangs on the protected rail, which **when
+parked is KAPWR minus D3 minus R7**:
+
+```
+  D3 forward drop at 194 µA    0.42 V
+  R7 drop                      0.09 V
+  ---------------------------------
+  total offset                 0.51 V    low, and only when parked
+```
+
+The low-battery self-disable below trips at 11.5 V. **Uncorrected it would
+actually trip at 12.01 V of real battery — giving up on a healthy battery.**
+
+Firmware must add the offset back whenever VPWR is absent, and **the offset is
+load-dependent, not a constant**, because R7's drop tracks the sleep current.
+
+This is the kind of error that reads as a weak battery for a year before anyone
+questions the ECU.
 
 ## The new requirement this creates: low-battery self-disable
 
@@ -1064,3 +1201,16 @@ battery becomes a no-start that looks like a dead ECU.
   a large sleep load otherwise, and nothing needs it while parked.
 - **Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
   hundreds of milliamps in a parked truck.
+- **[CONFIRM] A-44's number in the 1–104 scheme.** The wiring diagrams give VPWR
+  as *"pins 71 and 97"*; `oem-connectors.md` gives it as *"A-32, A-33"*. **Two
+  numbering systems coexist in this repo with no mapping recorded anywhere**, and
+  the KAPWR feed cannot be drawn until that is settled.
+- **[CONFIRM] the LTC4364 tolerates `OUT` held at battery while `IN` sits at 0 V.**
+  That is the parked state *by construction* here. The ideal-diode FET blocks the
+  current; what is unverified is the part's own rating for a reverse IN–OUT
+  differential with the die unpowered.
+- **[CONFIRM] the keep-alive fuse rating on this truck**, to size F2 below it.
+- **[CONFIRM] D3 reverse leakage at 125 °C.** It is reverse-biased only with the
+  key on and the MCU awake, so it costs nothing in the sleep budget — but a
+  Schottky would leak tens of µA and is the wrong part here for exactly that
+  reason. **Silicon, and take the 0.42 V.**

@@ -127,7 +127,16 @@ it**, next to the R<sub>IN</sub> spec that decides it.
 
 **And the same table was missing something larger.** The MAX25239 itself —
 **95 µA** in skip — was never in the sleep budget either. Corrected total:
-**≈944 µA**.
+~~**≈944 µA**~~ **≈194 µA.**
+
+> **Both corrections stand, but the total moved again — and for a bigger
+> reason.** This review found two *missing* entries. What neither it nor
+> `always-on-domain.md` asked was **where the constant 12 V comes from at all** —
+> and the board's only input was VPWR, which is key-switched. Defining the
+> **KAPWR feed** onto the *protected rail* rather than the LTC4364's input leaves
+> the LTC4364 unpowered when parked, removing its 750 µA: 80 % of the total this
+> review had just finished correcting. See
+> [`always-on-domain.md`](always-on-domain.md#the-kapwr-feed-where-the-constant-12-v-comes-from).
 
 ---
 
