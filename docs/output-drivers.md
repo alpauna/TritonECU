@@ -1012,6 +1012,21 @@ turns out to supply what the other needs.
 > **[MEASURE]** the **cold resistance of one sensor**. 1/5 against 1/10 of hot
 > is the difference between 16 W and 49 W in the driver, and it sets where the
 > ramp has to start.
+>
+> ⚠ **Null the leads first.** Hot is 9.0 Ω, so cold is **0.9–1.8 Ω** — the same
+> sub-2-ohm regime that made the coil primary read 3.6× high on a 2-wire
+> measurement. And here the error does not merely shrink the answer, **it
+> inverts it**: adding the ~1.3 Ω those leads contributed puts the reading at
+> 2.2–3.1 Ω, at which the heater never pulls the 6 A limit and the driver
+> appears to dissipate **nothing at all** instead of 16–49 W.
+>
+> | True cold R | Real FET power in limit | Read with +1.3 Ω of leads | Apparent FET power |
+> |--:|--:|--:|--:|
+> | 0.90 Ω | **48.6 W** | 2.20 Ω | **1.8 W** |
+> | 1.80 Ω | **16.2 W** | 3.10 Ω | **0 W** |
+>
+> Four-wire, or short the probes and subtract. The whole reason this
+> measurement exists is to decide between those columns.
 
 **SOT-223 wants copper.** At 1.5 A and the hot R<sub>DS(on)</sub> of 210 mΩ that
 is 0.47 W. On a minimum pad at 130 °C/W that is a 61 °C rise — about 121 °C
