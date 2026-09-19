@@ -55,9 +55,10 @@ Every three-wire sensor on this truck, at its worst case:
 | DPFE (C122) | ~12 mA | the largest single VREF load |
 | CHT pull-up (C179) | ~0.4 mA | pull-up is inside the ECU, sourced from VREF |
 | IAT pull-up (C107) | ~0.4 mA | same |
+| **TFT pull-up (C183-5)** | **~0.4 mA** | ⚠ **was missing from this table.** The transmission fluid thermistor is the *third* NTC and needs a pull-up exactly as CHT and IAT do — [`../docs/measurements-wanted.md`](measurements-wanted.md) |
 | ~~TR sensor~~ | — | **not on VREF** — a switch array on SIGRTN, per Ford's diagrams |
 | Speed control switches | ~5 mA | **[CONFIRM]** whether on VREF |
-| **Total** | **~25 mA** | |
+| **Total** | **~25 mA** | *(TFT's 0.4 mA is inside the rounding — it does not move the regulator sizing, but it belongs in the table)* |
 
 Not on VREF at all: MAF (12 V on circuit 361), CKP and CMP (variable
 reluctance, self-generating), knock sensor (piezo, self-generating), HO2S
