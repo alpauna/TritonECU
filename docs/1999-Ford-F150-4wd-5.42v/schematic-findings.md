@@ -332,6 +332,23 @@ Tying pin 36 to our AGND at the connector would throw the whole benefit away.
 > Signal is `967 LB/RD` on **pin 88** — checked, because the sheet's pin label is
 > easy to misread as 38, and pin 38 is unused on this truck.
 
+> ✅ **Confirmed at the sensor end.** `MAF-Connector.png` gives C141 directly:
+>
+> | C141 pin | Circuit | |
+> |--:|---|---|
+> | 2 | `361 RD` | **Power — hot in start or run.** This is **VPWR**, not VREF |
+> | 3 | `570 BK/WH` | **Ground** — the power-ground net, to S100/G101 |
+> | 4 | `968 TN/LB` | **MAF sensor signal return** → PCM pin 36 |
+> | 5 | `967 LB/RD` | **MAF signal out** → PCM pin 88 |
+>
+> Pins 1 and 6 unused. **Four wires, two of them a Kelvin pair** — exactly as
+> read off `EngineControls2.png`, now from the connector's own sheet.
+>
+> Note what pin 2 settles: **the MAF runs on VPWR, not VREF**, so it is *not*
+> ratiometric to the sensor reference and does not appear in
+> [`../vref-supply.md`](../vref-supply.md)'s load budget. That was already
+> assumed; it is now stated at the source.
+
 ---
 
 ## 17. VPWR is key-switched — confirmed at the relay coil, not inferred
