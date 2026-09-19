@@ -79,7 +79,7 @@ within a few percent, and the pull-up is sized: **2.2 kΩ to 3.3 V**, giving
 
 | | |
 |---|---|
-| **O2 heater cold resistance** | Leads nulled — it lands at 0.9–1.8 Ω, the same regime that just bit the coil. Decides whether the driver ever sees 16 W or 49 W — [`output-drivers.md`](output-drivers.md) |
+| ~~**O2 heater cold resistance**~~ | ✅ **6.12 Ω measured** — four times the prediction. It is a **mild PTC**, inrush is 2.35 A, and the driver never enters current limit. [`output-drivers.md`](output-drivers.md) |
 | **Circuit 679 level** | What the speed control servo, GEM and rear air suspension expect — 12 V, 5 V or open-drain. Decides only whether a pull-up gets populated |
 | **Donor case: pan depth and sign** | Straight edge across the rails, depth gauge to the pan. Clearance or thermal boss — [`DonorECU/README.md`](DonorECU/README.md) |
 

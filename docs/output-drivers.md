@@ -1092,9 +1092,33 @@ committed.
 
 ### Two cautions
 
-**O2 heaters are PTC — cold inrush is several amps** against ~1.5 A steady. The
+### ✅ MEASURED: 6.12 Ω cold — and the PTC assumption was wrong
+
+~~O2 heaters are PTC — cold inrush is several amps against ~1.5 A steady. The
 part current-limits briefly at 6 A minimum, which is a soft-start rather than a
-fault, and **firmware must not read it as one**.
+fault, and firmware must not read it as one.~~
+
+**Measured on a new sensor: 6.12 Ω across the two white heater wires.** This
+section predicted **0.9–1.8 Ω**, from *"PTC cold resistance is typically 1/5 to
+1/10 of hot."*
+
+**Cold/hot is 0.68, not 0.1–0.2. It is a mild PTC, not a lamp filament** — the
+1/5-to-1/10 rule holds for incandescent filaments and some ceramic PTCs, and
+nothing had checked whether it held here.
+
+| | Predicted (0.9 Ω) | **Measured (6.12 Ω)** |
+|---|--:|--:|
+| Inrush at 14.4 V | 6.00 A *(limited)* | **2.35 A** |
+| Reaches the 6 A current limit? | **yes** | **no — not close** |
+| Peak FET dissipation | **54 W** | **1.16 W** |
+| Four channels, harness | 24 A | **9.4 A** |
+
+**The driver is never stressed.** There is no current-limit event, so there is
+nothing to soft-start out of — and the firmware note about not reading current
+limit as a fault becomes moot, because it will not happen.
+
+Through the thermal tape at 2.93 °C/W, 1.16 W is **3.4 °C** of rise. The tape's
+180 °C short-term rating stops being a consideration too.
 
 #### PWM the heaters — but the driver was never the reason
 
@@ -1118,8 +1142,8 @@ dissipating **tens of watts in a SOT-223** until the PTC warms enough to fall
 below 6 A — hundreds of milliseconds, four channels, every cold start. Against
 a steady-state 0.47 W that already gives a 61 °C rise on a minimum pad.
 
-**And the harness sees 24 A** across four channels clamping together, against
-6 A steady.
+~~**And the harness sees 24 A** across four channels clamping together.~~
+**Measured: 9.4 A across all four**, against 6 A steady.
 
 **The real reason is the sensor.** A cold zirconia element with exhaust
 condensation on it cracks when heated fast. OEMs **delay** the heater until the
@@ -1132,8 +1156,8 @@ hardware.
 | | |
 |---|---|
 | **1. Delay** turn-on after a cold start — time or CHT based | protects the sensor. The part that actually matters |
-| **2. Ramp** duty from cold rather than stepping to 100 % | keeps the driver out of current limit entirely, turning a 16–49 W transient into nothing |
-| **3. Stagger** the four channels | 24 A becomes 10.5 A. The firmware is sequencing them anyway |
+| **2. Ramp** duty from cold rather than stepping to 100 % | ~~keeps the driver out of current limit~~ — **measured, it never enters current limit at all.** The ramp is entirely for the ceramic |
+| **3. Stagger** the four channels | ~~24 A becomes 10.5 A~~ — **measured inrush is 9.4 A across all four**, so this is now a nicety rather than a need. The firmware is sequencing them anyway |
 
 #### The ramp does not have to run open loop
 
@@ -1150,9 +1174,10 @@ off, or heater current sharing harness ground beats against it. PWM is what
 creates the off-windows. The two decisions were reached independently and each
 turns out to supply what the other needs.
 
-> **[MEASURE]** the **cold resistance of one sensor**. 1/5 against 1/10 of hot
-> is the difference between 16 W and 49 W in the driver, and it sets where the
-> ramp has to start.
+> ~~**[MEASURE]** the cold resistance of one sensor.~~ ✅ **Done: 6.12 Ω**, and
+> it removed the question rather than answering it — see above. The ramp's
+> starting point is now set by **the ceramic's tolerance for thermal shock**, not
+> by the driver, because the driver never gets warm.
 >
 > ⚠ **Null the leads first.** Hot is 9.0 Ω, so cold is **0.9–1.8 Ω** — the same
 > sub-2-ohm regime that made the coil primary read 3.6× high on a 2-wire
