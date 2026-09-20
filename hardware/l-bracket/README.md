@@ -19,7 +19,7 @@ Overall **30 × 50 × 50**, or 53 to the standoff tips.
                      +--+                    the two are on the midline,
                                              8.5 and 33.9 up from the end
 
-   top holes: 23.8 across the 30, 44.5 along the 50, centred.  Ø2 on Ø5 bosses.
+   top holes: 21.8 across the 30, 44.5 along the 50, centred.  Ø2 on Ø5 bosses.
 ```
 
 Render: `./render.sh` → `stl/bracket.stl`.
@@ -32,8 +32,8 @@ Render: `./render.sh` → `stl/bracket.stl`.
 | Short leg (the platform) | 30 × 50 |
 | Tall leg (the upright) | 50 × 50, inner face at x 27 |
 | Plate and wall thickness | **3** — *a decision, not on the drawing* |
-| Top hole pattern | 23.8 × 44.5, centred |
-| Top hole centres | x 3.10 / 26.90, y 2.75 / 47.25 |
+| Top hole pattern | 21.8 × 44.5, centred |
+| Top hole centres | x 4.10 / 25.90, y 2.75 / 47.25 |
 | Top bore, modelled | **2.30** — 2.0 nominal + 0.30 print compensation |
 | Standoffs | Ø5 × 3, on the top face |
 | Side hole centres | z 8.5 / 33.9 up from the free end, y 25 (midline) |
@@ -42,7 +42,8 @@ Render: `./render.sh` → `stl/bracket.stl`.
 `openscad` echoes every one of these on each render, so they follow the
 parameters rather than this table. Re-read them after changing anything. The
 rendered STL has been measured back: 30.000 × 50.000 × 53.000, every side bore
-at r 1.9000 exactly, every top bore at 1.150 and every boss at 2.500.
+at r 1.9000 exactly, every top bore at 1.150 and every boss at 2.500, on
+(4.10, 2.75) and the three that follow.
 
 ## How the drawing was read
 
@@ -56,12 +57,16 @@ plan. Three of its numbers needed work.
 - **The row spacing was 70 on the sketch, corrected to 44.5.** 70 cannot fit in
   a 50 deep plate; 44.5 leaves 2.75 mm of plate outboard of each row, and the
   drawn proportion (0.72 of the plate) sits between the two.
-- **The short leg was 25.8 on the sketch, opened to 30.** A 23.8 pattern in 25.8
-  puts each centre 1 mm from an edge: a Ø2.3 bore would open *onto* the edge
-  rather than through the plate, and a Ø5 boss would hang 1.5 mm in mid-air. At
-  30 each centre is 3.1 in, which leaves 1.95 mm of plate to the tip and 0.6 mm
-  outboard of each boss. `leg_x` is the one number to change if the real leg
-  differs.
+- **The short leg was 25.8 on the sketch, opened to 30.** The pattern was then
+  23.8, and 23.8 in 25.8 puts each centre 1 mm from an edge: a Ø2.3 bore would
+  open *onto* the edge rather than through the plate, and a Ø5 boss would hang
+  1.5 mm in mid-air.
+- **The pattern was 23.8 on the sketch, corrected to 21.8** off the module
+  itself. Each centre is now 4.1 in from the tip — 2.95 mm of plate to the tip,
+  1.6 mm outboard of each boss — and, more usefully, it opens the nut window
+  below. 25.8 would *almost* take the narrower pattern (2.0 to each centre, boss
+  overhanging 0.5), but `leg_x` is left at 30, because the extra 4.2 mm is
+  exactly what makes a nut possible under the inboard pair.
 
 The 50 is taken as **overall height**, top face to the free end, and the 30 as
 **tip to the outer face of the upright** — the same convention as the 44.5 on
@@ -69,30 +74,42 @@ hardware/psu-platform.
 
 ## Read this before you order screws
 
-> **Nothing can go under the inboard pair of top holes.**
+> **A nut fits under all four holes — but only if you move the pattern off
+> centre.**
 
-Their centres are at x 26.90 and the upright's inner face is at x 27.00, so each
-bore reaches **1.05 mm into the upright's plan area**. The bore itself is fine —
-it passes through 3 mm of plate like the others — but what is *below* that plate
-is upright, not air. A nut, or a screw head driven from below, has nowhere to go.
+What is under the short leg at the inboard holes is upright, not air, so a nut
+or a screw head driven from below has to clear the upright's inner face at
+x 27.00. With the pattern at 21.8 there is now a window where that works *and*
+each Ø5 boss still lands fully on plate:
 
-This is inherent to the numbers: the clear span beyond the upright is 27 mm and
-the pattern is 23.8, so there is 3.2 mm of slack in total, and no position exists
-where a Ø3.8 nut clears the wall and a Ø5 boss still lands on the plate.
+| | |
+|---|--:|
+| A Ø3.8 nut under the inboard pair needs | `top_x0` ≤ **3.30** |
+| A Ø5 boss on plate at the tip needs | `top_x0` ≥ **2.50** |
+| Centred, which is what the model ships with | `top_x0` = **4.10** |
 
-Three ways out, in order of preference:
+**The default is outside that window by 0.8 mm.** Centring the pattern is what
+costs the nut: at 4.10 the inboard centres sit 1.10 mm from the upright, and a
+nut wants 1.90. The model ships centred because that is what the drawing shows
+and because tapping is the better fastening anyway — but the choice is now real,
+and it is one parameter:
 
-1. ⭐ **Tap the plate and use no nut at all.** Plate plus standoff is **6 mm** of
-   stack — three diameters of M2, a respectable thread in PETG. Set
-   `hole_comp = 0` and model the bore at a **1.6 mm tapping pilot** instead of
-   2.30 clearance. This dissolves the problem rather than working around it.
-2. **Fasten the inboard pair from above** into the module's own threaded
-   standoffs, and keep clearance bores.
-3. **Measure the module's real pattern.** If it is not centred, set `top_x0`;
-   every millimetre outboard buys back a millimetre of nut clearance, at the cost
-   of the 0.6 mm the boss already has to the tip.
+1. ⭐ **Tap the plate and use no nut at all.** Plate plus standoff is **6 mm** —
+   three diameters of M2, a respectable thread in PETG. Set `hole_comp = 0` and
+   model the bore at a **1.6 mm tapping pilot** instead of 2.30 clearance. Keeps
+   the pattern centred and dissolves the question.
+2. **Set `top_x0 = 3.0`** and use ordinary nuts on all four. That puts the boss
+   0.5 mm from the tip and the nut 0.9 mm clear of the upright. The render
+   echoes both margins and tells you which side of the window you are on.
+3. **Fasten the inboard pair from above** into the module's own threads, and
+   leave everything else alone.
 
-The outboard pair is clear to the tip and takes an ordinary nut.
+*(Before the pattern came down to 21.8 this section said no such window existed.
+At 23.8 that was true: a nut needed `top_x0` ≤ 1.3 and a boss needed ≥ 2.5. The
+2 mm bought the overlap.)*
+
+The bore itself is fine at any of these — at the centred default it reaches just
+**0.05 mm** into the upright's plan area, against 1.05 mm before.
 
 ## Printing
 

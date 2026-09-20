@@ -34,13 +34,17 @@ hole_fn = 32;
    FROM THE DRAWING — every number here is dimensioned on the sketch
    --------------------------------------------------------------------------- */
 leg_x   = 30.0;  // short leg: outer tip to the OUTER face of the tall leg.
-                 // DRAWN 25.8 — raised to 30 on 2026-09-20 because a 23.8
-                 // pattern in 25.8 leaves 1 mm to each edge and the bore opens
-                 // onto it. See README, "How the drawing was read".
+                 // DRAWN 25.8 — raised to 30 on 2026-09-20 because the pattern
+                 // was then 23.8 and left 1 mm to each edge. The pattern has
+                 // since come down to 21.8, which 25.8 would ALMOST take (2.0
+                 // to each centre, boss overhanging 0.5). Left at 30: it is
+                 // what makes the nut window below possible. See README.
 leg_z   = 50.0;  // OVERALL height: top face of the short leg to the free end
 deep    = 50.0;  // both legs, the depth of the extrusion
 
-top_dx  = 23.8;  // the four top holes, centre to centre ACROSS the short leg
+top_dx  = 21.8;  // the four top holes, centre to centre ACROSS the short leg.
+                 // DRAWN 23.8 — corrected off the module on 2026-09-20, the
+                 // pattern is 2 mm narrower than the sketch said.
 top_dy  = 44.5;  // the four top holes, centre to centre ALONG the 50
 top_d   =  2.0;  // "2 mm holes in the centre of the standoffs"
 
@@ -165,13 +169,21 @@ echo(str("  plate below the lower  ", side_z0 - side_r, " mm"));
 echo(str("  plate above the upper  ", top_z - (side_z0 + side_dz + side_r),
          " mm to the short leg's underside"));
 echo(str("  plate either side      ", side_y - side_r, " mm"));
+nut_af   = 3.8;                       // M2 nut / head across the flats
+nut_x0   = wall_x - nut_af/2 - top_dx;   // largest top_x0 that clears the nut
+boss_x0  = standoff_d/2;                 // smallest that keeps the boss on plate
 echo(str("INBOARD top bore vs the upright's inner face (x ", wall_x, "): centre ",
          wall_x - (top_x0 + top_dx), " mm outboard, bore reaches ",
          (top_x0 + top_dx + top_r) - wall_x,
-         " mm INTO the upright's plan area"));
-echo("  -> below that plate there is upright, not air: a NUT or SCREW HEAD");
-echo("     cannot go under the inboard pair. Tap the plate (see README) or");
-echo("     fasten those two from above into the module's own threads.");
+         " mm into the upright's plan area"));
+echo(str("  a ", nut_af, " nut under the inboard pair needs top_x0 <= ", nut_x0,
+         ";  a ", standoff_d, " boss on plate needs top_x0 >= ", boss_x0));
+echo(str("  window ", (nut_x0 >= boss_x0)
+           ? str(boss_x0, " .. ", nut_x0, ",  top_x0 is ", top_x0, " — ",
+                 (top_x0 <= nut_x0 && top_x0 >= boss_x0)
+                   ? "INSIDE it, an ordinary nut fits all four"
+                   : "OUTSIDE it: centring the pattern costs the nut under the inboard pair. Set top_x0 into the window, or tap the plate.")
+           : "EMPTY at this pattern — tap the plate instead, see README"));
 if (standoff) {
     echo(str("standoffs             4 x ", standoff_d, " dia x ", standoff_h,
              " tall, on the short leg's TOP face"));
