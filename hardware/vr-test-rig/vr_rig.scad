@@ -32,11 +32,11 @@ root_fn  = 120;  // gear root circle
    Block Ford 36-1 that sits between the balancer and the crank pulley). The
    bore is DERIVED from the product photo's measured bore/OD = 0.253 — still
    worth a caliper, but it is now the only one that is. */
-wheel_od        = 171.45; // ** CONTRADICTED BY THE PART ** vendor listing.
-                          // Laid on the 157 mm carrier template the wheel sits
-                          // INSIDE the plate with grid showing either side. A
-                          // 171.45 wheel would overhang it by 14 mm. Count the
-                          // grid squares across it; 10 mm pitch, no maths needed.
+wheel_od        = 171.45; // ** DOUBTFUL ** vendor listing. Photographed on the
+                          // carrier template the wheel spans ~92 % of a frame the
+                          // 173 mm plate overruns, which puts it near 159 mm. That
+                          // is a pixel estimate, not a fact - but 171.45 is a
+                          // shade over 17 grid squares, so COUNT THEM. 10 mm pitch.
 wheel_thk       =   3.05; // .120"  — vendor listing
 wheel_bore      =  43.4;  // MEASURE: 0.253 x OD from the photo, not the vendor
 key_w           =   6.5;  // MEASURE: 15 % of bore diameter
@@ -75,11 +75,18 @@ tooth_w_deg     =   5.0;  // MEASURE with calipers at the rim
    supply it. See README. */
 key_to_gap      =   5.0;  // exact, half a pitch; +/-2.5 from the gap's own width
 
-/* The index flute on the flange OD is cut at key_to_gap so it points at the gap.
-   ** The GEOMETRIC sense of that rotation depends on which way the rig spins **,
-   which the operational definition above deliberately does not fix. Check it
-   against a hand-turn before trusting the flute as a datum - and better, read
-   key_to_gap off a tooth log instead of trusting the flute at all. */
+/* GEOMETRIC SENSE - now fixed, because the part carries its own orientation.
+   FRONT is cast into the wheel's front face, and the engine turns CLOCKWISE seen
+   from the front. A fixed sensor meets features in COUNTER-clockwise order (the
+   next one to arrive is the one currently counter-clockwise of it), and the gap
+   arrives before the keyway, so:
+
+       on the face marked FRONT, sweeping CLOCKWISE:
+       keyway first, then the missing tooth 5.00 deg later.
+
+   The index flute on the flange OD is cut at key_to_gap so it points at the gap.
+   Better still, read key_to_gap off a tooth log rather than trusting the flute:
+   the flute must be KNOWN, not RIGHT. */
 /* Both sensors share a 14.3 mm barrel; only their lengths differ (CKP 57 mm,
    CMP 38.1 mm). The mount is a through-bore clamp, so ONE part serves both —
    the sensor simply sits further in or out. */

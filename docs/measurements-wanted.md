@@ -95,10 +95,11 @@ left for free.
 
 | | What it closes | How |
 |---|---|---|
-| ~~**Which side the keyway is on**~~ | ✅ **CLOSED** — the first look was from the *back* | Redefined operationally: the gap passes the sensor, then the keyway **5.00°** later. An order of events cannot be mirrored |
-| ~~**Dorman or Ford wheel?**~~ | ✅ **CLOSED — it is the Ford wheel** | A universal 36-1 is broached to fit a shaft, so its teeth fall arbitrarily against the key. **This keyway lands on the crank's TDC datum**, which only a factory part does |
-| **#1 at TDC — what is in front of the CKP sensor?** ⭐ | **`CKP_GAP_TO_TDC_DEG` itself.** 5.00° is the *wheel's* half; the other half is where the sensor bolts to the block, and no wheel measurement can supply it | Piston stop, bring #1 up, then look at the sensor. Gap ~5° past = the whole chain is consistent |
-| **OD** | `wheel_od = 171.45` is already contradicted — the wheel sits *inside* the 157 mm template. Sets shaft height, wheel slot and both sensor brackets | Count 10 mm grid squares across it |
+| ~~**Which side the keyway is on**~~ | ✅ **CLOSED twice over** — the first look was from the *back* | Operationally: gap passes the sensor, then the keyway **5.00°** later — an order of events cannot be mirrored. Geometrically: **`FRONT` is cast into the wheel**, so on that face, sweeping clockwise, keyway first then the gap |
+| ~~**Dorman or Ford wheel?**~~ | ✅ **CLOSED — it is the Dorman**, cast `FRONT 917-060 53025 TAIWAN` | And it is a **Small Block Ford** part while the truck is a **modular 5.4L**, so **5.00° is the rig's datum and does not transfer to the truck** |
+| **The truck's own reluctor: key-to-gap** ⭐ | Whether the rig can calibrate the truck's timing at all. The README claims rig and truck share a datum; an SBF wheel cannot supply a modular one | Same reading, on the truck's wheel |
+| **#1 at TDC — what is in front of the CKP sensor?** ⭐ | **`CKP_GAP_TO_TDC_DEG` itself**, and it needs no wheel geometry at all — it measures the whole chain at once | Piston stop, bring #1 up, then look at the sensor |
+| **OD** | `wheel_od = 171.45` is **doubtful, not disproven** — the photo ratio puts it near 159 mm, but the plate runs off frame so nothing is bounded outright. Sets shaft height, wheel slot and both sensor brackets | Count 10 mm grid squares across it — 171.45 is 17.1 of them |
 | **Tooth width at the rim** | **Demoted.** 5.00° is the midpoint of two tooth centres, so the width cancels out of the answer entirely. It now only bounds the ±2.5° spread | Calipers, then `360·w/(π·OD)` |
 | **Bore, keyway w × d, the three holes' PCD and angles** | `wheel_hub` — spigot, key and bolt circle. All three are currently ratios off a product photo | Calipers; the holes read straight off the grid |
 

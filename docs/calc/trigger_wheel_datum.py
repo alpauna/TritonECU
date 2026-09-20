@@ -96,11 +96,20 @@ print("it, log teeth, and key_to_gap falls out. The flute must be KNOWN, not RIG
 
 print()
 print("=" * 74)
-print("6. THE OD, WITHOUT MEASURING ANYTHING")
+print("6. THE OD  --  a ratio, not a proof")
 print("=" * 74)
-plate_w, vendor_od = 157.0, 171.45
-print(f"carrier template width           {plate_w:.0f} mm")
-print(f"vendor OD (6-3/4\")               {vendor_od:.2f} mm")
-print(f"overhang a {vendor_od:.2f} wheel MUST show   {(vendor_od-plate_w)/2:.1f} mm per side")
-print("The photo shows grid on BOTH sides of the wheel. No overhang ->")
-print(f"the OD is under {plate_w:.0f} mm and the vendor listing does not describe this part.")
+plate_long, vendor_od = 173.0, 171.45
+frac = 0.92          # wheel span / frame width, EYEBALLED from the photo
+print("The first version of this argument claimed the wheel 'sits inside the")
+print("157 mm plate'. WRONG -- the plate runs off both edges of both photos, so")
+print("grid beside the wheel bounds nothing. What survives needs a pixel ratio:")
+print()
+print(f"  plate spans MORE than the frame, and is at most {plate_long:.0f} mm")
+print(f"  wheel spans LESS than the frame, about {frac:.2f} of it")
+print(f"  ->  OD < {plate_long:.0f} x {frac:.2f} = {plate_long*frac:.0f} mm")
+print()
+print(f"vendor OD (6-3/4\")               {vendor_od:.2f} mm  -- excluded, but by")
+print("                                 a measurement OF the photo, not a fact")
+print(f"                                 about it. Treat as a strong hint.")
+print()
+print(f"THE GRID SETTLES IT: {vendor_od:.2f} mm is {vendor_od/10:.1f} squares. Count them.")

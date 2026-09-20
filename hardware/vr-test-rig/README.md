@@ -481,12 +481,19 @@ finds *a* gap. That is the strongest test this rig can perform.
 Measured on the engine: the factory 5.4L puts the gap at TDC #1 as well. Rig and
 truck share one datum, so `CKP_GAP_TO_TDC_DEG = 0` for both.
 
-> ⚠ **This claim now needs re-deriving.** If the engine measurement located TDC
-> by way of the *keyway*, it inherits the 5.00° that `key_to_gap = 0` was hiding.
-> If it located TDC directly — piston at the stop, gap at the sensor — it stands
-> untouched. **Which method was used is not written down anywhere**, and that is
-> the whole problem: a datum whose derivation is unrecorded cannot be audited
-> when one of its inputs turns out to be wrong.
+> ⚠ **This claim does not survive the wheel being identified.** The rig's wheel
+> is a Dorman **917-060**, cast into the part — a **Small Block Ford**
+> OE-replacement reluctor. The truck is a **modular 5.4L**. A key-to-gap broached
+> for one engine family says nothing about the other, so **the rig and the truck
+> do not share a datum by construction**; they could only share one by
+> coincidence.
+>
+> What the rig still is: the best available test of *decoder behaviour* — sync
+> acquisition, cranking profiles, tooth counting, noise. What it is **not**, until
+> the truck is measured separately, is the instrument that calibrates the truck's
+> timing. And the older half of this claim has the same problem it always had:
+> **how the engine figure was derived is not written down anywhere**, so it
+> cannot be audited now that one of its inputs has moved.
 
 It stays a **named constant rather than a disappeared zero** — not out of caution
 about the measurement, but because the decoder needs somewhere to put the sensor
@@ -759,14 +766,54 @@ the part was read: *the missing tooth goes by, and TDC is coming up.*
 ⚠ The `.scad` still needs a geometric sense for the index flute, and **that one
 does depend on which way the rig spins.** It is flagged in the file.
 
-#### This also settles what the wheel is
+#### The part is marked — it IS the Dorman, and the inference above was wrong
 
-An aftermarket universal 36-1 has no reason for its keyway to relate to TDC — it
-is bored and broached to fit a shaft, and where the teeth land is arbitrary.
-**A keyway that falls on the crank's TDC datum is a factory part.** Together with
-the machined hub, the recessed pocket and the sub-157 mm OD, this is the **Ford
-5.4L crank trigger wheel**, not the Dorman 917-060 the `.scad` was dimensioned
-from. Every vendor-listed number in that file describes a different part.
+The front face is cast **`FRONT 917-060 53025 TAIWAN`**. It is the Dorman
+917-060, exactly the part the `.scad` was dimensioned from.
+
+> ~~*"A keyway that falls on the crank's TDC datum is a factory part. This is the
+> Ford 5.4L crank trigger wheel, not the Dorman."*~~ **Wrong, and the flaw was in
+> the premise:** it equated *aftermarket* with *universal*. The 917-060 is an
+> **OE-replacement reluctor for a named application**, not a blank broached to
+> fit a shaft — so its keyway is cut to put the gap where that engine's ECU
+> expects it. The keyway relating to TDC is exactly what a direct-fit replacement
+> part does, and it needed no Ford casting to explain.
+
+**And this reverses last round's conclusion about the truck.** The vendor lists
+917-060 as a **Small Block Ford** part — the `.scad` has said so all along — and
+the truck is a **modular 5.4L**. Different engine family, different crank,
+different reluctor. So:
+
+| | |
+|---|---|
+| **5.00° is the rig's `key_to_gap`** | ✅ measured, and it is this wheel's |
+| **5.00° is the truck's `CKP_GAP_TO_TDC_DEG`** | ❌ **no** — an SBF part cannot carry a modular engine's datum |
+
+> ⚠ **This is the claim to be careful about**, because the README leans on it
+> hard: *"the rig's absolute angle now is the engine's absolute angle"*. A
+> **key-to-gap measured on an SBF reluctor does not transfer to a modular
+> engine**, so the rig remains an excellent test of *decoder behaviour* — sync
+> acquisition, cranking profiles, tooth counting — while the truck's absolute
+> datum must be measured on the truck. See the flag at
+> [the calibration-bench claim](#the-truck-measures-the-same--so-the-rig-is-a-calibration-bench).
+
+#### `FRONT` closes the mirroring problem permanently
+
+The face-down reading happened because nothing on the wheel said which way it
+faced. **Something does** — `FRONT` is cast into it. Every future reading has an
+unambiguous reference, and the geometric sense can finally be written down.
+
+**Given: the marked FRONT face, and the engine turns clockwise seen from the
+front.** A fixed sensor meets features in *counter-clockwise* order — with the
+wheel turning clockwise, the feature that arrives next is the one currently
+counter-clockwise of the sensor. The gap arrives first and the keyway 5.00°
+later, so the keyway is 5.00° **counter-clockwise** of the gap:
+
+> **On the face marked `FRONT`, sweeping clockwise, the keyway comes first and
+> the missing tooth 5.00° after it.**
+
+That is a one-glance check, and it is the form the `.scad` needs for the index
+flute.
 
 #### What 5.00° is *not*: it is not `CKP_GAP_TO_TDC_DEG`
 
@@ -828,23 +875,33 @@ into a measured constant. Which is the real lesson:
 > in that flute is subtracted out of every test the rig runs — the rig would
 > confirm its own mistake. The constant belongs in firmware, measured.
 
-### The OD is wrong, and the template proves it without measuring anything
+### The OD is doubtful — but weaker than this section first claimed
 
-The wheel was photographed lying on the 157 × 173 mm carrier template. **It sits
-inside the plate, with grid showing on both sides.** `wheel_od = 171.45` (the
-vendor's 6-3/4") would overhang a 157 mm plate by 14 mm.
+> ~~*"The template proves it without measuring anything... the OD is under
+> 157 mm."*~~ **That argument was unsound.** It assumed the plate's full width
+> was in frame. **It is not** — the template runs off both edges of both photos,
+> so "grid is visible either side of the wheel" bounds nothing by itself.
 
-No scale, no pixel counting and no perspective correction is needed for that —
-either the wheel is wider than the plate or it is not, and it is not. The OD is
-**under 157 mm**, and the grid is right there to say what it actually is: *count
-the 10 mm squares across it.*
+What survives is a *ratio*, which needs no absolute scale but does need a pixel
+estimate:
 
-> **And it is not the Dorman wheel.** Settled not by the photo but by the keyway
-> itself: an aftermarket universal 36-1 is bored and broached to fit a shaft, so
-> where its teeth fall relative to the key is arbitrary. **This keyway lands on
-> the crank's TDC datum**, which only a factory part does. With the machined hub,
-> the recessed pocket and the sub-157 mm OD, this is the **Ford 5.4L crank
-> trigger wheel** — so the 5.00° is the truck's geometry, not the rig's.
+```
+the plate spans MORE than the frame       (grid at both edges)
+the wheel spans LESS than the frame       (grid beside it at its widest)
+the plate's largest dimension is 173 mm
+
+so   OD  <  173 x (wheel span / frame width)  ~  173 x 0.92  ~  159 mm
+```
+
+which still excludes the vendor's **171.45**, but on a measurement of the photo
+rather than on a fact about the photo. Treat it as a strong hint.
+
+**The grid settles it in five seconds and needs none of this: count the 10 mm
+squares across the wheel.** 171.45 is a shade over 17 of them.
+
+> **It is the Dorman**, and the part says so: `FRONT 917-060 53025 TAIWAN` is
+> cast into the front face. So the photo above is a photo of *this* wheel, the
+> 2.3° and the 5.00° are two readings of one part, and the part wins.
 
 ### Corrected: the keyway is NOT a DIN 8 mm key
 
