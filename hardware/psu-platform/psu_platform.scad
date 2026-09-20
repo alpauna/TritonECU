@@ -71,6 +71,18 @@ hole_comp = 0.30;
 hole_x0   = (up_w - hole_dx) / 2;   // 4.80
 hole_y0   = (deep - hole_dy) / 2;   // 9.45
 
+/* Standoffs on the four holes. The module bolts down onto the UPPER flange, so
+   these sit on its TOP face and lift the module clear of it — the usual reason
+   being solder tails or components on the underside of the module's board.
+
+   HEIGHT is the defining dimension: "3 mm standoff" means 3 mm of lift. It is
+   not the diameter — a 3 mm OD boss around a 2.3 mm bore would leave a 0.35 mm
+   wall, which is under two extrusion widths and would neither print nor hold.
+   5 mm OD gives a 1.35 mm wall and a proper seat for an M2 head (~3.8 mm A/F). */
+standoff   = true;
+standoff_h = 3.0;   // lift above the upper flange
+standoff_d = 5.0;   // OD; see the wall-thickness check in the echoes
+
 /* Optional corner ribs. OFF by default because the drawing has none and the
    web does not need them (see the 12 kg above). Turn them on if the load is
    ever sideways rather than down — that is the case the flat web is poor at. */
@@ -111,6 +123,13 @@ module platform() {
             // lower flange — starts at the web's INNER face for the same reason
             translate([web_x, 0, 0])        cube([lo_w + t, deep, t]);
 
+            // standoffs, on TOP of the upper flange, bored through below
+            if (standoff)
+                for (i = [0, 1], j = [0, 1])
+                    translate([hole_x0 + i * hole_dx,
+                               hole_y0 + j * hole_dy, height])
+                        cylinder(h = standoff_h, d = standoff_d, $fn = hole_fn);
+
             if (gusset) {
                 // under the upper flange, reaching inboard along its underside
                 ribs(web_x, height - t, -gusset_l, -gusset_l);
@@ -118,10 +137,11 @@ module platform() {
                 ribs(up_w, t, gusset_l, gusset_l);
             }
         }
-        // the four 2 mm holes, through the upper flange only
+        // the four 2 mm holes — through the upper flange AND any standoff on it
         for (i = [0, 1], j = [0, 1])
             translate([hole_x0 + i * hole_dx, hole_y0 + j * hole_dy, height - t - 1])
-                cylinder(h = t + 2, r = hole_r, $fn = hole_fn);
+                cylinder(h = t + (standoff ? standoff_h : 0) + 2, r = hole_r,
+                         $fn = hole_fn);
     }
 }
 
@@ -146,3 +166,26 @@ echo(str("CLEARANCE, inboard hole to web face  ",
          " mm  <-- a screw HEAD will not fit here, see README"));
 echo(str("bed footprint, printed on end  ", total_w, " x ", height,
          "  and ", deep, " tall"));
+if (standoff) {
+    echo(str("standoffs             4 x ", standoff_d, " dia x ", standoff_h,
+             " tall, on the upper flange's TOP face"));
+    echo(str("  wall around bore    ", (standoff_d - (hole_d + hole_comp)) / 2,
+             " mm",
+             ((standoff_d - (hole_d + hole_comp)) / 2 < 0.8)
+               ? "  <-- UNDER 2 extrusion widths, raise standoff_d" : "  (ok)"));
+    echo(str("  screw length now    module thickness + ", standoff_h + t,
+             " mm before any thread engages (was ", t, ")"));
+    echo(str("  overall height      ", height + standoff_h,
+             " mm to the standoff tips (part itself is still ", height, ")"));
+    echo(str("  outboard standoff to flange tip  ",
+             hole_x0 - standoff_d / 2, " mm",
+             (hole_x0 - standoff_d / 2 < 0) ? "  <-- OVERHANGS the edge" : ""));
+    echo(str("  inboard standoff to web outer face  ",
+             (up_w) - (hole_x0 + hole_dx + standoff_d / 2), " mm",
+             ((up_w) - (hole_x0 + hole_dx + standoff_d / 2) < 0)
+               ? "  <-- OVERHANGS the edge" : ""));
+    echo("  NOTE: standoffs do not change the 124 N / 12 kg web figure — a");
+    echo("        vertical load's moment is set by the 22.25 mm X offset, not");
+    echo("        by height. They also do NOT clear the inboard-hole nut clash");
+    echo("        below, which is on the UNDERSIDE.");
+}

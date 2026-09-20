@@ -4,6 +4,12 @@ A Z-bracket that stands a supply module off a surface and offsets it sideways.
 The module bolts down onto the **upper flange** through four 2 mm holes; the
 **lower flange** is the foot.
 
+**The four holes now carry Ø5 × 3 mm standoffs** on the flange's top face, so
+the module sits 3 mm clear of it. Overall height is **54 mm** to the standoff
+tips; the bracket itself is still 51. Bores run through standoff and flange
+together at Ø2.30 — nominal M2 plus 0.30 for what a printed bore loses.
+`standoff = false` returns the flat flange.
+
 ```
              TOP VIEW                            SIDE VIEW
    |<-- 44.5 -->|<---- 30 ---->|
@@ -55,21 +61,52 @@ Only the 44.5 flange can hold the holes — 34.9 does not fit inside 30.
 > **The inboard pair of holes clears the web by 0.65 mm.**
 
 The hole centres sit 39.70 from the tip and the web's inner face is at 41.50, so
-the *bore* clears comfortably. A **screw head does not**: an M2 pan head is
-Ø3.8, which would reach 41.6 and foul the web by 0.1 mm. This is a consequence of
-centring a 34.9 pattern in a 44.5 flange — it is what the drawing shows, and it
-is tight by construction rather than by mistake.
+the *bore* clears comfortably. **The fastener's head or nut does not**: Ø3.8
+across the flats reaches 41.6 and fouls the web by 0.1 mm. This is a consequence
+of centring a 34.9 pattern in a 44.5 flange — what the drawing shows, and tight
+by construction rather than by mistake.
 
-Three ways out, in order of preference:
+> ⚠ **Clarified: the obstruction is on the UNDERSIDE.** The flange's top face is
+> flat and clear right out to 44.5 — the web hangs *below* it — so nothing on top
+> can foul. It is the **nut** (or the head, if you drive from below) that meets
+> the web at the flange's lower face. **The standoffs do not help with this**,
+> because they are on the other side.
+
+Four ways out, in order of preference:
 
 1. **Measure the module's real pattern.** If it is not actually centred, set
    `hole_x0` and re-render; nothing else changes.
-2. **Countersunk screws.** An M2 flat head is Ø3.65 and sits *in* the plate.
-3. **Move the pattern outboard** by a millimetre and accept 2.65 mm to the tip.
+2. ⭐ **Tap it and use no nut at all** — *newly practical because of the
+   standoffs*. Standoff plus flange is **6 mm** of stack, three diameters of M2
+   engagement, which is a respectable thread in PETG. Drop `hole_comp` and model
+   the bore at a **1.6 mm tapping pilot** instead of 2.30 clearance. **This
+   dissolves the clash outright** rather than working around it.
+3. **Countersunk screws.** An M2 flat head is Ø3.65 and sits *in* the plate.
+4. **Move the pattern outboard** by a millimetre and accept 2.65 mm to the tip.
 
 ## Printing
 
 **Stand it on end — 92 mm tall, the 74.5 × 51 Z outline on the bed.**
+
+> ⚠ **The standoffs cost this orientation its best property.** The argument
+> below rests on the part being a **constant cross-section prism**. Four Ø5
+> bosses are not part of that prism: stood on end they become **horizontal
+> stubs off a vertical wall**, and their M2 bores print on their sides, where a
+> bore sags at the crown and comes out elliptical — the 0.30 mm compensation
+> was sized for a *vertical* bore.
+>
+> **Stand it on end anyway.** The prism argument is about the web and the
+> corners, which carry the load; the stubs are 3 mm long and their tips only
+> have to be flat. Either let them bridge and clean the bores with a 2 mm drill,
+> or drop four scraps of support under them. **Do not flip the part flat to
+> please the standoffs** — that puts the corners back into the interlayer
+> direction that delaminated the VR rig's bearing blocks, and trades a load-path
+> problem for a cosmetic one.
+>
+> ✅ **Or set `standoff = false`, print the prism, and use four M2 washers or
+> nylon spacers** for the 3 mm. That keeps the orientation perfect and costs
+> pennies — worth considering, since the standoffs are the only thing in this
+> part that is not a prism.
 
 The part is a constant cross-section prism, so in that orientation it is
 **entirely self-supporting** and every layer is a complete Z. The load path from
