@@ -83,6 +83,28 @@ within a few percent, and the pull-up is sized: **2.2 kΩ to 3.3 V**, giving
 | **Circuit 679 level** | What the speed control servo, GEM and rear air suspension expect — 12 V, 5 V or open-drain. Decides only whether a pull-up gets populated |
 | **Donor case: pan depth and sign** | Straight edge across the rails, depth gauge to the pan. Clearance or thermal boss — [`DonorECU/README.md`](DonorECU/README.md) |
 
+## 5. The 36-1 trigger wheel — the datum everything angular hangs on ⭐
+
+The keyway was observed against the missing tooth on 2026-09-19, and it
+**falsified `key_to_gap = 0`** — see
+[the correction](../hardware/vr-test-rig/README.md#corrected-the-keyway-is-not-on-the-gap)
+and [`calc/trigger_wheel_datum.py`](calc/trigger_wheel_datum.py). Five things
+turn that observation into a number, and the wheel is already sitting on the
+10 mm carrier-template grid, which does most of them for free.
+
+| | What it closes | How |
+|---|---|---|
+| **Which side the keyway is on** ⭐ | **The sign of `key_to_gap`.** Wrong sign is a 15° datum error — *twice* as bad as the old wrong value | One look: wheel face-up as the sensor sees it, keyway clockwise or anticlockwise from the gap? |
+| **Is this the Dorman or the Ford wheel?** ⭐ | Whether 7.5° is the **rig's** datum or the **truck's** `CKP_GAP_TO_TDC_DEG` | The part is machined with a stepped hub and a recessed pocket; a Dorman 36-1 is a flat plate |
+| **OD** | `wheel_od = 171.45` is already contradicted — the wheel sits *inside* the 157 mm template. Sets shaft height, wheel slot and both sensor brackets | Count 10 mm grid squares across it |
+| **Tooth width at the rim** | Converts the edge observation to degrees. Whole 40–60 % duty range is only ±0.5°, so this is a *refinement*, not a blocker | Calipers, then `360·w/(π·OD)` |
+| **Bore, keyway w × d, the three holes' PCD and angles** | `wheel_hub` — spigot, key and bolt circle. All three are currently ratios off a product photo | Calipers; the holes read straight off the grid |
+
+> **The best measurement here is not a measurement.** Once the rig runs, homing
+> the stepper on the flute and taking a tooth log reads `key_to_gap` at
+> **0.1125°** — 23× better than sighting it by eye, and it does not need the
+> flute to be *right*, only *known*.
+
 ## Not worth measuring
 
 | | Why |

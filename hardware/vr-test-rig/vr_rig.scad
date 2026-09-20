@@ -32,13 +32,33 @@ root_fn  = 120;  // gear root circle
    Block Ford 36-1 that sits between the balancer and the crank pulley). The
    bore is DERIVED from the product photo's measured bore/OD = 0.253 — still
    worth a caliper, but it is now the only one that is. */
-wheel_od        = 171.45; // 6-3/4" — vendor listing
+wheel_od        = 171.45; // ** CONTRADICTED BY THE PART ** vendor listing.
+                          // Laid on the 157 mm carrier template the wheel sits
+                          // INSIDE the plate with grid showing either side. A
+                          // 171.45 wheel would overhang it by 14 mm. Count the
+                          // grid squares across it; 10 mm pitch, no maths needed.
 wheel_thk       =   3.05; // .120"  — vendor listing
 wheel_bore      =  43.4;  // MEASURE: 0.253 x OD from the photo, not the vendor
 key_w           =   6.5;  // MEASURE: 15 % of bore diameter
 key_d           =   4.1;  // MEASURE: 19 % of bore radius
-key_to_gap      =   0;    // degrees from keyway to the MISSING TOOTH.
-                          // 0 on this wheel: the keyway is inline with the gap.
+
+/* Tooth width at the rim as an angle. 36-1 pitch is 10.00 deg; this says how
+   much of that pitch is metal. 50 % duty is the usual drawing and is NOT a
+   measurement of anything. It matters because key_to_gap is derived from it:
+       tooth_w_deg = 360 * tooth_mm / (pi * wheel_od) */
+tooth_w_deg     =   5.0;  // MEASURE with calipers at the rim
+
+/* Degrees from the MISSING TOOTH CENTRE to the keyway. This was 0 — "the keyway
+   is inline with the gap" — taken from a vendor product photo. THE PART IN HAND
+   SAYS OTHERWISE: the keyway lines up with the rear edge of the tooth
+   immediately forward of the gap. That is the same feature as the FORWARD EDGE
+   OF THE GAP ITSELF, which is the useful way to say it because it needs no duty
+   assumption to locate. In degrees it is one pitch less half a tooth.
+
+   SIGN IS UNCONFIRMED. Positive here means the direction of rotation; nobody has
+   recorded which way round the keyway sits when viewed from the sensor side, and
+   getting it backwards puts the datum 15 deg out instead of 7.5. See README. */
+key_to_gap      = 10 - tooth_w_deg/2;   // 7.5 at 50 % duty
                           // The index flute on the flange OD is cut at this angle,
                           // so the flute always points at the gap.
 /* Both sensors share a 14.3 mm barrel; only their lengths differ (CKP 57 mm,
