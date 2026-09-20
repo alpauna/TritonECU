@@ -971,7 +971,7 @@ was always the better one, and it was never behind the cover.**
 
 ⚠ **One wheel is in hand, not two** — the OEM-under-Dorman photo is the
 reviewer's. This section is written for the day a second wheel arrives, and the
-[genuine `XW1Z`](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-settles-the-dorman)
+[genuine `XW1Z`](#-the-ford-ring-is-the-final-validation--the-dorman-builds-the-rig)
 is that wheel. **Stacking beats measuring**, for the reason this
 whole thread keeps running into: every attempt so far sighted a radius outward
 *from the keyway*, which is the innermost feature on the wheel and therefore the
@@ -1001,13 +1001,172 @@ mode and would not show up in any angular measurement.
 frame. The tooth edges are the measurement, and they need more than the ~15 px
 they get in a three-quarter view of the whole wheel.
 
-#### ⭐ A genuine `XW1Z-12A227-AC` is three days out — and it settles the Dorman
+#### ⭐⭐ Better than looking: spin each wheel and diff the tooth logs
 
-The OE part can be **in hand Tuesday 2026-09-22**. Everything in this thread so
-far has been **inference** — a casting number, a date-code prefix, a catalogue's
-year range, a stranger's review — and a genuine Ford pulse ring is the geometry
-all of it was reaching for. It does not reach all of it. It reaches the half
-that is on the shelf.
+**Don't read the stack by eye — read it through the sensor.** `startToothLog()`
+already exists, the rig already spins a wheel past a real VR sensor, and a
+period log is a *number* where a stacked rim is a judgement call. This upgrades
+the test above rather than replacing it.
+
+##### What the existing log already gives, with no datum of any kind
+
+`CrankSensor` logs `periodUs` per edge into a **720-entry** buffer — 35 events
+per revolution, so **20.6 revolutions** per capture — and tags each with
+`toothNum`, which resets at the gap. **That tag is the physical tooth index**,
+so periods can be averaged per-tooth across all 20 revs for a **4.5×** noise
+reduction, straight out of the existing format.
+
+| what falls out | how it appears in the log |
+|---|---|
+| **Per-tooth pitch error** ⭐ | Group by `toothNum`, average, compare against 10.000°. This is a **fingerprint of the wheel**, and two wheels' fingerprints subtract |
+| **Runout / eccentricity** ⭐ | A **once-per-revolution sinusoid** in the intervals. An independent fault mode, and no angular datum is needed to see it |
+| **Tooth count and gap width** | Directly. Confirms 36-1 rather than something adjacent |
+| **Tooth width / duty** | Only if both edges are captured — the ISR is `FALLING` only, so **this one needs a change** or it is not measured |
+| **OD / air-gap mismatch** | Amplitude, not timing. Zero crossings do not move with amplitude |
+
+**And the timebase is not the limit.** `esp_timer_get_time()` is 1 µs, and one
+microsecond is a very small angle:
+
+| rig speed | tooth period | 1 µs as crank angle | capture length |
+|--:|--:|--:|--:|
+| 300 rpm | 5556 µs | **0.0018°** | 4.1 s |
+| 600 rpm | 2778 µs | 0.0036° | 2.1 s |
+| 1200 rpm | 1389 µs | 0.0072° | 1.0 s |
+
+That is **60× finer than the stepper's 0.1125°** at 300 rpm, so the microstep
+figure bounds only the *index* reading, never the tooth data. **Slower is
+better** for angular resolution — but VR output scales with speed and the
+conditioner's 33 % adaptive threshold has to arm, so there is a floor. The real
+limit is the fixture and ISR jitter, not the clock.
+
+> ⚠ The ISR is `attachInterrupt` + `esp_timer_get_time()`, **not** hardware timer
+> capture as `CLAUDE.md` claims. It is on core 1 with no WiFi, so jitter should
+> be ~1 µs — but that is an assumption, and the repeatability run below measures
+> it rather than trusting it.
+
+##### ⚠ But a self-referenced log is blind to phase — which is the thing alleged
+
+This is the catch, and it is worth being blunt about: **a pure phase offset
+produces a perfect tooth log.** Every pitch reads 10.000°, the gap is exactly
+where a 36-1's gap belongs, and there is nothing anomalous anywhere in the file.
+
+**The log resets `toothNum` at the gap, so the gap is the origin by
+construction** — and you cannot measure an origin against itself. A wheel whose
+keyway is half a pitch out logs *identically* to one that is perfect.
+
+**And phase is the most likely reading of the review.** *"Teeth don't match up"*
+plus *runs rough and sets codes* is the signature of the gap being in the wrong
+place, not of the teeth being unevenly spaced. So the log as it stands would
+**pass the very wheel the review is complaining about**.
+
+##### The fix costs nothing: stack them and log the union
+
+Same setup as the eyeball stack — both wheels keyed on one shaft — but read
+through the sensor instead of by eye. **One sensor sees both tooth sets at
+once**, and the phase offset is no longer a judgement call:
+
+| stagger | what the log looks like |
+|---|---|
+| **0 — in phase** | 35 events, one gap. Indistinguishable from one wheel |
+| **δ, small** | **70 events in close pairs**, alternating `δ` and `10−δ`. The pair spacing **is** the answer, read in µs |
+| **5.00° — half a pitch** | **70 evenly spaced events.** The log becomes a clean **72-2**, and it is unmistakable at a glance in the data |
+| **whole pitches** | Two gaps in different places |
+
+**Nothing needs writing for this.** The logging block sits *after* the sync state
+machine and runs on `_toothLogCapturing` alone, so **periods are captured even
+when the decoder cannot sync** — which is exactly the stacked case. Better
+still, call `begin(pin, 72, 2)` for the stacked run and the decoder syncs
+properly, restoring `toothNum` labelling and per-tooth averaging.
+
+> ⚠ **This needs the two ODs to match.** Different diameters mean different air
+> gaps, and the conditioner's **33 % adaptive arming threshold** may simply reject
+> the weaker set — one wheel's teeth vanishing from the log. That is a finding in
+> its own right (it is the air-gap fault mode), but it is not the phase
+> measurement. **Caliper both ODs before stacking**, and set the gap to split the
+> difference.
+
+##### Or add an index pulse — and get absolute `key_to_gap`, not just a difference
+
+The stack gives `key_to_gap(A) − key_to_gap(B)`. An index reference gives each
+wheel's own value, and it is a small change: **on an index ISR, record the
+current `_toothLogIdx` and the µs elapsed since the last tooth.** Two fields and
+one handler. The gap's position relative to the shaft then falls out of every
+capture, for any wheel, singly mounted.
+
+**Either way the accuracy floor is the keyway, not the electronics.** The slot is
+[≈3.6 × 2.3 mm](#corrected-the-keyway-is-not-a-din-8-mm-key) at a 24 mm bore, so
+0.05–0.1 mm of side clearance is **0.24–0.48°** of rock at r = 12 mm. Both wheels
+are driven the same direction by the same key, so most of it is common-mode — but
+call the phase floor **±0.2°** and not 0.002°.
+
+> **Against a 5.00° question that is 25× margin, and it does not touch the pitch
+> and runout numbers at all** — those live inside one revolution and never
+> reference the key.
+
+##### Measurement discipline, because this is a comparison
+
+| | |
+|---|---|
+| ⭐ **Run the same wheel twice, *remounting* between runs** | This is the repeatability floor, and it includes fixture error rather than just electrical noise. **Anything smaller than the A-vs-A difference is not real.** Same lesson as [nulling the leads](../../docs/measurements-wanted.md) |
+| **Run at two speeds** | A geometric error is the same *angle* at any rpm; compliance, resonance and torque ripple are not. Identical patterns at 300 and 1200 rpm means geometry |
+| **Separate wheel runout from fixture runout** | Both are a once-per-rev sinusoid. **Check where the high spot sits on the shaft**: if it stays put when the wheel is swapped, it is the hub bore; if it travels with the wheel, it is the wheel |
+| **The hub bore fit now matters more** | It is the fixture for a comparative measurement, and `wheel_bore` is still derived from a photo grid. **Caliper it** before trusting a runout number |
+
+##### What this still does not reach
+
+The truck's own wheel, which is behind the timing cover. This compares **Dorman
+against genuine Ford**, on the bench — which is the arm that
+[survived the retraction](#-retracted--the-photographs-are-the-reviewers-engine-not-this-truck),
+and the one that decides whether 5.00° is an OE value or a defect.
+
+**And this is exactly what makes validating last cheap.** The Dorman is the build
+article — it is on the shaft the whole time, so **log it at two speeds, twice
+with a remount, the first day the rig turns**, and log it again whenever anything
+about the fixture changes. By the time the Ford ring comes off the shelf the
+reference is captured, the repeatability floor is known, and the validation is
+**one run and a subtraction** rather than a session.
+
+#### ⭐ The Ford ring is the *final* validation — the Dorman builds the rig
+
+**Decided: order `XW1Z-12A227-AC` now, validate with it last.** The Dorman gets
+the rig running; the genuine ring checks the Dorman at the end. Everything in
+this thread so far has been **inference** — a casting number, a date-code prefix,
+a catalogue's year range, a stranger's review — and a genuine Ford pulse ring is
+the geometry all of it was reaching for. It does not reach all of it. It reaches
+the half that is on the shelf.
+
+##### Why validating last is better than validating first
+
+Not a compromise — **the deferral upgrades the measurement.** Today the
+comparison would be two wheels stacked on a bar and a hard look at the rim. By
+the time the rig runs it is
+[a tooth log at 0.002°](#-better-than-looking-spin-each-wheel-and-diff-the-tooth-logs)
+with an established repeatability floor, on the real sensor, at two speeds.
+
+| | validate now | validate at the end |
+|---|---|---|
+| Instrument | eye, at r ≈ 65 mm | **the rig, through the real VR sensor** |
+| Phase resolution | a fraction of a tooth-width | **±0.2°**, keyway-limited |
+| Also yields | nothing else | **per-tooth pitch, runout, duty, amplitude** |
+| Blocks the build? | — | **no** |
+
+**And nothing in the build is waiting on it.** The `.scad` is already dimensioned
+from the Dorman, so the hub, bore, key and bolt circle are cut to the part that
+will actually be on the shaft. That was luck; it is now the plan.
+
+> ⚠ **The one real risk in this ordering: the hub is cut to the Dorman.** If the
+> Ford ring's bore, keyway or bolt circle differ, the validation run is blocked
+> by a printed part at the worst possible moment. **Caliper the Ford wheel the
+> day it arrives**, months before it is needed, purely to find out whether the
+> hub needs a second variant. That is the one early task the late-validation plan
+> creates.
+
+> ⭐ **And order it now even though it is needed last.** `XW1Z-…` is a
+> **1999-prefix number revised to `-AC`** — a part Ford has already superseded
+> once and can take NLA at any time. Build time is months; part availability is
+> not guaranteed over months. **A part on the shelf is an option that cannot
+> expire; a part in a catalogue can.** If it goes NLA mid-build, the validation
+> arm dies with it and there is no recovering it.
 
 ##### It is the only second wheel this project will ever have
 
@@ -1082,13 +1241,21 @@ rig is blocked on, and nothing else in the building can answer them.
 | **half a pitch apart** | The Dorman is phase-defective, the review is confirmed on parts we can actually hold, and the rig wheel carries a **known-wrong** offset — harmless on a bench, [arguably useful](#the-rig-does-not-care--and-is-arguably-better-off) |
 | **walking apart round the rim** | Pitch or tooth-count mismatch. Grosser than the review describes, and blatant |
 
-##### ⚠ Three things to do the moment it is out of the box
+##### ⚠ Four things to do the moment it is out of the box — then shelf it
 
-| | why |
+Validation is months away, but **these are the ones that cannot wait**, because
+each can invalidate the plan while there is still time to react.
+
+| | why it cannot wait |
 |---|---|
-| **Read the casting**, and record it beside `FRONT 917-060 53025 TAIWAN` | A Ford box is not a measurement. Cast with a *different* base number means XW1Z has superseded and what is in hand is the successor's geometry — still useful, but no longer the part the Dorman catalogue cross-references |
-| **Caliper the OD** | An independent check on **~135 mm**, currently a photo-grid reading against [a listing wrong by 25 %](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-). Two parts agreeing at the calipers closes it, and the `.scad` hub still wants a caliper number |
-| **Count the teeth** | 35 plus the gap. Free, and it is the one way a wrong part announces itself before any stacking |
+| ⭐ **Caliper the bore, keyway and bolt circle** | **Against the `.scad` hub, which is cut to the Dorman.** A mismatch found now is a reprint; found at validation it is a blocked measurement at the end of the build |
+| **Caliper the OD** | An independent check on **~135 mm**, currently a photo-grid reading against [a listing wrong by 25 %](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-). Two parts agreeing at the calipers closes it — **and the hub is blocked on exactly this number** |
+| **Read the casting**, and record it beside `FRONT 917-060 53025 TAIWAN` | A Ford box is not a measurement. A *different* base number means XW1Z superseded and this is the successor's geometry — still useful, but no longer the part the Dorman cross-references. **And it is the window for a return** |
+| **Count the teeth** | 35 plus the gap. Free, and it is how a wrong part announces itself before anything is built around it |
+
+> **Then put it away.** Its job is to be the reference at the end, and the
+> cheapest way for it to fail at that job is to get used as a bench part in the
+> meantime. **Do not mount it, do not spin it, do not lend it to the rig.**
 
 > ⚠ **The receipt does not settle the 1999 question.** `XW1Z-12A227-AC` is
 > cataloged from 2001; a genuine one proves the *number* is real, not that the

@@ -24,7 +24,7 @@ pio run -t monitor -e freenove_esp32_s3_wroom
 ### Dual-Core Split
 
 **Core 1 — Real-Time Engine Control** (dedicated FreeRTOS task via `xTaskCreatePinnedToCore`):
-- Crank/cam ISR (hardware timer capture)
+- Crank/cam ISR (GPIO edge interrupt, `esp_timer_get_time()` 1 µs timebase)
 - RPM calculation
 - Spark timing (dwell + fire)
 - Injector timing (pulse width)
