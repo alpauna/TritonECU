@@ -199,8 +199,21 @@ brg_press       =  +0.30; /* Bearing pocket, OVERSIZE on the model.
    wants 0.05-0.25 mm of gap and puts zero hoop stress into the plastic.
    The shoulder still locates it axially.
 
-   ** CALIBRATE THIS: print part="fit_gauge", measure, set this number. **
-   Printers differ by more than the failure margin does. */
+   ** CALIBRATED 2026-09-20 on this printer. ** The gauge's +0.15 pocket took a
+   6001 with no play; +0.30 and +0.45 were both loose. A pocket modelled at
+   28.15 that finishes snug on a 28.00 bearing means the bore shrinks ~0.15 mm
+   on diameter, so:
+
+       +0.15 -> ~0.00 gap   felt best, and is the WRONG one: no room for the
+                            compound, and a block that prints a tenth tighter
+                            is back in interference — the first PETG set's
+                            failure exactly
+       +0.30 -> ~0.15 gap   <= this one. Middle of the 0.05-0.25 window
+       +0.45 -> ~0.30 gap   past what Loctite 638 will fill
+
+   At a 0.15 mm gap use 638 (fills to 0.25), not 609 (~0.10 and marginal).
+   Re-run the gauge on a different printer or filament: printers differ by more
+   than the failure margin does. */
 clr             =   0.25; // general clearance
 wall            =   4.0;
 base_t          =   8.0;

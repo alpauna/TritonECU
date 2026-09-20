@@ -76,6 +76,33 @@ upright and they read left to right.
 > **A coupon printed before that date has good pockets and useless labels: the
 > pockets are still in order, so count from the end, don't squint.**
 
+### Result of the first gauge print (2026-09-20)
+
+**+0.15 took the bearing with no play. +0.30 and +0.45 were both loose.**
+
+That is the measurement the gauge exists for: a pocket modelled at **28.15** that
+finishes snug on a **28.00** bearing means this printer shrinks a horizontal bore
+by **≈0.15 mm on diameter** — mid-range of the 0.2–0.4 this page predicted.
+
+> ⚠ **The pocket that felt best is the wrong one to build.** The bearing is not
+> held by the bore, it is held by the compound, and the compound needs a gap.
+
+| Pocket | Finishes at | Gap on the bearing | |
+|--:|--:|--:|---|
+| +0.15 | ~28.00 | ~0.00 | felt perfect. No room for adhesive, and a block that prints a tenth tighter is back in interference — **this is the first PETG set's failure** |
+| **+0.30** | ~28.15 | **~0.15** | felt loose, and is the middle of the 0.05–0.25 window |
+| +0.45 | ~28.30 | ~0.30 | past what 638 will fill |
+
+**`brg_press` stays at +0.30** — unchanged in value, but no longer a guess. Even
+if the shrink wanders ±0.05 between blocks, the gap stays inside 0.10–0.25.
+
+**Use Loctite 638, not 609.** At a 0.15 mm gap 609 is marginal — it is rated for
+about 0.10 mm diametral — while 638 fills to 0.25.
+
+The "loose" feel is the design working. Anyone re-running this gauge on another
+printer should pick **the pocket one or two steps above the one that feels
+right**, not the one that feels right.
+
 ### The rule this leaves behind
 
 Swept the rest of the rig: **every other fit is clearance** (`shaft_dia + clr`,
