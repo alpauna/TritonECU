@@ -793,10 +793,40 @@ So the engine-family objection is withdrawn. **Two better ones replace it.**
 | **5.00° is the rig's `key_to_gap`** | ✅ measured, and it is this wheel's |
 | **5.00° is the truck's `CKP_GAP_TO_TDC_DEG`** | ❌ **still no** — for the two reasons below |
 
-**First: the applications start at 2001, and the truck is a 1999.** Every listed
-year is 2001 or later. Whether the 1999 5.4L uses this reluctor at all is
-**[CONFIRM]**, and it is not safe to assume — 2001 is exactly the kind of
-boundary a crank-trigger revision lands on.
+**First — and this one mostly dissolves on inspection.** Dorman's listed years all
+start at 2001 while the truck is a 1999, which looked like a design boundary.
+**The OE number it supersedes says otherwise.**
+
+`XW1Z-12A227-AC`, read with the same scheme this project used on the donor PCM's
+`1L2F-12A650-ANC` ([`DonorECU/README.md`](../../docs/DonorECU/README.md), where
+`1` = 2001):
+
+| | |
+|---|---|
+| **`X`** | **1999 model year** — `X` = 1999 and `Y` = 2000, before Ford went numeric at `1` = 2001 |
+| `W1` | vehicle line |
+| `Z` | service part |
+| `12A227` | the pulse ring — same `12A…` ignition family as the PCM's `12A650` |
+| `-AC` | third revision: `AA`, `AB`, `AC` |
+
+A prefix dates when the *number* was created, not the years it serves. But a
+**1999-created base number, revised twice, still cataloged for 2001-2010**, means
+one reluctor design spans 1999→2010 — so **the 2001 start is a cataloging
+artifact, not a design change.**
+
+##### Read the casting on the OEM wheel *before* reading the teeth
+
+This is the ordering that matters, because the same tooth observation means two
+opposite things depending on it:
+
+| the OEM wheel is cast… | then a stagger at the rim means |
+|---|---|
+| **`XW1Z-12A227`** (or supersedes to it) | The Dorman is the **correct** part — so any stagger is a **manufacturing defect**, exactly what the review alleges |
+| **a different base number** | The Dorman is simply the **wrong part** for a 1999 — a stagger is **expected**, and says nothing about Dorman's quality |
+
+The OEM wheel has casting text around its hub face in
+[the photo](../../docs/1999-Ford-F150-4wd-5.42v/OriginalUnderDorman.png). **That
+number decides how to read the tooth comparison**, so it is worth having first.
 
 **Second, and this is the one that matters:** a customer review of this exact
 part reports
