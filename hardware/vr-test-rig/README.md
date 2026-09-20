@@ -900,6 +900,11 @@ geometry at all, and it closes the moment the cover goes back on.
 > **Whichever wheel stays on the engine, the calibration belongs to that wheel.**
 > Mark it. `CKP_GAP_TO_TDC_DEG` is measured *with the fitted wheel*, and swapping
 > wheels later — in either direction — invalidates it.
+>
+> ⚠ **Narrowed** now that [a genuine Ford ring is
+> coming](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-ends-the-inferring):
+> a swap invalidates **the number, not the measurement**. Stack the outgoing and
+> incoming wheels and the rim stagger carries the constant across. Measure now.
 
 #### The decisive test: stack the two wheels, do not measure either one
 
@@ -933,12 +938,116 @@ mode and would not show up in any angular measurement.
 frame. The tooth edges are the measurement, and they need more than the ~15 px
 they get in a three-quarter view of the whole wheel.
 
+#### ⭐ A genuine `XW1Z-12A227-AC` is three days out — and it ends the inferring
+
+The OE part can be **in hand Tuesday 2026-09-22**. That changes the character of
+every open question above, because **everything in this thread so far has been
+inference**: a casting number, a date-code prefix, a catalogue's year range, a
+stranger's review. A genuine Ford pulse ring *is* the geometry all of that was
+reaching for.
+
+##### It splits one tangled observation into two independent ones
+
+Today there is **one** stack — the truck's OEM wheel under the Dorman — and
+[its meaning flips](#read-the-casting-on-the-oem-wheel-before-reading-the-teeth)
+on a casting number that may or may not be legible. With a known-good reference
+there are **two stacks, each answering one question, neither needing the other**:
+
+| stack | answers | needs nothing from |
+|---|---|---|
+| **Ford vs Dorman** | Is 917-060 a faithful copy? **Is the review real?** | the truck |
+| **Ford vs the truck's own wheel** | Does a 1999 5.4 use the XW1Z design at all? | the Dorman |
+
+**So the casting read on the truck's wheel stops being load-bearing.** It drops
+from *"read this before reading the teeth"* to a **cross-check** — ordering only
+mattered because each arm was the other's reference, and now neither is.
+
+**Ford vs Dorman, and what each rim says:**
+
+| the stacked rim shows | verdict |
+|---|---|
+| **teeth and gap coincide** | The review describes width, profile or runout — not phase. **5.00° is the OE design value**, and this file's old `key_to_gap ≈ 0` belief was simply mistaken rather than falsified by somebody's defect |
+| **half a pitch apart** | The review is right, the Dorman is phase-defective, and this project measured a documented defect without knowing it existed |
+| **walking apart round the rim** | Pitch or tooth-count mismatch — grosser than the review describes, and blatant |
+
+##### It is a falsification test for the newest claim in this file
+
+The *`X` = 1999, so one design spans 1999→2010* argument
+[above](#the-part-is-marked--it-is-the-dorman-and-the-inference-above-was-wrong)
+is **a reading of a part number, not a measurement**. Stacked against the 1999
+truck's own wheel, the genuine XW1Z confirms it or kills it outright:
+
+| Ford vs the truck's wheel | verdict |
+|---|---|
+| **coincide** | The decode holds. The 2001 catalogue start really is an artifact, and XW1Z is the right part for this truck |
+| **they do not** | The decode was right about the *number* and wrong about the *design*. 2001 is a real boundary, XW1Z is the wrong part for a 1999 — **and the Dorman's stagger was never a defect at all** |
+
+That second row retracts this file's most recent conclusion. That is the point of
+running it.
+
+##### ⏳ It does not reopen the front cover — take `CKP_GAP_TO_TDC_DEG` now anyway
+
+> ⚠ **Do not hold the ⭐⭐ measurement for the delivery.** The open front cover is
+> the perishable thing; a part in a box is not.
+
+**And a reading taken today is not wasted by a swap on Tuesday**, which is where
+the rule below needs narrowing. Only `key_to_gap` changes when a wheel changes —
+the sensor term is a property of **where the sensor bolts to the block**, and it
+survives the swap untouched:
+
+```
+CKP_GAP_TO_TDC_DEG(new wheel) = CKP_GAP_TO_TDC_DEG(fitted wheel) + stagger
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^
+                                piston stop, once, while the       read off the
+                                cover is off                       stacked rim
+```
+
+The [stacked rim](#the-decisive-test-stack-the-two-wheels-do-not-measure-either-one)
+*is* that stagger, at r ≈ 65 mm and needing no datum. So the earlier warning —
+*swapping wheels later invalidates it* — is **narrowed: a swap invalidates the
+number, not the measurement**, provided the two wheels get stacked. **One piston
+stop, ever.**
+
+##### It resolves the operational dead-end below
+
+The rule that follows bars the Dorman from the truck and leaves **nothing in its
+place**. A genuine Ford ring is a wheel that can be fitted *without*
+contaminating the comparison against the factory PCM, and it sends the Dorman to
+the bench with no regrets — where
+[a non-zero offset is the better test article](#the-rig-does-not-care--and-is-arguably-better-off)
+anyway. **Ford on the truck, Dorman on the rig**, and both jobs get the part that
+suits them.
+
+##### ⚠ Three things to do the moment it is out of the box
+
+| | why |
+|---|---|
+| **Read the casting**, and record it beside `FRONT 917-060 53025 TAIWAN` | A Ford box is not a measurement. Cast with a *different* base number means XW1Z has superseded and what is in hand is the successor's geometry — still useful, but no longer the part the Dorman catalogue cross-references |
+| **Caliper the OD** | An independent check on **~135 mm**, currently a photo-grid reading against [a listing wrong by 25 %](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-). Two parts agreeing at the calipers closes it, and the `.scad` hub still wants a caliper number |
+| **Count the teeth** | 35 plus the gap. Free, and it is the one way a wrong part announces itself before any stacking |
+
+> ⚠ **The receipt does not settle the 1999 question.** `XW1Z-12A227-AC` is
+> cataloged from 2001; a genuine one proves the *number* is real, not that the
+> *design* fits a 1999. That is exactly what the stack against the truck's own
+> wheel is for — **do not let the Ford box substitute for the reading.**
+
+**Stacking three is not required.** The crank snout may not take them, and it
+does not have to: **the key registers each wheel independently**, so two separate
+readings against the Ford reference are worth one three-high stack, in either
+order, with the crank free to turn in between. Off the engine, a close-fitting
+bar through the keyways does the same job.
+
 #### The operational rule, either way
 
 > ⚠ **Do not fit this wheel to the truck.** It is a bench part. Whatever the
 > cause, a part with a user-reported timing defect does not belong on the vehicle
 > the ECU is being developed against — a wheel that makes the *factory* PCM run
 > rough would contaminate every comparison against it.
+>
+> ✅ **And now there is somewhere for the rule to land.** It used to bar the only
+> spare wheel in the building; [the genuine
+> `XW1Z-12A227-AC`](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-ends-the-inferring)
+> is the part that goes on the truck, and this one goes on the rig.
 
 **And TritonECU is immune to the defect in a way the factory PCM is not**, which
 is worth noticing. The OEM PCM has gap-to-TDC baked in; ours has
