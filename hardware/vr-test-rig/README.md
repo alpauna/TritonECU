@@ -62,6 +62,20 @@ orientation* as the real block — horizontal and vertical bores do not shrink
 alike. Try a 6001 in each, and set `brg_press` to whichever slides in with a
 whisker of play. **Printers differ by more than the failure margin does.**
 
+**The pockets run smallest → largest, and the smallest end is the notched one.**
+The V notch in the top face is over +0.15. Hold the coupon with the numbers
+upright and they read left to right.
+
+> ⚠ **The first coupon's labels were unreadable, and that was a modelling bug —
+> fixed 2026-09-20.** The text sat at baseline z 3.5 with the bore centred at
+> z 18, so the bore mouth opened at **z 3.93** directly above it: everything but
+> the bottom 0.4 mm of every digit was inside the hole. All three were lost the
+> same way, which is why it looked like a printing problem. The coupon now
+> carries an 8 mm **plain label band** below the bores — it is 44 mm tall
+> instead of 36 — with the numbers 0.8 mm deep in it and the notch as a backup.
+> **A coupon printed before that date has good pockets and useless labels: the
+> pockets are still in order, so count from the end, don't squint.**
+
 ### The rule this leaves behind
 
 Swept the rest of the rig: **every other fit is clearance** (`shaft_dia + clr`,

@@ -712,23 +712,64 @@ module base_half(lo, hi) {
    shrink alike. Print it, try a 6001 in each, and set brg_press to the one
    that slides in with a whisker of play.                                   */
 gauge_steps = [0.15, 0.30, 0.45];
+
+/* LABEL BAND. Fixed 2026-09-20: the labels used to sit at baseline z = 3.5 with
+   the bore centred at z = 18, so the bore mouth opened at z = 3.93 directly
+   above them and ate everything but the bottom 0.4 mm of each digit. Printed,
+   only the very bottom of the number was visible on all three. The band is now
+   plain plate BELOW the bores, the whole reason the part got taller.
+
+   The numbers are the only thing that tells the pockets apart — 0.15 mm on
+   diameter is not something you can eyeball — so the band also carries a V
+   notch in the top face over the SMALLEST pocket. If the text fails again, the
+   notched end is still the +0.15 end. */
+gauge_band  = 8.0;   // plain plate under the bores, for the labels
+gauge_text  = 4.5;   // cap height lands ~3.2, centred in the band
+gauge_cut   = 0.8;   // engraving depth; 0.6 was shallow for a dark filament
+gauge_notch = true;
+notch_w     = 6.0;
+notch_d     = 1.5;   // over the bore there is only wall (4) to give away
+
 module fit_gauge() {
     pitch = brg_od + 6; n = len(gauge_steps);
-    w = n*pitch; h = brg_od + 2*wall; t = brg_w + 3;
+    w = n*pitch; h = brg_od + 2*wall + gauge_band; t = brg_w + 3;
+    zc = gauge_band + wall + brg_od/2;      // bore centre, lifted by the band
     difference() {
         translate([-w/2, -t/2, 0]) cube([w, t, h]);
         for (i = [0:n-1]) {
             x = -w/2 + pitch*(i + 0.5);
-            translate([x, -t/2 - 1, brg_od/2 + wall]) rotate([-90,0,0])
+            translate([x, -t/2 - 1, zc]) rotate([-90,0,0])
                 cylinder(d = brg_od + gauge_steps[i], h = brg_w + 1, $fn = fit_fn);
-            translate([x, -t/2 - 2, brg_od/2 + wall]) rotate([-90,0,0])
+            translate([x, -t/2 - 2, zc]) rotate([-90,0,0])
                 cylinder(d = brg_od - 4, h = t + 4, $fn = fit_fn);
-            translate([x, -t/2 + 0.6, 3.5]) rotate([90,0,0])
-                linear_extrude(1) text(str(gauge_steps[i]), size = 5,
-                    halign = "center", valign = "baseline", $fn = 16);
+            // label, in the band, clear of the bore by the whole wall
+            translate([x, -t/2 + gauge_cut, gauge_band/2]) rotate([90,0,0])
+                linear_extrude(gauge_cut + 0.5)
+                    text(str(gauge_steps[i]), size = gauge_text,
+                         halign = "center", valign = "center", $fn = 16);
         }
+        // V notch in the top face, over the smallest pocket
+        if (gauge_notch)
+            translate([-w/2 + pitch*0.5, 0, h]) rotate([90, 0, 0])
+                linear_extrude(t + 2, center = true)
+                    polygon([[-notch_w/2, 0], [notch_w/2, 0], [0, -notch_d]]);
     }
 }
+
+echo(str("fit gauge  ", len(gauge_steps), " pockets ", gauge_steps,
+         "  on a ", len(gauge_steps)*(brg_od+6), " x ", brg_w+3, " x ",
+         brg_od + 2*wall + gauge_band, " coupon"));
+echo(str("  bore centre z       ", gauge_band + wall + brg_od/2));
+echo(str("  bore mouth bottom   ",
+         gauge_band + wall + brg_od/2 - (brg_od + gauge_steps[0])/2,
+         "  <- label band is clear below this"));
+echo(str("  label band          0 .. ", gauge_band, ", text ", gauge_text,
+         " centred at ", gauge_band/2, ", cut ", gauge_cut, " deep"));
+echo(str("  material over the notch root  ",
+         (brg_od + 2*wall + gauge_band) - notch_d
+           - (gauge_band + wall + brg_od/2 + (brg_od + gauge_steps[0])/2), " mm"));
+echo("  SMALLEST pocket is the NOTCHED end, and reads left to right with the");
+echo("  numbers upright.");
 
 if      (part == "fit_gauge")     fit_gauge();
 else if (part == "bearing_block") bearing_block();
