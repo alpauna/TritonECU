@@ -824,6 +824,53 @@ the OEM wheel's key-to-gap.** If it comes back near 0 while this one is 5.00°,
 the review is explained, and this project measured a documented defect without
 knowing the defect existed.
 
+#### The test is already rigged: **both wheels on the crank, keyed**
+
+[Both are on the crank snout together](../../docs/1999-Ford-F150-4wd-5.42v/RegisteredOn36-1wheel.png)
+— OEM and Dorman, one key, front cover off. **That is the registration**, the
+real one, the one both wheels are actually cut for. Nothing on a bench improves
+on it, and having both on *simultaneously* beats swapping them: the crank cannot
+drift between two readings if there is only one reading.
+
+**Whatever stagger the rim shows IS `key_to_gap(Dorman) − key_to_gap(OEM)`**, in
+tooth-widths, needing no conversion, no protractor, no datum and no TDC. Four
+things to read off it, in order of what they decide:
+
+| look at | decides |
+|---|---|
+| **Do the two missing teeth coincide?** ⭐ | The datum itself. **Offset by half a tooth pitch confirms the 5.00° and explains the review** |
+| If the teeth are staggered, by what fraction of a tooth? | The size of the error. Uniform all the way round = phase; growing = pitch mismatch |
+| **Do the two ODs match?** | Sensor **air gap** — an independent fault mode no angular reading catches. Stacked and concentric, a step at the rim is obvious |
+| Do the tooth widths match? | Duty difference. Moves *edges* by half the difference, leaves centres alone |
+
+> **This is a look, not a photograph.** Two wheels keyed on one shaft either have
+> coincident teeth or they do not, and the eye resolves that far better than a
+> camera at an angle. I have misread this wheel from photos twice already — the
+> current shot *hints* at a doubled edge around the lower rim, and I am not
+> calling it from 15 pixels of tooth.
+
+*(Visible and worth recording: the wheel is fitted with **`FRONT` facing
+forward**, the same face the clockwise sign convention above is written against.)*
+
+#### ⏳ The front cover is off — that is the window for `CKP_GAP_TO_TDC_DEG`
+
+This is the ⭐⭐ measurement, and it is **available right now and not later**.
+With the front open, the gap and the sensor can be seen at the same time:
+
+1. **Piston stop on #1** — still the gold standard, and it does not care that the
+   front is apart.
+2. Bring #1 to TDC.
+3. **Read where the gap sits relative to the CKP sensor.**
+
+That is the entire constant in one reading — `key_to_gap` *plus* the sensor's
+mounting angle, which is the term [no wheel measurement can
+supply](#what-500-is-not-it-is-not-ckp_gap_to_tdc_deg). It needs no wheel
+geometry at all, and it closes the moment the cover goes back on.
+
+> **Whichever wheel stays on the engine, the calibration belongs to that wheel.**
+> Mark it. `CKP_GAP_TO_TDC_DEG` is measured *with the fitted wheel*, and swapping
+> wheels later — in either direction — invalidates it.
+
 #### The decisive test: stack the two wheels, do not measure either one
 
 Both wheels are in hand ([photo](../../docs/1999-Ford-F150-4wd-5.42v/OriginalUnderDorman.png),
