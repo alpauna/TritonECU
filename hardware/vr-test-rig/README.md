@@ -897,6 +897,105 @@ second-hand evidence it carries unknowns that no amount of looking will close.
 So the review's *claim* now has a photograph beside it, which is more than it had
 before. It is still a claim about somebody else's parts.
 
+##### ⚠ The drift is there in the photo — and the camera can manufacture all of it
+
+**Observed:** the Dorman's teeth run out of register with the OEM row, worst
+around **120°**, and back into register at the missing tooth. *"There may be a
+degree of variance."* Both tooth rows are genuinely visible — the OEM's rusty
+square tops behind the Dorman's bright ones — and the offset genuinely varies
+along the rim. **The observation is real. The attribution is the problem.**
+
+**Two coaxial tooth rings at different depths, photographed off-axis, produce
+exactly this signature from projection alone.** The far ring's projected centre
+is displaced from the near ring's by `Δz·sin α`, so a tooth at radius `r` picks
+up an apparent angular shift
+
+```
+δ(θ) ≈ (Δz · sin α / r) · sin(θ − φ)
+```
+
+— **a once-per-revolution sinusoid with two nulls 180° apart.** Drift out, come
+back in. There is no defect in that equation.
+
+**And the magnitudes are not small.** At `r ≈ 65 mm`:
+
+| axial separation `Δz` | α = 20° | 30° | 40° | 55° |
+|--:|--:|--:|--:|--:|
+| 6 mm | 1.8° | 2.6° | 3.4° | 4.3° |
+| **10 mm** | 3.0° | 4.4° | **5.7°** | 7.2° |
+| 12 mm | 3.6° | 5.3° | 6.8° | 8.7° |
+
+> ⚠ **At a 10 mm axial separation, a 35° camera angle manufactures exactly the
+> 5.00° half-pitch stagger the Dorman is being blamed for.** That shot is at
+> least that oblique. **Parallax can account for the whole effect**, nulls and
+> all.
+
+##### The arithmetic that settles it without any photograph
+
+**On a closed circle, mean pitch is fixed by tooth count: 360/N.** Two wheels
+with the same number of teeth have identical average spacing *by construction*
+and **cannot accumulate drift over a revolution**. Only a constant offset is
+possible between them.
+
+So a stagger that **varies** around the rim has exactly two explanations, and
+they are very far apart:
+
+| | |
+|---|---|
+| **Different tooth counts** | Real, gross, and **countable in ten seconds** on parts in hand |
+| **Not real** | Projection, i.e. the camera |
+
+Dorman publishes **35**. If the OEM row is also 35, **a varying stagger is
+arithmetically impossible** and the photo is showing parallax. That is a
+one-line test that needs no rig, no calipers and no datum.
+
+**And if the drift were real, 120° is a very loud number.** One pitch of slip
+per 120° is **three pitches per revolution** — a 3-tooth difference, 36 vs 33 or
+39. Nobody would need a photograph.
+
+> ⚠ **Beware the aliasing.** *"Comes back in phase"* is ambiguous: teeth are
+> identical, so the rows look aligned at **every whole pitch of slip**, not only
+> at zero. Apparent re-registration is consistent with 0°, 10°, 20°… and the
+> photo cannot tell them apart. Only the **gap** is a unique feature — which is
+> why it is the only landmark in that image worth trusting.
+
+##### What *"a degree of variance"* would mean, if it is the real number
+
+One degree is **a tenth of a tooth pitch**. Placed against everything else in
+this file:
+
+| | |
+|---|---|
+| This photograph | ⛔ **cannot resolve it** — 1° is ~5 native pixels at that rim, and the parallax term is 3–7× larger |
+| The parallax term | **3–7°**, so 1° is buried inside the artefact |
+| Keyway slop on the rig | **±0.2°** — resolvable |
+| A tooth log | **0.002°** — trivially resolvable |
+
+**And a 1° result would kill the half-pitch hypothesis rather than support it.**
+This file's own table puts *"a degree or two"* at **probably unnoticed**, against
+*"half a pitch → runs rough, sets timing codes"*. If the true figure is ~1°, the
+review's complaint is not a phase complaint and we should stop reading it as one.
+
+##### The VR sensor is immune to this entire class of error
+
+Worth stating plainly, because it is the strongest argument yet for
+[the tooth log](#-better-than-looking-spin-each-wheel-and-diff-the-tooth-logs):
+**a sensor occupies one fixed point and time-stamps teeth as they arrive.** There
+is no projection, no camera angle, no axial separation and no foreshortening —
+the entire parallax term is structurally absent, not merely small.
+
+**Every wheel reading this project has got wrong, it got wrong from a
+photograph**: the keyway on the gap, the 171.45 mm OD, the face it was looking
+at, whose engine it was, and now very probably this. **Stop measuring wheels with
+cameras.**
+
+> ✅ **If a photo is taken anyway, square-on is not a style preference.** `α = 0`
+> makes `sin α = 0` and the parallax term vanishes *identically*, not
+> approximately. That is the reason the [photo
+> spec](#the-decisive-test-stack-the-two-wheels-do-not-measure-either-one) asks
+> for it.
+
+
 **The stack *method* survives** — it loses its parts, not its logic. Whatever
 stagger a registered rim shows IS `key_to_gap(A) − key_to_gap(B)`, and
 [the procedure is written out
@@ -992,6 +1091,7 @@ coincide?"*, which has no datum in it.
 | Gap in a *completely different place* | Phase error of a whole number of pitches — grosser, and a no-start rather than rough running |
 | Aligned somewhere, **walking apart** as you go round | Different **pitch** — tooth count or pitch-circle mismatch. Would be a blatant defect |
 | Centres aligned, one set's teeth **fatter** | **Duty/width difference.** Shifts *edges* by half the difference while leaving centres alone — a smaller effect, and it only bites if the decoder times off a single edge |
+| **Stagger that grows and shrinks smoothly, nulling twice per revolution** | ⚠ **Your camera.** [Parallax between two axially separated rings](#-the-drift-is-there-in-the-photo--and-the-camera-can-manufacture-all-of-it) — 3–7° of pure artefact at a typical oblique angle. **Not a wheel property.** Shoot square-on and it vanishes identically |
 
 **Compare the two ODs in the same shot while they are stacked.** A diameter
 difference changes the sensor **air gap** as well, which is an independent fault
