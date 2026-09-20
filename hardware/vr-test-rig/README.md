@@ -750,6 +750,13 @@ for, and it bounds the answer rather than setting it.
 > so if the keyway is the crank's TDC datum then TDC lands exactly midway between
 > tooth centres — the furthest point from any edge. That is a sensible thing to
 > design on purpose, and a strange thing to happen by accident.
+>
+> ✅ **This instinct was right**, and the file then spent several sections
+> arguing against it. [Resolved in its
+> favour](#-and-500-was-never-a-measurement--the-exactly-half-a-pitch-alarm-was-circular).
+> ⚠ But note what the box below makes explicit: **5.00° is the midpoint of the
+> observed interval, not a reading.** The true value is somewhere in 2–8°, so
+> "exactly half a pitch" cannot itself be used as evidence of anything.
 
 #### Sign, settled — by the engine rather than by the wheel
 
@@ -838,7 +845,14 @@ part reports
 > because this is where the computer reads off the crank sensor. Use this
 > pulsator ring and your engine will have timing codes and run rough."*
 
-#### That review may be describing the number we measured
+#### ~~That review may be describing the number we measured~~ — withdrawn
+
+> ⚠ **This section is kept for the record and is no longer believed.** It rests
+> on `key_to_gap(OEM) ≈ 0`, which was never verified, and on a photograph whose
+> [artefact budget exceeds the whole disputed
+> quantity](#-the-drift-is-there-in-the-photo--and-the-camera-can-manufacture-all-of-it).
+> Worse, its headline number is
+> [a midpoint read back as evidence](#-and-500-was-never-a-measurement--the-exactly-half-a-pitch-alarm-was-circular).
 
 The README's prior belief was that **the factory wheel puts the gap at TDC** —
 `key_to_gap ≈ 0`. This Dorman measures **5.00°**. That is **exactly half a tooth
@@ -929,6 +943,84 @@ back in. There is no defect in that equation.
 > 5.00° half-pitch stagger the Dorman is being blamed for.** That shot is at
 > least that oblique. **Parallax can account for the whole effect**, nulls and
 > all.
+
+##### A second artefact, and it is the one that does the damage
+
+**The camera is not looking down the axis, so it never sees the two tooth rows'
+side faces in the same plane.** That is a distinct error from the centre-offset
+parallax above, and it adds to it.
+
+A tooth has axial thickness `t`. Viewed at `α` off the axis, its near-face edge
+and far-face edge project to different angular positions, smeared by `t·sin α/r`
+— and **the OEM row is partly occluded by the Dorman**, so which of its edges is
+visible changes around the rim. You are not comparing the same feature to
+itself:
+
+| tooth thickness | α = 20° | 30° | 40° | 55° |
+|--:|--:|--:|--:|--:|
+| 3 mm | 0.9° | 1.3° | 1.7° | 2.2° |
+| **5 mm** | 1.5° | **2.2°** | **2.8°** | 3.6° |
+| 6 mm | 1.8° | 2.6° | 3.4° | 4.3° |
+
+**Artefact budget, added up:** 3–7° of centre parallax **plus** 2–3° of
+edge-selection. **That is the whole disputed quantity several times over**, on a
+5.00° question. There is no headroom left in this photograph for a real signal.
+
+> ⚠ **And oblique photography is a *biased* instrument, not just a noisy one.**
+> Both terms **add** apparent offset; neither cancels a real one except at the
+> two nulls. So an off-axis view is systematically biased **toward finding a
+> defect** — it cannot manufacture agreement, only disagreement.
+>
+> **Which may be the whole story of the review.** A reviewer looking at their own
+> oblique view, seeing teeth not line up, and blaming the part is the same
+> mechanism that fooled this file twice. That is not proof they were wrong. It is
+> a quantified, sufficient explanation for what they reported, and it needs no
+> defect in it.
+
+##### ⚠ And 5.00° was never a measurement — the "exactly half a pitch" alarm was circular
+
+This is the one that matters most, and it is a mistake in this file rather than
+in a photograph. Re-read
+[the derivation](#500-and-this-time-the-tooth-width-does-not-matter): what was
+*observed* is that **the keyway sits somewhere in the gap** between the missing
+tooth's edge and the next tooth's edge. **5.00° is the midpoint of that
+interval**, computed, not read:
+
+```
+tooth width w ≈ 5 mm at OD 135  →  4.2° of arc
+interval          2.1° .............. 7.9°
+midpoint          ^^^^^ 5.00° ^^^^^     ± 2.9°
+```
+
+**So "exactly half a pitch" is arithmetic, not a coincidence.** *Any* keyway
+observed to lie in that gap returns exactly half a pitch as its midpoint
+estimate. The file then treated that exactness as suspicious — *"half a pitch is
+precisely the magnitude that makes an engine run rough"* — and that reasoning is
+**circular**: the value came from the midpoint, and was then read back as
+evidence.
+
+**The true figure is somewhere in 2–8°.** Which resolves a contradiction this
+file has been carrying:
+
+| claim | verdict |
+|---|---|
+| `key_to_gap ≈ 0` is **falsified** | ✅ **Stands.** Zero is outside the observed interval — the keyway is not on the gap |
+| The Dorman is **half a pitch out vs OEM** | ⛔ **Withdrawn.** This needs `key_to_gap(OEM) ≈ 0`, which was **assumed and never verified**. The only evidence ever offered for it was the photograph |
+| *"TDC midway between tooth centres is sensible by design, strange by accident"* | ✅ **This was the right instinct**, and it contradicted the defect reading. Resolve in its favour |
+
+> **The defect hypothesis rests entirely on an assumption about a wheel nobody
+> here has seen.** Written down plainly it does not survive. **Downgrade it: the
+> Dorman is not suspect until something that is not a camera says so.**
+
+**Nothing in the plan changes** — count the teeth, log the wheel, let the Ford
+ring arbitrate at the end. Only the prior changes, and it changes a lot: this
+file should stop writing as though it is holding a defective part.
+
+> ⚠ The [rule barring the Dorman from the truck](#the-operational-rule-either-way)
+> now rests on a stranger's unquantified sentence and nothing else. It is still
+> free to obey — the cover is on and nothing is being fitted — so it stays. But
+> it is a precaution now, not a finding.
+
 
 ##### The arithmetic that settles it without any photograph
 
@@ -1547,7 +1639,7 @@ the listing** — which had both the OD and the engine family wrong.
 nothing to do with engine family: the applications begin at **2001** and the
 truck is a **1999**, and a review of this part reports its teeth do not match
 OEM. Both are covered
-[above](#that-review-may-be-describing-the-number-we-measured).
+[above](#that-review-may-be-describing-the-number-we-measured--withdrawn).
 
 > **It is the Dorman**, and the part says so: `FRONT 917-060 53025 TAIWAN` is
 > cast into the front face. So the photo above is a photo of *this* wheel, the
