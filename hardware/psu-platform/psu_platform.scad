@@ -105,16 +105,16 @@ cut_fn        = 64;     // a 14 mm bore at 32 is 0.034 mm off; at 64 it is 0.008
    bottom of the FOOT rather than from a free end, because this web has no free
    end — it lands on the lower flange.
 
-   side_y is "15 mm from the right side, looking at the face straight on", read
-   as standing on the UPPER FLANGE'S side (x = -) and looking toward +x, which
-   puts the viewer's right at y = 0. That is the same end of the 92 as the Ø14
-   standoff cut in the foot. If "right" meant the other end, set
-   side_y = deep - 15 = 77 and nothing else changes. */
+   side_y is "15 mm from the right side, looking at the face straight on".
+   CONFIRMED 2026-09-20: the face is the web seen from the UPPER FLANGE's side,
+   and the right-hand end of the 92 is y = deep, so the holes are 15 from THAT
+   end — the far end from the Ø14 standoff cut in the foot, not the near one. */
 side_holes = true;
 side_d     =  3.5;   // nominal; modelled at 3.80 with the same compensation
 side_dz    = 25.4;   // centre to centre, up the web
 side_z0    =  8.5;   // LOWER centre, up from z = 0 — the underside of the foot
-side_y     = 15.0;   // from the y = 0 end of the 92
+side_edge  = 15.0;   // from the RIGHT-hand end of the 92, looking at the face
+side_y     = deep - side_edge;   // 77.0
 
 /* Optional corner ribs. OFF by default because the drawing has none and the
    web does not need them (see the 12 kg above). Turn them on if the load is
@@ -223,8 +223,9 @@ if (side_holes) {
              "  (", side_d, " + ", hole_comp, ")"));
     echo(str("  centres  z         ", side_z0, " and ", side_z0 + side_dz,
              "  up from the underside of the foot,  y ", side_y));
-    echo(str("  y is measured from the y = 0 end; the other end is at ",
-             deep - side_y, ". Flip with side_y = ", deep - side_y, "."));
+    echo(str("  ", side_edge, " from the RIGHT-hand end of the ", deep,
+             " looking at the web from the upper flange's side, so y = ",
+             side_y, ".  Mirror is y = ", deep - side_y, "."));
     echo(str("  web either side of them  ", side_y - side_r, " and ",
              deep - side_y - side_r, " mm"));
     echo(str("  lower bore clears the foot's TOP face by ",

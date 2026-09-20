@@ -25,7 +25,7 @@ together at Ø2.30 — nominal M2 plus 0.30 for what a printed bore loses.
    holes:  34.9 apart across,  73.1 apart along the 92,  centred in the flange
    O14:    clearance for the module's ~13 mm standoff, in the FOOT, tangent to
            the fold, centre 10 mm from the end of the 92
-   O3.5:   a pair through the WEB, 25.4 apart, at z 8.5 and 33.9, y 15 —
+   O3.5:   a pair through the WEB, 25.4 apart, at z 8.5 and 33.9, y 77 —
            the same fixing holes hardware/l-bracket carries in its upright
 ```
 
@@ -43,7 +43,7 @@ Render: `./render.sh` → `stl/platform.stl`.
 | Hole centres | x 4.80 / 39.70, y 9.45 / 82.55 |
 | Modelled hole diameter | **2.3** — 2.0 nominal + 0.30 print compensation |
 | Standoff clearance cut | **Ø14** through the foot at x 51.5, y 10 |
-| Ø3.5 pair in the web | z 8.5 / 33.9, y 15 — modelled **3.80** |
+| Ø3.5 pair in the web | z 8.5 / 33.9, y 77 — modelled **3.80** |
 
 `openscad` echoes every one of these on each render, so they follow the
 parameters rather than this table. Re-read them after changing anything. The
@@ -97,7 +97,7 @@ end to measure from and they are not on the midline.
 | | |
 |---|--:|
 | Centres up from the **underside of the foot** | **8.5** and **33.9** |
-| Across the 92, from the y = 0 end | **15.0** |
+| Across the 92, from the y = 92 end | **15.0** → y = **77.0** |
 | Modelled bore | **3.80** — 3.5 nominal + 0.30 |
 
 The z numbers are the L bracket's unchanged: there the 8.5 ran from the leg's
@@ -105,13 +105,12 @@ free end, here from the bottom of the foot, which is the same plane in both
 parts. The lower bore clears the foot's **top** face by 3.6 mm, so a washer sits
 flat; the upper bore has 12.2 mm to the underside of the upper flange.
 
-> **Which end is "the right side".** The instruction was *15 mm from the right,
-> looking at the face straight on*, which needs a side to stand on. It is read
-> here as standing on the **upper flange's side** and looking at the web — the
-> viewer's right is then y = 0, so `side_y = 15` puts them at the **same end of
-> the 92 as the Ø14 standoff cut**. If the intended face was the other one, the
-> whole answer is `side_y = 77`; nothing else in the part changes, and the render
-> echoes both the current value and its mirror.
+> **Which end is "the right side".** Confirmed 2026-09-20: the face is the web
+> seen from the **upper flange's side**, and the right-hand end of the 92 is
+> **y = 92** — so the pair sits 15 from *that* end, at **y = 77**, the far end
+> from the Ø14 standoff cut rather than the near one. `side_edge` is the 15 and
+> `side_y` derives from it, so the part reads the way the instruction was given;
+> the render echoes the resulting y and its mirror.
 
 `side_holes = false` removes them.
 
