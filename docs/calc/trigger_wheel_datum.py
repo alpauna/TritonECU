@@ -96,20 +96,30 @@ print("it, log teeth, and key_to_gap falls out. The flute must be KNOWN, not RIG
 
 print()
 print("=" * 74)
-print("6. THE OD  --  a ratio, not a proof")
+print("6. THE OD  --  measured, once the whole template was in frame")
 print("=" * 74)
-plate_long, vendor_od = 173.0, 171.45
-frac = 0.92          # wheel span / frame width, EYEBALLED from the photo
-print("The first version of this argument claimed the wheel 'sits inside the")
-print("157 mm plate'. WRONG -- the plate runs off both edges of both photos, so")
-print("grid beside the wheel bounds nothing. What survives needs a pixel ratio:")
+plate, slot, vendor_od = (157.0, 173.0), 101.4, 171.45
+squares = 13.5              # grid squares across the wheel, 10 mm pitch
+od = squares * 10
+print("Two earlier attempts at this were wrong in opposite directions, and the")
+print("fix was not better arithmetic - it was putting the whole reference in the")
+print(f"picture. Scales available in that photo: the {plate[0]:.0f} x {plate[1]:.0f} mm plate outline")
+print(f"and the {slot:.1f} mm pin-field slot, which is local rather than at the edges.")
 print()
-print(f"  plate spans MORE than the frame, and is at most {plate_long:.0f} mm")
-print(f"  wheel spans LESS than the frame, about {frac:.2f} of it")
-print(f"  ->  OD < {plate_long:.0f} x {frac:.2f} = {plate_long*frac:.0f} mm")
+print(f"wheel across the grid          ~{squares:.1f} squares  ->  ~{od:.0f} mm")
+print(f"vendor listing (6-3/4\")        {vendor_od:.2f} mm  ->  {vendor_od/10:.1f} squares")
+print(f"error                          {(vendor_od-od)/od:+.0%}")
 print()
-print(f"vendor OD (6-3/4\")               {vendor_od:.2f} mm  -- excluded, but by")
-print("                                 a measurement OF the photo, not a fact")
-print(f"                                 about it. Treat as a strong hint.")
+print("=" * 74)
+print("7. WHAT ELSE MOVES  --  the ratios were never the problem")
+print("=" * 74)
+print("bore/OD = 0.253 came from the product photo. A RATIO IS SCALE-FREE, so it")
+print("cannot be wrong about size. It was multiplied by the wrong OD:")
 print()
-print(f"THE GRID SETTLES IT: {vendor_od:.2f} mm is {vendor_od/10:.1f} squares. Count them.")
+for name, ratio, oldv in (("wheel_bore", 0.253, 43.4),
+                          ("key_w   (0.15 x bore)", 0.253*0.15, 6.5),
+                          ("key_d   (0.19 x bore/2)", 0.253*0.19/2, 4.1)):
+    print(f"  {name:<26}{oldv:>6.2f}  ->  {ratio*od:>6.2f}")
+print()
+print(f"The wheel_hub spigot was cut for a {43.4:.1f} mm bore against a ~{0.253*od:.0f} mm one:")
+print(f"{43.4 - 0.253*od:.1f} mm of interference on the diameter. It would not have gone in.")

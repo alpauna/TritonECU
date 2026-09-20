@@ -32,15 +32,25 @@ root_fn  = 120;  // gear root circle
    Block Ford 36-1 that sits between the balancer and the crank pulley). The
    bore is DERIVED from the product photo's measured bore/OD = 0.253 — still
    worth a caliper, but it is now the only one that is. */
-wheel_od        = 171.45; // ** DOUBTFUL ** vendor listing. Photographed on the
-                          // carrier template the wheel spans ~92 % of a frame the
-                          // 173 mm plate overruns, which puts it near 159 mm. That
-                          // is a pixel estimate, not a fact - but 171.45 is a
-                          // shade over 17 grid squares, so COUNT THEM. 10 mm pitch.
-wheel_thk       =   3.05; // .120"  — vendor listing
-wheel_bore      =  43.4;  // MEASURE: 0.253 x OD from the photo, not the vendor
-key_w           =   6.5;  // MEASURE: 15 % of bore diameter
-key_d           =   4.1;  // MEASURE: 19 % of bore radius
+/* ** THE VENDOR'S 171.45 (6-3/4") IS WRONG. ** Photographed flat on the carrier
+   template with the WHOLE plate in frame, the wheel measures about 13.5 of the
+   10 mm grid squares. 171.45 would be 17.1 of them. Two independent scales agree
+   on the photo - the 157 x 173 plate outline and the 101.4 mm pin-field slot -
+   and they bracket the wheel at 128..141 mm.
+
+   135 BELOW IS STILL AN ESTIMATE. Put a caliper on it before printing ANY rig
+   part: this one number sets shaft height, wheel dip, the base slot and both
+   sensor stations, and it now drives the bore and keyway too. */
+wheel_od        = 135;    // ** MEASURE ** ~13.5 grid squares, was a bad 171.45
+wheel_thk       =   3.05; // .120" — vendor listing, and that listing is now suspect
+
+/* The product photo's RATIOS survived what its absolute dimension did not - a
+   ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
+   was 0.253 x the WRONG OD, which is how a good ratio produced a bad number.
+   Deriving them keeps that from happening again: measure the OD and these follow. */
+wheel_bore      = 0.253 * wheel_od;        // photo ratio, ~34.2 at OD 135
+key_w           = 0.15  * wheel_bore;      // 15 % of bore diameter
+key_d           = 0.19  * wheel_bore / 2;  // 19 % of bore radius
 
 /* Tooth width at the rim as an angle, tooth_w_deg = 360*tooth_mm/(pi*wheel_od).
    50 % duty is the usual drawing and is NOT a measurement. It no longer sets
@@ -382,9 +392,11 @@ module wheel_hub() {
             translate([0,0,10]) cylinder(d = wheel_bore - clr, $fn = fit_fn, h = wh_spig_l);
             // Integral key, formed in X-Y with the spigot. It must stand PROUD
             // of the spigot by the wheel's keyway depth — the spigot fills the
-            // 24 mm bore, and the key fills the slot cut outward from it. The
-            // cube runs from the axis so it merges with the spigot; only the
-            // part past r = 11.875 does any work.
+            // bore, and the key fills the slot cut outward from it. The cube
+            // runs from the axis so it merges with the spigot; only the part
+            // past wheel_bore/2 does any work. (This comment said "the 24 mm
+            // bore" and "r = 11.875" through two OD corrections; the numbers
+            // are derived now, so it no longer carries any.)
             translate([0,0,10])
                 translate([0, -key_w/2 + clr/2, 0])
                     cube([wheel_bore/2 + key_d - 0.1, key_w - clr, wh_spig_l]);

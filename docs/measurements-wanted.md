@@ -96,12 +96,13 @@ left for free.
 | | What it closes | How |
 |---|---|---|
 | ~~**Which side the keyway is on**~~ | ✅ **CLOSED twice over** — the first look was from the *back* | Operationally: gap passes the sensor, then the keyway **5.00°** later — an order of events cannot be mirrored. Geometrically: **`FRONT` is cast into the wheel**, so on that face, sweeping clockwise, keyway first then the gap |
-| ~~**Dorman or Ford wheel?**~~ | ✅ **CLOSED — it is the Dorman**, cast `FRONT 917-060 53025 TAIWAN` | And it is a **Small Block Ford** part while the truck is a **modular 5.4L**, so **5.00° is the rig's datum and does not transfer to the truck** |
+| ~~**Dorman or Ford wheel?**~~ | ✅ **CLOSED — it is the Dorman**, cast `FRONT 917-060 53025 TAIWAN` | But **which engine it fits is now open again** — see the next row |
+| **Is 917-060 an SBF or a modular part?** ⭐ | Whether the rig can calibrate the truck's timing. The listing says **Small Block Ford**, but that same listing's OD is wrong by 25 %, and ~135 mm is plausible for a **modular 4.6/5.4** reluctor. If modular, 5.00° transfers and the bench claim is restored | **[CONFIRM] against Dorman's own application list** — one lookup |
 | **The truck's own reluctor: key-to-gap** ⭐ | Whether the rig can calibrate the truck's timing at all. The README claims rig and truck share a datum; an SBF wheel cannot supply a modular one | Same reading, on the truck's wheel |
 | **#1 at TDC — what is in front of the CKP sensor?** ⭐ | **`CKP_GAP_TO_TDC_DEG` itself**, and it needs no wheel geometry at all — it measures the whole chain at once | Piston stop, bring #1 up, then look at the sensor |
-| **OD** | `wheel_od = 171.45` is **doubtful, not disproven** — the photo ratio puts it near 159 mm, but the plate runs off frame so nothing is bounded outright. Sets shaft height, wheel slot and both sensor brackets | Count 10 mm grid squares across it — 171.45 is 17.1 of them |
+| **OD — caliper it** ⭐ | ✅ **171.45 is dead** — the whole-template photo reads **~13.5 squares, ~135 mm**, 25 % under the listing. Now also drives `wheel_bore`, `key_w`, `key_d`. **Print no rig part until this is a caliper reading** | Calipers. The grid got it to ±7 mm; the hub fit needs better |
 | **Tooth width at the rim** | **Demoted.** 5.00° is the midpoint of two tooth centres, so the width cancels out of the answer entirely. It now only bounds the ±2.5° spread | Calipers, then `360·w/(π·OD)` |
-| **Bore, keyway w × d, the three holes' PCD and angles** | `wheel_hub` — spigot, key and bolt circle. All three are currently ratios off a product photo | Calipers; the holes read straight off the grid |
+| **Bore, keyway w × d, the four holes' PCD and angles** | `wheel_hub` — spigot, key and bolt circle. Now **derived from the OD** via the photo's ratios (0.253, 0.15, 0.19), so they are only as good as the caliper above. The old spigot was **9.2 mm oversize on the diameter** and would not have entered | Calipers; the holes read straight off the grid |
 
 > **The best measurement here is not a measurement.** Once the rig runs, homing
 > the stepper on the flute and taking a tooth log reads `key_to_gap` at

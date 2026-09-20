@@ -875,29 +875,75 @@ into a measured constant. Which is the real lesson:
 > in that flute is subtracted out of every test the rig runs — the rig would
 > confirm its own mistake. The constant belongs in firmware, measured.
 
-### The OD is doubtful — but weaker than this section first claimed
+### The OD is **~135 mm**, not 171.45 — the vendor listing is wrong by 25 %
 
-> ~~*"The template proves it without measuring anything... the OD is under
-> 157 mm."*~~ **That argument was unsound.** It assumed the plate's full width
-> was in frame. **It is not** — the template runs off both edges of both photos,
-> so "grid is visible either side of the wheel" bounds nothing by itself.
+A third photo put the **whole template** in frame on a light background, which is
+what the first two were missing. Two independent scales now sit in the same
+image:
 
-What survives is a *ratio*, which needs no absolute scale but does need a pixel
-estimate:
+| scale reference | | |
+|---|--:|--:|
+| Plate outline | 157 × 173 mm | known |
+| **Pin-field slot** | **101.4 mm** | known, and *local* to the plate rather than at its edges |
+| **The wheel** | **~13.5 grid squares** | **≈ 128–141 mm** |
+
+`wheel_od = 171.45` would be **17.1 squares.** It is not close.
+
+> Two earlier attempts at this got it wrong in opposite directions and both are
+> struck: *"the template proves it without measuring anything"* assumed a plate
+> width that ran off frame, and the ratio that replaced it leaned on a pixel
+> estimate of that same bad frame. **The fix was not better arithmetic, it was a
+> better photograph** — put the whole reference in the picture.
+
+**135 is still an estimate.** Caliper it before printing any rig part: this one
+number now drives the bore and keyway as well as the geometry.
+
+### The photo's *ratios* survived what its absolute dimension did not
+
+The product photo gave bore/OD = **0.253**, and `wheel_bore` was set to
+0.253 × 171.45 = **43.4**. The ratio was never the problem — **a ratio is
+scale-free, so it cannot be wrong about size.** It was multiplied by the wrong
+number.
+
+The `.scad` now derives them, so measuring the OD propagates by itself:
 
 ```
-the plate spans MORE than the frame       (grid at both edges)
-the wheel spans LESS than the frame       (grid beside it at its widest)
-the plate's largest dimension is 173 mm
-
-so   OD  <  173 x (wheel span / frame width)  ~  173 x 0.92  ~  159 mm
+wheel_bore = 0.253 * wheel_od        43.4  ->  34.2
+key_w      = 0.15  * wheel_bore       6.5  ->   5.1
+key_d      = 0.19  * wheel_bore / 2   4.1  ->   3.25
 ```
 
-which still excludes the vendor's **171.45**, but on a measurement of the photo
-rather than on a fact about the photo. Treat it as a strong hint.
+⚠ **The old `wheel_hub` spigot would not have entered the wheel** — 43.4 against
+a ~34 mm bore is 9 mm of interference on the diameter. That part must be
+re-rendered, not just re-checked.
 
-**The grid settles it in five seconds and needs none of this: count the 10 mm
-squares across the wheel.** 171.45 is a shade over 17 of them.
+### And the rig's geometry inverts — the wheel no longer reaches the base
+
+| | at 171.45 | **at 135** |
+|---|--:|--:|
+| Wheel dip below shaft height | 25.7 mm | **7.5 mm** |
+| Rim to ground | 16.3 mm | **34.5 mm** |
+| **Base wheel slot** | 114.4 mm | **0 — not needed at all** |
+
+The slot is gone. [Below](#two-consequences-and-one-of-them-is-not-obvious) this
+file argues at length that the wheel is *bigger* than assumed, so the shaft had
+to be **dropped** until the wheel ran *through* a slot in the base — and that the
+slot was "the plate's weakest section". **All of that was reasoning from the bad
+OD.** At 135 mm a 60 mm shaft holds the rim 34.5 mm clear of the ground with the
+base untouched, and `shaft_h` can now come *down* for a shorter, stiffer upright
+rather than being held up to clear a slot that does not exist.
+
+### The vendor listing is discredited — including its *application*
+
+The same listing supplied the OD **and** the claim that 917-060 is a **Small
+Block Ford** part. The OD is measurably wrong by 25 %, so the application claim
+inherits the doubt rather than standing on its own.
+
+**This matters because it may hand the calibration-bench claim back.** ~135 mm is
+a plausible size for a **modular 4.6/5.4** crank reluctor, and if 917-060 is in
+fact the modular part, then the rig's wheel and the truck's wheel are the same
+wheel and 5.00° *does* transfer. **[CONFIRM] against Dorman's own application
+list** — one lookup decides whether the rig can calibrate the truck's timing.
 
 > **It is the Dorman**, and the part says so: `FRONT 917-060 53025 TAIWAN` is
 > cast into the front face. So the photo above is a photo of *this* wheel, the
@@ -912,23 +958,27 @@ deep. At a 24 mm bore that is **≈3.6 × 2.3 mm** — less than half the DIN 68
 **A printed 8 mm key would simply not have entered the slot.** `key_w` and
 `key_d` now carry the photo-derived figures, still marked MEASURE.
 
-### Settled: the vendor's own listing
+### ~~Settled: the vendor's own listing~~ — the listing does not describe the part
 
-**6-3/4" OD and .120" thick** — a Small Block Ford 36-1 that sits between the
-harmonic balancer and the crank pulley. In millimetres:
+> **Struck.** Measured against the carrier-template grid the OD is **~135 mm**,
+> not the listed 6-3/4" / 171.45 — wrong by 25 %. See
+> [the measurement](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-).
+> The bore and keyway derived from it were wrong by the same factor, and the
+> listing's *"Small Block Ford"* application inherits the doubt.
 
-| | was assumed | **actual** |
-|---|--:|--:|
-| OD | 150 | **171.45** |
-| Thickness | 5.0 | **3.05** |
-| Bore | 38 (guess) | **43.4** — 0.253 × OD, still the one to caliper |
+~~**6-3/4" OD and .120" thick** — a Small Block Ford 36-1 that sits between the
+harmonic balancer and the crank pulley. In millimetres:~~
 
-The bore is the only figure still derived rather than published, and the photo's
-ratio is what supplies it. Everything else now comes from the vendor.
+| | was assumed | ~~"actual"~~ | **measured** |
+|---|--:|--:|--:|
+| OD | 150 | ~~171.45~~ | **~135** |
+| Thickness | 5.0 | 3.05 | still from the listing |
+| Bore | 38 (guess) | ~~43.4~~ | **~34.2** — 0.253 × OD, the ratio was fine |
 
-*(It is an SBF part, not a modular one. Irrelevant on a bench — a 36-1 wheel is a
-36-1 wheel — but it does mean the earlier "Ford modular crank snout" reasoning
-was aimed at the wrong engine family.)*
+**The lesson is which number to trust.** The photo gave *ratios* and the vendor
+gave an *absolute*, and it was the absolute that failed. A ratio is scale-free,
+so it cannot be wrong about size — and multiplying a good ratio by a bad
+dimension is precisely how 43.4 happened.
 
 ### Two consequences, and one of them is not obvious
 
