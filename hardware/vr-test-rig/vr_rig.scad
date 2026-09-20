@@ -298,8 +298,17 @@ y_cmp    = cam_y + cam_target_od/2 + air_gap + sensor_barrel_cmp - sm_plate/2;
    let it. The old slot was cut wheel_od + 10 = 160 wide on a plate 100 wide --
    it severed the base in two. */
 wheel_dip = wheel_od/2 - shaft_h;
-slot_y    = (shaft_h + base_t < wheel_od/2)
-            ? 2*sqrt(pow(wheel_od/2, 2) - pow(shaft_h + base_t, 2)) + 10 : 0;
+/* FIXED — the old test asked the wrong question, twice.
+   It was  (shaft_h + base_t < wheel_od/2), i.e. "does the wheel punch out the
+   BOTTOM of the plate", and it sized the slot on the chord at that bottom face.
+   But a slot is needed as soon as the wheel reaches below the base TOP, and it
+   must be as long as the chord THERE -- the top face is the widest section of
+   the intersection, the bottom the narrowest.
+   At the current OD 135 the old form cut NO SLOT while the wheel buried 7.5 mm
+   into an 8 mm plate: a hard collision, wheel cannot turn. Where it did fire
+   (OD >= 138) it was short by 45 mm. Cut through; a blind pocket buys nothing. */
+slot_y    = (wheel_dip > 0)
+            ? 2*sqrt(pow(wheel_od/2, 2) - pow(shaft_h, 2)) + 10 : 0;
 /* Cross-check against the photo, so a typo in the measured numbers is caught
    before anything is printed rather than after. */
 echo(str("wheel bore/OD = ", wheel_bore/wheel_od,
@@ -308,6 +317,12 @@ echo(str("wheel bore/OD = ", wheel_bore/wheel_od,
            : "  (photo: 0.253, consistent)"));
 echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
          " mm, ", foot_h + base_t - wheel_dip, " mm to ground; slot ", slot_y, " mm"));
+/* The base slot and the sensor bolt holes both track wheel_od directly, and
+   wheel_od is still an estimate. Say so at render time, where it will be seen. */
+echo(str("BASE GATE: slot_y ", slot_y, " mm and y_ck ", y_ck,
+         " mm both scale with wheel_od = ", wheel_od,
+         ".  +/-7 mm of OD moves y_ck by +/-3.5 mm, past a 4.4 mm hole.",
+         "  DO NOT PRINT base/base_a/base_b UNTIL wheel_od IS A CALIPER READING."));
 
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through

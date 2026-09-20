@@ -178,9 +178,13 @@ stepper that has been running.
 - **Print the bearing blocks lying on their backs**, bore axis vertical. That
   keeps the bore round and puts the shaft load into layer *shear* rather than
   pulling layers apart.
-- Bearing pocket is sized at `brg_od - 0.05` for a light press. If it will not
-  seat, open `brg_press` toward `+0.10` rather than forcing it — a cracked block
-  moves the air gap.
+- ⚠ ~~Bearing pocket is sized at `brg_od - 0.05` for a light press. If it will
+  not seat, open `brg_press` toward `+0.10`.~~ **STALE — and this is the exact
+  setting that split the first PETG set.** `brg_press` is now **`+0.30`**, a
+  *clearance* fit held with retaining compound, for the reasons at the
+  [top of this file](#-bearing-blocks-print-the-fit-gauge-first). **Print
+  `fit_gauge` first and let it choose the number.** Do not reach for a press
+  fit; the whole point of the correction is that there isn't one.
 
 ## The air gap is the experiment, not a setting
 
@@ -1697,20 +1701,62 @@ stands off at y = 109, so `plate_w` goes 240 → **260**. Still 300 × 260, whic
 
 ### What that means for print order
 
-With OD and thickness now published, only the **bore** is still derived. It
-affects `wheel_hub` alone — the spigot, the keyway and the clamp — so that is the
-one part still worth holding.
+> ⚠ **The table that was here is struck.** It opened *"with OD and thickness now
+> published"* — and both were then withdrawn. The OD came from the vendor
+> listing that turned out to be [wrong by
+> 25 %](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-), and
+> `wheel_thk = 3.05` is still that same listing. **135 is a photo-grid estimate,
+> ±7 mm.** Current order below.
 
-| safe to print now | gated, and on what |
+**`shaft_h` is now a fixed 60 mm, not `wheel_od/2 + 12`** — which is what makes
+most of the rig printable today. The parts that still track the wheel are the
+ones that touch it or aim at it.
+
+| ✅ print now | why it is safe |
 |---|---|
-| `crank_gear`, `cam_gear` | `wheel_hub` — wheel bore + keyway |
-| `cam_target` | `sensor_mount` ×2 — **sensor barrel length** |
-| `bearing_block` ×4 | `base` — plate width follows the sensor station |
-| `motor_mount` | |
+| **`fit_gauge`** ⭐ **first, before anything** | Chooses `brg_press`. The first PETG set split because this step was skipped |
+| `bearing_block` ×4 | `shaft_h` only — **after** the gauge sets the pocket |
+| `motor_mount` | `shaft_h` only |
+| `crank_gear`, `cam_gear` | Gear parameters only |
+| `cam_target` | No wheel dependency at all |
+| `sensor_ckp`, `sensor_cmp` | Check models — their whole job is to be held up against the real thing |
 
-The bearing blocks and motor mount are cut to `shaft_h` alone, so they are
-settled. The base is **back on the gated list** — its width is now driven by
-where the sensor has to stand.
+| ⛔ hold | gated on |
+|---|---|
+| **`base` / `base_a` / `base_b`** | **`wheel_od`.** The slot length and the sensor bolt holes both scale with it — ±7 mm of OD moves `y_ck` by ±3.5 mm, past a 4.4 mm clearance hole. **And see the bug below** |
+| **`hub`, `wheel_hub`** | `wheel_bore`, `key_w`, `key_d`, `wheel_thk` — **all four are photo ratios or the bad listing.** The previous spigot was [9.2 mm oversize](#corrected-the-keyway-is-not-a-din-8-mm-key) and would not have entered |
+| `sensor_mount` ×2 | Sensor barrel length — the module itself is clean, only its station on the base moves |
+
+#### 🐛 Fixed before this print run: the base cut no wheel slot at all
+
+`slot_y` tested `shaft_h + base_t < wheel_od/2` — *"does the wheel punch out the
+**bottom** of the plate"* — and sized the slot on the chord at that bottom face.
+**Both are the wrong question.** A slot is needed the moment the wheel reaches
+below the base **top**, and it must be as long as the chord *there*, which is the
+widest section of the intersection rather than the narrowest.
+
+| `wheel_od` | wheel dips | old `slot_y` | corrected |
+|--:|--:|--:|--:|
+| 132 | 6.0 mm | **0 mm** | 65.0 mm |
+| **135** (nominal) | **7.5 mm** | **0 mm** ⛔ | **71.8 mm** |
+| 138 | 9.0 mm | 33.4 mm | 78.1 mm |
+| 141 | 10.5 mm | 47.2 mm | 84.0 mm |
+
+**At the current nominal the base cut no slot while the wheel buried 7.5 mm into
+an 8 mm plate** — a hard collision, wheel cannot turn. Where the old test did
+fire it was short by ~45 mm. Fixed in `vr_rig.scad`, and the render now echoes a
+**BASE GATE** line naming the dependency so it cannot be printed absent-mindedly.
+
+> ⚠ **Note how close the cliff was.** `shaft_h + base_t = 68` against
+> `wheel_od/2 = 67.5` — the old condition failed by **0.5 mm**. A wheel 1 mm
+> larger would have hidden the bug completely, and a rig that had been printed
+> and assembled would have found it with a stalled motor.
+
+#### All fourteen parts render clean
+
+`openscad` builds every `part =` target with no warnings or errors, including
+both base halves — checked after the slot fix, so the geometry is sound even
+where the *dimensions* are still gated.
 
 ## 5. The sensors are flange-mounted, which broke the mount design
 
