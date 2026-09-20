@@ -255,6 +255,7 @@ nothing to defeat.
 | | |
 |---|---|
 | [4R100 rebuild manual for the DIY](https://www.powerstrokearmy.com/threads/4r100-rebuild-manual-for-the-diy.20642/) | ⚠ **4R100, not 4R70W** — this truck has the 4R70W. Worth having anyway: the **MegaSquirt pinout this project cross-checks against was developed on a 4R100**, which is why it listed a coast clutch solenoid that does not exist here ([`output-drivers.md`](docs/output-drivers.md)). If another MS-sheet entry ever looks wrong, this is where the explanation will be |
+| [Dorman 917-060 — the rig's 36-1 wheel](https://www.dormanproducts.com/p-53996-917-060.aspx) ([Amazon, with the reviews](https://www.amazon.com/Dorman-917-060-Ignition-Pulsator-Ring/dp/B00B2LCDQA)) | Steel, **35 teeth**, OE cross **XW1Z-12A227-AC**, modular V8 (2001-2010 F-150 4.6, **2002-2010 F-150 5.4**). ⚠ **Bench part only — do not fit it to the truck.** A review reports its teeth do not match the OEM wheel, giving timing codes and rough running; we measured its keyway **5.00° — half a tooth pitch — from where the factory datum was believed to be** ([`vr-test-rig/README.md`](hardware/vr-test-rig/README.md)) |
 
 ## Layout
 

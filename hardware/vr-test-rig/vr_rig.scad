@@ -28,10 +28,16 @@ root_fn  = 120;  // gear root circle
        keyway width     = 15 % of bore diameter
        keyway depth     = 19 % of bore radius
    "150 mm OD with a 24 mm bore" is ratio 0.160 and cannot both be true. */
-/* OD and thickness are from the vendor's own listing (6-3/4" x .120", a Small
-   Block Ford 36-1 that sits between the balancer and the crank pulley). The
-   bore is DERIVED from the product photo's measured bore/OD = 0.253 — still
-   worth a caliper, but it is now the only one that is. */
+/* WHAT THE PART ACTUALLY IS. Dorman 917-060, cast into the front face along
+   with FRONT. Dorman's catalogue: steel, 35 teeth, OE cross XW1Z-12A227-AC,
+   fitting 2001-2010 F-150 4.6 and 2002-2010 F-150 5.4 among others. The reseller
+   listing this file used to quote got BOTH the OD (6-3/4") and the engine family
+   ("Small Block Ford") wrong.
+
+   ** DO NOT FIT THIS WHEEL TO THE TRUCK. ** It is a bench part. Its applications
+   start at 2001 and the truck is a 1999, and a customer review of this exact
+   part reports its teeth do not match the OEM wheel - timing codes and rough
+   running. See README. The rig does not care; the vehicle would. */
 /* ** THE VENDOR'S 171.45 (6-3/4") IS WRONG. ** Photographed flat on the carrier
    template with the WHOLE plate in frame, the wheel measures about 13.5 of the
    10 mm grid squares. 171.45 would be 17.1 of them. Two independent scales agree

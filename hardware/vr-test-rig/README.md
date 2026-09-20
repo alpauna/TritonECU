@@ -482,11 +482,11 @@ Measured on the engine: the factory 5.4L puts the gap at TDC #1 as well. Rig and
 truck share one datum, so `CKP_GAP_TO_TDC_DEG = 0` for both.
 
 > ⚠ **This claim does not survive the wheel being identified.** The rig's wheel
-> is a Dorman **917-060**, cast into the part — a **Small Block Ford**
-> OE-replacement reluctor. The truck is a **modular 5.4L**. A key-to-gap broached
-> for one engine family says nothing about the other, so **the rig and the truck
-> do not share a datum by construction**; they could only share one by
-> coincidence.
+> is a Dorman **917-060**, cast into the part. It *is* a modular V8 reluctor —
+> Dorman lists **2002-2010 F-150 5.4** among others — but two things still break
+> the shared datum: the applications **start at 2001 and the truck is a 1999**,
+> and a customer review of this exact part reports that **its teeth do not match
+> the OEM wheel**, causing timing codes and rough running.
 >
 > What the rig still is: the best available test of *decoder behaviour* — sync
 > acquisition, cranking profiles, tooth counting, noise. What it is **not**, until
@@ -779,23 +779,77 @@ The front face is cast **`FRONT 917-060 53025 TAIWAN`**. It is the Dorman
 > expects it. The keyway relating to TDC is exactly what a direct-fit replacement
 > part does, and it needed no Ford casting to explain.
 
-**And this reverses last round's conclusion about the truck.** The vendor lists
-917-060 as a **Small Block Ford** part — the `.scad` has said so all along — and
-the truck is a **modular 5.4L**. Different engine family, different crank,
-different reluctor. So:
+**It is not a Small Block Ford part either — that was the listing's third error.**
+Dorman's own catalogue puts 917-060 on **modular V8s**: 2001-2010 F-150 4.6,
+**2002-2010 F-150 5.4**, Crown Victoria, Mustang, Explorer, Expedition,
+Navigator, Mountaineer. **35 teeth**, steel, cross-referenced to OE
+**XW1Z-12A227-AC**. The ~135 mm we measured is a modular reluctor's size, and it
+agrees.
+
+So the engine-family objection is withdrawn. **Two better ones replace it.**
 
 | | |
 |---|---|
 | **5.00° is the rig's `key_to_gap`** | ✅ measured, and it is this wheel's |
-| **5.00° is the truck's `CKP_GAP_TO_TDC_DEG`** | ❌ **no** — an SBF part cannot carry a modular engine's datum |
+| **5.00° is the truck's `CKP_GAP_TO_TDC_DEG`** | ❌ **still no** — for the two reasons below |
 
-> ⚠ **This is the claim to be careful about**, because the README leans on it
-> hard: *"the rig's absolute angle now is the engine's absolute angle"*. A
-> **key-to-gap measured on an SBF reluctor does not transfer to a modular
-> engine**, so the rig remains an excellent test of *decoder behaviour* — sync
-> acquisition, cranking profiles, tooth counting — while the truck's absolute
-> datum must be measured on the truck. See the flag at
-> [the calibration-bench claim](#the-truck-measures-the-same--so-the-rig-is-a-calibration-bench).
+**First: the applications start at 2001, and the truck is a 1999.** Every listed
+year is 2001 or later. Whether the 1999 5.4L uses this reluctor at all is
+**[CONFIRM]**, and it is not safe to assume — 2001 is exactly the kind of
+boundary a crank-trigger revision lands on.
+
+**Second, and this is the one that matters:** a customer review of this exact
+part reports
+
+> *"The teeth on the wheel don't exactly match up to the OEM one, this matters
+> because this is where the computer reads off the crank sensor. Use this
+> pulsator ring and your engine will have timing codes and run rough."*
+
+#### That review may be describing the number we measured
+
+The README's prior belief was that **the factory wheel puts the gap at TDC** —
+`key_to_gap ≈ 0`. This Dorman measures **5.00°**. That is **exactly half a tooth
+pitch**, and half a pitch of crank-angle error is precisely the magnitude that
+makes an engine *run badly and set codes* rather than *not start*:
+
+| error | symptom |
+|---|---|
+| a whole pitch, 10° | gross; likely no-start or violent misfire |
+| **half a pitch, 5.00°** | **runs, runs rough, sets timing codes** ← the review |
+| a degree or two | probably unnoticed |
+
+**This is a hypothesis, not a conclusion** — "the teeth don't match" could also
+mean tooth width, profile or runout. But it is testable in one reading: **measure
+the OEM wheel's key-to-gap.** If it comes back near 0 while this one is 5.00°,
+the review is explained, and this project measured a documented defect without
+knowing the defect existed.
+
+#### The operational rule, either way
+
+> ⚠ **Do not fit this wheel to the truck.** It is a bench part. Whatever the
+> cause, a part with a user-reported timing defect does not belong on the vehicle
+> the ECU is being developed against — a wheel that makes the *factory* PCM run
+> rough would contaminate every comparison against it.
+
+**And TritonECU is immune to the defect in a way the factory PCM is not**, which
+is worth noticing. The OEM PCM has gap-to-TDC baked in; ours has
+`CKP_GAP_TO_TDC_DEG` as a **named, calibratable constant** — the decision
+[recorded above](#the-truck-measures-the-same--so-the-rig-is-a-calibration-bench)
+to keep it a named constant rather than a disappeared zero. Calibrate to whatever
+wheel is actually fitted and a 5° offset is a number, not a fault. That immunity
+is exactly why the constant must be **measured on the truck, with the truck's own
+wheel**, and never inherited from the bench.
+
+#### The rig does not care — and is arguably better off
+
+A wheel whose gap sits half a pitch from where the factory puts it is **still a
+perfectly good 36-1 wheel**. The rig tests *decoder behaviour*: sync acquisition,
+cranking profiles, tooth counting, noise. None of that depends on where TDC is.
+
+In fact a non-zero offset makes the **better** test article. A bench that always
+calibrates to zero never exercises the offset at all, so any code path that
+silently assumes `CKP_GAP_TO_TDC_DEG == 0` would pass every test and fail on the
+truck. **This wheel forces the constant to be real.**
 
 #### `FRONT` closes the mirroring problem permanently
 
@@ -933,17 +987,19 @@ OD.** At 135 mm a 60 mm shaft holds the rim 34.5 mm clear of the ground with the
 base untouched, and `shaft_h` can now come *down* for a shorter, stiffer upright
 rather than being held up to clear a slot that does not exist.
 
-### The vendor listing is discredited — including its *application*
+### RESOLVED — it is a modular part, and the listing was wrong twice
 
-The same listing supplied the OD **and** the claim that 917-060 is a **Small
-Block Ford** part. The OD is measurably wrong by 25 %, so the application claim
-inherits the doubt rather than standing on its own.
+Dorman's catalogue: **917-060**, steel, **35 teeth**, OE cross
+**XW1Z-12A227-AC**, fitting 2001-2010 F-150 4.6, **2002-2010 F-150 5.4**, Crown
+Victoria, Mustang, Explorer, Expedition, Navigator, Mountaineer. The ~135 mm we
+measured is a modular reluctor's size and **corroborates the catalogue against
+the listing** — which had both the OD and the engine family wrong.
 
-**This matters because it may hand the calibration-bench claim back.** ~135 mm is
-a plausible size for a **modular 4.6/5.4** crank reluctor, and if 917-060 is in
-fact the modular part, then the rig's wheel and the truck's wheel are the same
-wheel and 5.00° *does* transfer. **[CONFIRM] against Dorman's own application
-list** — one lookup decides whether the rig can calibrate the truck's timing.
+**But the calibration-bench claim does not come back**, for two reasons that have
+nothing to do with engine family: the applications begin at **2001** and the
+truck is a **1999**, and a review of this part reports its teeth do not match
+OEM. Both are covered
+[above](#that-review-may-be-describing-the-number-we-measured).
 
 > **It is the Dorman**, and the part says so: `FRONT 917-060 53025 TAIWAN` is
 > cast into the front face. So the photo above is a photo of *this* wheel, the
@@ -964,10 +1020,13 @@ deep. At a 24 mm bore that is **≈3.6 × 2.3 mm** — less than half the DIN 68
 > not the listed 6-3/4" / 171.45 — wrong by 25 %. See
 > [the measurement](#the-od-is-135-mm-not-17145--the-vendor-listing-is-wrong-by-25-).
 > The bore and keyway derived from it were wrong by the same factor, and the
-> listing's *"Small Block Ford"* application inherits the doubt.
+> listing's *"Small Block Ford"* application was wrong too — Dorman's own
+> catalogue puts this part on **modular V8s**, not an SBF.
 
 ~~**6-3/4" OD and .120" thick** — a Small Block Ford 36-1 that sits between the
-harmonic balancer and the crank pulley. In millimetres:~~
+harmonic balancer and the crank pulley. In millimetres:~~ *(Neither figure nor
+the engine family survived. Dorman's catalogue: a **modular V8** reluctor,
+**35 teeth**, OE **XW1Z-12A227-AC**.)*
 
 | | was assumed | ~~"actual"~~ | **measured** |
 |---|--:|--:|--:|
