@@ -824,9 +824,12 @@ opposite things depending on it:
 | **`XW1Z-12A227`** (or supersedes to it) | The Dorman is the **correct** part — so any stagger is a **manufacturing defect**, exactly what the review alleges |
 | **a different base number** | The Dorman is simply the **wrong part** for a 1999 — a stagger is **expected**, and says nothing about Dorman's quality |
 
-The OEM wheel has casting text around its hub face in
-[the photo](../../docs/1999-Ford-F150-4wd-5.42v/OriginalUnderDorman.png). **That
-number decides how to read the tooth comparison**, so it is worth having first.
+~~The OEM wheel has casting text around its hub face in [the photo], so that
+number is worth having first.~~ ⚠ **Struck — that photo is the reviewer's, and
+the OEM wheel is not in hand.** The casting is behind the timing cover, and the
+whole ordering question below is [moot for a different
+reason](#-and-this-is-what-makes-the-retraction-cheap): the constant is measured
+directly, not inferred from which wheel it is.
 
 **Second, and this is the one that matters:** a customer review of this exact
 part reports
@@ -849,67 +852,127 @@ makes an engine *run badly and set codes* rather than *not start*:
 | a degree or two | probably unnoticed |
 
 **This is a hypothesis, not a conclusion** — "the teeth don't match" could also
-mean tooth width, profile or runout. But it is testable in one reading: **measure
-the OEM wheel's key-to-gap.** If it comes back near 0 while this one is 5.00°,
-the review is explained, and this project measured a documented defect without
-knowing the defect existed.
+mean tooth width, profile or runout. ~~But it is testable in one reading: measure
+the OEM wheel's key-to-gap.~~ ⚠ **Not that way** — the OEM wheel is behind the
+timing cover. **The genuine Ford ring tests it instead**, on a bench, and answers
+the same question: if `key_to_gap(Ford)` comes back near 0 while this one is
+5.00°, the review is explained and this project measured a documented defect
+without knowing the defect existed.
 
-#### The test is already rigged: **both wheels on the crank, keyed**
+#### ⚠ RETRACTED — the photographs are the reviewer's engine, not this truck
 
-[Both are on the crank snout together](../../docs/1999-Ford-F150-4wd-5.42v/RegisteredOn36-1wheel.png)
-— OEM and Dorman, one key, front cover off. **That is the registration**, the
-real one, the one both wheels are actually cut for. Nothing on a bench improves
-on it, and having both on *simultaneously* beats swapping them: the crank cannot
-drift between two readings if there is only one reading.
+**The timing cover on this truck has never been off.** Both PNGs in
+`docs/1999-Ford-F150-4wd-5.42v/` came from the customer review, not from here,
+and three commits read them as if they were ours. What this project has in its
+hands is **one wheel: the Dorman**. The OEM wheel has never been seen except in
+somebody else's photograph.
 
-**Whatever stagger the rim shows IS `key_to_gap(Dorman) − key_to_gap(OEM)`**, in
-tooth-widths, needing no conversion, no protractor, no datum and no TDC. Four
-things to read off it, in order of what they decide:
-
-| look at | decides |
+| claimed | actually |
 |---|---|
-| **Do the two missing teeth coincide?** ⭐ | The datum itself. **Offset by half a tooth pitch confirms the 5.00° and explains the review** |
-| If the teeth are staggered, by what fraction of a tooth? | The size of the error. Uniform all the way round = phase; growing = pitch mismatch |
-| **Do the two ODs match?** | Sensor **air gap** — an independent fault mode no angular reading catches. Stacked and concentric, a step at the rim is obvious |
-| Do the tooth widths match? | Duty difference. Moves *edges* by half the difference, leaves centres alone |
+| ~~"Both wheels are on the crank on one key — the test is already rigged"~~ | **The reviewer's crank.** Nothing is rigged here |
+| ~~"Both wheels are in hand"~~ | **One is.** The Dorman |
+| ~~"The OEM wheel has casting text around its hub face … the wheel is in hand"~~ | **It is not in hand**, and that casting read is not available short of pulling the cover |
+| ~~"⏳ The front cover is off — that is the window"~~ | **The cover is on.** No window, no urgency |
 
-> **This is a look, not a photograph.** Two wheels keyed on one shaft either have
-> coincident teeth or they do not, and the eye resolves that far better than a
-> camera at an angle. I have misread this wheel from photos twice already — the
-> current shot *hints* at a doubled edge around the lower rim, and I am not
-> calling it from 15 pixels of tooth.
+**The tell was in the file the whole time.** The two review images are `.png` —
+screenshots — while every photograph taken here is `.jpg` off a camera
+(`36-1Wheel.jpg`, `36-1Wheel-Front.jpg`).
 
-*(Visible and worth recording: the wheel is fitted with **`FRONT` facing
-forward**, the same face the clockwise sign convention above is written against.)*
+> ⚠ **Record provenance when an image lands.** A photograph is evidence about
+> *that* part on *that* vehicle. Three commits turned on an implicit "ours" that
+> nothing in the file ever actually said.
 
-#### ⏳ The front cover is off — that is the window for `CKP_GAP_TO_TDC_DEG`
+##### What the reviewer's photo is still worth — and what it cannot settle
 
-This is the ⭐⭐ measurement, and it is **available right now and not later**.
-With the front open, the gap and the sensor can be seen at the same time:
+It is not worthless. It is **the very test this file then went on to design**,
+already performed by someone else: two wheels, one crank, cover off. But as
+second-hand evidence it carries unknowns that no amount of looking will close.
 
-1. **Piston stop on #1** — still the gold standard, and it does not care that the
-   front is apart.
-2. Bring #1 to TDC.
-3. **Read where the gap sits relative to the CKP sensor.**
+| unknown | why it bites |
+|---|---|
+| **What year is the reviewer's truck?** | If a 2003, 917-060 *is* the cataloged part, their stagger is a Dorman defect, and it says nothing about a 1999. If a 1999, defect and wrong-year are **confounded** and the photo cannot separate them |
+| **Is their Dorman keyed, or just held up?** | A pry tool is in frame and the new wheel sits bright and proud of the chains. **Two wheels free to rotate on a shared bore say nothing** — this file's own warning, and it applies to other people's photos first |
+| **Which row of teeth is which?** | Assumed from the filename, never established |
 
-That is the entire constant in one reading — `key_to_gap` *plus* the sensor's
-mounting angle, which is the term [no wheel measurement can
-supply](#what-500-is-not-it-is-not-ckp_gap_to_tdc_deg). It needs no wheel
-geometry at all, and it closes the moment the cover goes back on.
+So the review's *claim* now has a photograph beside it, which is more than it had
+before. It is still a claim about somebody else's parts.
+
+**The stack *method* survives** — it loses its parts, not its logic. Whatever
+stagger a registered rim shows IS `key_to_gap(A) − key_to_gap(B)`, and
+[the procedure is written out
+below](#the-decisive-test-stack-the-two-wheels-do-not-measure-either-one). It
+runs the day a second wheel is on the bench.
+
+> **And it is a look, not a photograph** — which is precisely the rule that was
+> just broken. I have now misread this wheel from photos three times: twice on
+> which face I was seeing, once on whose engine it was.
+
+*(Worth keeping from the reviewer's photo, since it is a claim about the part
+rather than about their truck: it is installed **`FRONT` facing forward** — the
+same face the clockwise sign convention above is written against.)*
+
+#### ~~⏳ The front cover is off — that is the window~~ — it is on, and the constant never needed it off
+
+The cover-off look was never available here. **And it costs almost nothing**,
+because the route that works with the cover on is better on the merits, not just
+on access. ~~*Piston stop on #1, bring it to TDC, read where the gap sits
+relative to the CKP sensor.*~~
+
+##### ⭐⭐ Trigger a timing light off the sync gap
+
+Everything that reading needed is reachable from outside the engine:
+
+1. **Piston stop on #1 — cover on, one plug out.** This half never needed the
+   cover off at all. Mark true TDC on the damper and lay a degree tape from it.
+2. **Trigger a timing light from the decoder's sync-gap event** instead of from a
+   plug wire. TritonECU already finds the gap; a GPIO pulse on gap-detect into
+   the light's trigger input is the whole modification.
+3. **Read the damper.** The light flashes as the gap passes the sensor, so the
+   tape reads `CKP_GAP_TO_TDC_DEG` off the real crank, at speed, in one look.
+
+**Why this is better than the cover-off eyeball it replaces:**
+
+| | cover off, by eye | timing light off the gap |
+|---|---|---|
+| Resolution | a wheel rim down a dark hole | a degree tape at **damper radius**, strobed |
+| What it includes | wheel + sensor angle | wheel + sensor angle **+ the conditioner** — the chain the firmware actually times off |
+| Engine state | static | **running**, so any rpm-dependent term shows itself |
+| Access | damper, accessories, cover | one spark plug and a jumper |
+
+And the conditioner term comes for free rather than as a worry: Mode A2 switches
+at the **tooth centre** on a zero crossing, with [50 ns of propagation
+delay](#the-conditioners-switch-point-is-not-the-tooth-edge) — 0.0018° at
+6000 rpm. The strobe therefore fires on a defined wheel feature, and the tape
+gives the number the firmware wants, not a proxy for it.
+
+> This is the same argument as [the rig measuring its own flute
+> offset](#the-rig-can-measure-this-on-itself-to-01): **the constant belongs in
+> firmware, measured by the thing that consumes it.** The truck deserves what the
+> bench was already getting.
+
+##### ⭐ And this is what makes the retraction cheap
+
+`CKP_GAP_TO_TDC_DEG` measured this way **does not care what wheel is on the
+crank.** It reads the truck's own fitted wheel, whatever it is, through the
+truck's own sensor and conditioner. The entire wheel-identification thread above
+— Dorman or Ford, XW1Z or not, 1999 or 2001 — was only ever a way to *predict*
+this number. **The prediction route died with the photographs; the direct route
+was always the better one, and it was never behind the cover.**
 
 > **Whichever wheel stays on the engine, the calibration belongs to that wheel.**
 > Mark it. `CKP_GAP_TO_TDC_DEG` is measured *with the fitted wheel*, and swapping
 > wheels later — in either direction — invalidates it.
 >
-> ⚠ **Narrowed** now that [a genuine Ford ring is
-> coming](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-ends-the-inferring):
-> a swap invalidates **the number, not the measurement**. Stack the outgoing and
-> incoming wheels and the rim stagger carries the constant across. Measure now.
+> ✅ **And no swap is in prospect.** The cover is on, the truck keeps its own
+> wheel, and the strobe reads that wheel directly. The rule stands but has
+> nothing to bite on — which is the comfortable way for a rule to stand.
 
 #### The decisive test: stack the two wheels, do not measure either one
 
-Both wheels are in hand ([photo](../../docs/1999-Ford-F150-4wd-5.42v/OriginalUnderDorman.png),
-OEM underneath the Dorman). **Stacking beats measuring**, for the reason this
+⚠ **One wheel is in hand, not two** — the OEM-under-Dorman photo is the
+reviewer's. This section is written for the day a second wheel arrives, and the
+[genuine `XW1Z`](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-settles-the-dorman)
+is that wheel. **Stacking beats measuring**, for the reason this
 whole thread keeps running into: every attempt so far sighted a radius outward
 *from the keyway*, which is the innermost feature on the wheel and therefore the
 noisiest — 2.6–4.1° per millimetre of slip. Comparing two rims directly moves the
@@ -938,85 +1001,86 @@ mode and would not show up in any angular measurement.
 frame. The tooth edges are the measurement, and they need more than the ~15 px
 they get in a three-quarter view of the whole wheel.
 
-#### ⭐ A genuine `XW1Z-12A227-AC` is three days out — and it ends the inferring
+#### ⭐ A genuine `XW1Z-12A227-AC` is three days out — and it settles the Dorman
 
-The OE part can be **in hand Tuesday 2026-09-22**. That changes the character of
-every open question above, because **everything in this thread so far has been
-inference**: a casting number, a date-code prefix, a catalogue's year range, a
-stranger's review. A genuine Ford pulse ring *is* the geometry all of that was
-reaching for.
+The OE part can be **in hand Tuesday 2026-09-22**. Everything in this thread so
+far has been **inference** — a casting number, a date-code prefix, a catalogue's
+year range, a stranger's review — and a genuine Ford pulse ring is the geometry
+all of it was reaching for. It does not reach all of it. It reaches the half
+that is on the shelf.
 
-##### It splits one tangled observation into two independent ones
+##### It is the only second wheel this project will ever have
 
-Today there is **one** stack — the truck's OEM wheel under the Dorman — and
-[its meaning flips](#read-the-casting-on-the-oem-wheel-before-reading-the-teeth)
-on a casting number that may or may not be legible. With a known-good reference
-there are **two stacks, each answering one question, neither needing the other**:
+⚠ **Revised** — this section first assumed the truck's OEM wheel was in hand. It
+is not; [the photographs are the
+reviewer's](#-retracted--the-photographs-are-the-reviewers-engine-not-this-truck).
+That kills one of the two arms and leaves the other **completely intact**:
 
-| stack | answers | needs nothing from |
+| stack | answers | status |
 |---|---|---|
-| **Ford vs Dorman** | Is 917-060 a faithful copy? **Is the review real?** | the truck |
-| **Ford vs the truck's own wheel** | Does a 1999 5.4 use the XW1Z design at all? | the Dorman |
+| **Ford vs Dorman** | Is 917-060 a faithful copy? **Is the review real?** | ✅ **Fully available** — two parts, a bar through the keyways, no truck, no cover, no engine |
+| ~~**Ford vs the truck's own wheel**~~ | Does a 1999 5.4 use the XW1Z design at all? | ⛔ **Deferred behind the timing cover.** Damper, accessory drive, front cover — and the cover carries the oil pump and front seal. Not a measurement, a job |
 
-**So the casting read on the truck's wheel stops being load-bearing.** It drops
-from *"read this before reading the teeth"* to a **cross-check** — ordering only
-mattered because each arm was the other's reference, and now neither is.
+**And the surviving arm is the one that mattered.** It is a pure bench test
+between two parts that will both be on the shelf, and it decides whether the rig
+wheel's 5.00° is an OE design value or somebody's defect.
 
-**Ford vs Dorman, and what each rim says:**
-
-| the stacked rim shows | verdict |
-|---|---|
-| **teeth and gap coincide** | The review describes width, profile or runout — not phase. **5.00° is the OE design value**, and this file's old `key_to_gap ≈ 0` belief was simply mistaken rather than falsified by somebody's defect |
-| **half a pitch apart** | The review is right, the Dorman is phase-defective, and this project measured a documented defect without knowing it existed |
-| **walking apart round the rim** | Pitch or tooth-count mismatch — grosser than the review describes, and blatant |
-
-##### It is a falsification test for the newest claim in this file
+##### ⛔ The 1999 question stays open, and that is now permanent-ish
 
 The *`X` = 1999, so one design spans 1999→2010* argument
 [above](#the-part-is-marked--it-is-the-dorman-and-the-inference-above-was-wrong)
-is **a reading of a part number, not a measurement**. Stacked against the 1999
-truck's own wheel, the genuine XW1Z confirms it or kills it outright:
+is **a reading of a part number, not a measurement**, and there is no longer any
+way to test it — the only 1999 wheel in the story is bolted inside this truck's
+timing cover.
 
-| Ford vs the truck's wheel | verdict |
+**Mark it as an argument and leave it.** It is not load-bearing any more: it was
+propping up a *prediction* of `CKP_GAP_TO_TDC_DEG`, and
+[the strobe measures that directly](#-and-this-is-what-makes-the-retraction-cheap)
+without caring which wheel is on the crank.
+
+##### ~~⏳ Take `CKP_GAP_TO_TDC_DEG` before it arrives~~ — there is no deadline
+
+⚠ **Struck.** This urged a piston-stop reading *"while the cover is off"*. The
+cover is not off and never was. There is no perishable window on either side:
+the truck is not open, and the part is not going anywhere.
+
+The transfer arithmetic it was built on is still true and still worth keeping,
+for whenever a wheel does come off:
+
+```
+CKP_GAP_TO_TDC_DEG(new wheel) = CKP_GAP_TO_TDC_DEG(fitted wheel) + rim stagger
+```
+
+— because the sensor term belongs to **where the sensor bolts to the block** and
+survives any wheel change. It simply has no occasion to be used right now.
+
+##### It does not put a wheel on the truck either
+
+The [rule below](#the-operational-rule-either-way) bars the Dorman from the
+truck, and a genuine Ford ring looked like the part that could take its place.
+**It cannot, at a sane price** — fitting anything means pulling the cover.
+
+So the honest scope of this purchase is narrower than it looked yesterday, and
+worth stating plainly:
+
+| | |
 |---|---|
-| **coincide** | The decode holds. The 2001 catalogue start really is an artifact, and XW1Z is the right part for this truck |
-| **they do not** | The decode was right about the *number* and wrong about the *design*. 2001 is a real boundary, XW1Z is the wrong part for a 1999 — **and the Dorman's stagger was never a defect at all** |
+| ✅ **Is the Dorman a faithful copy of the OE ring?** | **Yes, this answers it** — on a bench, with a bar through two keyways |
+| ✅ **Is the rig's 5.00° an OE value or a defect?** | **Yes** — same reading, and it is what the bench actually needs to know |
+| ✅ **An independent OD and tooth-count check** | **Yes** — against a photo-grid number and a listing that was wrong by 25 % |
+| ⛔ Does a 1999 use this design? | No. Needs the truck's wheel |
+| ⛔ `CKP_GAP_TO_TDC_DEG` | No — and it never did. [The strobe does that](#-trigger-a-timing-light-off-the-sync-gap) |
 
-That second row retracts this file's most recent conclusion. That is the point of
-running it.
+**That is still worth the money**, because the first two rows are the ones the
+rig is blocked on, and nothing else in the building can answer them.
 
-##### ⏳ It does not reopen the front cover — take `CKP_GAP_TO_TDC_DEG` now anyway
+**Ford vs Dorman, and what each outcome means now:**
 
-> ⚠ **Do not hold the ⭐⭐ measurement for the delivery.** The open front cover is
-> the perishable thing; a part in a box is not.
-
-**And a reading taken today is not wasted by a swap on Tuesday**, which is where
-the rule below needs narrowing. Only `key_to_gap` changes when a wheel changes —
-the sensor term is a property of **where the sensor bolts to the block**, and it
-survives the swap untouched:
-
-```
-CKP_GAP_TO_TDC_DEG(new wheel) = CKP_GAP_TO_TDC_DEG(fitted wheel) + stagger
-                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^
-                                piston stop, once, while the       read off the
-                                cover is off                       stacked rim
-```
-
-The [stacked rim](#the-decisive-test-stack-the-two-wheels-do-not-measure-either-one)
-*is* that stagger, at r ≈ 65 mm and needing no datum. So the earlier warning —
-*swapping wheels later invalidates it* — is **narrowed: a swap invalidates the
-number, not the measurement**, provided the two wheels get stacked. **One piston
-stop, ever.**
-
-##### It resolves the operational dead-end below
-
-The rule that follows bars the Dorman from the truck and leaves **nothing in its
-place**. A genuine Ford ring is a wheel that can be fitted *without*
-contaminating the comparison against the factory PCM, and it sends the Dorman to
-the bench with no regrets — where
-[a non-zero offset is the better test article](#the-rig-does-not-care--and-is-arguably-better-off)
-anyway. **Ford on the truck, Dorman on the rig**, and both jobs get the part that
-suits them.
+| the stacked rim shows | then |
+|---|---|
+| **coincide** | The Dorman is a faithful copy. **5.00° is the OE `key_to_gap`**, this file's old `key_to_gap ≈ 0` belief was simply mistaken, and the reviewer's stagger means *their* engine wanted a different wheel — a wrong-application complaint wearing a defect's clothes |
+| **half a pitch apart** | The Dorman is phase-defective, the review is confirmed on parts we can actually hold, and the rig wheel carries a **known-wrong** offset — harmless on a bench, [arguably useful](#the-rig-does-not-care--and-is-arguably-better-off) |
+| **walking apart round the rim** | Pitch or tooth-count mismatch. Grosser than the review describes, and blatant |
 
 ##### ⚠ Three things to do the moment it is out of the box
 
@@ -1044,10 +1108,9 @@ bar through the keyways does the same job.
 > the ECU is being developed against — a wheel that makes the *factory* PCM run
 > rough would contaminate every comparison against it.
 >
-> ✅ **And now there is somewhere for the rule to land.** It used to bar the only
-> spare wheel in the building; [the genuine
-> `XW1Z-12A227-AC`](#-a-genuine-xw1z-12a227-ac-is-three-days-out--and-it-ends-the-inferring)
-> is the part that goes on the truck, and this one goes on the rig.
+> ✅ **Free to obey, as it turns out.** Fitting anything means pulling the cover,
+> and the cover is staying on. The Dorman goes to the rig because there is
+> nowhere else for it to go.
 
 **And TritonECU is immune to the defect in a way the factory PCM is not**, which
 is worth noticing. The OEM PCM has gap-to-TDC baked in; ours has
