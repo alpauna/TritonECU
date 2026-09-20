@@ -25,6 +25,8 @@ together at Ø2.30 — nominal M2 plus 0.30 for what a printed bore loses.
    holes:  34.9 apart across,  73.1 apart along the 92,  centred in the flange
    O14:    clearance for the module's ~13 mm standoff, in the FOOT, tangent to
            the fold, centre 10 mm from the end of the 92
+   O3.5:   a pair through the WEB, 25.4 apart, at z 8.5 and 33.9, y 15 —
+           the same fixing holes hardware/l-bracket carries in its upright
 ```
 
 Render: `./render.sh` → `stl/platform.stl`.
@@ -41,6 +43,7 @@ Render: `./render.sh` → `stl/platform.stl`.
 | Hole centres | x 4.80 / 39.70, y 9.45 / 82.55 |
 | Modelled hole diameter | **2.3** — 2.0 nominal + 0.30 print compensation |
 | Standoff clearance cut | **Ø14** through the foot at x 51.5, y 10 |
+| Ø3.5 pair in the web | z 8.5 / 33.9, y 15 — modelled **3.80** |
 
 `openscad` echoes every one of these on each render, so they follow the
 parameters rather than this table. Re-read them after changing anything. The
@@ -84,6 +87,33 @@ The cut interrupts the foot's joint to the web for **14 mm of the 92**; the othe
 > what you actually want is relief in the **upper** flange — a boss on the module
 > that fouls the plate it bolts to — that is a different cut and this is the wrong
 > one; say so and it moves.
+
+## The Ø3.5 pair in the web
+
+The same fixing holes `hardware/l-bracket` carries in its upright, and the same
+**25.4** between centres — but placed differently, because this web has no free
+end to measure from and they are not on the midline.
+
+| | |
+|---|--:|
+| Centres up from the **underside of the foot** | **8.5** and **33.9** |
+| Across the 92, from the y = 0 end | **15.0** |
+| Modelled bore | **3.80** — 3.5 nominal + 0.30 |
+
+The z numbers are the L bracket's unchanged: there the 8.5 ran from the leg's
+free end, here from the bottom of the foot, which is the same plane in both
+parts. The lower bore clears the foot's **top** face by 3.6 mm, so a washer sits
+flat; the upper bore has 12.2 mm to the underside of the upper flange.
+
+> **Which end is "the right side".** The instruction was *15 mm from the right,
+> looking at the face straight on*, which needs a side to stand on. It is read
+> here as standing on the **upper flange's side** and looking at the web — the
+> viewer's right is then y = 0, so `side_y = 15` puts them at the **same end of
+> the 92 as the Ø14 standoff cut**. If the intended face was the other one, the
+> whole answer is `side_y = 77`; nothing else in the part changes, and the render
+> echoes both the current value and its mirror.
+
+`side_holes = false` removes them.
 
 ## Read this before you order screws
 
@@ -136,6 +166,11 @@ Four ways out, in order of preference:
 > nylon spacers** for the 3 mm. That keeps the orientation perfect and costs
 > pennies — worth considering, since the standoffs are the only thing in this
 > part that is not a prism.
+
+> ⚠ **The Ø3.5 pair is the one thing that prints *better* on end.** Its bores
+> run along X, so with the depth vertical they come out as ordinary horizontal
+> bores in a vertical wall — same as the Ø14 below, crown bridged, clean them
+> with a 3.5 mm drill.
 
 > ⚠ **The Ø14 cut breaks the prism too, in a smaller way.** Stood on end the
 > foot is a vertical wall and the cut is a horizontal-axis hole through it, so

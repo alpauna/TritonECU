@@ -99,6 +99,23 @@ psu_cut_y     = 10.0;   // centre, from the y = 0 end of the 92
 psu_cut_x     = 0;      // 0 = derive it, tangent to the fold; else an absolute x
 cut_fn        = 64;     // a 14 mm bore at 32 is 0.034 mm off; at 64 it is 0.008
 
+/* The Ø3.5 pair in the WEB — the same holes hardware/l-bracket carries in its
+   upright, and the same 25.4 between centres. Two differences, both asked for:
+   they are NOT on the midline of the 92, and the lower one is measured from the
+   bottom of the FOOT rather than from a free end, because this web has no free
+   end — it lands on the lower flange.
+
+   side_y is "15 mm from the right side, looking at the face straight on", read
+   as standing on the UPPER FLANGE'S side (x = -) and looking toward +x, which
+   puts the viewer's right at y = 0. That is the same end of the 92 as the Ø14
+   standoff cut in the foot. If "right" meant the other end, set
+   side_y = deep - 15 = 77 and nothing else changes. */
+side_holes = true;
+side_d     =  3.5;   // nominal; modelled at 3.80 with the same compensation
+side_dz    = 25.4;   // centre to centre, up the web
+side_z0    =  8.5;   // LOWER centre, up from z = 0 — the underside of the foot
+side_y     = 15.0;   // from the y = 0 end of the 92
+
 /* Optional corner ribs. OFF by default because the drawing has none and the
    web does not need them (see the 12 kg above). Turn them on if the load is
    ever sideways rather than down — that is the case the flat web is poor at. */
@@ -119,6 +136,7 @@ total_w = up_w + lo_w;
    the fold does not touch it. */
 cut_d  = psu_cut_d + psu_cut_clear;
 cut_x  = (psu_cut_x > 0) ? psu_cut_x : up_w + cut_d / 2;
+side_r = (side_d + hole_comp) / 2;
 
 module ribs(x, z, dx, dz) {
     // A right triangle in X-Z, extruded along Y, repeated along the depth.
@@ -169,6 +187,13 @@ module platform() {
         if (psu_cut)
             translate([cut_x, psu_cut_y, -1])
                 cylinder(h = t + 2, d = cut_d, $fn = cut_fn);
+
+        // the Ø3.5 pair — through the WEB, axis along X
+        if (side_holes)
+            for (k = [0, 1])
+                translate([web_x - 1, side_y, side_z0 + k * side_dz])
+                    rotate([0, 90, 0])
+                        cylinder(h = t + 2, r = side_r, $fn = hole_fn);
     }
 }
 
@@ -193,6 +218,28 @@ echo(str("CLEARANCE, inboard hole to web face  ",
          " mm  <-- a screw HEAD will not fit here, see README"));
 echo(str("bed footprint, printed on end  ", total_w, " x ", height,
          "  and ", deep, " tall"));
+if (side_holes) {
+    echo(str("Ø", side_d, " pair in the web   modelled dia ", side_d + hole_comp,
+             "  (", side_d, " + ", hole_comp, ")"));
+    echo(str("  centres  z         ", side_z0, " and ", side_z0 + side_dz,
+             "  up from the underside of the foot,  y ", side_y));
+    echo(str("  y is measured from the y = 0 end; the other end is at ",
+             deep - side_y, ". Flip with side_y = ", deep - side_y, "."));
+    echo(str("  web either side of them  ", side_y - side_r, " and ",
+             deep - side_y - side_r, " mm"));
+    echo(str("  lower bore clears the foot's TOP face by ",
+             side_z0 - side_r - t, " mm",
+             ((side_z0 - side_r - t) < 0)
+               ? "  <-- BREAKS INTO the foot" : "  (ok)"));
+    echo(str("  an M3.5 washer on the lower hole reaches down to z ",
+             side_z0 - 3.75, ";  the foot's top face is at ", t,
+             ((side_z0 - 3.75) < t) ? "  <-- washer fouls the foot" : "  (clears)"));
+    echo(str("  upper bore to the underside of the upper flange  ",
+             (height - t) - (side_z0 + side_dz + side_r), " mm"));
+    echo(str("  same end as the standoff cut? cut y = ", psu_cut_y,
+             ", holes y = ", side_y,
+             (abs(psu_cut_y - side_y) < 20) ? "  (yes, same end)" : "  (opposite ends)"));
+}
 if (psu_cut) {
     echo(str("standoff clearance    ", cut_d, " dia through the LOWER flange  (",
              psu_cut_d, " standoff + ", psu_cut_clear, " on diameter)"));
