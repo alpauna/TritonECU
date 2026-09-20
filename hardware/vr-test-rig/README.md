@@ -824,6 +824,38 @@ the OEM wheel's key-to-gap.** If it comes back near 0 while this one is 5.00°,
 the review is explained, and this project measured a documented defect without
 knowing the defect existed.
 
+#### The decisive test: stack the two wheels, do not measure either one
+
+Both wheels are in hand ([photo](../../docs/1999-Ford-F150-4wd-5.42v/OriginalUnderDorman.png),
+OEM underneath the Dorman). **Stacking beats measuring**, for the reason this
+whole thread keeps running into: every attempt so far sighted a radius outward
+*from the keyway*, which is the innermost feature on the wheel and therefore the
+noisiest — 2.6–4.1° per millimetre of slip. Comparing two rims directly moves the
+reading to r ≈ 65 mm, where the same slip is **0.7–0.9°**. It also needs no
+absolute angular reference at all: the question becomes *"do these edges
+coincide?"*, which has no datum in it.
+
+> ⚠ **It only works if the keyways are registered.** Two wheels free to rotate on
+> a shared bore tell you nothing. Put a key, or a close-fitting bar, through both
+> keyways — or thread both onto a shaft with a key — before reading the rim.
+
+**Four signatures, and they are distinguishable at a glance:**
+
+| what the rim shows | what it means |
+|---|---|
+| **Uniform stagger all the way round**, gap included | **Phase error.** Read it at the rim in tooth-widths. **Half a pitch confirms the 5.00° and explains the review** |
+| Gap in a *completely different place* | Phase error of a whole number of pitches — grosser, and a no-start rather than rough running |
+| Aligned somewhere, **walking apart** as you go round | Different **pitch** — tooth count or pitch-circle mismatch. Would be a blatant defect |
+| Centres aligned, one set's teeth **fatter** | **Duty/width difference.** Shifts *edges* by half the difference while leaving centres alone — a smaller effect, and it only bites if the decoder times off a single edge |
+
+**Compare the two ODs in the same shot while they are stacked.** A diameter
+difference changes the sensor **air gap** as well, which is an independent fault
+mode and would not show up in any angular measurement.
+
+**What a readable photo needs:** square-on to the faces, with the rim filling the
+frame. The tooth edges are the measurement, and they need more than the ~15 px
+they get in a three-quarter view of the whole wheel.
+
 #### The operational rule, either way
 
 > ⚠ **Do not fit this wheel to the truck.** It is a bench part. Whatever the
