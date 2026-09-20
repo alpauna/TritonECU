@@ -459,11 +459,10 @@ between a datum and a guess.
 ### ~~On this wheel the keyway is inline with the gap — the offset is zero~~
 
 > **Falsified by the part.** `key_to_gap = 0` came from a vendor product photo.
-> With the wheel in hand the keyway lines up with **the rear edge of the tooth
-> immediately forward of the missing tooth** — which is the same feature as the
-> **forward edge of the gap**. That is one pitch less half a tooth from the gap
-> centre: **7.5°** if the teeth are half-pitch. See
-> [the correction below](#corrected-the-keyway-is-not-on-the-gap).
+> With the wheel in hand the keyway lines up with **the gap between the missing
+> tooth and the next tooth** — the midpoint between two tooth centres, so
+> **5.00° exactly, whatever the tooth width.** See
+> [the correction below](#corrected-the-keyway-sits-half-a-pitch-from-the-missing-tooth).
 
 The hub cuts its index flute at `key_to_gap`, so the flute on the flange OD
 points at the missing tooth. Once the wheel is bolted on the teeth all look
@@ -483,7 +482,7 @@ Measured on the engine: the factory 5.4L puts the gap at TDC #1 as well. Rig and
 truck share one datum, so `CKP_GAP_TO_TDC_DEG = 0` for both.
 
 > ⚠ **This claim now needs re-deriving.** If the engine measurement located TDC
-> by way of the *keyway*, it inherits the 7.5° that `key_to_gap = 0` was hiding.
+> by way of the *keyway*, it inherits the 5.00° that `key_to_gap = 0` was hiding.
 > If it located TDC directly — piston at the stop, gap at the sensor — it stands
 > untouched. **Which method was used is not written down anywhere**, and that is
 > the whole problem: a datum whose derivation is unrecorded cannot be audited
@@ -701,76 +700,127 @@ was measured, and it settles two things and unsettles a third.
 makes `CKP_GAP_TO_TDC_DEG = 0` and the whole absolute-position method work.~~
 
 > **Superseded — and the 2.3° was the clue, not the noise.** The part says the
-> keyway is on the gap's *forward edge*, ~7.5° from its centre. The photo said
-> 2.3°, and 7.5 − 2.3 = 5.2° is **half a pitch — one whole tooth width**. A
-> disagreement that lands on exactly one feature is not random error; it is two
-> people measuring two different edges. See [the correction](#corrected-the-keyway-is-not-on-the-gap).
+> keyway sits in the gap *after* the missing tooth, **5.00°** from its centre —
+> half a pitch. The photo said 2.3°. Both readings sighted a radius outward from
+> the keyway, which is the noisy end of the wheel by a factor of 3–5. See
+> [the correction](#corrected-the-keyway-sits-half-a-pitch-from-the-missing-tooth).
 
 It is also **already drilled** — four holes are visible. Wheel retention is
 answered; the hub's bolt circle just has to match whatever they actually are.
 
-### Corrected: the keyway is NOT on the gap
+### Corrected: the keyway sits half a pitch from the missing tooth
 
-**Measured on the physical wheel, 2026-09-19:** the keyway is *forward* of the
-missing tooth, lined up with **the rear edge of the tooth just forward of the
-gap**.
+**Measured on the physical wheel, 2026-09-19**, and corrected the same day after
+the first look turned out to be *from the back of the wheel*:
 
-That rear edge is the same feature as **the forward edge of the missing-tooth
-gap** — the tooth bounding the gap on the forward side *is* what makes that edge.
-Saying it that way is worth the sentence, because it removes the tooth-width
-assumption from the observation. The observation is now a statement about an edge
-that exists on the part, not about a centre that has to be inferred.
+> The keyway lines up with **the gap between the missing tooth and the next
+> tooth**.
 
-Converting the edge to degrees is what needs the tooth width:
+#### 5.00°, and this time the tooth width does not matter
 
-| tooth duty | tooth width | **key_to_gap** |
-|---|--:|--:|
-| 40 % | 4.0° | 8.0° |
-| **50 %** (assumed) | **5.0°** | **7.5°** |
-| 60 % | 6.0° | 7.0° |
+That gap runs from the missing tooth's edge to the next tooth's edge, so its
+centre is the **midpoint between two tooth centres** — one at the missing
+position, one a pitch away. Midpoint of 0° and 10.00° is **5.00°**, and the tooth
+width cancels:
 
-`key_to_gap = 10 − tooth_w_deg/2` now sits in the `.scad` in exactly that form,
-so measuring the tooth propagates by itself. **The whole range is 7–8°**, so even
-an unmeasured duty pins this to ±0.5° — the observation is worth far more than
-the assumption riding on it.
+```
+gap spans   w/2  ..  pitch - w/2          (w = tooth width)
+centre    = (w/2 + pitch - w/2) / 2 = pitch/2 = 5.00 deg   for any w
+```
 
-#### The sign is not known, and getting it wrong costs 15°, not 7.5°
+`key_to_gap = 5.0` is therefore **exact and duty-free**, where the first reading
+— "the rear edge of the tooth just forward" — gave 7.5° *and needed the tooth
+width to say so*. The rear edge is the far boundary of this very gap, so the two
+readings are the same feature described twice; the second one is simply the
+better description, because the centre of a gap is a stronger datum than its
+edge.
 
-"Forward" was read as *the direction of rotation*. If it is backwards the keyway
-lands at −7.5° instead of +7.5°, and the datum moves by **15°** — one and a half
-pitches, and *twice* the error of having left it at the old 0. **One look settles it:** with the wheel face-up as the sensor sees it, is
-the keyway clockwise or anticlockwise from the gap?
+The remaining uncertainty is the **width of the gap the keyway sits in**: 10 − w,
+so **±2.5°** at 50 % duty. That is now the *only* thing tooth width is needed
+for, and it bounds the answer rather than setting it.
 
-#### Why the old photo said 2.3° and this says 7.5° — the keyway is the noisy end
+> **TDC falls between two tooth positions, not on one.** 5.00° is half a pitch,
+> so if the keyway is the crank's TDC datum then TDC lands exactly midway between
+> tooth centres — the furthest point from any edge. That is a sensible thing to
+> design on purpose, and a strange thing to happen by accident.
 
-Both numbers come from sighting a radius from the keyway out to the rim, and
-**that is the wrong way round.** A radial line's angular error is `δ/r`, so a
-linear error δ in locating a feature costs angle in inverse proportion to how far
-out it sits. The keyway is the innermost feature on the wheel:
+#### Sign, settled — by the engine rather than by the wheel
+
+The rig's own convention was ambiguous and the first reading got it backwards
+(the wheel was face-down). The fix is to stop defining it geometrically:
+
+> **`key_to_gap` is the crank rotation from the gap passing the sensor until the
+> keyway passes the sensor.** Always positive. **+5.00°.**
+
+That is operational — it names two events in the order they happen, so it cannot
+be mirrored by picking up the wheel the other way round. It is also exactly how
+the part was read: *the missing tooth goes by, and TDC is coming up.*
+
+⚠ The `.scad` still needs a geometric sense for the index flute, and **that one
+does depend on which way the rig spins.** It is flagged in the file.
+
+#### This also settles what the wheel is
+
+An aftermarket universal 36-1 has no reason for its keyway to relate to TDC — it
+is bored and broached to fit a shaft, and where the teeth land is arbitrary.
+**A keyway that falls on the crank's TDC datum is a factory part.** Together with
+the machined hub, the recessed pocket and the sub-157 mm OD, this is the **Ford
+5.4L crank trigger wheel**, not the Dorman 917-060 the `.scad` was dimensioned
+from. Every vendor-listed number in that file describes a different part.
+
+#### What 5.00° is *not*: it is not `CKP_GAP_TO_TDC_DEG`
+
+This is the wheel's half of the answer, and it is worth being precise about the
+other half:
+
+```
+CKP_GAP_TO_TDC_DEG  =  key_to_gap  +  angle( sensor , keyway-at-TDC )
+                       ^^^^^^^^^^     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       5.00 deg,      set by where the sensor BOLTS TO
+                       the wheel      THE BLOCK. Not a wheel property.
+```
+
+The gap is detected when the gap passes **the sensor**; TDC happens when the
+crank reaches a particular orientation. Those coincide only if the sensor is
+mounted exactly where the keyway points at TDC, which would be luck. So the
+sequencing claim — *gap first, TDC second* — is right and is the useful half,
+but the magnitude still needs the engine.
+
+**And the engine settles it in one measurement, with no protractor:** bring #1 to
+TDC on a piston stop, then look at what is in front of the CKP sensor. If the gap
+has just gone past by about 5°, the whole chain is consistent and
+`CKP_GAP_TO_TDC_DEG` is confirmed small. If the gap is somewhere else entirely,
+the second term above is not zero and this is exactly how you find out.
+
+#### Why the old photo said 2.3° — the keyway is the noisy end
+
+Both the photo reading and the first physical reading sighted a radius *from the
+keyway out to the rim*, and **that is backwards.** A radial line's angular error
+is `δ/r`, so a linear error costs angle in inverse proportion to how far out the
+feature sits — and the keyway is the innermost feature on the wheel:
 
 | feature | radius | 1 mm error costs |
 |---|--:|--:|
 | **keyway** | ~14–22 mm | **2.6–4.1°** — up to 0.41 pitch |
 | tooth at the rim | ~64–86 mm | 0.7–0.9° — under 0.09 pitch |
 
-So the keyway end of the sight-line is **3–5× noisier than the tooth end**, and a
-1 mm slip there is already 0.4 of a pitch. The two readings differ by 5.2°,
-which is **half a pitch — one whole tooth** — the signature of two people reading
-two different edges, not of random scatter.
+**3–5× noisier at the keyway end**, which is where both readings started. It also
+explains how a wheel could be read face-down without the error being obvious: at
+that noise level, 2.3° and 5.0° and 7.5° all look like "about on the gap".
 
 #### The rig can measure this on itself, to 0.1°
 
-This does not need a protractor, and it does not need the flute to be right
+None of the above needs a protractor, and none of it needs the flute to be right
 first. `key_to_gap` only has to be *known*, not *correct*:
 
-1. Cut the flute at the current best guess and print the hub.
+1. Cut the flute at 5.00° and print the hub.
 2. Mount the wheel, home the stepper against the flute.
 3. Spin it and take a tooth log — `CrankSensor::startToothLog()` already exists.
 4. The gap's position relative to home falls out at **0.1125°** per step at 16×
    microstepping.
 
-That is **40× finer than anything achievable by eye**, and it turns a printed
-feature into a measured constant. Which is the real lesson here:
+That is **23× finer than sighting it by eye**, and it turns a printed feature
+into a measured constant. Which is the real lesson:
 
 > **The index flute should never have been the datum.** It is an eyeball aid for
 > finding the gap on a wheel whose teeth all look alike. The moment the decoder's
@@ -789,12 +839,12 @@ either the wheel is wider than the plate or it is not, and it is not. The OD is
 **under 157 mm**, and the grid is right there to say what it actually is: *count
 the 10 mm squares across it.*
 
-> **This may not be the Dorman wheel at all.** The part in the photo is machined —
-> stepped hub, a recessed pocket around the bore, three small holes — where an
-> aftermarket 36-1 is a flat laser-cut plate. It is filed under the truck's
-> folder. **If this is the factory 5.4L crank trigger wheel, then the 7.5° above
-> is the truck's timing datum, not the rig's**, and it lands directly on
-> `CKP_GAP_TO_TDC_DEG`. Worth settling before either number is used.
+> **And it is not the Dorman wheel.** Settled not by the photo but by the keyway
+> itself: an aftermarket universal 36-1 is bored and broached to fit a shaft, so
+> where its teeth fall relative to the key is arbitrary. **This keyway lands on
+> the crank's TDC datum**, which only a factory part does. With the machined hub,
+> the recessed pocket and the sub-157 mm OD, this is the **Ford 5.4L crank
+> trigger wheel** — so the 5.00° is the truck's geometry, not the rig's.
 
 ### Corrected: the keyway is NOT a DIN 8 mm key
 

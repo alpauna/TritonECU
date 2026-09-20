@@ -85,19 +85,21 @@ within a few percent, and the pull-up is sized: **2.2 kΩ to 3.3 V**, giving
 
 ## 5. The 36-1 trigger wheel — the datum everything angular hangs on ⭐
 
-The keyway was observed against the missing tooth on 2026-09-19, and it
-**falsified `key_to_gap = 0`** — see
-[the correction](../hardware/vr-test-rig/README.md#corrected-the-keyway-is-not-on-the-gap)
-and [`calc/trigger_wheel_datum.py`](calc/trigger_wheel_datum.py). Five things
-turn that observation into a number, and the wheel is already sitting on the
-10 mm carrier-template grid, which does most of them for free.
+The keyway was observed against the missing tooth on 2026-09-19. It
+**falsified `key_to_gap = 0`**, and two of the follow-ups below closed the same
+day — including the one that identifies the wheel. See
+[the correction](../hardware/vr-test-rig/README.md#corrected-the-keyway-sits-half-a-pitch-from-the-missing-tooth)
+and [`calc/trigger_wheel_datum.py`](calc/trigger_wheel_datum.py). The wheel is
+already sitting on the 10 mm carrier-template grid, which does most of what is
+left for free.
 
 | | What it closes | How |
 |---|---|---|
-| **Which side the keyway is on** ⭐ | **The sign of `key_to_gap`.** Wrong sign is a 15° datum error — *twice* as bad as the old wrong value | One look: wheel face-up as the sensor sees it, keyway clockwise or anticlockwise from the gap? |
-| **Is this the Dorman or the Ford wheel?** ⭐ | Whether 7.5° is the **rig's** datum or the **truck's** `CKP_GAP_TO_TDC_DEG` | The part is machined with a stepped hub and a recessed pocket; a Dorman 36-1 is a flat plate |
+| ~~**Which side the keyway is on**~~ | ✅ **CLOSED** — the first look was from the *back* | Redefined operationally: the gap passes the sensor, then the keyway **5.00°** later. An order of events cannot be mirrored |
+| ~~**Dorman or Ford wheel?**~~ | ✅ **CLOSED — it is the Ford wheel** | A universal 36-1 is broached to fit a shaft, so its teeth fall arbitrarily against the key. **This keyway lands on the crank's TDC datum**, which only a factory part does |
+| **#1 at TDC — what is in front of the CKP sensor?** ⭐ | **`CKP_GAP_TO_TDC_DEG` itself.** 5.00° is the *wheel's* half; the other half is where the sensor bolts to the block, and no wheel measurement can supply it | Piston stop, bring #1 up, then look at the sensor. Gap ~5° past = the whole chain is consistent |
 | **OD** | `wheel_od = 171.45` is already contradicted — the wheel sits *inside* the 157 mm template. Sets shaft height, wheel slot and both sensor brackets | Count 10 mm grid squares across it |
-| **Tooth width at the rim** | Converts the edge observation to degrees. Whole 40–60 % duty range is only ±0.5°, so this is a *refinement*, not a blocker | Calipers, then `360·w/(π·OD)` |
+| **Tooth width at the rim** | **Demoted.** 5.00° is the midpoint of two tooth centres, so the width cancels out of the answer entirely. It now only bounds the ±2.5° spread | Calipers, then `360·w/(π·OD)` |
 | **Bore, keyway w × d, the three holes' PCD and angles** | `wheel_hub` — spigot, key and bolt circle. All three are currently ratios off a product photo | Calipers; the holes read straight off the grid |
 
 > **The best measurement here is not a measurement.** Once the rig runs, homing

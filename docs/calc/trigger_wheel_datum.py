@@ -2,41 +2,47 @@
 """36-1 trigger wheel keyway datum. Reproduces the "Corrected: the keyway is NOT
 on the gap" section of hardware/vr-test-rig/README.md.
 
-The observation (physical wheel, 2026-09-19): the keyway lines up with the REAR
-EDGE of the tooth immediately forward of the missing tooth -- i.e. with the
-FORWARD EDGE OF THE GAP. Everything below turns that into degrees and asks how
-well it can be known."""
+The observation (physical wheel, 2026-09-19, corrected the same day after the
+first look turned out to be from the BACK of the wheel): the keyway lines up with
+THE GAP BETWEEN THE MISSING TOOTH AND THE NEXT TOOTH. Everything below turns that
+into degrees and asks how well it can be known."""
 
 import math
 
 PITCH = 360.0 / 36          # 10.00 deg, 36-1
 
 print("=" * 74)
-print("1. THE EDGE, IN DEGREES  --  and what the tooth width does to it")
+print("1. THE GAP CENTRE  --  and why the tooth width CANCELS")
 print("=" * 74)
 print(f"tooth pitch                    {PITCH:.2f} deg")
-print("keyway sits at the rear edge of the tooth one pitch forward:")
-print("    key_to_gap = pitch - tooth_w/2\n")
-print(f"{'duty':>6} {'tooth_w':>9} {'key_to_gap':>12}")
+print("The keyway sits in the gap between the missing tooth and the next tooth.")
+print("That gap runs from one tooth's edge to the next tooth's edge, so its")
+print("centre is the MIDPOINT OF TWO TOOTH CENTRES -- and w cancels:\n")
+print("    gap spans  w/2 .. pitch-w/2")
+print("    centre   = (w/2 + pitch - w/2)/2 = pitch/2\n")
+print(f"{'duty':>6} {'tooth_w':>9} {'gap centre':>12} {'gap width':>11}")
 for duty in (0.40, 0.50, 0.60):
     w = PITCH * duty
-    print(f"{duty:>6.0%} {w:>8.2f}d {PITCH - w/2:>11.2f}d"
+    print(f"{duty:>6.0%} {w:>8.2f}d {PITCH/2:>11.2f}d {PITCH-w:>10.2f}d"
           + ("   <-- assumed" if duty == 0.50 else ""))
-span = (PITCH - PITCH*0.60/2) - (PITCH - PITCH*0.40/2)
-print(f"\nwhole 40-60 % duty range spans {abs(span):.1f} deg.")
-print("So the UNMEASURED tooth width costs +/-0.5 deg. The observation itself is")
-print("worth much more than the assumption riding on it.")
+print(f"\nkey_to_gap = {PITCH/2:.2f} deg EXACTLY, for any tooth width.")
+print("The first reading of this part gave 7.5 deg -- the FAR EDGE of this same")
+print("gap -- and needed the duty to say so. Tooth width now only bounds the")
+print(f"uncertainty: the keyway is somewhere in a {PITCH-PITCH*0.5:.1f} deg gap, so +/-{(PITCH-PITCH*0.5)/2:.2f} deg.")
 
 print()
 print("=" * 74)
-print("2. SIGN  --  the one thing that is NOT small")
+print("2. SIGN  --  define it by EVENTS, and it cannot be mirrored")
 print("=" * 74)
-k = PITCH - PITCH*0.5/2
-print(f"forward  = direction of rotation  ->  key_to_gap = +{k:.1f} deg")
-print(f"backward                          ->  key_to_gap = -{k:.1f} deg")
-print(f"getting it wrong moves the datum by {2*k:.0f} deg = {2*k/PITCH:.1f} PITCHES,")
-print(f"which is {2*k/k:.0f}x the error of simply leaving key_to_gap at its old 0"
-      f" ({k:.1f} deg).")
+print("The first reading was taken with the wheel FACE-DOWN, which mirrors any")
+print("geometric convention (clockwise/anticlockwise, forward/back). So:")
+print()
+print("    key_to_gap = crank rotation from THE GAP PASSING THE SENSOR")
+print("                 until THE KEYWAY PASSES THE SENSOR.")
+print()
+print(f"Always positive. +{PITCH/2:.2f} deg. An order of events has no handedness.")
+print("It is also how the part reads on the engine: the missing tooth goes by,")
+print("and TDC is coming up.")
 
 print()
 print("=" * 74)
@@ -57,15 +63,24 @@ print("keyway OUT to the rim puts the worst error at the start of the lever.")
 
 print()
 print("=" * 74)
-print("4. THE OLD PHOTO SAID 2.3 deg. THAT DISAGREEMENT IS NOT NOISE")
+print("4. WHAT 5.00 deg IS NOT: IT IS NOT CKP_GAP_TO_TDC_DEG")
 print("=" * 74)
-old, new = 2.3, k
-print(f"photo (Dorman 917-060 listing)   {old:.1f} deg")
-print(f"the part in hand                 {new:.1f} deg")
-print(f"difference                       {new-old:.1f} deg"
-      f"  = {(new-old)/PITCH:.2f} PITCH = {(new-old)/(PITCH*0.5):.2f} tooth widths")
-print("Half a pitch -- one whole tooth -- is the signature of two different EDGES")
-print("being read, not of random scatter. Such disagreements are never random.")
+print("    CKP_GAP_TO_TDC_DEG = key_to_gap + angle(sensor, keyway-at-TDC)")
+print(f"                       = {PITCH/2:.2f} deg   + set by where the sensor BOLTS")
+print("                                     TO THE BLOCK -- not a wheel property")
+print()
+print("The gap is detected when it passes THE SENSOR; TDC happens when the crank")
+print("reaches an orientation. They coincide only if the sensor sits exactly")
+print("where the keyway points at TDC, which would be luck.")
+print()
+print("So the SEQUENCING (gap first, TDC second) is right and is the useful half.")
+print("The magnitude needs the engine -- and one look supplies it: bring #1 to TDC")
+print(f"on a piston stop and see if the gap has just gone past by ~{PITCH/2:.0f} deg.")
+print()
+print("Readings of this wheel so far, all sighted outward FROM the keyway:")
+for label, v in (("vendor photo", 2.3), ("part, face-down", 7.5), ("part, corrected", PITCH/2)):
+    print(f"    {label:<18}{v:>5.1f} deg")
+print("At 2.6-4.1 deg of noise per mm (section 3) all three look like 'on the gap'.")
 
 print()
 print("=" * 74)

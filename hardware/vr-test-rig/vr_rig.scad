@@ -42,25 +42,44 @@ wheel_bore      =  43.4;  // MEASURE: 0.253 x OD from the photo, not the vendor
 key_w           =   6.5;  // MEASURE: 15 % of bore diameter
 key_d           =   4.1;  // MEASURE: 19 % of bore radius
 
-/* Tooth width at the rim as an angle. 36-1 pitch is 10.00 deg; this says how
-   much of that pitch is metal. 50 % duty is the usual drawing and is NOT a
-   measurement of anything. It matters because key_to_gap is derived from it:
-       tooth_w_deg = 360 * tooth_mm / (pi * wheel_od) */
+/* Tooth width at the rim as an angle, tooth_w_deg = 360*tooth_mm/(pi*wheel_od).
+   50 % duty is the usual drawing and is NOT a measurement. It no longer sets
+   key_to_gap - see below - it only bounds the uncertainty, +/- (10-w)/2. */
 tooth_w_deg     =   5.0;  // MEASURE with calipers at the rim
 
-/* Degrees from the MISSING TOOTH CENTRE to the keyway. This was 0 — "the keyway
-   is inline with the gap" — taken from a vendor product photo. THE PART IN HAND
-   SAYS OTHERWISE: the keyway lines up with the rear edge of the tooth
-   immediately forward of the gap. That is the same feature as the FORWARD EDGE
-   OF THE GAP ITSELF, which is the useful way to say it because it needs no duty
-   assumption to locate. In degrees it is one pitch less half a tooth.
+/* Degrees from the MISSING TOOTH CENTRE to the keyway. Was 0, from a vendor
+   product photo. THE PART SAYS OTHERWISE: the keyway lines up with THE GAP
+   BETWEEN THE MISSING TOOTH AND THE NEXT TOOTH.
 
-   SIGN IS UNCONFIRMED. Positive here means the direction of rotation; nobody has
-   recorded which way round the keyway sits when viewed from the sensor side, and
-   getting it backwards puts the datum 15 deg out instead of 7.5. See README. */
-key_to_gap      = 10 - tooth_w_deg/2;   // 7.5 at 50 % duty
-                          // The index flute on the flange OD is cut at this angle,
-                          // so the flute always points at the gap.
+   That gap's centre is the midpoint of two tooth centres - one at the missing
+   position, one a pitch away - so the tooth width cancels:
+
+       gap spans  w/2 .. pitch-w/2   ->   centre = pitch/2 = 5.00 deg, any w
+
+   EXACT and duty-free. The first reading of this part said 7.5 deg ("the rear
+   edge of the tooth just forward"), which is the far boundary of this same gap
+   and needed the duty to state. The centre of a gap is the better datum.
+
+   SIGN. Defined by two EVENTS, not by geometry, because the first reading was
+   taken with the wheel face-down and mirrored:
+
+       key_to_gap = crank rotation from THE GAP PASSING THE SENSOR
+                    until THE KEYWAY PASSES THE SENSOR.   Always positive.
+
+   An order of events cannot be mirrored by picking the wheel up the other way.
+   It is also how the part reads on the engine: the missing tooth goes by, and
+   TDC is coming up.
+
+   ** This is NOT CKP_GAP_TO_TDC_DEG. ** It is the wheel's half. The other half
+   is where the sensor bolts to the block, and no measurement of the wheel can
+   supply it. See README. */
+key_to_gap      =   5.0;  // exact, half a pitch; +/-2.5 from the gap's own width
+
+/* The index flute on the flange OD is cut at key_to_gap so it points at the gap.
+   ** The GEOMETRIC sense of that rotation depends on which way the rig spins **,
+   which the operational definition above deliberately does not fix. Check it
+   against a hand-turn before trusting the flute as a datum - and better, read
+   key_to_gap off a tooth log instead of trusting the flute at all. */
 /* Both sensors share a 14.3 mm barrel; only their lengths differ (CKP 57 mm,
    CMP 38.1 mm). The mount is a through-bore clamp, so ONE part serves both —
    the sensor simply sits further in or out. */
