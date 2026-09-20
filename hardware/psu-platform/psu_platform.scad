@@ -83,6 +83,22 @@ standoff   = true;
 standoff_h = 3.0;   // lift above the upper flange
 standoff_d = 5.0;   // OD; see the wall-thickness check in the echoes
 
+/* Clearance for the module's own ~13 mm standoff. The sketch of 2026-09-19 puts
+   a circle in the LOWER flange (the foot), tangent to the fold line and near one
+   end of the 92 — that is the plan position of a boss on the module's underside,
+   so the foot has to be holed to clear it rather than sit on it.
+
+   x is derived, not dimensioned: the drawn circle touches the fold line, so the
+   centre is one radius outboard of it. y was scaled off the sketch at about 8 mm
+   from the end, which would leave ~1 mm of plate; it is set to 10 here so the
+   margin is 3. Set psu_cut_y from the real module and read the margin echo. */
+psu_cut       = true;
+psu_cut_d     = 13.0;   // the standoff itself, as measured off the module
+psu_cut_clear =  1.0;   // added to DIAMETER: the hole is 14.0
+psu_cut_y     = 10.0;   // centre, from the y = 0 end of the 92
+psu_cut_x     = 0;      // 0 = derive it, tangent to the fold; else an absolute x
+cut_fn        = 64;     // a 14 mm bore at 32 is 0.034 mm off; at 64 it is 0.008
+
 /* Optional corner ribs. OFF by default because the drawing has none and the
    web does not need them (see the 12 kg above). Turn them on if the load is
    ever sideways rather than down — that is the case the flat web is poor at. */
@@ -97,6 +113,12 @@ gusset_l  = 12;     // how far the rib reaches along each leg
 hole_r = (hole_d + hole_comp) / 2;
 web_x  = up_w - t;          // inner face of the web
 total_w = up_w + lo_w;
+
+/* The fold line — where the two rectangles of the top view meet — is at up_w.
+   The web hangs BELOW the upper flange from web_x to up_w, so a cut tangent to
+   the fold does not touch it. */
+cut_d  = psu_cut_d + psu_cut_clear;
+cut_x  = (psu_cut_x > 0) ? psu_cut_x : up_w + cut_d / 2;
 
 module ribs(x, z, dx, dz) {
     // A right triangle in X-Z, extruded along Y, repeated along the depth.
@@ -142,6 +164,11 @@ module platform() {
             translate([hole_x0 + i * hole_dx, hole_y0 + j * hole_dy, height - t - 1])
                 cylinder(h = t + (standoff ? standoff_h : 0) + 2, r = hole_r,
                          $fn = hole_fn);
+
+        // clearance for the module's ~13 mm standoff — through the LOWER flange
+        if (psu_cut)
+            translate([cut_x, psu_cut_y, -1])
+                cylinder(h = t + 2, d = cut_d, $fn = cut_fn);
     }
 }
 
@@ -166,6 +193,24 @@ echo(str("CLEARANCE, inboard hole to web face  ",
          " mm  <-- a screw HEAD will not fit here, see README"));
 echo(str("bed footprint, printed on end  ", total_w, " x ", height,
          "  and ", deep, " tall"));
+if (psu_cut) {
+    echo(str("standoff clearance    ", cut_d, " dia through the LOWER flange  (",
+             psu_cut_d, " standoff + ", psu_cut_clear, " on diameter)"));
+    echo(str("  centre              x ", cut_x, "  y ", psu_cut_y));
+    echo(str("  gap to the fold     ", cut_x - cut_d / 2 - up_w, " mm",
+             ((cut_x - cut_d / 2 - up_w) < 0)
+               ? "  <-- EATS INTO the upper flange / web" : "  (tangent = 0)"));
+    echo(str("  plate left to the y=0 end   ", psu_cut_y - cut_d / 2, " mm",
+             ((psu_cut_y - cut_d / 2) < 2)
+               ? "  <-- UNDER 2 mm, a sliver: move psu_cut_y out or open the"
+                 + " cut to the edge" : "  (ok)"));
+    echo(str("  plate left to the outer tip ", total_w - (cut_x + cut_d / 2),
+             " mm"));
+    echo(str("  the foot's joint to the web is interrupted for ", cut_d,
+             " of the ", deep, " — the other ", deep - cut_d, " still carry it"));
+    if (gusset && abs(psu_cut_y - (deep * 0.5 / gusset_n)) < cut_d / 2 + gusset_t)
+        echo("  <-- a GUSSET rib lands on this cut; move one or the other");
+}
 if (standoff) {
     echo(str("standoffs             4 x ", standoff_d, " dia x ", standoff_h,
              " tall, on the upper flange's TOP face"));

@@ -18,11 +18,13 @@ together at Ø2.30 — nominal M2 plus 0.30 for what a printed bore loses.
    |            |              |          +----------+--+          48
  92|            |              |                     |##|           |
    |            |              |                     |##|          51
-   |  o      o  |              |             +-------+##+-------+  ---
+   |  o      o  | (  ) <- O14  |             +-------+##+-------+  ---
    +------------+--------------+             +-----------------+    3
     upper flange  lower flange               |<----- 74.5 ---->|
 
    holes:  34.9 apart across,  73.1 apart along the 92,  centred in the flange
+   O14:    clearance for the module's ~13 mm standoff, in the FOOT, tangent to
+           the fold, centre 10 mm from the end of the 92
 ```
 
 Render: `./render.sh` → `stl/platform.stl`.
@@ -38,6 +40,7 @@ Render: `./render.sh` → `stl/platform.stl`.
 | Hole pattern | 34.9 × 73.1, centred |
 | Hole centres | x 4.80 / 39.70, y 9.45 / 82.55 |
 | Modelled hole diameter | **2.3** — 2.0 nominal + 0.30 print compensation |
+| Standoff clearance cut | **Ø14** through the foot at x 51.5, y 10 |
 
 `openscad` echoes every one of these on each render, so they follow the
 parameters rather than this table. Re-read them after changing anything. The
@@ -55,6 +58,32 @@ over. Had the web been extra, the top view would need a third band.
 The 51 is taken as **overall height**, outer face to outer face.
 
 Only the 44.5 flange can hold the holes — 34.9 does not fit inside 30.
+
+## The ~13 mm standoff cutout
+
+The module has a boss on its underside that lands where the **foot** is, so the
+foot is holed rather than made to sit on it. **Ø14 = the 13 mm standoff plus 1 mm
+on diameter**, through the 3 mm lower flange, centred at **x 51.5, y 10**.
+
+How that position comes off the sketch of 2026-09-19:
+
+- **x is derived, not dimensioned.** The drawn circle *touches the fold line*, so
+  its centre is one radius outboard of it: 44.5 + 7 = **51.5**. The web hangs
+  below the upper flange, from 41.5 to 44.5, so a cut tangent to the fold takes
+  nothing off the web. `psu_cut_x` overrides this with an absolute x.
+- **y was scaled off the sketch** at about 8 mm from the end of the 92, which
+  would leave ~1 mm of plate outboard of the bore — a sliver. It is set to
+  **10**, so 3 mm remains. `psu_cut_y` is the one number to change once the
+  module is on the bracket; the render echoes the margin and flags it under 2 mm.
+
+The cut interrupts the foot's joint to the web for **14 mm of the 92**; the other
+78 still carry it, and the foot is not the loaded member anyway — the web is.
+
+> The sketch is a **top view**, so the circle's plan position says *which plate*
+> it falls in, and it falls in the 30 mm lower flange, clear of the 44.5 one. If
+> what you actually want is relief in the **upper** flange — a boss on the module
+> that fouls the plate it bolts to — that is a different cut and this is the wrong
+> one; say so and it moves.
 
 ## Read this before you order screws
 
@@ -107,6 +136,12 @@ Four ways out, in order of preference:
 > nylon spacers** for the 3 mm. That keeps the orientation perfect and costs
 > pennies — worth considering, since the standoffs are the only thing in this
 > part that is not a prism.
+
+> ⚠ **The Ø14 cut breaks the prism too, in a smaller way.** Stood on end the
+> foot is a vertical wall and the cut is a horizontal-axis hole through it, so
+> its **crown bridges** and droops a few tenths — the usual elliptical top of a
+> printed sideways bore. It is a clearance hole, so that is tolerable; if the
+> standoff still fouls, raise `psu_cut_clear` to 1.5-2.0 rather than reaming.
 
 The part is a constant cross-section prism, so in that orientation it is
 **entirely self-supporting** and every layer is a complete Z. The load path from
