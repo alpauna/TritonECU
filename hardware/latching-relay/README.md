@@ -40,6 +40,24 @@ so a 5 V rail drives it with no bootstrap. Two SO-8s replace four SOT-23s. It
 costs 37 mm² more and about 40× the money, so it is a preference, not an
 improvement — but it is a legitimate one.
 
+## Or use an ordinary 5 V relay
+
+There are plain 5 V relays in the drawer, and they build today rather than
+waiting on the post. The firmware covers them with `LATCHING 0`.
+
+| | Latching | Ordinary |
+|---|---|---|
+| Drive | 30 ms pulse | coil **held** |
+| Holding current | **zero** | 70–90 mA, ~0.4 W, for as long as the supply is on |
+| After a blackout | comes back **on by itself** unless firmware resets it | **off**, by construction |
+| FETs populated | 2 or 4 | **1** |
+| Coil header | A / +5V / C | A / +5V |
+
+The fail-safe-off behaviour that costs a boot pulse and a paragraph of reasoning
+on a latching relay is simply free on an ordinary one — no power, no coil, no
+contact. What you pay is 0.4 W sitting in the coil, and a standby module that
+has to carry it continuously rather than in 30 ms bursts.
+
 ## Pulses, not levels
 
 A latching relay is driven by a **20–50 ms pulse**, not a held signal. That is

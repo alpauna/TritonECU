@@ -17,12 +17,22 @@
 /* ---------------------------------------------------------------------------
    Which relay is fitted
    ---------------------------------------------------------------------------
+   LATCHING 1  a latching relay: pulses, and it remembers. Zero holding current,
+               but it also holds through a blackout, so setup() has to decide
+               what "off" means — see below.
+   LATCHING 0  an ordinary 5 V relay: the coil is HELD while on. Costs 70-90 mA
+               and ~0.4 W for as long as the supply is on, and only leg A is
+               populated. It is fail-safe off by construction: no power, no
+               coil, no contact. Nothing in setup() to decide.
+
    DUAL_COIL  two coils, two low-side FETs. Asserting a leg pin pulls that coil
               to ground: HIGH = energised.
    SINGLE     one coil across the two bridge midpoints, all four FETs fitted.
               Each leg is a CMOS pair with its gates tied, so the leg pin is
               INVERTING: pin LOW = midpoint HIGH. Idle is both pins LOW, which
-              puts both midpoints high and the coil sees no differential.       */
+              puts both midpoints high and the coil sees no differential.
+              Ignored when LATCHING is 0 — an ordinary relay has one coil.      */
+#define LATCHING  1
 #define DUAL_COIL 1
 
 /* ---------------------------------------------------------------------------
@@ -67,7 +77,12 @@ static void legsIdle() {
 }
 
 // pulse(true) = SET (relay on, 36 V supply live). pulse(false) = RESET.
+// With LATCHING 0 this holds instead of pulsing, and leg C is never touched.
 static void pulse(bool set) {
+#if !LATCHING
+    digitalWrite(PIN_LEG_A, set ? HIGH : LOW);
+    return;
+#else
 #if DUAL_COIL
     digitalWrite(set ? PIN_LEG_A : PIN_LEG_C, HIGH);
 #else
@@ -78,6 +93,7 @@ static void pulse(bool set) {
     delay(PULSE_MS);
     legsIdle();
     delay(COIL_REST_MS);
+#endif
 }
 
 /* ---------------------------------------------------------------------------
@@ -122,7 +138,9 @@ void setup() {
        the part simply will not run low enough to emit a half-pulse and leave
        the armature stranded. See the firmware README. */
     delay(50);                 // let the 5 V rail settle before loading it
+#if LATCHING
     pulse(false);
+#endif                         // LATCHING 0 is already off: legsIdle() did it
     relayOn = false;
 }
 

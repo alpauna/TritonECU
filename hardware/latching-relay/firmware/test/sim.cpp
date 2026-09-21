@@ -48,7 +48,11 @@ static void check(const char* what, bool want_pulse, bool want_on) {
     log_.clear();
 }
 int main() {
+#if LATCHING
     setup();                 check("boot",          true,  false);  // fail-safe off
+#else
+    setup();                 check("boot",          false, false);  // already off
+#endif
     press(60);               check("short press",   true,  true);   // SET
     press(60);               check("short press",   true,  false);  // RESET
     press(60);               check("short press",   true,  true);
@@ -58,6 +62,14 @@ int main() {
     press(60);               check("bounce+press",  true,  true);   // exactly one
     pinv[PIN_PA3]=LOW; tick(60); pinv[PIN_PA3]=HIGH; tick(300);
                              check("ECU line",      true,  false);  // toggles too
+#if !LATCHING
+    // held, not pulsed: the coil pin must still be HIGH after a press
+    press(60);
+    printf("%-16s %-24s coil pin=%d  %s\n", "held on", log_.c_str(),
+           outv[PIN_PA6], outv[PIN_PA6] == HIGH ? "ok" : "FAIL");
+    if (outv[PIN_PA6] != HIGH) fails++;
+    log_.clear();
+#endif
     printf("%s\n", fails ? "FAILURES" : "all pass");
     return fails ? 1 : 0;
 }

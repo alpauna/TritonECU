@@ -10,10 +10,12 @@ pio run -t upload       # flash over UPDI
 pio run -t fuses        # write the fuses — INCLUDING the BOD level, see below
 ```
 
-## Two switches at the top of `src/main.cpp`
+## Three switches at the top of `src/main.cpp`
 
 | | |
 |---|---|
+| `LATCHING 1` | A latching relay: pulses, and it remembers. Zero holding current — but it holds through a blackout, so `setup()` has to decide what "off" means. |
+| `LATCHING 0` | **An ordinary 5 V relay from the drawer.** The coil is *held* while on: 70–90 mA and ~0.4 W for as long as the supply runs, and only leg A is populated. Fail-safe off by construction — no power, no coil, no contact — so `setup()` has nothing to decide and `DUAL_COIL` is ignored. |
 | `DUAL_COIL 1` | Two coils, two low-side FETs. Asserting a leg pin energises that coil. |
 | `DUAL_COIL 0` | One coil across the bridge. Each leg is a CMOS pair with its gates tied, so the pin is **inverting**: LOW = midpoint HIGH, and idle (both LOW) puts both midpoints high so the coil sees no differential. |
 | `SENSE_FITTED 0` | State is tracked in RAM. |
@@ -66,8 +68,12 @@ g++ -std=c++17 -Wall -Wextra -o /tmp/sim test/sim.cpp && /tmp/sim
 `test/sim.cpp` stubs the Arduino API, includes `src/main.cpp` and drives the
 state machine on a PC — boot, short presses, long press on and off, a bouncing
 contact, and the ECU line. It checks which coil fired and what state resulted,
-and exits non-zero on failure. Flip `DUAL_COIL` and re-run to check the
-H-bridge build; the pulses should swap legs and stay 30 ms.
+and exits non-zero on failure.
+
+**All three builds pass.** Flip the switches and re-run: `DUAL_COIL 0` should
+swap the legs and keep the pulses at 30 ms, and `LATCHING 0` should emit no
+pulse at boot and leave the coil pin *high* after a press rather than returning
+it low.
 
 ```
 boot             Chi@50ms Clo@80ms        relayOn=0  ok
