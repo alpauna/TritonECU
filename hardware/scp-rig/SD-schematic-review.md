@@ -20,8 +20,7 @@ Reference designators landed differently from the suggestion above (R3 is DAT1
 rather than DAT2, and so on) — irrelevant, the **nets** are what matter and they
 are right.
 
-**Two items remain open, neither of them a schematic error:** the pins 9–12
-question below, and the 3V3 budget.
+**One item remains open**, and it is not a schematic error: the 3V3 budget.
 
 ---
 
@@ -97,15 +96,41 @@ were kept at all: 4-bit mode wants every DAT line held.
 
 Net change: **one resistor added**, one moved, one deleted from SCLK.
 
-## 3. Check what pins 9–12 actually are
+## 3. ✅ Pins 9–12 are shell grounds — there is no card detect
 
-All four are tied to GND. On many microSD sockets those are shell tabs, in which
-case grounding them is correct. On others **one pair is a card-detect switch**,
-and grounding it throws the detection away.
+Resolved from the Molex drawing
+[`Molex-472192001-drawing.pdf`](Molex-472192001-drawing.pdf) (`SD-47219-001`,
+*TFR reader, hinge type*). Its pin table is unambiguous:
 
-**[CONFIRM]** against the Molex 472192001 drawing. If a CD switch exists, it is
-worth a GPIO — "no card" is otherwise indistinguishable from "card present but
-every write failing", and on a capture rig that difference is the whole evening.
+| | | | |
+|---|---|---|---|
+| PIN1 DAT2 | PIN2 CD/DAT3 | PIN3 CMD | PIN4 VDD |
+| PIN5 CLK | PIN6 VSS | PIN7 DAT0 | PIN8 DAT1 |
+| **G1 GND** | **G2 GND** | **G3 GND** | **G4 GND** |
+
+All four are shell and fitting-nail grounds. **Grounding them is correct** — the
+schematic is right as drawn, and no GPIO is needed.
+
+**But it means there is no hardware card-detect at all**, which has a
+consequence for an unattended drive:
+
+> **"No card" and "card present but every write failing" look identical to the
+> firmware** unless it goes looking. On a rig that gets left recording while
+> someone drives, that difference is the whole session.
+
+**Mitigate in firmware, not hardware.** Attempt the mount at startup and use
+**GP25**, the onboard LED, to say so before the truck moves:
+
+| LED | Means |
+|---|---|
+| Steady | card mounted, file open, logging |
+| Fast blink | **mount failed** — no card, bad card, or bad seating |
+| Slow blink | running but ring overflows have been counted |
+
+Also from the drawing, and worth knowing: **5 000 mating cycles**, 0.5 A per
+contact, 100 mΩ max contact resistance, and the `472192001` variant carries
+**20 µ″ gold** against the `472190001`'s 2 µ″ — the right choice for a socket
+that will be re-seated constantly during bring-up.
 
 ## 4. The 3V3 rail is tighter than it looks
 
@@ -141,6 +166,6 @@ board-level run; worth having footprints for.
 |--:|---|---|
 | 1 | CS pull-up missing, SCLK pull-up redundant | **Move R5 to SPCS** |
 | 2 | Pin 8 on the DAT2 net | Relabel to DAT1 **and add R7, 10 kΩ** |
-| 3 | Pins 9–12 all grounded | Confirm shell vs card-detect |
+| 3 | Pins 9–12 all grounded | ✅ **Correct — all shell GND, no CD switch.** Cover it in firmware |
 | 4 | 3V3 peak ~261 mA | Verify budget, keep bulk local |
 | 5 | No series damping | Optional footprints |
