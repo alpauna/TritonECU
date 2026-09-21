@@ -398,6 +398,7 @@ void WebHandler::setupRoutes() {
                     so["raw"] = d->rawAdc;
                     so["error"] = d->inError;
                     so["warn"] = d->inWarning;
+                    so["masked"] = d->masked;   // live but unvalidated
                     so["srcType"] = (int)d->sourceType;
                     so["activeStates"] = d->activeStates;
                 }

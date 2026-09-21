@@ -92,6 +92,8 @@ struct SensorDescriptor {
     float avgBuffer[MAX_AVG_SAMPLES];
     bool inError;
     bool inWarning;
+    bool masked;        // activeStates gate is closed: value is LIVE but UNVALIDATED.
+                        // Not the same as "reading zero" — see docs/startup-masking.md
 
     void clear() {
         memset(this, 0, sizeof(*this));
@@ -114,6 +116,7 @@ struct SensorDescriptor {
         avgCount = 0;
         inError = false;
         inWarning = false;
+        masked = false;
     }
 };
 

@@ -146,6 +146,10 @@ private:
     // Evaluate all fault rules
     void evaluateRules();
 
+    // errorMin/errorMax/warnMin/warnMax -> inError/inWarning. Skipped while the
+    // descriptor is masked, which is what "gate the validation, not the read" means.
+    void validate(SensorDescriptor& d);
+
     // Piecewise-linear interpolation for dynamic threshold curves
     static float interpolateCurve(const float* xs, const float* ys, uint8_t n, float x);
 

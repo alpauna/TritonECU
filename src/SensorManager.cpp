@@ -282,42 +282,41 @@ void SensorManager::update() {
         else if (_engineState->cranking) curState = STATE_CRANKING;
     }
 
-    // Iterate all enabled descriptors: read -> filter -> calibrate
+    // Iterate all enabled descriptors: read -> filter -> calibrate -> validate
     for (uint8_t i = 0; i < MAX_SENSORS; i++) {
         SensorDescriptor& d = _desc[i];
         if (d.sourceType == SRC_DISABLED) continue;
 
-        // State-dependent activation gate
-        if (!(d.activeStates & curState)) {
-            d.value = 0.0f;
-            d.inError = false;
-            d.inWarning = false;
-            continue;
-        }
+        // State-dependent activation gate.
+        //
+        // Masked means "do not BELIEVE this reading", not "do not TAKE it". The
+        // value stays live for the dashboard, /state, MQTT and the logger; only
+        // validation and the fault rules are suppressed. This used to write
+        // d.value = 0.0f and skip the read, which had two costs: zero is a
+        // value rather than an absence — a masked oil pressure sensor read 0.0,
+        // the one number that means danger, indistinguishable downstream from a
+        // failing one — and nothing was captured during cranking, which is the
+        // window where rail sag and pressure rise time are actually visible.
+        d.masked = !(d.activeStates & curState);
 
-        // CJ125 override for O2 slots
         if (i == SLOT_O2_B1 && _cj125 && _cj125->isReady(0)) {
+            // CJ125 override for O2 slots
             d.value = _cj125->getAfr(0);
-            continue;
-        }
-        if (i == SLOT_O2_B2 && _cj125 && _cj125->isReady(1)) {
+        } else if (i == SLOT_O2_B2 && _cj125 && _cj125->isReady(1)) {
             d.value = _cj125->getAfr(1);
-            continue;
-        }
-
-        // Virtual sources: values already in engineering units, skip filter/calibrate
-        if (d.sourceType == SRC_ENGINE_STATE || d.sourceType == SRC_OUTPUT_STATE) {
+        } else if (d.sourceType == SRC_ENGINE_STATE || d.sourceType == SRC_OUTPUT_STATE) {
+            // Virtual sources: already in engineering units, skip filter/calibrate
             d.value = readSource(d);
             d.rawVoltage = d.value;
             d.rawFiltered = d.value;
-            // Still run validation below via evaluateRules()
-            continue;
+        } else {
+            float voltage = readSource(d);
+            float filtered = applyFilter(d, voltage);
+            d.rawVoltage = filtered;
+            d.value = calibrate(d, filtered);
         }
 
-        float voltage = readSource(d);
-        float filtered = applyFilter(d, voltage);
-        d.rawVoltage = filtered;
-        d.value = calibrate(d, filtered);
+        validate(d);
     }
 
     // Evaluate fault rules
@@ -493,6 +492,31 @@ float SensorManager::interpolateCurve(const float* xs, const float* ys, uint8_t 
     return ys[n - 1];
 }
 
+void SensorManager::validate(SensorDescriptor& d) {
+    // A masked sensor is unvalidated by definition: the reading is live, but
+    // nothing may conclude anything from it.
+    if (d.masked) {
+        d.inError = false;
+        d.inWarning = false;
+        return;
+    }
+
+    // An ADC that has not settled reads near zero. That is not a fault.
+    if (d.settleGuard > 0.0f && fabsf(d.value) < d.settleGuard) {
+        d.inError = false;
+        d.inWarning = false;
+        return;
+    }
+
+    bool err = (!isnan(d.errorMin) && d.value < d.errorMin) ||
+               (!isnan(d.errorMax) && d.value > d.errorMax);
+    bool warn = (!isnan(d.warnMin) && d.value < d.warnMin) ||
+                (!isnan(d.warnMax) && d.value > d.warnMax);
+
+    d.inError   = err;
+    d.inWarning = warn && !err;   // an error outranks a warning
+}
+
 void SensorManager::evaluateRules() {
     uint8_t limpFaults = 0;
     uint8_t celFaults = 0;
@@ -505,6 +529,14 @@ void SensorManager::evaluateRules() {
 
         const SensorDescriptor& d = _desc[r.sensorSlot];
         if (d.sourceType == SRC_DISABLED) continue;
+
+        // Now that masked sensors are still READ, a rule could see a real value
+        // in a state where it must not conclude anything from it.
+        if (d.masked) {
+            r.debounceStart = 0;
+            r.active = false;
+            continue;
+        }
 
         // Skip if rule requires engine running and it's not
         if (r.requireRunning && !_engineRunning) {
