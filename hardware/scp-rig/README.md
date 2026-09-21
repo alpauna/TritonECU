@@ -85,6 +85,26 @@ C174 would work. **Do not.**
   confirming the TCIL on pin 12 — those are pin-level questions the DLC cannot
   answer. This is the method that already settled pins 12 and 79.
 
+### Check the connector before wiring it
+
+⚠ **Many OBD-II cables and breakouts omit pins 2 and 10.** They are the J1850
+PWM pair, and a CAN-era cable has no use for them — cheap ones populate only
+4, 5, 6, 14 and 16. A bare connector shell is fine; a moulded cable may simply
+not have the terminals. **Check before building anything around it**: continuity
+from the pin-2 cavity to its wire, and the same for 10. A missing terminal looks
+exactly like a quiet bus.
+
+**Ground: use pin 5, not pin 4.** Pin 5 is *signal* ground and is the correct
+reference for a bus measurement; pin 4 is *chassis* ground. If the rig is
+powered from pin 16 (variant B), return that current on **pin 4** and keep the
+comparator referenced to **pin 5** — otherwise the supply current shares a return
+with the signal reference and puts its own drop into what you are measuring.
+
+**Confirm the numbering with a meter before trusting it.** The 16-pin shell is
+two rows and the numbering flips depending on which side you are looking at.
+Find **+12 V — that is pin 16** — and orient from there. Ten minutes of checking
+against an unplugged connector beats debugging a rig that was correct all along.
+
 ## Why each part is the value it is
 
 | | | |
@@ -203,5 +223,5 @@ put back in order later.
 | D1, D2 | MM3Z3V3BW |
 | D3 | SMF3.3 |
 | C1 | 100 nF |
-| J1 | OBD-II male connector or breakout |
+| J1 | OBD-II male connector or breakout — **verify pins 2 and 10 are populated**, see below |
 | opt. | GPS module (NMEA, UART), microSD breakout |
