@@ -225,11 +225,74 @@ WiFi, SD, the web server — any of which can wedge the thing that is supposed t
 warn you about oil pressure. Moving the function in does not fix the High finding
 below; it raises the stakes on it.
 
-The cheap fix is a **heartbeat-gated lamp driver**: a retriggerable monostable
-(555, or an RC and a transistor) that holds the lamp *off* only while the ECU
-keeps pulsing it. Stop pulsing — hang, reset, crash, brown-out — and the lamp
-comes on by itself. That inverts the failure from silent to loud, costs about
-fifty cents, and needs one GPIO that the ECU toggles in its 10 ms loop.
+### The heartbeat-gated lamp
+
+**Adopted.** The lamp is held *off* by a diode pump that the ECU has to keep
+feeding. Stop feeding it — hang, crash, reset, brown-out, watchdog loop — and the
+lamp lights itself. The failure inverts from silent to loud, for about eight
+parts.
+
+```
+  ECU GPIO ──[C_pump 220n]──┬──|<|── +5V        (D_a, returns the pump)
+           100 Hz square    │
+                            └──|>|──┬── HOLD ──[R_base 10k]── b  Q_h (MMBT3904)
+                              (D_b) │                             e ── GND
+                        C_hold 1u ──┤                             c ──┐
+                        R_bleed150k─┘                                 │
+                                                                      │
+              +5V ──[R_pu 100k]──┬─────────────────────────────────────┘
+                                 │
+                                 └── GATE  Q_wd ── DRAIN ──┬── J1 Dash
+                                          SOURCE ── GND    │
+       ECU "pressure low" ── GATE  Q_lamp ── DRAIN ────────┘
+                                   SOURCE ── GND
+```
+
+Two low-side FETs with their drains tied together are a **wired-OR**: the lamp
+lights if *either* the ECU asks for it, or the watchdog gives up on the ECU.
+
+**Sizing**, at 100 Hz with BAT54 Schottkys (hold node charges to 4.4 V):
+
+| | | |
+|---|--:|---|
+| Pump current, C<sub>pump</sub> 220 nF | 97 µA | |
+| Bleed current, R<sub>bleed</sub> 150k | 29 µA | **3.3× margin** — comfortable |
+| Timeout, C<sub>hold</sub> 1 µF into an NPN's 0.7 V | **276 ms** | lamp lights this long after the last pulse |
+
+Slower heartbeats want a bigger pump or a weaker bleed: 50 Hz with 100 nF into
+150k gives **0.7×** and never holds the node up at all. 470k moves the timeout to
+864 ms with 10× margin if a longer fuse is preferred.
+
+**Why a pump rather than a 555 or a monostable:** a hung MCU usually leaves its
+pin *static*, and a static pin — high or low — transfers no charge. The pump
+therefore fails safe on a stuck output as well as a stopped one, which a level-
+triggered design does not. Every other failure it sees goes the same way: if
+C<sub>pump</sub> opens, Q<sub>h</sub> dies, or the 5 V rail sags, the pull-up
+raises Q<sub>wd</sub>'s gate and the lamp comes **on**.
+
+**It gives the bulb check back for free.** From key-on until the ECU boots and
+starts pulsing, there is no heartbeat — so the lamp is lit, exactly as the stock
+circuit behaves, without needing a rule for it.
+
+**The firmware rule that makes it mean anything:** emit the heartbeat *only from
+the code path that has just read the sender and evaluated the rule* — never from
+a timer ISR or the scheduler. A heartbeat from a timer proves the CPU is alive.
+A heartbeat from the bottom of the oil-pressure routine proves **the function
+that protects the engine ran**, which is the thing actually being claimed.
+
+| Failure | Result |
+|---|---|
+| ECU hangs, pin left high or low | no charge transferred → **lamp on** in 276 ms |
+| ECU resets or brown-outs | **lamp on**, and stays on until it boots and pulses |
+| Sensor read throws or the rule is skipped | heartbeat not emitted → **lamp on** |
+| Pump cap, diode, or Q<sub>h</sub> fails | pull-up wins → **lamp on** |
+| ECU alive and pressure genuinely low | its own FET → **lamp on** |
+| ECU alive, pressure fine | held off, 97 µA of pump current |
+
+An alternative worth pricing: a **TPS3823-class supervisor** (SOT-23-5, ~$0.50)
+has a WDI pin and a fixed ~200 ms window, which does the same job more
+deterministically and can supervise the 3.3 V rail at the same time. Fewer parts,
+one more line item, and a timeout you cannot tune.
 
 ## Audit against automotive reality
 
