@@ -127,16 +127,36 @@ against an unplugged connector beats debugging a rig that was correct all along.
 | 3V3 (pin 36) | Supplies the TLV7031 |
 | GND (pin 38) | **Common with vehicle ground** |
 
-## Two power variants
+## Powering it
 
-| | A — bench and cab | B — unattended drive |
-|---|---|---|
-| Pico power | USB from a laptop | DLC pin 16 (+12 V) → buck/LDO → VSYS |
-| Logging | USB serial to the laptop | SD card on SPI (GP16–19) — see below |
-| Use for | everything up to and including the RPM sweep in park | the road-speed drive, if nobody is riding along |
+| Source | Logging | Survives cranking? | Ground |
+|---|---|---|---|
+| Laptop USB | USB serial | n/a — engine off or idling | laptop ↔ vehicle |
+| **Truck USB adapter** | **must be SD** — no host, so no serial | ⚠ **no** | second path to vehicle ground |
+| **USB power bank** ⭐ | SD | ✅ **yes** | **single reference, through DLC pin 5 only** |
+| DLC pin 16 + buck | SD | with holdup | single, if returned on pin 4 |
 
-Variant A is enough for the whole capture protocol if someone holds the laptop.
-**Start there** — one fewer subsystem to debug while chasing a bus.
+**The truck's USB adapter is fine for idle, the RPM sweep and the drive — and
+wrong for two of the seven capture steps.** Step 1 is *key off → on* and step 2
+is *crank*. Anything fed from vehicle 12 V sags during cranking, and a cheap
+adapter will brown the Pico out at precisely the moment being recorded. If the
+socket is switched rather than always-hot, step 1 cannot be captured at all.
+
+**A USB power bank solves it outright**, and it is the cheapest answer:
+
+- Immune to cranking sag, so the crank frames actually get recorded.
+- No second path to vehicle ground — the rig then references the bus **only**
+  through DLC pin 5, which is what the comparator wants.
+- No mains-adjacent noise from a cheap switching adapter riding on the same 12 V
+  the bus lives on.
+
+**Also note: powering from a charger means no USB host, so there is no serial
+log.** SD becomes mandatory the moment the laptop goes away. That is variant B's
+logging with variant A's simplicity.
+
+Whatever the source, put **bulk plus ceramic decoupling at the Pico** — a few
+hundred µF and 100 nF. The rig is a measuring instrument sharing a vehicle with
+injectors and coils.
 
 ## Logging to SD — yes, and throughput is not the problem
 
