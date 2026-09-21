@@ -1,0 +1,71 @@
+;
+; edge_capture — one word per edge, no protocol knowledge at all.
+;
+; Deliberately dumb. It does not know what J1850 PWM is, what a bit is, or where
+; a frame starts. It measures the time between edges and reports it, so the
+; timing constants come from the bus rather than from someone's memory of a
+; datasheet. Point it at a running truck and the tp clusters fall out.
+;
+; Word format:  (count << 1) | level_after_the_edge
+;   count = elapsed loop iterations. The loop body is 2 PIO cycles, so
+;           one count = 2 / f_pio seconds. At 16 MHz that is 125 ns.
+;   level = the pin state AFTER the edge that ended this interval.
+;
+; Encoding the level in the LSB matters: if the FIFO ever overruns and a word is
+; lost, a stream of bare intervals silently inverts polarity from then on and
+; every later decode is wrong. With the level attached, a dropped word is
+; detectable rather than corrupting.
+;
+.program edge_capture
+
+.wrap_target
+    mov x, ~null            ; x = 0xFFFFFFFF, count downward
+
+level_low:
+    jmp pin, rose           ; pin high now -> rising edge ends this interval
+    jmp x--, level_low      ; still low: one more count  (2-cycle loop)
+
+rose:
+    mov isr, ~x             ; ~x = number of counts elapsed
+    in pins, 1              ; append the current level in the LSB
+    push noblock            ; never stall the timer — drop instead, and detect it
+    mov x, ~null
+
+level_high:
+    jmp pin, still_high
+    jmp fell
+still_high:
+    jmp x--, level_high     ; (2-cycle loop, same as above)
+
+fell:
+    mov isr, ~x
+    in pins, 1
+    push noblock
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+// pin: the comparator output (GP2 on this rig).
+// f_pio_hz: PIO clock. 16 MHz gives 125 ns per count and keeps a 24 us bit at
+// ~192 counts — small numbers, plenty of resolution, no risk of overflow.
+static inline void edge_capture_init(PIO pio, uint sm, uint offset,
+                                     uint pin, float f_pio_hz) {
+    pio_sm_config c = edge_capture_program_get_default_config(offset);
+
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);   // input
+
+    sm_config_set_in_pins(&c, pin);      // for `in pins, 1`
+    sm_config_set_jmp_pin(&c, pin);      // for `jmp pin`
+
+    // Shift LEFT so `in pins,1` lands in the LSB, under the count.
+    sm_config_set_in_shift(&c, false, false, 32);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);            // 8 words deep
+
+    sm_config_set_clkdiv(&c, (float)clock_get_hz(clk_sys) / f_pio_hz);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

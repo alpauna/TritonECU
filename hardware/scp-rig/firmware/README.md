@@ -51,9 +51,61 @@ slot ring** so the wrap is exercised fifty times over, exact-capacity fullness,
 refusal and counting on overflow, that the *oldest* survives an overflow, and the
 250 ms stall sizing above. Exits non-zero on failure.
 
+## `pio/edge_capture.pio` + `include/PulseHistogram.h`
+
+**Measure the bit timing; do not hard-code it.**
+
+J1850 PWM carries meaning in *where the falling edge falls inside a bit*, so the
+decoder needs tp values in nanoseconds. Taking those from a half-remembered
+datasheet produces a decoder that fails **like broken hardware** — which is the
+most expensive way to be wrong here. So the first firmware knows nothing about
+the protocol: it times edges and reports what it saw.
+
+### The PIO side
+
+One 32-bit word per edge: `(count << 1) | level_after_the_edge`. The loop body is
+two PIO cycles, so at 16 MHz one count is **125 ns** and a 24 µs bit is ~192
+counts — small numbers, ample resolution.
+
+Two deliberate choices:
+
+- **The level rides in the LSB.** Bare intervals would be one lost FIFO word away
+  from silently inverted polarity, and every later decode would be wrong with
+  nothing to show for it.
+- **`push noblock`.** Never stall the timer. Drop and detect — the SM's
+  `RXSTALL` flag says it happened.
+
+### The histogram side
+
+Bin the intervals, report the clusters. Point it at a running truck for thirty
+seconds and the output is a short list — *"8.0 µs ×41k, 16.1 µs ×39k, 24.2 µs
+×2k"* — and **those are the constants**, measured on the bus that has to be
+decoded rather than recalled.
+
+> **The floor is a fraction of the TOTAL, not of the tallest bin.** This is not a
+> detail — the host test caught it. SOF, EOF and IFS happen **once per frame**
+> while ordinary bits happen dozens of times per frame, so the intervals that
+> define frame structure sit two orders of magnitude below the common peaks. A
+> peak-relative floor throws away exactly what the exercise is for. Default is
+> 1 ‰ of all samples.
+
+### Test
+
+```bash
+g++ -std=c++17 -Wall -Wextra -Iinclude -o /tmp/t test/pulsehistogram_test.cpp && /tmp/t
+```
+
+Feeds a synthetic stream shaped like a real bus — two common short intervals, a
+rarer long one, and scattered noise — and checks that all three clusters are
+found with the right centroids and populations while the noise is rejected.
+
 ## Still to write
 
-- PIO program: edge capture and J1850 PWM bit decode.
+- J1850 PWM bit decode, **using the constants the histogram produces**.
 - Frame assembly and CRC.
 - SD writer draining the ring, flushing on a 1 s timer.
 - Optional GPS on UART for a shared timebase.
+
+> The PIO program is written but **has not run on hardware** — no Pico here.
+> Verify on the bench first: feed GP2 a known square wave and confirm the
+> reported intervals match, before trusting anything it says about a truck.
