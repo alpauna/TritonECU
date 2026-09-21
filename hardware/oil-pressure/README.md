@@ -169,6 +169,68 @@ that keeps regulating down to 6 V, or **accept the reset and stop letting the
 lamp depend on the MCU** — which is the High finding below, reached from a
 different direction.
 
+## Folding it into the ECU
+
+The plan is to move this function into the ESP32 ECU and let config decide
+whether a **switch** or a **sender** is fitted. Reading the ECU's existing code,
+almost none of that needs new firmware — `SensorDescriptor`, `FaultRule` and
+`CustomPin`/`OutputRule` already express it.
+
+### Sender mode
+
+| Field | Value | Why |
+|---|---|---|
+| `sourceType` | `SRC_MCP3204` | **0–5 V native**, 12-bit, on SPI — so a 4.5 V signal needs no divider, and it sidesteps the ESP32's ADC2/WiFi conflict entirely |
+| `calType` | `CAL_LINEAR` | `calA`/`calB` = 0.5 / 4.5 V, `calC`/`calD` = 0 / 100 PSI. That *is* a ratiometric transducer, exactly |
+| `unit` | `"PSI"` | already an example in the header |
+| `emaAlpha`, `avgSamples` | ~0.2, 4 | the filtering C2 used to do in hardware |
+| `errorMin` / `errorMax` | −5 / 105 PSI | **the feature the old board never had**: a healthy transducer never leaves 0.5–4.5 V, so anything outside reads as an impossible pressure and is a *wiring fault*, not 0 PSI. A broken sender wire currently looks exactly like no oil pressure |
+| `faultBit`, `faultAction` | → `FAULT_ACT_CEL` | |
+| `activeStates` | see below | |
+
+### Switch mode
+
+The same slot, two fields changed: `sourceType` = `SRC_GPIO_DIGITAL` (or
+`SRC_EXPANDER`), `calType` = `CAL_NONE`. Value becomes 0/1, and switch polarity
+is handled by picking `OP_LT` vs `OP_GT` in the rule — no invert flag needed.
+
+**So "switch or sender" is two fields in one sensor slot, not a firmware branch.**
+
+### The lamp
+
+A `FaultRule` — `sensorSlot` = the oil slot, `op` = `OP_LT`, `thresholdA` = 12,
+`debounceMs` ≈ 2000 so it does not flicker at a hot idle, `requireRunning` = true
+— driving a `CustomPin` output through an `OutputRule`.
+
+**One behavioural decision to make deliberately:** the stock lamp lights with the
+key on and the engine not running, as a bulb check. `requireRunning` suppresses
+exactly that. If the goal is to preserve stock behaviour, the *lamp* rule and the
+*fault* rule are not the same rule — lamp on when (key on AND not running) OR
+(running AND below 12).
+
+### Two things that are not free
+
+**1. Ratiometric cancellation is a hardware requirement, not a config one.**
+`MCP3204Reader::begin(spi, cs, vRef = 5.0f)` scales against a *number*. The
+cancellation only actually happens if the chip's **VREF pin is tied to the same
+5 V that feeds the transducer** — then a sagging rail moves signal and reference
+together and the ratio holds, which is the property that keeps the reading honest
+through cranking. Wire VREF to a separate precision reference and you lose it
+silently: the number still looks plausible, it is just wrong whenever the rail
+moves.
+
+**2. The fail-silent problem gets *worse*, not better.** On the old board a hung
+ATtiny meant no lamp. In the ECU the lamp now depends on a far larger system —
+WiFi, SD, the web server — any of which can wedge the thing that is supposed to
+warn you about oil pressure. Moving the function in does not fix the High finding
+below; it raises the stakes on it.
+
+The cheap fix is a **heartbeat-gated lamp driver**: a retriggerable monostable
+(555, or an RC and a transistor) that holds the lamp *off* only while the ECU
+keeps pulsing it. Stop pulsing — hang, reset, crash, brown-out — and the lamp
+comes on by itself. That inverts the failure from silent to loud, costs about
+fifty cents, and needs one GPIO that the ECU toggles in its 10 ms loop.
+
 ## Audit against automotive reality
 
 What is known so far, worst first:
