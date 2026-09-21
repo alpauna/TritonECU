@@ -46,7 +46,7 @@ optional, CS mandatory, and CS is the one missing.**
 | DAT1, DAT2 | **optional** | Unused in SPI mode — see below |
 | SCLK | **not needed** | Host-driven |
 
-## 2. Pin 8 is labelled DAT2 — it is DAT1
+## 2. Pin 8 is labelled DAT2 — it is DAT1, and splitting it needs R7
 
 Pins **1 and 8 are both on the `DAT2` net**. Pin 1 is DAT2; **pin 8 is DAT1**.
 
@@ -54,6 +54,24 @@ Harmless in SPI mode — both are unused and both end up pulled high through R3 
 so the board will work. It is wrong the moment anyone tries 4-bit SD mode, and it
 is the kind of copy-paste slip that survives into three later revisions because
 nothing ever fails because of it.
+
+**Splitting them orphans pin 8 from R3**, so DAT1 needs its own pull-up:
+**R7, 10 kΩ to 3V3**. Otherwise the relabel quietly leaves DAT1 floating, which
+is worse than the shared net it replaced — and for the same reason the pull-ups
+were kept at all: 4-bit mode wants every DAT line held.
+
+### Pull-up allocation, as fixed
+
+| R | 10 kΩ to 3V3 | Card pin | |
+|---|---|---|---|
+| R3 | DAT2 | 1 | unchanged |
+| **R5** | **SPCS / CS** | **2** | **moved off SCLK** |
+| R4 | MOSI / CMD | 3 | unchanged |
+| R6 | MISO / DAT0 | 7 | unchanged |
+| **R7** | **DAT1** | **8** | **new** |
+| — | SCLK | 5 | **no pull-up** — host-driven |
+
+Net change: **one resistor added**, one moved, one deleted from SCLK.
 
 ## 3. Check what pins 9–12 actually are
 
@@ -98,7 +116,7 @@ board-level run; worth having footprints for.
 | # | Item | Action |
 |--:|---|---|
 | 1 | CS pull-up missing, SCLK pull-up redundant | **Move R5 to SPCS** |
-| 2 | Pin 8 on the DAT2 net | Relabel to DAT1 |
+| 2 | Pin 8 on the DAT2 net | Relabel to DAT1 **and add R7, 10 kΩ** |
 | 3 | Pins 9–12 all grounded | Confirm shell vs card-detect |
 | 4 | 3V3 peak ~261 mA | Verify budget, keep bulk local |
 | 5 | No series damping | Optional footprints |
