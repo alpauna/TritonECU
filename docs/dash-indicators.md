@@ -78,6 +78,27 @@ flash if monitored sensors/actuators or circuits have failed.**"*
 At 15 mA the driver is trivial — any SOT-23 logic-level FET, and the 820 Ω means
 the ECU never sees more than that even with the output shorted to the 12 V rail.
 
+**It is an open-drain output, and only that.** The lamp's far side sits at 12 V
+through the 820 Ω, so the ECU sinks pin 79 to ground to light it and must go
+**high-impedance** to extinguish it — never driven high. Driving it high would
+put 12 V through the lamp into the ECU's own rail. Requirements:
+
+| | |
+|---|---|
+| Topology | N-channel **low side only**, drain to pin 79, source to ground |
+| Current | ~12–15 mA, set by the 820 Ω upstream |
+| V<sub>DS</sub> when off | battery, so 40–60 V for load-dump headroom |
+| Fault tolerance | the 820 Ω caps a dead short to +12 at ~18 mA — the ECU cannot be hurt by this line |
+| Off state | high-Z, **not** pulled high |
+
+Same shape as the CEL, the oil dash line and the buzzer: everything this ECU
+drives on the dash is a low-side sink.
+
+> ⚠ **Do not wire pin 79 until its colour is checked.** `eec-v-pinout.md` claims
+> pin 79 is **Ignition Coil 8**, not the indicator lamp. See
+> [`source-conflicts.md`](source-conflicts.md) — getting this wrong puts a coil
+> driver on a lamp circuit.
+
 > **The cluster's house style is open-to-warn**, which is worth knowing for
 > everything else on that connector: the oil pressure switch is *closed* for
 > normal, and the anti-lock indicator "receives an **open** from the ABS module

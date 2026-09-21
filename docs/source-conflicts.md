@@ -48,7 +48,31 @@ splice **S225**. The switch is separately on pin **29** via `224 TN/WH`.
 error, most likely from a generic EEC-V table. **This is the rule below working:
 the EVTM outranks derived notes, and counting sources is not weighing them.**
 
-## Conflict 2 — who drives the 4×4 LOW RANGE indicator?
+## Conflict 2 — what is on PCM pin 79? ⚠ **highest stakes so far**
+
+| Source | Says pin 79 is |
+|---|---|
+| EVTM `4R70W-Transmission.png`, read at the pin row | **Transmission Control Indicator Lamp**, `911 WH/LG`, a low-side sink |
+| `eec-v-pinout.md` line 108, and its coil summary | **Ignition Coil 8**, IGNH, `WHT/RED` |
+
+Both cannot be true of the same connector, and **this is the dangerous kind of
+disagreement**: a replacement ECU that drives a coil output onto a lamp circuit,
+or sinks a lamp driver onto a coil primary, destroys something on the first key
+cycle.
+
+`eec-v-pinout.md` has already been wrong once here — it placed the trans
+indicator on pin 12 when the EVTM shows 79 — and its coil list (`26, 104, 52, 53,
+27, 1, 78, 79`) is internally consistent with that error, which is how such
+things survive. The EVTM is Ford's own and is drawn for this truck's
+transmission. It is the stronger source, but the cost of being wrong is high
+enough to warrant measuring.
+
+**Test, and it is a two-minute one:** at the PCM connector, read **pin 79's wire
+colour**. `WH/LG` is the indicator lamp; `WHT/RED` is coil 8. Then confirm by
+continuity from C251's lamp terminal. Do this **before** anything is wired to
+pin 79.
+
+## Conflict 3 — who drives the 4×4 LOW RANGE indicator?
 
 | Source | Says |
 |---|---|
