@@ -104,6 +104,17 @@ private:
     static const uint16_t CEL_PREFAULT_ON_MS     = 300;
     LampDriver _celLamp;
 
+    // Audible annunciation. Bursts, never a continuous tone: a tone gets
+    // unplugged and then nothing annunciates again. Pre-fault stays SILENT for
+    // the same reason — an advisory that beeps is an advisory that gets muted.
+    static const uint16_t BUZZ_ON_MS          = 150;
+    static const uint16_t BUZZ_GAP_MS         = 150;
+    static const uint8_t  BUZZ_CRITICAL_BEEPS = 3;
+    static const uint32_t BUZZ_CRITICAL_MS    = 10000;   // every 10 s
+    static const uint8_t  BUZZ_FAULT_BEEPS    = 2;
+    static const uint32_t BUZZ_FAULT_MS       = 60000;   // every 60 s
+    LampDriver _buzzer;
+
     CrankSensor* _crank;
     CamSensor* _cam;
     IgnitionManager* _ignition;
@@ -170,6 +181,7 @@ private:
     uint8_t _limpFaults = 0;
     uint8_t _celFaults = 0;
     uint8_t _prefaultFaults = 0;
+    uint16_t _pinBuzzer;   // DEF_PIN_BUZZER, set in the constructor like the rest
     uint16_t _limpRevLimit = 3000;
     float _limpAdvanceCap = 10.0f;
     uint32_t _limpRecoveryMs = 5000;

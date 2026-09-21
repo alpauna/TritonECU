@@ -135,6 +135,9 @@
 #define DEF_PIN_FUEL_PUMP   200   // MCP23S17 #0 P0
 #define DEF_PIN_TACH_OUT    201   // MCP23S17 #0 P1
 #define DEF_PIN_CEL         202   // MCP23S17 #0 P2
+#define DEF_PIN_BUZZER      204   // MCP23S17 #0 P4 — audible annunciator.
+                                  // P3, P5-P7 on this chip remain free;
+                                  // injectors moved to #5 (280+) long ago.
 #define DEF_PIN_CJ125_SS1   208   // MCP23S17 #0 P8
 #define DEF_PIN_CJ125_SS2   209   // MCP23S17 #0 P9
 #define DEF_PIN_SS_A        216   // MCP23S17 #1 P0

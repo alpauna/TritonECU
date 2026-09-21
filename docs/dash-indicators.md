@@ -188,6 +188,19 @@ Verified on the host (`test/host/lampdriver_test.cpp`): 6 beeps and 900 ms of
 sounding in 20 s for the critical pattern, a 0.5 % duty cycle for the full-fault
 one, and re-arming with identical parameters does not retrigger the phase.
 
+### Wired: MCP23S17 #0 P4 (pin 204)
+
+`DEF_PIN_BUZZER 204`, driven from the same tiers as the CEL in
+`ECU::checkLimpMode()`, plus one 150 ms chirp in `begin()` as a key-on
+self-test.
+
+> **A note on the pin map.** CLAUDE.md still describes an **I²C MCP23017 at
+> 0x20** with injectors 4–8 on P3–P7. The board has since moved to **SPI
+> MCP23S17** chips addressed as `200 + (chip × 16) + pin`, and injectors live on
+> chip **#5** (280+). So P4 was free after all — but the stale doc made it look
+> occupied. Chip #0 now holds fuel pump (200), tach (201), CEL (202), **buzzer
+> (204)**, and the CJ125 chip selects (208/209); P3 and P5–P7 remain free.
+
 ### Policy worth deciding before it is wired
 
 - **Silence/acknowledge**, and whether a *new* fault re-arms it. Without this,

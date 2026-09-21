@@ -39,7 +39,7 @@ ECU::ECU(Scheduler* ts)
       _pinTcc(DEF_PIN_TCC), _pinEpc(DEF_PIN_EPC),
       _pinHspiSck(DEF_PIN_HSPI_SCK), _pinHspiMosi(DEF_PIN_HSPI_MOSI), _pinHspiMiso(DEF_PIN_HSPI_MISO),
       _pinHspiCs(DEF_PIN_HSPI_CS), _pinMcp3204Cs(DEF_PIN_MCP3204_CS),
-      _pinFuelPump(DEF_PIN_FUEL_PUMP), _pinTachOut(DEF_PIN_TACH_OUT), _pinCel(DEF_PIN_CEL),
+      _pinFuelPump(DEF_PIN_FUEL_PUMP), _pinTachOut(DEF_PIN_TACH_OUT), _pinCel(DEF_PIN_CEL), _pinBuzzer(DEF_PIN_BUZZER),
       _pinSsA(DEF_PIN_SS_A), _pinSsB(DEF_PIN_SS_B), _pinSsC(DEF_PIN_SS_C), _pinSsD(DEF_PIN_SS_D),
       _pinSharedInt(0xFF) {
     memset(&_state, 0, sizeof(_state));
@@ -337,6 +337,14 @@ void ECU::begin() {
         // CEL / check engine light
         xPinMode(_pinCel, OUTPUT);
         xDigitalWrite(_pinCel, LOW);
+
+        // Buzzer — one short chirp at key-on as a self-test. The lamps prove
+        // out; this should too, because a buzzer that has failed silent is
+        // indistinguishable from one with nothing to say.
+        xPinMode(_pinBuzzer, OUTPUT);
+        xDigitalWrite(_pinBuzzer, HIGH);
+        delay(BUZZ_ON_MS);
+        xDigitalWrite(_pinBuzzer, LOW);
     }
 
     // CJ125 wideband O2 controller — requires I2C (ADS1115) and expander #0 (SPI CS pins)
@@ -561,8 +569,22 @@ void ECU::checkLimpMode() {
         _celLamp.set(LampDriver::OFF);
     }
 
-    if (_i2cEnabled && _expander0Enabled)
-        xDigitalWrite(_pinCel, _celLamp.state(millis()) ? HIGH : LOW);
+    // Buzzer follows the same tiers, minus pre-fault. It reads the fault masks
+    // rather than raw sensor values, so cranking and settleMs windows suppress
+    // it for free — the faults themselves are already masked there.
+    if (_limpActive) {
+        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_CRITICAL_BEEPS, BUZZ_CRITICAL_MS);
+    } else if (celOnly != 0) {
+        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_FAULT_BEEPS, BUZZ_FAULT_MS);
+    } else {
+        _buzzer.set(LampDriver::OFF);
+    }
+
+    uint32_t nowMs = millis();
+    if (_i2cEnabled && _expander0Enabled) {
+        xDigitalWrite(_pinCel, _celLamp.state(nowMs) ? HIGH : LOW);
+        xDigitalWrite(_pinBuzzer, _buzzer.state(nowMs) ? HIGH : LOW);
+    }
 
     // Update shared state
     _state.limpMode = _limpActive;
