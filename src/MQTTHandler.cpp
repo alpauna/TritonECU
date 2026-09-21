@@ -61,6 +61,7 @@ void MQTTHandler::publishState() {
     doc["oilPsi"] = s.oilPressurePsi;
     doc["oilLow"] = s.oilPressureLow;
     doc["oilSensorFault"] = s.oilSensorFault;
+    doc["prefault"] = s.prefaultFaults;
     doc["expFaults"] = s.expanderFaults;
 
     // Transmission

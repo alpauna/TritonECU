@@ -383,6 +383,7 @@ void WebHandler::setupRoutes() {
             doc["oilPressurePsi"] = es.oilPressurePsi;
             doc["oilPressureLow"] = es.oilPressureLow;
             doc["oilSensorFault"] = es.oilSensorFault;
+            doc["prefaultFaults"] = es.prefaultFaults;
             doc["expanderFaults"] = es.expanderFaults;
 
             // Sensor descriptors array

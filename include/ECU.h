@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <functional>
 #include <TaskSchedulerDeclarations.h>
+#include "LampDriver.h"    // CEL cadence: steady for faults, slow flash for pre-faults
 
 class CrankSensor;
 class CamSensor;
@@ -46,6 +47,7 @@ struct EngineState {
                                       // broken or shorted wire, not low pressure
     volatile uint8_t expanderFaults;
     volatile uint8_t celFaults;
+    volatile uint8_t prefaultFaults;  // advisory only: CEL blinks, nothing acts
     volatile uint32_t overdwellCount;
     volatile bool fuelPumpOn;
     volatile bool fuelPumpPriming;
@@ -93,6 +95,14 @@ private:
     Scheduler* _ts;
     Task* _tUpdate;
     EngineState _state;
+
+    // CEL cadence. The pre-fault flash is deliberately SLOW and short — 300 ms
+    // every 4 s. On any OBD-II vehicle a MIL flashing at ~1 Hz means a
+    // catalyst-damaging misfire, i.e. the most severe thing the lamp can say,
+    // so a pre-fault must not be mistaken for it. See docs/dash-indicators.md.
+    static const uint16_t CEL_PREFAULT_PERIOD_MS = 4000;
+    static const uint16_t CEL_PREFAULT_ON_MS     = 300;
+    LampDriver _celLamp;
 
     CrankSensor* _crank;
     CamSensor* _cam;
@@ -159,6 +169,7 @@ private:
     bool _limpActive = false;
     uint8_t _limpFaults = 0;
     uint8_t _celFaults = 0;
+    uint8_t _prefaultFaults = 0;
     uint16_t _limpRevLimit = 3000;
     float _limpAdvanceCap = 10.0f;
     uint32_t _limpRecoveryMs = 5000;

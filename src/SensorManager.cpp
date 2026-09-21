@@ -566,6 +566,7 @@ void SensorManager::validate(SensorDescriptor& d) {
 void SensorManager::evaluateRules() {
     uint8_t limpFaults = 0;
     uint8_t celFaults = 0;
+    uint8_t prefaultFaults = 0;
     uint32_t now = millis();
 
     for (uint8_t i = 0; i < MAX_RULES; i++) {
@@ -649,6 +650,8 @@ void SensorManager::evaluateRules() {
                         limpFaults |= bit;
                     } else if (r.faultAction == FAULT_ACT_CEL) {
                         celFaults |= bit;
+                    } else if (r.faultAction == FAULT_ACT_PREFAULT) {
+                        prefaultFaults |= bit;
                     }
                 }
             } else {
@@ -658,6 +661,8 @@ void SensorManager::evaluateRules() {
                     limpFaults |= bit;
                 } else if (r.faultAction == FAULT_ACT_CEL) {
                     celFaults |= bit;
+                } else if (r.faultAction == FAULT_ACT_PREFAULT) {
+                    prefaultFaults |= bit;
                 }
             }
         } else {
@@ -668,6 +673,7 @@ void SensorManager::evaluateRules() {
 
     _limpFaults = limpFaults;
     _celFaults = celFaults;
+    _prefaultFaults = prefaultFaults;
 }
 
 float SensorManager::getO2Afr(uint8_t bank) const {

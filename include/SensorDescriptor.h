@@ -39,9 +39,13 @@ enum EngineRunState : uint8_t {
 // --- Fault action ---
 enum FaultAction : uint8_t {
     FAULT_ACT_NONE     = 0,
-    FAULT_ACT_LIMP     = 1,
+    FAULT_ACT_LIMP     = 1,  // CRITICAL: CEL steady + limp mode
     FAULT_ACT_SHUTDOWN  = 2,
-    FAULT_ACT_CEL      = 3   // CEL only — no rev limit or advance cap
+    FAULT_ACT_CEL      = 3,  // FULL: CEL steady, no rev limit or advance cap
+    FAULT_ACT_PREFAULT = 4   // PRE-FAULT: CEL blinks. Something is drifting out
+                             // of its normal envelope but still works — a pump
+                             // drawing more current, a sensor near its limit.
+                             // Advisory, no action taken.
 };
 
 // --- Rule operators ---

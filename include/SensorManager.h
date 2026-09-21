@@ -106,6 +106,7 @@ public:
     // --- Limp/fault ---
     uint8_t getLimpFaults() const { return _limpFaults; }
     uint8_t getCelFaults() const { return _celFaults; }
+    uint8_t getPrefaultFaults() const { return _prefaultFaults; }
     void setLimpThresholds(float mapMin, float mapMax, float tpsMin, float tpsMax,
                            float cltMax, float iatMax, float vbatMin);
 
@@ -147,6 +148,7 @@ private:
 
     uint8_t _limpFaults = 0;
     uint8_t _celFaults = 0;
+    uint8_t _prefaultFaults = 0;
     bool _engineRunning = false;
 
     // Read raw value from source device for a descriptor

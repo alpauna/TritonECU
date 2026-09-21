@@ -721,6 +721,7 @@ static const char* faultActionToStr(FaultAction a) {
         case FAULT_ACT_LIMP:     return "limp";
         case FAULT_ACT_SHUTDOWN: return "shutdown";
         case FAULT_ACT_CEL:      return "cel";
+        case FAULT_ACT_PREFAULT: return "prefault";
         default:                 return "none";
     }
 }
@@ -729,6 +730,7 @@ static FaultAction strToFaultAction(const char* s) {
     if (strcmp(s, "limp") == 0)     return FAULT_ACT_LIMP;
     if (strcmp(s, "shutdown") == 0) return FAULT_ACT_SHUTDOWN;
     if (strcmp(s, "cel") == 0)      return FAULT_ACT_CEL;
+    if (strcmp(s, "prefault") == 0) return FAULT_ACT_PREFAULT;
     return FAULT_ACT_NONE;
 }
 static const char* ruleOpToStr(RuleOp op) {

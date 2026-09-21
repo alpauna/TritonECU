@@ -123,6 +123,35 @@ and any of them lighting the flash:
 Each should set a fault bit, latch until cleared, and the serious ones should
 call the `setLimpMode()` that is already sitting there unused.
 
+## CEL severity tiers — and the one convention this collides with
+
+Implemented: `FAULT_ACT_PREFAULT` joins `FAULT_ACT_CEL` and `FAULT_ACT_LIMP`, and
+`LampDriver` owns the cadence.
+
+| Tier | Action | Lamp | Anything acts? |
+|---|---|---|---|
+| **Pre-fault** | `FAULT_ACT_PREFAULT` | **blink**, 300 ms every 4 s | No — advisory only |
+| **Full fault** | `FAULT_ACT_CEL` | **steady** | No |
+| **Critical** | `FAULT_ACT_LIMP` / `SHUTDOWN` | **steady** | Limp mode: rev limit, advance cap, trans lock |
+
+Severity outranks, so a steady lamp beats a blinking one and a real fault is
+never downgraded to a flash by an unrelated advisory.
+
+> ⚠ **On any OBD-II vehicle, a MIL flashing at about 1 Hz means a
+> catalyst-damaging misfire** — the most severe thing that lamp can say, "stop
+> driving now". Using a blink for the *least* severe tier inverts that, which is
+> the opposite of the rule this document opens with.
+>
+> The pre-fault flash is therefore deliberately **slow and short — 300 ms every
+> 4 seconds** — so it cannot be read as the 1 Hz misfire cadence. It looks like a
+> heartbeat, not an alarm. If it ever needs to be unmistakable, the alternative
+> is to move *critical* to a 1 Hz flash, which puts the fastest cadence at the
+> top where every mechanic already expects it. Both are one constant in `ECU.h`.
+
+`LampDriver` is deliberately generic — off / steady / blink with an asymmetric
+duty — because the O/D OFF lamp needs exactly the same thing, and an `OutputRule`
+cannot express a cadence.
+
 ## The ECU-is-dead signature
 
 The heartbeat-gated watchdog in `hardware/oil-pressure/` should drive **this lamp

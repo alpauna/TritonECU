@@ -543,16 +543,32 @@ void ECU::checkLimpMode() {
         }
     }
 
-    // --- CEL control: ON for any limp OR cel-only fault, OFF when both clear ---
+    // --- CEL control, three tiers ---
+    //   CRITICAL (limp/shutdown) -> steady, and limp mode above
+    //   FULL     (cel)           -> steady
+    //   PRE-FAULT                -> slow blink, advisory, nothing acts
+    // Severity outranks: a steady lamp beats a blinking one, so a real fault is
+    // never downgraded to a flash by an unrelated advisory.
+    uint8_t prefault = _sensors->getPrefaultFaults();
     _celFaults = celOnly;
-    bool celNeeded = (_limpActive || celOnly != 0);
+    _prefaultFaults = prefault;
+
+    if (_limpActive || celOnly != 0) {
+        _celLamp.set(LampDriver::STEADY);
+    } else if (prefault != 0) {
+        _celLamp.set(LampDriver::BLINK, CEL_PREFAULT_PERIOD_MS, CEL_PREFAULT_ON_MS);
+    } else {
+        _celLamp.set(LampDriver::OFF);
+    }
+
     if (_i2cEnabled && _expander0Enabled)
-        xDigitalWrite(_pinCel, celNeeded ? HIGH : LOW);
+        xDigitalWrite(_pinCel, _celLamp.state(millis()) ? HIGH : LOW);
 
     // Update shared state
     _state.limpMode = _limpActive;
     _state.limpFaults = _limpFaults;
     _state.celFaults = _celFaults;
+    _state.prefaultFaults = _prefaultFaults;
 }
 
 void ECU::checkExpanderHealth() {
