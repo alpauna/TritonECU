@@ -55,6 +55,46 @@ drive where everything changed is unidentifiable.
 **Record a reference channel alongside the bus.** RPM from the crank sensor and
 speed from GPS, on the same timebase. Without one, correlation is guesswork.
 
+### Choosing which sensor to unplug — quieter is better
+
+The point of the transition capture is that **only the MIL changes**. A fault
+that also changes how the engine runs moves half the bus with it, and then the
+MIL bit is buried among genuine data changes.
+
+| Unplug | Sets a code | Side effects at idle | Verdict |
+|---|---|---|---|
+| **IAT** | yes, promptly | PCM substitutes a default air temp; fuelling barely moves | ⭐ **quietest** |
+| **EGR / DPFE** | yes | EGR is closed at idle anyway | ⭐ also good |
+| HO2S | yes | drops to open loop, fuelling shifts | usable, noisier |
+| **TPS** | yes, promptly | **PCM's whole air/fuel and shift strategy changes** | works, but noisy — see below |
+
+**TPS is a poor first choice and a good second one.** The 4R70W sheet lists TP as
+an input to *"EPC pressure, shift and torque converter clutch scheduling"*, so
+unplugging it moves idle, fuelling and the transmission at once. The MIL bit will
+be in there, but so will a dozen other changing bytes.
+
+Where it *is* useful is as a deliberate second run: if TP is broadcast on SCP,
+pulling the sensor pegs those bytes, which helps identify them. Do that as its
+own experiment, not as the MIL capture.
+
+> ⛔ **Do not drive with the TPS unplugged.** Shift scheduling and EPC line
+> pressure both depend on it.
+
+**Suggested order on the 2001:**
+
+1. **Baseline** — no faults, engine idling, five minutes. This is the reference
+   every later diff is taken against, and it exists only because this truck
+   currently has no codes.
+2. **RPM sweep in park** — tach bytes, against that baseline.
+3. **Pull the IAT while idling** — the clean MIL transition.
+4. Reconnect, clear, confirm the lamp goes out and the bus returns to the
+   baseline pattern. *A transition that only works in one direction has not been
+   identified.*
+5. Optionally, pull the TPS as a separate run to find the TP bytes.
+
+Record which sensor was pulled, and when, in the log notes. Six months from now
+the capture will be unreadable without it.
+
 ### On-demand MIL, without breaking anything
 
 The 2003 truck has a **disconnected EGR** setting a code, which makes it a
