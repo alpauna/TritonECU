@@ -36,14 +36,29 @@
 #define DUAL_COIL 1
 
 /* ---------------------------------------------------------------------------
-   Pins — ATtiny202 SOIC-8: 1 VDD, 2 PA6, 3 PA7, 4 PA1, 5 PA2, 6 UPDI, 7 PA3,
+   Pins
+   ---------------------------------------------------------------------------
+   ATtiny202 SOIC-8 (UPDI): 1 VDD, 2 PA6, 3 PA7, 4 PA1, 5 PA2, 6 UPDI, 7 PA3,
    8 GND. Five usable I/O, which is exactly what this needs.
+
+   ATtiny85 SOIC-8 (ISP): PB0..PB4 usable, PB5 is RESET and stays that way —
+   claiming it needs the reset-disable fuse and then HV programming to recover,
+   which is never worth it for one more pin. PB0/PB2 are the USI pins; nothing
+   here uses USI, so they are ordinary I/O.
    --------------------------------------------------------------------------- */
-#define PIN_LEG_A   PIN_PA6   // SET  coil  (dual) / bridge leg A (single)
-#define PIN_LEG_C   PIN_PA7   // RESET coil (dual) / bridge leg C (single)
-#define PIN_BUTTON  PIN_PA1   // to GND, internal pull-up
-#define PIN_SENSE   PIN_PA2   // relay's spare pole through a divider, or unused
-#define PIN_ECU     PIN_PA3   // pull LOW briefly to toggle from the ESP32
+#if defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny25__)
+  #define PIN_LEG_A   1       // PB1
+  #define PIN_LEG_C   4       // PB4
+  #define PIN_BUTTON  3       // PB3
+  #define PIN_SENSE   0       // PB0
+  #define PIN_ECU     2       // PB2
+#else                         // ATtiny202, and the host test
+  #define PIN_LEG_A   PIN_PA6 // SET  coil  (dual) / bridge leg A (single)
+  #define PIN_LEG_C   PIN_PA7 // RESET coil (dual) / bridge leg C (single)
+  #define PIN_BUTTON  PIN_PA1 // to GND, internal pull-up
+  #define PIN_SENSE   PIN_PA2 // relay's spare pole through a divider, or unused
+  #define PIN_ECU     PIN_PA3 // pull LOW briefly to toggle from the ESP32
+#endif
 
 /* ---------------------------------------------------------------------------
    Timing — the only numbers worth tuning to the relay you actually have

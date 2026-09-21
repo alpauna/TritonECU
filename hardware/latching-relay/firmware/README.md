@@ -33,9 +33,22 @@ Five usable I/O, which is exactly what this needs.
 | PA2 | state sense from the relay's spare pole |
 | PA3 | ECU line — the ESP32 pulls it low briefly to toggle |
 
-**For a classic ATtiny on an ISP programmer** (13A, 25/45/85) change those five
-defines and the `[env:]` block in `platformio.ini`. Everything else is plain
-Arduino API and ports unchanged.
+**ATtiny85 on ISP is a supported target**, not just a claim: `src/main.cpp`
+switches its own pin defines on `__AVR_ATtiny85__`, and `platformio.ini` carries
+an `[env:attiny85]`. Build it with `pio run -e attiny85`.
+
+| Signal | ATtiny202 | ATtiny85 |
+|---|---|---|
+| leg A | PA6 | **PB1** |
+| leg C | PA7 | **PB4** |
+| button | PA1 | **PB3** |
+| state sense | PA2 | **PB0** |
+| ECU line | PA3 | **PB2** |
+
+PB5 stays RESET on the tiny85 — claiming it needs the reset-disable fuse and
+then HV programming to recover, which is never worth one more pin. The 4.3 V
+brown-out ports across unchanged: the tiny85's BODLEVEL fuse offers exactly
+1.8 / 2.7 / 4.3 V.
 
 ## Two behaviours that are the point of building this
 
@@ -70,7 +83,7 @@ state machine on a PC — boot, short presses, long press on and off, a bouncing
 contact, and the ECU line. It checks which coil fired and what state resulted,
 and exits non-zero on failure.
 
-**All three builds pass.** Flip the switches and re-run: `DUAL_COIL 0` should
+**All six builds pass** — three switch combinations × two MCUs. Flip the switches and re-run: `DUAL_COIL 0` should
 swap the legs and keep the pulses at 30 ms, and `LATCHING 0` should emit no
 pulse at boot and leave the coil pin *high* after a press rather than returning
 it low.
