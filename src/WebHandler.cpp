@@ -381,6 +381,7 @@ void WebHandler::setupRoutes() {
             const EngineState& es = _ecu->getState();
             doc["oilPressurePsi"] = es.oilPressurePsi;
             doc["oilPressureLow"] = es.oilPressureLow;
+            doc["oilSensorFault"] = es.oilSensorFault;
             doc["expanderFaults"] = es.expanderFaults;
 
             // Sensor descriptors array

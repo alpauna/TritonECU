@@ -492,6 +492,17 @@ float SensorManager::interpolateCurve(const float* xs, const float* ys, uint8_t 
     return ys[n - 1];
 }
 
+bool SensorManager::isOilPressureLow() const {
+    // Ask the rule that actually models low oil pressure, not the descriptor's
+    // plausibility flag. A masked sensor cannot fire a rule, so cranking and
+    // the settle window are already handled upstream in evaluateRules().
+    for (uint8_t i = 0; i < MAX_RULES; i++) {
+        const FaultRule& r = _rules[i];
+        if (r.sensorSlot == SLOT_OIL && r.faultBit != 0xFF) return r.active;
+    }
+    return false;
+}
+
 void SensorManager::validate(SensorDescriptor& d) {
     // A masked sensor is unvalidated by definition: the reading is live, but
     // nothing may conclude anything from it.

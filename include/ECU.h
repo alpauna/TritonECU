@@ -41,7 +41,9 @@ struct EngineState {
     volatile bool  limpMode;
     volatile uint8_t limpFaults;
     volatile float oilPressurePsi;
-    volatile bool  oilPressureLow;
+    volatile bool  oilPressureLow;    // the OIL_LOW rule fired: pressure is low
+    volatile bool  oilSensorFault;    // the sender reads an impossible value:
+                                      // broken or shorted wire, not low pressure
     volatile uint8_t expanderFaults;
     volatile uint8_t celFaults;
     volatile uint32_t overdwellCount;

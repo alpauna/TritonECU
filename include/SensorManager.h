@@ -62,7 +62,18 @@ public:
     float getIatTempF() const { return _desc[SLOT_IAT].value; }
     float getBatteryVoltage() const { return _desc[SLOT_VBAT].value; }
     float getOilPressurePsi() const { return _desc[SLOT_OIL].value; }
-    bool isOilPressureLow() const { return _desc[SLOT_OIL].inError; }
+    // LOW PRESSURE is the OIL_LOW *rule* firing — OP_LT on an RPM curve, with a
+    // 3 s debounce, requireRunning and an 800 rpm gate. It used to read the
+    // descriptor's inError, which is a different question entirely (see below)
+    // and was permanently false because validation was never implemented.
+    bool isOilPressureLow() const;
+
+    // SENSOR FAULT is the descriptor's plausibility check: errorMin/errorMax on
+    // a 0.5-4.5 V transducer catch a broken or shorted sender wire, which reads
+    // as an impossible pressure rather than a low one.
+    bool isOilSensorFault() const {
+        return _desc[SLOT_OIL].sourceType != SRC_DISABLED && _desc[SLOT_OIL].inError;
+    }
     uint16_t getRawAdc(uint8_t channel) const;
 
     // --- Backward-compatible setters (update descriptor calibration) ---

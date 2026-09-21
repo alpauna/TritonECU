@@ -450,6 +450,7 @@ void ECU::update() {
     // Oil pressure from sensor descriptor slot 7
     _state.oilPressurePsi = _sensors->getOilPressurePsi();
     _state.oilPressureLow = _sensors->isOilPressureLow();
+    _state.oilSensorFault = _sensors->isOilSensorFault();
 
     // Expander health check (every 100 cycles = ~1s at 10ms)
     if (++_expanderHealthCounter >= 100) {

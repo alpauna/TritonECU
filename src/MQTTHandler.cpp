@@ -60,6 +60,7 @@ void MQTTHandler::publishState() {
     doc["celFaults"] = s.celFaults;
     doc["oilPsi"] = s.oilPressurePsi;
     doc["oilLow"] = s.oilPressureLow;
+    doc["oilSensorFault"] = s.oilSensorFault;
     doc["expFaults"] = s.expanderFaults;
 
     // Transmission
