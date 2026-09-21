@@ -89,11 +89,66 @@ Building the rig with the shipping values means Phase 0 validates the board.
 | | A — bench and cab | B — unattended drive |
 |---|---|---|
 | Pico power | USB from a laptop | DLC pin 16 (+12 V) → buck/LDO → VSYS |
-| Logging | USB serial to the laptop | SD card on SPI (GP16–19) |
+| Logging | USB serial to the laptop | SD card on SPI (GP16–19) — see below |
 | Use for | everything up to and including the RPM sweep in park | the road-speed drive, if nobody is riding along |
 
 Variant A is enough for the whole capture protocol if someone holds the laptop.
 **Start there** — one fewer subsystem to debug while chasing a bus.
+
+## Logging to SD — yes, and throughput is not the problem
+
+A decoded frame is small, so the card is never the bottleneck:
+
+| Record | Rate at 500 frames/s | 10 min | 1 hour |
+|---|--:|--:|--:|
+| **Binary**, 8 B µs-timestamp + len + flags + 12 B payload = **22 B** | **10.7 KB/s** | 6.6 MB | 40 MB |
+| CSV, ~60 B/line | 29 KB/s | 18 MB | 108 MB |
+
+An SD card over SPI sustains hundreds of KB/s at worst, so there is roughly
+**27× headroom**. Log **binary and convert offline** — a four-hour session is
+158 MB, and CSV costs 3× that for nothing the converter cannot give back.
+
+### The real risk is stall latency, not bandwidth
+
+Cheap cards pause **100–250 ms** for internal housekeeping — wear levelling, block
+erase — and during that pause the writer blocks. Without somewhere to put frames,
+they are simply lost, and a dropped frame in the middle of a MIL transition is
+the one you needed.
+
+**Fix it with RAM, which the Pico has plenty of** (264 KB):
+
+| Ring buffer | Covers |
+|---|--:|
+| 16 KB | 1.5 s |
+| **64 KB** | **6.0 s** |
+| 128 KB | 11.9 s |
+
+**64 KB is the pick.** Capture writes into the ring from the PIO side; a second
+loop drains it to the card. Count and log ring overflows — a capture that
+silently dropped frames is worse than no capture, because nothing tells you the
+gap is there.
+
+### Four things that bite on a vehicle
+
+- **Flush on a timer, not just on close.** The key gets cut, the plug gets
+  pulled. Sync every second — 10 KB at this rate — and preallocate the file so
+  FAT metadata is not being rewritten constantly.
+- **DLC pin 16 is permanent 12 V**, unswitched. The rig runs whenever it is
+  plugged in. Add a switch, or accept a flat battery.
+- **That 12 V is vehicle 12 V**, with everything that implies — so the buck needs
+  the same input protection as anything else on this truck: reverse-polarity
+  diode and a TVS that stands off above 16 V and clamps below the buck's rating.
+  See [`../../docs/harness-protection.md`](../../docs/harness-protection.md).
+- **Log GPS time as well as the µs counter.** The µs timer restarts every boot,
+  so a multi-session capture has no common timebase without it — and the GPS
+  fix is what ties road speed to the frames.
+
+### File naming
+
+One file per session, rotated at a size that stays manageable, named from GPS
+date/time when a fix is available and a boot counter when it is not. A directory
+of `capture_0007.bin` with no timestamps is a capture you will not be able to
+put back in order later.
 
 ## Build order
 
