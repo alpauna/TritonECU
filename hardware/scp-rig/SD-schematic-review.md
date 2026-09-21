@@ -146,13 +146,33 @@ quietly resets**, and the second gets diagnosed as a bad antenna for a week.
 regulator is still running.** Two regulators fighting over one net is a good way
 to destroy both. There are two clean topologies instead:
 
-| | Topology | Notes |
+| | Topology | `3V3_EN` |
 |---|---|---|
-| **A** ⭐ | New LDO → **its own 3V3A rail for GPS + SD**. Pico keeps `3V3(OUT)` for the RP2040 and the TLV7031. Common ground | Simple, no interaction. Puts the **bursty loads on one rail and the measurement front end on the quiet one** |
-| B | New LDO powers **everything**: tie the Pico's **`3V3_EN` to ground** to disable its buck, then feed `3V3(OUT)` | One rail, but it must carry the Pico too, and `3V3_EN` **must** be grounded or you are back to two regulators fighting |
+| A | New LDO → its own rail for GPS + SD. Pico keeps `3V3(OUT)` for the RP2040 and TLV7031 | **leave alone** |
+| **B** ⭐ | New LDO powers **everything**, Pico included | **tie to GND** |
 
-**A is the better fit here.** The comparator is the instrument; leaving it on the
-rail that has no SD write bursts on it costs nothing.
+**B is the better choice, and for a reason worth stating plainly: the Pico's
+onboard regulator is itself a switcher** — an RT6150 buck-boost. If the argument
+for using an LDO is *"do not put a switching regulator next to a GNSS front
+end"*, then leaving the Pico's buck running keeps one on the board regardless.
+Disabling it and feeding everything from one quiet LDO removes the last switcher
+from the design.
+
+Under topology A the GPS would sit on a clean LDO while a buck-boost switched
+away 20 mm from the antenna trace. That is the wrong half of the problem solved.
+
+### Wiring topology B
+
+| | |
+|---|---|
+| **`3V3_EN` → GND** | Disables the Pico's buck-boost. **Not optional** — without it, two regulators fight over `3V3(OUT)` |
+| **LDO output → `3V3(OUT)`** | The documented way to run a Pico from an external 3.3 V supply |
+| LDO must carry | RP2040 **and** GPS **and** SD: the full **261 mA** peak, so ≥500 mA |
+| USB | VBUS may still be connected for data; the buck stays off because `3V3_EN` is grounded |
+
+**Verify `3V3_EN` is grounded before first power-up**, with the LDO fitted and a
+meter on `3V3(OUT)`. Getting this wrong is not a subtle fault — it is two
+regulators back-driving each other.
 
 ### Choosing the part — LDO, not a buck
 
@@ -197,5 +217,5 @@ board-level run; worth having footprints for.
 | 1 | CS pull-up missing, SCLK pull-up redundant | **Move R5 to SPCS** |
 | 2 | Pin 8 on the DAT2 net | Relabel to DAT1 **and add R7, 10 kΩ** |
 | 3 | Pins 9–12 all grounded | ✅ **Correct — all shell GND, no CD switch.** Cover it in firmware |
-| 4 | 3V3 peak ~261 mA | ✅ **Dedicated 3.3 V being added.** LDO not buck; do **not** parallel it onto `3V3(OUT)` |
+| 4 | 3V3 peak ~261 mA | ✅ **Dedicated 3.3 V LDO, powering everything.** **Tie the Pico's `3V3_EN` to GND** — its onboard regulator is a switcher, and the point is to have none near the GNSS front end |
 | 5 | No series damping | Optional footprints |
