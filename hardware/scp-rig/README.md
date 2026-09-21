@@ -208,25 +208,21 @@ readable from the listing page:
 | **Supply voltage** | `VCC_RF` is **3.3 V** | must accept 3.3 V — many automotive GPS antennas are 5 V-only |
 | **Current** | short protection trips at **50 mA** | typically 10–20 mA, but confirm |
 
-### ⚠ The SMA connector may be RP-SMA — check before ordering an antenna
+### ✅ The SMA connector is standard SMA female — checked
 
-**BWSMA-KWE-Z001**, PCB-end right-angle, 0–6000 MHz — electrically fine for
-1.6 GHz GNSS. But its own description reads *"With **External Thread and Internal
-Pin**"*, and that combination is **RP-SMA female**, not standard SMA female:
+**BWSMA-KWE-Z001**, PCB-end right-angle, 0–6000 MHz. Electrically fine for
+1.6 GHz GNSS, and **inspected on the bench: hole in the middle**, i.e. a centre
+**socket**. Standard SMA female, which mates with the antenna's SMA male centre
+pin. ✔
 
-| | Threads | Centre contact |
-|---|---|---|
-| SMA **female** (what a GNSS antenna mates with) | external | **socket** |
-| **RP-SMA female** | external | **pin** ← what the description says |
+The datasheet's own wording — *"With External Thread and Internal Pin"* — reads
+like RP-SMA female (external thread **plus a centre pin**), which would not have
+mated: pin against pin. It was describing the contact being *recessed inside the
+body*, not a reversed polarity.
 
-Nearly every GNSS active antenna terminates in a **standard SMA male** — external
-nut, centre **pin**. Against an RP-SMA female, pin meets pin and it will not
-mate.
-
-**Look down the barrel before ordering the antenna.** A hole is standard SMA
-female and correct. A pin in the middle is RP-SMA, and the antenna must then be
-RP-SMA too. This is a cheap thing to get wrong and an annoying one to discover
-with the truck idling.
+> **Worth keeping as a habit rather than a scare.** Connector gender is the
+> cheapest thing to verify and among the more annoying to discover late. Looking
+> down the barrel takes two seconds; a mismating pair takes a return and a week.
 
 ## Powering it
 
