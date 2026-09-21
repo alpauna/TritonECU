@@ -62,6 +62,29 @@ Building the rig with the shipping values means Phase 0 validates the board.
         and strap SCP− to GND
 ```
 
+## Where to connect — DLC, not the 104-pin
+
+The bus is the same net at both ends: EEC-V **pin 16 = SCP+ (914 `TAN/ORG`)** and
+**pin 15 = SCP− (915 `PNK/LT BLU`)** are DLC **pins 2 and 10**. Back-probing
+C174 would work. **Do not.**
+
+| | DLC | Back-probe at C174 |
+|---|---|---|
+| Access | designed to be plugged into | behind the kick panel, awkward |
+| Ground and 12 V | pins 4/5 and 16, right there | separate wires |
+| Terminal risk | none | **a spread terminal causes intermittent faults later** — the worst kind to chase, and you will chase it believing it is your ECU |
+| Neighbours | none that matter | **coil and injector drivers**. Pins 78 and 79 are coils 7 and 8 |
+| Engine running | fine | coil driver pins carry clamped flyback spikes. Keep probes away from them |
+
+**Both jobs exist and they are different measurements:**
+
+- **Bus capture → the DLC.** It is a bus, not point-to-point, so everything the
+  PCM, GEM and cluster say is visible there. Probing at the PCM adds risk and
+  shows exactly the same traffic.
+- **Pin identification → back-probe at C174.** Which pin sinks the MIL, or
+  confirming the TCIL on pin 12 — those are pin-level questions the DLC cannot
+  answer. This is the method that already settled pins 12 and 79.
+
 ## Why each part is the value it is
 
 | | | |
