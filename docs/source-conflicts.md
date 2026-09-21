@@ -48,49 +48,49 @@ splice **S225**. The switch is separately on pin **29** via `224 TN/WH`.
 error, most likely from a generic EEC-V table. **This is the rule below working:
 the EVTM outranks derived notes, and counting sources is not weighing them.**
 
-## Conflict 2 — what is on PCM pin 79? ⚠ **highest stakes so far**
+## RESOLVED BY THE TRUCK — pin 79 is Ignition Coil 8
 
-| Source | Says pin 79 is |
+| Source | Said pin 79 is |
 |---|---|
-| EVTM `4R70W-Transmission.png`, read at the pin row | **Transmission Control Indicator Lamp**, `911 WH/LG`, a low-side sink |
-| `eec-v-pinout.md` line 108, and its coil summary | **Ignition Coil 8**, IGNH, `WHT/RED` |
-| **The truck**, photographed at the connector | a **white/RED** wire — which matches coil 8, not the lamp |
+| EVTM `4R70W-Transmission.png`, at the pin row | Transmission Control Indicator Lamp, `911 WH/LG` — **wrong** |
+| `eec-v-pinout.md` line 108 and its coil summary | **Ignition Coil 8**, IGNH, `WHT/RED` — **right** |
+| **The truck** (`Pin79-Question.png`, 2026-09-21) | **white/RED**, in the cavity confirmed by the **moulded number on the back of the 104-pin connector**, cross-checked against pinout placement |
 
-Both cannot be true of the same connector, and **this is the dangerous kind of
-disagreement**: a replacement ECU that drives a coil output onto a lamp circuit,
-or sinks a lamp driver onto a coil primary, destroys something on the first key
-cycle.
+The truck is the arbiter and it is unambiguous: **PCM pin 79 drives ignition
+coil 8.** Nothing else may ever be wired there.
 
-`eec-v-pinout.md` has already been wrong once here — it placed the trans
-indicator on pin 12 when the EVTM shows 79 — and its coil list (`26, 104, 52, 53,
-27, 1, 78, 79`) is internally consistent with that error, which is how such
-things survive. The EVTM is Ford's own and is drawn for this truck's
-transmission. It is the stronger source, but the cost of being wrong is high
-enough to warrant measuring.
+### Why this one is worth remembering
 
-### Truck observation, 2026-09-21
+The two sources **agree everywhere else they overlap** — 29 (TCS), 92 (BPP), 36
+and 88 (MAF), 39 (IAT), 89 (TP). That rules out a numbering-convention mismatch,
+which would have made them disagree everywhere. The EVTM sheet simply has a bad
+pin callout at this one place, and the "wrong variant" explanation is closed too:
+[`transmission.md`](1999-Ford-F150-4wd-5.42v/transmission.md) confirms the truck
+is 4R70W 4×4, which is the sheet in question.
 
-`Pin79-Question.png`, photographed at the PCM connector: the wire in question is
-**white with a RED stripe** (builder's reading, on a faded 25-year-old harness —
-the photo itself is flash-washed and every pale wire in it measures hue ≈ 39°, so
-the colour call is the builder's, not the camera's).
+### The trust order needs a row above the EVTM
 
-**`WHT/RED` is coil 8.** If that cavity is genuinely 79, then `eec-v-pinout.md`
-is right and the EVTM's pin callout is wrong for this truck — and the wrong-sheet
-escape is closed: [`transmission.md`](1999-Ford-F150-4wd-5.42v/transmission.md)
-confirms this truck is **4R70W, 4×4**, which is the sheet that shows 911 WH/LG
-at 79.
+This file previously said "prefer the EVTM for anything with a pin or circuit
+number". That was right against *derived notes* and wrong as a general rule:
 
-**Still open: how the cavity was identified as 79.** Counted against the moulded
-numbers, or inferred? That is the whole question now.
+1. **The truck.** A moulded cavity number and a meter.
+2. The EVTM.
+3. Derived notes (`eec-v-pinout.md`, `dash-modules.md`, `schematic-findings.md`).
 
-**The test that needs no colour and no counting — follow the wire.** Coil 8's
-wire runs *out to a coil on the engine*. The indicator wire runs *into the cabin*
-to C251 on the column. Twelve inches of tracing separates them absolutely, on a
-harness where every pale wire has faded toward tan.
+Both of this file's own earlier conclusions about pin 79 were wrong in turn —
+first pin 12 by counting sources, then pin 79 by trusting the EVTM over the
+derived note that happened to be right. Paper lost to metal.
 
-⛔ **Until that is done, nothing gets wired to pin 79.** If it is coil 8, a lamp
-sink there meets a coil primary.
+### So where is the indicator lamp?
+
+**Unknown, and back to being unknown.** `eec-v-pinout.md` says **pin 12**,
+`WHT/LT GRN`, which is `911 WH/LG` under a different transcription — and that
+note has now been vindicated once on this exact circuit. It is the leading
+candidate but it is **not confirmed**.
+
+Confirm it the same way: read the moulded number at the cavity with the `WH/LG`
+wire, then trace that wire — the indicator runs **into the cabin** to C251 on the
+column, while every coil wire runs **out to the engine**.
 
 ## Conflict 3 — who drives the 4×4 LOW RANGE indicator?
 

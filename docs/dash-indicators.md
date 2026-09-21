@@ -45,8 +45,8 @@ impossible. It is not — it is a **discrete ground-switched LED**, which is als
 where the resistor in that circuit lives (the LED's own, per `eec-v-pinout.md`),
 so the ECU sinks milliamps.
 
-**PCM pin 79 — settled by the EVTM itself.** `4R70W-Transmission.png` draws the
-whole circuit, and it is unambiguous:
+**The lamp pin is NOT settled — and pin 79 is definitively not it.**
+`4R70W-Transmission.png` draws the circuit itself, which is worth having:
 
 ```
   12V (START OR RUN) ─ C243 ─ 640 RD/YE ─ S225 ─ C251M/F ─┬─[ 820 OHMS ]─ TCIL ─┐
@@ -54,22 +54,25 @@ whole circuit, and it is unambiguous:
                                                           └─ O/D OFF switch ─┐  │
                                                                              │  │
                           224 TN/WH ── C251 ── PCM pin 29  ◄─────────────────┘  │
-                          911 WH/LG ── C251 ── C158 ── PCM pin 79  ◄────────────┘
+                          911 WH/LG ── C251 ── C158 ── PCM pin ??  ◄────────────┘
 ```
 
 | | |
 |---|--:|
-| Switch in, "12 V when closed" | **pin 29**, `224 TN/WH` |
-| **Indicator lamp out, PCM sinks it** | **pin 79**, `911 WH/LG` |
+| Switch in, "12 V when closed" | **pin 29**, `224 TN/WH` — agreed by every source |
+| Indicator lamp out, PCM sinks it | `911 WH/LG`, **pin unconfirmed** |
 | Series resistor, inside the TCS assembly | **820 Ω** |
 | Lamp current the ECU must sink | **12.2 mA** at 12 V, **15.1 mA** at 14.4 V |
 
-> **Correction.** An earlier version of this file chose pin **12**, on the
-> grounds that two derived notes said 12 against one saying 79. That was
-> counting sources instead of weighing them — `eec-v-pinout.md` has the right
-> circuit colour (WHT/LT GRN = `911 WH/LG`) with the wrong pin, and
-> `schematic-findings.md` had it right all along. The EVTM sheet outranks both,
-> which is exactly the rule [`source-conflicts.md`](source-conflicts.md) sets out.
+> ⛔ **PCM pin 79 is Ignition Coil 8**, confirmed on the truck by the moulded
+> cavity number on the back of the 104-pin connector and a `WHT/RED` wire. The
+> EVTM sheet's callout of 79 for the lamp is wrong. **Never wire a lamp sink
+> there** — see [`source-conflicts.md`](source-conflicts.md).
+>
+> `eec-v-pinout.md` puts the indicator on **pin 12** (`WHT/LT GRN` = `911 WH/LG`)
+> and has now been proved right once on this exact circuit, so it is the leading
+> candidate. Confirm by cavity number and by tracing the wire into the cabin to
+> C251 before wiring anything.
 
 **The EVTM also confirms the flashing behaviour** in its own callout, rather than
 leaving it to memory: *"Indicates that 4th gear has been disengaged. **May also
@@ -94,10 +97,9 @@ put 12 V through the lamp into the ECU's own rail. Requirements:
 Same shape as the CEL, the oil dash line and the buzzer: everything this ECU
 drives on the dash is a low-side sink.
 
-> ⚠ **Do not wire pin 79 until its colour is checked.** `eec-v-pinout.md` claims
-> pin 79 is **Ignition Coil 8**, not the indicator lamp. See
-> [`source-conflicts.md`](source-conflicts.md) — getting this wrong puts a coil
-> driver on a lamp circuit.
+> ⛔ **Pin 79 is Ignition Coil 8 — confirmed on the truck.** A lamp sink there
+> would meet a coil primary. The lamp's actual pin is still to be established;
+> see [`source-conflicts.md`](source-conflicts.md).
 
 > **The cluster's house style is open-to-warn**, which is worth knowing for
 > everything else on that connector: the oil pressure switch is *closed* for
