@@ -22,12 +22,28 @@ pull-up there is harmless and does nothing.
 
 **Fix:** move R5 from SCLK to SPCS. No part-count change.
 
+### Do DAT1 and DAT2 need their 10 k pull-ups?
+
+**No — not in SPI mode.** The protocol touches only CS, CMD (MOSI), CLK and DAT0
+(MISO). DAT1 and DAT2 are unused, and the majority of microSD-SPI designs leave
+them unconnected with no pull-ups at all.
+
+Keep them anyway, for two reasons that cost nothing:
+
+- **No running cost.** A pull-up only draws current if something pulls the line
+  low. Against a high-Z card pin that is zero — two resistors and no power.
+- **They become required if 4-bit SD mode is ever used**, where all DAT lines
+  want pull-ups. Cheap future-proofing rather than clutter.
+
+So the pull-up bank is not wrong, it is just aimed one pin short: **DAT1/DAT2
+optional, CS mandatory, and CS is the one missing.**
+
 | Line | Pull-up? | Why |
 |---|---|---|
 | **CS / SPCS** | **yes — missing** | Card samples it at power-up to choose SPI vs SD mode |
 | MISO / DAT0 | yes ✔ | Open-drain during some card states |
 | MOSI / CMD | yes ✔ | Recommended |
-| DAT1, DAT2 | yes ✔ | Unused in SPI mode; held high rather than floating |
+| DAT1, DAT2 | **optional** | Unused in SPI mode — see below |
 | SCLK | **not needed** | Host-driven |
 
 ## 2. Pin 8 is labelled DAT2 — it is DAT1
