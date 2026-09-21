@@ -9,3 +9,6 @@ secrets.ini
 .~lock.*#
 ~$*
 .DS_Store
+
+# Service manual archive — 95 MB, and a Ford copyright
+docs/**/*.zip

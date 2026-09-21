@@ -169,6 +169,64 @@ that keeps regulating down to 6 V, or **accept the reset and stop letting the
 lamp depend on the MCU** — which is the High finding below, reached from a
 different direction.
 
+## The stock circuit is inverted — correcting an earlier finding
+
+`docs/1999-Ford-F150-4wd-5.42v/InstramentCluster2.png` settles how this circuit
+actually works on this truck, and it is the opposite of what the audit below
+originally assumed:
+
+> **ENGINE OIL PRESSURE SWITCH — "CLOSED WITH NORMAL OIL PRESSURE"**, circuit
+> **31 WH/RD**, C101 → C120M/F → C158M/F → **instrument cluster C236 pin 20**,
+> into the cluster's microprocessor. The sheet's own note: *"Closes with normal
+> oil pressure, causing a gauge reading of NORMAL. With low oil pressure, switch
+> opens and causes a LOW gauge reading."*
+
+Three consequences, and they run through everything else here:
+
+1. **The switch never reaches the PCM.** It is a cluster input. That is why the
+   board's `Dash` pin works at all — it intercepts a sender-to-cluster wire, not
+   anything the PCM owns.
+2. **Grounded means NORMAL.** So Q1 must be **on** when pressure is fine and
+   **off** when it is low. Confirm the firmware drives it that way round; the
+   polarity is easy to get backwards and the bench symptom is an indicator that
+   is simply always wrong.
+3. **Ford already made it fail-safe.** An open wire, a dead board, a FET that
+   never turns on — all read LOW. **The audit's High finding is withdrawn**: a
+   hung ATtiny releases the line through R1's gate pull-down and the cluster
+   shows LOW, which is the correct, loud direction.
+
+### What the watchdog is actually for now
+
+Not "light the lamp when the ECU dies" — the pull-down does that by itself. The
+remaining hole is narrower and real: **an MCU that hangs with its output stuck
+HIGH** holds the line grounded and reports NORMAL forever.
+
+So the heartbeat circuit inverts too. Instead of a second FET asserting the lamp,
+it **shunts Q1's gate to ground** when the heartbeat stops:
+
+```
+   HOLD node ──[10k]── b  Q_a (NPN)   c ──┬──[100k]── +5V
+                          e ── GND        │
+                                          └──[10k]── b  Q_b (NPN)
+                                                        e ── GND
+                                                        c ── Q1 GATE
+```
+
+Heartbeat alive → Q<sub>a</sub> on → Q<sub>b</sub>'s base held low → gate free,
+the ECU drives it. Heartbeat stops → the hold node decays → Q<sub>a</sub> off →
+the pull-up turns Q<sub>b</sub> on → **Q1's gate is shunted to ground**, the line
+is released, the cluster reads LOW. One transistor more than the original
+sketch, and it now covers the only failure the pull-down does not.
+
+The pump sizing from that section is unchanged: 220 nF at 100 Hz, 150k bleed,
+1 µF hold, 276 ms timeout.
+
+> **The O/D OFF lamp needs this same question asked before its plan is trusted.**
+> `docs/dash-indicators.md` assumes a discrete, ground-to-illuminate lamp. These
+> cluster sheets show the cluster's only PCM connection is **SCP**, and the MIL
+> lives *inside* the cluster with no wire to it. If O/D OFF is the same, there is
+> no wire for a watchdog to grab and the whole approach there changes.
+
 ## Folding it into the ECU
 
 The plan is to move this function into the ESP32 ECU and let config decide
@@ -300,7 +358,8 @@ What is known so far, worst first:
 
 | Finding | Severity | Notes |
 |---|---|---|
-| **The lamp path depends on the MCU.** Dead or reset ATtiny → lamp **off**, silently | **High** | Worse than the stock switch it replaced, because it fails dark. Cranking is both the moment a 7805 is least reliable and the moment you most want oil pressure. A comparator that pulls the lamp below 12 psi regardless of firmware would make the warning independent again |
+| ~~The lamp path depends on the MCU~~ | **Withdrawn** | See "The stock circuit is inverted" below. On *this* truck the wire is grounded for NORMAL, so a dead MCU releases it and the cluster shows LOW. The failure is already in the safe direction, and the High finding was based on my assumption rather than the schematic |
+| **A stuck-HIGH output holds the line grounded** | Medium | The one bad case that survives the inversion: an MCU that hangs with the pin asserted keeps saying NORMAL forever. This is what the watchdog is actually for — see below |
 | **Q1 is 30 V** on a net tied to battery through the bulb | Medium, on paper | Clamped load dump is ~35 V. *But* the bulb is ~78 Ω hot, so the FET avalanches at 30 V passing only ~64 mA — ~1.9 W in a 160 W part that is explicitly avalanche-rated. It likely clamps the dump itself. A 60 V part costs the same and retires the question |
 | **R1 = 10 MΩ** gate pull-down | Low | 100 nA worst-case leakage × 10 MΩ = 1.0 V against a 0.8 V minimum threshold; and C<sub>rss</sub> 355 pF couples ~8.8 % of any drain step onto the gate, bled with τ = R × C<sub>iss</sub> = **40 ms**. 10 kΩ gives 40 µs and clears both by 1000×. In practice harmless here: real leakage at 1 V is picoamps and a lamp's drain does not slew fast. Fails toward lamp-on, which is the forgiving direction |
 | **D1's TVS value was never recorded** | Medium | There *was* a TVS, which is the right instinct. But the window is narrow and easy to miss: it must stand off **> 16 V** (charging system plus margin) and clamp **< 35 V** (a 78xx's absolute maximum). SMAJ/SMBJ **18A** clamps at 29.2 V ✓ and **20A** at 32.4 V ✓, while a **24A** clamps at 43 V ✗ — above the regulator's abs max, so it would protect nothing. If the original was a 24 V part it was decorative |
