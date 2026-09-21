@@ -569,6 +569,24 @@ void SensorManager::evaluateRules() {
     uint8_t prefaultFaults = 0;
     uint32_t now = millis();
 
+    // Descriptor-level plausibility faults. errorMin/errorMax catch a sensor
+    // reading something it physically cannot — a wiring fault — which is a
+    // different claim from anything a threshold rule makes, and carries its own
+    // bit and action. These were persisted and editable but never consumed.
+    for (uint8_t i = 0; i < MAX_SENSORS; i++) {
+        const SensorDescriptor& d = _desc[i];
+        if (d.sourceType == SRC_DISABLED || d.faultBit == 0xFF) continue;
+        if (!d.inError) continue;          // validate() clears this while masked
+        uint8_t bit = (1 << d.faultBit);
+        if (d.faultAction == FAULT_ACT_LIMP || d.faultAction == FAULT_ACT_SHUTDOWN) {
+            limpFaults |= bit;
+        } else if (d.faultAction == FAULT_ACT_CEL) {
+            celFaults |= bit;
+        } else if (d.faultAction == FAULT_ACT_PREFAULT) {
+            prefaultFaults |= bit;
+        }
+    }
+
     for (uint8_t i = 0; i < MAX_RULES; i++) {
         FaultRule& r = _rules[i];
         if (r.sensorSlot >= MAX_SENSORS) continue;
@@ -579,8 +597,11 @@ void SensorManager::evaluateRules() {
 
         // Now that masked sensors are still READ, a rule could see a real value
         // in a state where it must not conclude anything from it. Same for a
-        // sensor still inside its post-start settle window.
-        if (d.masked || d.settling) {
+        // sensor still inside its post-start settle window — and for one whose
+        // reading is implausible, because a broken sender wire reading -12 PSI
+        // would otherwise trip OIL_LOW and put the engine in limp mode, blaming
+        // the engine for a wiring fault and hiding the real cause.
+        if (d.masked || d.settling || d.inError) {
             r.debounceStart = 0;
             r.active = false;
             continue;
@@ -789,7 +810,23 @@ void SensorManager::configureOilPressure(uint8_t mode, uint8_t pin, bool activeL
         d.avgSamples = 4;
     }
     d.faultBit = 6;  // FAULT_OIL
-    d.faultAction = FAULT_ACT_LIMP;
+    // A wiring fault is not an engine fault: light the lamp, do not rev-limit.
+    // The OIL_LOW *rule* still carries LIMP for genuinely low pressure.
+    d.faultAction = FAULT_ACT_CEL;
+
+    if (mode == 2) {
+        // PLAUSIBILITY. A healthy 0.5-4.5 V transducer never leaves that band,
+        // so anything outside it is a broken or shorted sender wire rather than
+        // a pressure. +/-5% of full scale is +/-0.2 V, i.e. trips below 0.3 V or
+        // above 4.7 V. An open wire reads ~0 V, which lands at -12.5% and is
+        // caught immediately.
+        d.errorMin = -0.05f * maxPsi;
+        d.errorMax =  1.05f * maxPsi;
+    } else {
+        // A switch cannot be implausible: both states are legitimate.
+        d.errorMin = NAN;
+        d.errorMax = NAN;
+    }
 
     // Update the OIL_LOW rule threshold
     for (uint8_t i = 0; i < MAX_RULES; i++) {

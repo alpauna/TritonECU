@@ -245,9 +245,47 @@ almost none of that needs new firmware — `SensorDescriptor`, `FaultRule` and
 | `calType` | `CAL_LINEAR` | `calA`/`calB` = 0.5 / 4.5 V, `calC`/`calD` = 0 / 100 PSI. That *is* a ratiometric transducer, exactly |
 | `unit` | `"PSI"` | already an example in the header |
 | `emaAlpha`, `avgSamples` | ~0.2, 4 | the filtering C2 used to do in hardware |
-| `errorMin` / `errorMax` | −5 / 105 PSI | **the feature the old board never had**: a healthy transducer never leaves 0.5–4.5 V, so anything outside reads as an impossible pressure and is a *wiring fault*, not 0 PSI. A broken sender wire currently looks exactly like no oil pressure |
+| `errorMin` / `errorMax` | **−5 / 105 PSI** (built) | **the feature the old board never had**: a healthy transducer never leaves 0.5–4.5 V, so anything outside reads as an impossible pressure and is a *wiring fault*, not 0 PSI. A broken sender wire on V1.0 looks exactly like no oil pressure |
 | `faultBit`, `faultAction` | → `FAULT_ACT_CEL` | |
 | `activeStates` | see below | |
+
+#### The plausibility band, as built
+
+`configureOilPressure()` sets the limits from `maxPsi`, so they scale with the
+transducer: **±5 % of full scale**, which is ±0.2 V either side of the sensor's
+own 0.5–4.5 V range.
+
+| Condition | Volts | PSI | |
+|---|--:|--:|---|
+| Sender wire open | 0.00 | −12.5 | **sensor fault** |
+| Shorted to ground | 0.05 | −11.2 | **sensor fault** |
+| `errorMin` | 0.30 | **−5.0** | |
+| Bottom of range | 0.50 | 0.0 | plausible |
+| 12 PSI threshold | 0.98 | 12.0 | plausible |
+| Top of range | 4.50 | 100.0 | plausible |
+| `errorMax` | 4.70 | **105.0** | |
+| Shorted to 5 V | 5.00 | 112.5 | **sensor fault** |
+
+**Two faults with different consequences**, which is the point of separating
+them:
+
+| | Raises | Action |
+|---|---|---|
+| Implausible reading | the **descriptor's** fault | **CEL steady, no limp** — a wiring fault is not an engine fault |
+| Genuinely low pressure | the **OIL_LOW rule** | CEL steady **+ limp mode** |
+
+And **a rule never fires on a sensor that is already `inError`**. Without that,
+a broken sender reading −12.5 PSI would trip OIL_LOW and put the engine in limp
+mode — blaming the engine for a wiring fault and hiding the real cause.
+
+Two supporting changes were needed to make the limits mean anything: the
+descriptor's `faultBit`/`faultAction` were persisted and editable but **never
+consumed**, so plausibility raised nothing; and the oil descriptor's action moved
+from `LIMP` to `CEL`.
+
+The dash output needs no change — with a broken sender the reading fails the
+`ORULE_GT 12` test, so the line is released and the cluster reads LOW, which is
+exactly right.
 
 ### Switch mode
 
