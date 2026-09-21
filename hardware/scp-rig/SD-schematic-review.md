@@ -1,7 +1,31 @@
-# SD card page — review of V1.0
+# SD card page — review
 
-Subject: [`SD-schematic-v1.0.png`](SD-schematic-v1.0.png), *SCP Scanner*, page 2
-of 2, dated 2026-09-21. Socket **Molex 472192001**, SPI mode.
+Subject: [`SD-schematic-v1.1.png`](SD-schematic-v1.1.png) (was
+[`v1.0`](SD-schematic-v1.0.png)), *SCP Scanner*, page 2 of 2. Socket **Molex
+472192001**, SPI mode.
+
+## ✅ V1.1 — all three findings fixed, verified against the drawing
+
+| | Was | Now |
+|---|---|---|
+| **CS / SPCS pull-up** | missing | **R6, 10 kΩ** ✔ |
+| **SCLK pull-up** | present, unnecessary | **removed** ✔ |
+| **Pin 8** | on the `DAT2` net | **its own `DAT1` net, R3 10 kΩ** ✔ |
+
+Pull-up bank now reads **DAT1, DAT2, MOSI, SPCS, MISO** — five lines, and
+notably **not SCLK**. Card pins map cleanly: 1 DAT2, 2 SPCS, 3 MOSI, 4 VDD,
+5 SCLK, 6 GND, 7 MISO, 8 DAT1. Decoupling unchanged at 100 nF + 10 µF.
+
+Reference designators landed differently from the suggestion above (R3 is DAT1
+rather than DAT2, and so on) — irrelevant, the **nets** are what matter and they
+are right.
+
+**Two items remain open, neither of them a schematic error:** the pins 9–12
+question below, and the 3V3 budget.
+
+---
+
+## The original findings, kept for the reasoning
 
 **The shape is right**: SPI-mode wiring, pull-ups present, VDD decoupled with
 100 nF + 10 µF, shell pins grounded. Five notes, ordered by how much they matter.
