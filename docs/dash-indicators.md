@@ -26,7 +26,8 @@ So the lamp has three states, not two:
 | **Flashing ~1 Hz** | **Transmission fault.** Takes precedence over steady |
 
 > **To verify on the truck**, rather than trusted from memory: the exact flash
-> cadence, and whether this indicator proves out at key-on.
+> cadence, and whether this indicator proves out at key-on. That it flashes for
+> faults at all is now confirmed by the EVTM — see below.
 
 ### Where the lamp actually is — settled
 
@@ -44,11 +45,38 @@ impossible. It is not — it is a **discrete ground-switched LED**, which is als
 where the resistor in that circuit lives (the LED's own, per `eec-v-pinout.md`),
 so the ECU sinks milliamps.
 
-**PCM pin 12, not 79.** Two independent notes (`eec-v-pinout.md`,
-`dash-modules.md`) say the indicator is pin 12; `schematic-findings.md` says 79
-and flags that it appears "in no output list in this tree", which reads as its
-own doubt. Going with **12 in / 29 for the switch**, and worth a continuity check
-at C251 before anything is wired.
+**PCM pin 79 — settled by the EVTM itself.** `4R70W-Transmission.png` draws the
+whole circuit, and it is unambiguous:
+
+```
+  12V (START OR RUN) ─ C243 ─ 640 RD/YE ─ S225 ─ C251M/F ─┬─[ 820 OHMS ]─ TCIL ─┐
+                                                          │                     │
+                                                          └─ O/D OFF switch ─┐  │
+                                                                             │  │
+                          224 TN/WH ── C251 ── PCM pin 29  ◄─────────────────┘  │
+                          911 WH/LG ── C251 ── C158 ── PCM pin 79  ◄────────────┘
+```
+
+| | |
+|---|--:|
+| Switch in, "12 V when closed" | **pin 29**, `224 TN/WH` |
+| **Indicator lamp out, PCM sinks it** | **pin 79**, `911 WH/LG` |
+| Series resistor, inside the TCS assembly | **820 Ω** |
+| Lamp current the ECU must sink | **12.2 mA** at 12 V, **15.1 mA** at 14.4 V |
+
+> **Correction.** An earlier version of this file chose pin **12**, on the
+> grounds that two derived notes said 12 against one saying 79. That was
+> counting sources instead of weighing them — `eec-v-pinout.md` has the right
+> circuit colour (WHT/LT GRN = `911 WH/LG`) with the wrong pin, and
+> `schematic-findings.md` had it right all along. The EVTM sheet outranks both,
+> which is exactly the rule [`source-conflicts.md`](source-conflicts.md) sets out.
+
+**The EVTM also confirms the flashing behaviour** in its own callout, rather than
+leaving it to memory: *"Indicates that 4th gear has been disengaged. **May also
+flash if monitored sensors/actuators or circuits have failed.**"*
+
+At 15 mA the driver is trivial — any SOT-23 logic-level FET, and the 820 Ω means
+the ECU never sees more than that even with the output shorted to the 12 V rail.
 
 > **The cluster's house style is open-to-warn**, which is worth knowing for
 > everything else on that connector: the oil pressure switch is *closed* for

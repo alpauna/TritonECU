@@ -35,6 +35,19 @@ continuity to the PCM. Colour is the discriminator — the trans-control indicat
 on PCM pin 12 is **WHT/LT GRN**, a different circuit that is easy to confuse with
 it.
 
+## Resolved — the O/D indicator is PCM pin 79
+
+`eec-v-pinout.md` and `dash-modules.md` both said pin **12**;
+`schematic-findings.md` said **79** and doubted itself. `4R70W-Transmission.png`
+draws the circuit end to end: `911 WH/LG` from the Transmission Control Indicator
+Lamp through C251 and C158 to **PCM pin 79**, with an **820 Ω** series resistor
+inside the switch assembly and 12 V (start or run) arriving via `640 RD/YE` and
+splice **S225**. The switch is separately on pin **29** via `224 TN/WH`.
+
+`eec-v-pinout.md` has the right wire colour and the wrong pin — a transcription
+error, most likely from a generic EEC-V table. **This is the rule below working:
+the EVTM outranks derived notes, and counting sources is not weighing them.**
+
 ## Conflict 2 — who drives the 4×4 LOW RANGE indicator?
 
 | Source | Says |
