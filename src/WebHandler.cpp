@@ -190,6 +190,7 @@ void WebHandler::setupRoutes() {
                 if (!isnan(d->warnMin)) val["warnMin"] = d->warnMin;
                 if (!isnan(d->warnMax)) val["warnMax"] = d->warnMax;
                 val["settle"] = d->settleGuard;
+                val["settleMs"] = d->settleMs;
                 JsonObject fault = s["fault"].to<JsonObject>();
                 fault["bit"] = d->faultBit;
                 fault["action"] = (int)d->faultAction;
@@ -399,7 +400,8 @@ void WebHandler::setupRoutes() {
                     so["raw"] = d->rawAdc;
                     so["error"] = d->inError;
                     so["warn"] = d->inWarning;
-                    so["masked"] = d->masked;   // live but unvalidated
+                    so["masked"] = d->masked;      // live but unvalidated
+                    so["settling"] = d->settling;  // ditto, post-start grace
                     so["srcType"] = (int)d->sourceType;
                     so["activeStates"] = d->activeStates;
                 }
@@ -779,6 +781,7 @@ void WebHandler::setupRoutes() {
                         if (!isnan(d->warnMin)) val["warnMin"] = d->warnMin;
                         if (!isnan(d->warnMax)) val["warnMax"] = d->warnMax;
                         val["settle"] = d->settleGuard;
+                        val["settleMs"] = d->settleMs;
                         JsonObject fault = s["fault"].to<JsonObject>();
                         fault["bit"] = d->faultBit;
                         fault["action"] = (int)d->faultAction;
@@ -857,6 +860,7 @@ void WebHandler::setupRoutes() {
                     d->warnMin = s["validate"]["warnMin"].is<float>() ? (float)s["validate"]["warnMin"] : NAN;
                     d->warnMax = s["validate"]["warnMax"].is<float>() ? (float)s["validate"]["warnMax"] : NAN;
                     d->settleGuard = s["validate"]["settle"] | d->settleGuard;
+                    d->settleMs = s["validate"]["settleMs"] | d->settleMs;
                 }
                 if (s["fault"].is<JsonObject>()) {
                     d->faultBit = s["fault"]["bit"] | d->faultBit;

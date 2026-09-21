@@ -800,6 +800,7 @@ bool Config::loadSensorConfig(const char* filename, SensorDescriptor* desc, uint
         d.warnMin = val["warnMin"].is<float>() ? (float)val["warnMin"] : NAN;
         d.warnMax = val["warnMax"].is<float>() ? (float)val["warnMax"] : NAN;
         d.settleGuard = val["settle"] | 0.0f;
+        d.settleMs = val["settleMs"] | d.settleMs;
 
         // Fault
         JsonObject fault = s["fault"];
@@ -897,6 +898,7 @@ bool Config::saveSensorConfig(const char* filename, const SensorDescriptor* desc
         if (!isnan(d.warnMin))  val["warnMin"] = d.warnMin;   else val["warnMin"] = (char*)nullptr;
         if (!isnan(d.warnMax))  val["warnMax"] = d.warnMax;   else val["warnMax"] = (char*)nullptr;
         val["settle"] = d.settleGuard;
+        val["settleMs"] = d.settleMs;
 
         JsonObject fault = s["fault"].to<JsonObject>();
         fault["bit"] = d.faultBit;

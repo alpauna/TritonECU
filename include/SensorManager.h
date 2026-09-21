@@ -141,6 +141,10 @@ private:
     SensorDescriptor _desc[MAX_SENSORS];
     FaultRule _rules[MAX_RULES];
 
+    // Start-of-run tracking for settleMs. Zero means "not running".
+    uint32_t _runningSinceMs = 0;
+    uint8_t  _prevRunState = STATE_OFF;
+
     uint8_t _limpFaults = 0;
     uint8_t _celFaults = 0;
     bool _engineRunning = false;

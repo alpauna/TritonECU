@@ -77,6 +77,11 @@ struct SensorDescriptor {
     float warnMin;      // Value below -> warning (NAN = disabled)
     float warnMax;      // Value above -> warning (NAN = disabled)
     float settleGuard;  // Skip validation if abs(rawValue) < guard
+    uint32_t settleMs;  // Grace period AFTER the engine starts before this
+                        // sensor's readings are believed. Timed from the
+                        // CRANKING -> RUNNING transition, reset on a stall.
+                        // Oil pressure takes a second or two to come up; the
+                        // indicator should show that, a fault should not.
 
     // Fault
     uint8_t faultBit;   // Bit position in fault bitmask (0-7), 0xFF = none
@@ -94,6 +99,8 @@ struct SensorDescriptor {
     bool inWarning;
     bool masked;        // activeStates gate is closed: value is LIVE but UNVALIDATED.
                         // Not the same as "reading zero" — see docs/startup-masking.md
+    bool settling;      // inside settleMs of the start: same deal, live but
+                        // unvalidated, for a different reason
 
     void clear() {
         memset(this, 0, sizeof(*this));
@@ -106,6 +113,7 @@ struct SensorDescriptor {
         warnMin = NAN;
         warnMax = NAN;
         settleGuard = 0.0f;
+        settleMs = 0;
         faultBit = 0xFF;
         faultAction = FAULT_ACT_NONE;
         activeStates = STATE_ALL;
@@ -117,6 +125,7 @@ struct SensorDescriptor {
         inError = false;
         inWarning = false;
         masked = false;
+        settling = false;
     }
 };
 

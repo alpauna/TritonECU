@@ -147,6 +147,12 @@ void SensorManager::initDefaultDescriptors() {
         d.sourceType = SRC_DISABLED;
         d.faultBit = 6;  // FAULT_OIL
         d.faultAction = FAULT_ACT_LIMP;
+        d.settleMs = 3000;  // pressure takes a second or two to come up
+        // Read during cranking — that is where rise time and rail sag show up —
+        // but do not VALIDATE then: a sagging rail on an absolute-reference ADC
+        // drags a ratiometric sender's reading out of its plausible range and
+        // would report a wiring fault that is not there.
+        d.activeStates = STATE_OFF | STATE_RUNNING;
     }
     // Slots 8-15: spare (already cleared)
 }
@@ -180,10 +186,15 @@ void SensorManager::initDefaultRules() {
     {
         FaultRule& r = _rules[2];
         r.clear();
+        // 2 s of debounce: a coolant temperature genuinely above 280 F does not
+        // arrive in under two seconds, but a rail sag during cranking can make
+        // an NTC read hot for a moment (lower divider voltage -> lower computed
+        // resistance -> higher temperature).
         strncpy(r.name, "CLT_HIGH", sizeof(r.name));
         r.sensorSlot = SLOT_CLT;
         r.op = OP_GT;
         r.thresholdA = 280.0f;
+        r.debounceMs = 2000;
         r.faultBit = 2;         // FAULT_CLT
         r.faultAction = FAULT_ACT_LIMP;
     }
@@ -195,6 +206,7 @@ void SensorManager::initDefaultRules() {
         r.sensorSlot = SLOT_IAT;
         r.op = OP_GT;
         r.thresholdA = 200.0f;
+        r.debounceMs = 2000;
         r.faultBit = 3;         // FAULT_IAT
         r.faultAction = FAULT_ACT_LIMP;
     }
@@ -208,6 +220,12 @@ void SensorManager::initDefaultRules() {
         r.thresholdA = 10.0f;
         r.faultBit = 4;         // FAULT_VBAT
         r.faultAction = FAULT_ACT_LIMP;
+        // Cranking drags a healthy battery to 9-10 V. Without these two this
+        // rule set the LIMP bit on every start, instantly, because debounceMs
+        // defaults to 0. Charging-system voltage is only meaningful once the
+        // alternator is turning, which is what requireRunning says.
+        r.requireRunning = true;
+        r.debounceMs = 3000;
     }
     // Rule 5: OIL low (RPM-dependent curve, only when engine running above idle)
     {
@@ -282,6 +300,17 @@ void SensorManager::update() {
         else if (_engineState->cranking) curState = STATE_CRANKING;
     }
 
+    // Track the CRANKING -> RUNNING transition that settleMs is timed from. A
+    // stall clears it, so a restart gets a fresh grace period rather than
+    // inheriting the last one.
+    uint32_t now = millis();
+    if (curState == STATE_RUNNING) {
+        if (_prevRunState != STATE_RUNNING) _runningSinceMs = now;
+    } else {
+        _runningSinceMs = 0;
+    }
+    _prevRunState = curState;
+
     // Iterate all enabled descriptors: read -> filter -> calibrate -> validate
     for (uint8_t i = 0; i < MAX_SENSORS; i++) {
         SensorDescriptor& d = _desc[i];
@@ -298,6 +327,12 @@ void SensorManager::update() {
         // failing one — and nothing was captured during cranking, which is the
         // window where rail sag and pressure rise time are actually visible.
         d.masked = !(d.activeStates & curState);
+
+        // Settle window: the engine has started but this sensor has not caught
+        // up yet. Oil pressure needs a second or two of cranking-to-running
+        // before a low reading means anything. Subtraction is overflow-safe.
+        d.settling = (d.settleMs > 0) && (_runningSinceMs != 0) &&
+                     ((uint32_t)(now - _runningSinceMs) < d.settleMs);
 
         if (i == SLOT_O2_B1 && _cj125 && _cj125->isReady(0)) {
             // CJ125 override for O2 slots
@@ -504,9 +539,9 @@ bool SensorManager::isOilPressureLow() const {
 }
 
 void SensorManager::validate(SensorDescriptor& d) {
-    // A masked sensor is unvalidated by definition: the reading is live, but
-    // nothing may conclude anything from it.
-    if (d.masked) {
+    // A masked or settling sensor is unvalidated by definition: the reading is
+    // live, but nothing may conclude anything from it.
+    if (d.masked || d.settling) {
         d.inError = false;
         d.inWarning = false;
         return;
@@ -542,8 +577,9 @@ void SensorManager::evaluateRules() {
         if (d.sourceType == SRC_DISABLED) continue;
 
         // Now that masked sensors are still READ, a rule could see a real value
-        // in a state where it must not conclude anything from it.
-        if (d.masked) {
+        // in a state where it must not conclude anything from it. Same for a
+        // sensor still inside its post-start settle window.
+        if (d.masked || d.settling) {
             r.debounceStart = 0;
             r.active = false;
             continue;
