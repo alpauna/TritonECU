@@ -102,6 +102,13 @@ discrete PCM pin. See
 [`1999-Ford-F150-4wd-5.42v/schematic-findings.md`](1999-Ford-F150-4wd-5.42v/schematic-findings.md)
 §10.
 
+> ⚠ **The MIL half of this is disputed.** Chilton p. 12-38 draws the malfunction
+> indicator lamp on a discrete **PNK/LT GRN** wire straight to the PCM, which
+> contradicts the EVTM reading. It matters: the ECU now drives a CEL on expander
+> pin 202, and whether that pin lights anything depends on the answer. See
+> [`source-conflicts.md`](source-conflicts.md) for the test.
+
+
 So the choice was never "SCP or discrete wires". It was **SCP or no dash at
 all** — no tachometer, no speedometer, no check-engine lamp.
 
