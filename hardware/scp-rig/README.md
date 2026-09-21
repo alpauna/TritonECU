@@ -190,6 +190,24 @@ can overload the front end, and under 15 dB may read as *open* to the detector.
 > **[CONFIRM]** whether RF_IN is internally DC-blocked, and whether the datasheet's
 > later pages carry a reference bias network. Pages 1–9 do not.
 
+### Antenna selection — three numbers to check
+
+Candidate: **Bingfu vehicle waterproof active GPS antenna, SMA male**
+([listing](https://www.amazon.com/Bingfu-Waterproof-Navigation-Connector-Tracking/dp/B07R7RC96G)).
+Magnetic vehicle mount and waterproof is the right shape for this. Its being
+**SMA male** — centre pin, internal-threaded nut — makes the connector check
+below decisive rather than academic: the board side must be **standard SMA
+female with a centre socket.**
+
+Three numbers decide whether it works with this module, and none of them were
+readable from the listing page:
+
+| Check | Against | Wanted |
+|---|---|---|
+| **Gain** | module supports **15–30 dB** | ≤ 30 dB. These are sold at 28 dB (fine) and at 38 dB (over the window) |
+| **Supply voltage** | `VCC_RF` is **3.3 V** | must accept 3.3 V — many automotive GPS antennas are 5 V-only |
+| **Current** | short protection trips at **50 mA** | typically 10–20 mA, but confirm |
+
 ### ⚠ The SMA connector may be RP-SMA — check before ordering an antenna
 
 **BWSMA-KWE-Z001**, PCB-end right-angle, 0–6000 MHz — electrically fine for
