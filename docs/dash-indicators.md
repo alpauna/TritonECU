@@ -45,8 +45,9 @@ impossible. It is not — it is a **discrete ground-switched LED**, which is als
 where the resistor in that circuit lives (the LED's own, per `eec-v-pinout.md`),
 so the ECU sinks milliamps.
 
-**The lamp pin is NOT settled — and pin 79 is definitively not it.**
-`4R70W-Transmission.png` draws the circuit itself, which is worth having:
+**Settled on the truck: the lamp is C174 pin 12, the switch is pin 29.**
+`4R70W-Transmission.png` draws the circuit correctly apart from its lamp pin
+callout, which says 79 and is wrong:
 
 ```
   12V (START OR RUN) ─ C243 ─ 640 RD/YE ─ S225 ─ C251M/F ─┬─[ 820 OHMS ]─ TCIL ─┐
@@ -54,25 +55,24 @@ so the ECU sinks milliamps.
                                                           └─ O/D OFF switch ─┐  │
                                                                              │  │
                           224 TN/WH ── C251 ── PCM pin 29  ◄─────────────────┘  │
-                          911 WH/LG ── C251 ── C158 ── PCM pin ??  ◄────────────┘
+                          911 WH/LG ── C251 ── C158 ── PCM pin 12  ◄────────────┘
 ```
 
 | | |
 |---|--:|
 | Switch in, "12 V when closed" | **pin 29**, `224 TN/WH` — agreed by every source |
-| Indicator lamp out, PCM sinks it | `911 WH/LG`, **pin unconfirmed** |
+| **Indicator lamp out, PCM sinks it** | **pin 12**, `911 WH/LG` (= `WHT/LT GRN`) |
 | Series resistor, inside the TCS assembly | **820 Ω** |
 | Lamp current the ECU must sink | **12.2 mA** at 12 V, **15.1 mA** at 14.4 V |
 
 > ⛔ **PCM pin 79 is Ignition Coil 8**, confirmed on the truck by the moulded
 > cavity number on the back of the 104-pin connector and a `WHT/RED` wire. The
 > EVTM sheet's callout of 79 for the lamp is wrong. **Never wire a lamp sink
-> there** — see [`source-conflicts.md`](source-conflicts.md).
+> there.**
 >
-> `eec-v-pinout.md` puts the indicator on **pin 12** (`WHT/LT GRN` = `911 WH/LG`)
-> and has now been proved right once on this exact circuit, so it is the leading
-> candidate. Confirm by cavity number and by tracing the wire into the cabin to
-> C251 before wiring anything.
+> Both pins are now truck-confirmed rather than read off paper:
+> **12 = indicator lamp, 79 = coil 8.** See
+> [`source-conflicts.md`](source-conflicts.md) for how the two sources split.
 
 **The EVTM also confirms the flashing behaviour** in its own callout, rather than
 leaving it to memory: *"Indicates that 4th gear has been disengaged. **May also
@@ -98,8 +98,7 @@ Same shape as the CEL, the oil dash line and the buzzer: everything this ECU
 drives on the dash is a low-side sink.
 
 > ⛔ **Pin 79 is Ignition Coil 8 — confirmed on the truck.** A lamp sink there
-> would meet a coil primary. The lamp's actual pin is still to be established;
-> see [`source-conflicts.md`](source-conflicts.md).
+> would meet a coil primary. The lamp is **C174 pin 12**.
 
 > **The cluster's house style is open-to-warn**, which is worth knowing for
 > everything else on that connector: the oil pressure switch is *closed* for

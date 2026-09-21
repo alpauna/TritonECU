@@ -81,16 +81,27 @@ Both of this file's own earlier conclusions about pin 79 were wrong in turn —
 first pin 12 by counting sources, then pin 79 by trusting the EVTM over the
 derived note that happened to be right. Paper lost to metal.
 
-### So where is the indicator lamp?
+### And the indicator lamp is C174 pin 12 — also confirmed on the truck
 
-**Unknown, and back to being unknown.** `eec-v-pinout.md` says **pin 12**,
-`WHT/LT GRN`, which is `911 WH/LG` under a different transcription — and that
-note has now been vindicated once on this exact circuit. It is the leading
-candidate but it is **not confirmed**.
+`eec-v-pinout.md` had it right: **pin 12, `WHT/LT GRN`** — which is `911 WH/LG`
+under a different transcription. Confirmed at the connector, 2026-09-21.
 
-Confirm it the same way: read the moulded number at the cavity with the `WH/LG`
-wire, then trace that wire — the indicator runs **into the cabin** to C251 on the
-column, while every coil wire runs **out to the engine**.
+So on this one circuit the derived note was right **twice** and the EVTM sheet
+wrong once:
+
+| | `eec-v-pinout.md` | `4R70W-Transmission.png` | **The truck** |
+|---|---|---|---|
+| Indicator lamp (TCIL) | pin **12** ✅ | pin 79 ❌ | **pin 12** |
+| Ignition coil 8 | pin **79** ✅ | — | **pin 79** |
+| O/D switch (TCS) | pin 29 ✅ | pin 29 ✅ | pin 29 |
+
+**This does not demote the EVTM generally.** Those sheets have been right about
+everything else they were asked — the oil pressure switch polarity, the cluster's
+indicator set, the DTR and OSS pins, the 820 Ω, the flash-for-faults behaviour.
+What is established is narrower and more useful: **`4R70W-Transmission.png` has a
+bad pin callout at the TCIL**, and a source being authoritative in general does
+not make it right in a particular. That is what the trust order above is for, and
+why the truck sits at the top of it.
 
 ## Conflict 3 — who drives the 4×4 LOW RANGE indicator?
 
