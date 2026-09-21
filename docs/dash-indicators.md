@@ -152,6 +152,53 @@ never downgraded to a flash by an unrelated advisory.
 duty — because the O/D OFF lamp needs exactly the same thing, and an `OutputRule`
 cannot express a cadence.
 
+## Audible annunciation — a buzzer, not the stock chime
+
+**Do not hijack the seatbelt chime.** `gem-module.md` shows the chime is a
+GEM/CTM function driven by *its own inputs* — pin 10 key-in-ignition
+(`158 BK/PK`), the safety-belt switch, the door-ajar switches — with pin 12
+driving the belt indicator out to the cluster. There is no "sound the chime"
+input, so making it chime means asserting one of those, and none of them is a
+private wire:
+
+| Assert | What else the truck then believes |
+|---|---|
+| Belt switch | the belt is unbuckled — lights the belt lamp, and it is shared with restraint logic |
+| Key-in-ignition | the key is in — courtesy lighting, theft logic |
+| Door ajar | a door is open — interior lamps, the door-ajar indicator |
+
+Same shape as the oil lamp polarity: these are shared signals, and faking one
+lies to every module listening. A dedicated buzzer also lets the driver tell
+*"that's the ECU"* from *"that's my seatbelt"*, which a borrowed chime never can.
+
+### Patterns, and why bursts rather than a tone
+
+| Tier | Lamp | Buzzer |
+|---|---|---|
+| Pre-fault | blink, 300 ms / 4 s | **silent** — an advisory that beeps is an advisory that gets disconnected |
+| Full fault | steady | 2 × 150 ms, repeating every **60 s** |
+| **Critical** | steady + limp | **3 × 150 ms, repeating every 10 s** |
+
+`LampDriver` gained a `BURST` mode for this: *n* pulses, then quiet until the
+repeat window comes round. A continuous tone is worse than useless — it gets
+unplugged, and then nothing annunciates ever again. Three beeps every ten
+seconds says "attend to me" and stays tolerable long enough to drive somewhere.
+
+Verified on the host (`test/host/lampdriver_test.cpp`): 6 beeps and 900 ms of
+sounding in 20 s for the critical pattern, a 0.5 % duty cycle for the full-fault
+one, and re-arming with identical parameters does not retrigger the phase.
+
+### Policy worth deciding before it is wired
+
+- **Silence/acknowledge**, and whether a *new* fault re-arms it. Without this,
+  the first long drive with a known fault ends with the buzzer disconnected.
+- **Never sound while cranking**, or during a sensor's `settleMs` window — the
+  masking work already suppresses the faults themselves, so this comes free as
+  long as the buzzer follows the fault masks rather than raw readings.
+- **Critical should also sound once at key-on** as a self-test, the same way the
+  lamps prove out. A buzzer that has failed silent is indistinguishable from one
+  with nothing to say.
+
 ## The ECU-is-dead signature
 
 The heartbeat-gated watchdog in `hardware/oil-pressure/` should drive **this lamp
