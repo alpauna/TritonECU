@@ -78,8 +78,10 @@ same 5 V that is the ADC reference, so regulator error cancels in the ratio —
 the reference sag together. The reading stays honest right down to the MCU's
 brown-out threshold. That is the single best decision in this design.
 
-**D2's headroom is the flaw in that path.** The signal legitimately reaches
-4.50 V and the clamp sits at 5 V:
+**D2's headroom was the flaw in that path — and it was seen on the bench.** The
+clamp got in the way and **skewed the high-pressure readings**, which is why it
+is off the board. The arithmetic says the same thing: the signal legitimately
+reaches 4.50 V and the clamp sits at 5 V.
 
 | | |
 |---|--:|
@@ -87,13 +89,32 @@ brown-out threshold. That is the single best decision in this design.
 | A 5.1 V ±5 % zener, worst case | **4.85 V** |
 | Margin | **0.35 V**, into a soft knee |
 
-10 µA of leakage at full scale costs 12 mV across R3 — 0.3 PSI, and leakage
-climbs with temperature. It reads *low* at high pressure, which is the direction
-nobody notices. **Use 5.6 V, or better, clamp to the rails with a BAT54S instead
-of a zener** — the rail clamp has no knee to sit on.
+10 µA of leakage at full scale costs 12 mV across R3 — 0.3 PSI, reading *low* at
+high pressure, and climbing with temperature.
 
-Fault currents through R3 into a 5 V clamp: 5.8 mA with the sender wire at 12 V,
-9.1 mA at 16 V, 24.9 mA at 35 V — 127 mW worst case, inside a SOD-323 part.
+### Replacing it
+
+The pin is bare now, which is fine on a bench transducer and not fine in a
+vehicle, where the sender wire can find battery. Options, against a 35 V fault:
+
+| Clamp | R3 | Error at full scale | 35 V fault current | |
+|---|--:|--:|--:|---|
+| 5.1 V zener | 1k2 | **12 mV — 0.30 PSI** | 24.9 mA | what was fitted, and what skewed the readings |
+| 5.6 V zener | 1k2 | 1.2 mV — 0.03 PSI | 24.5 mA | knee moved clear, but there is still a knee |
+| **BAT54S to the rails** | **10k** | **0.5 mV — 0.01 PSI** | **3.0 mA** | Schottky reverse-biased 0.5 V at full scale; no knee to sit on |
+| **Internal clamps only** | **47k** | **0** | **0.63 mA** | no part at all — R3 alone limits pin injection |
+
+⚠ **Rail clamping has a catch worth knowing**: a fault pushes current *into* the
+5 V rail, and a 78xx cannot sink. At R3 = 1k2 that is 25 mA, which would drag
+the rail up and take the ATtiny with it. At 10k it is 3 mA, comfortably absorbed
+by the ATtiny's own ~5 mA draw. **So the clamp and the resistor have to be
+chosen together** — fitting a BAT54S while leaving R3 at 1.2 kΩ would be worse
+than no clamp at all.
+
+Either of the bottom two rows wants **C2 = 100 nF** at the pin: the cap feeds the
+ADC's sample-and-hold, so the 10 kΩ guidance on source impedance stops applying
+and a 10k or 47k series resistor is fine. τ is 1–4.7 ms, which for oil pressure
+is instant.
 
 ## Still to establish
 
