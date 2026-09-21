@@ -69,6 +69,24 @@ a five-minute comparison. If the two disagree, the front end is the suspect.
 clone that silently drops frames is indistinguishable from a bus with nothing on
 it.
 
+**Force the protocol; do not let it auto-detect.** `ATSP 1` (or `ATTP 1` to try
+without saving) selects J1850 PWM explicitly. Auto-detect works by probing for a
+*response*, and a passive listener on a bus where nothing answers **it** can
+conclude the bus is dead — which looks exactly like the failure being debugged.
+
+> **Why the histogram exists, restated.** The common ELM327 references — including
+> [this one](https://github.com/TheTom/elm327_obd_for_mac/blob/main/ELM327_TECHNICAL_REFERENCE.md)
+> — carry only *"protocol 1, 41.6 kbaud, pins 2 and 10"* and **no timing at all**:
+> no tp1/tp2, no SOF/EOD/EOF/IFS, no CRC, no frame structure. The constants are
+> not sitting in accessible documentation, and a number lifted from a different
+> implementation produces a decoder that fails like broken hardware. Measuring
+> this truck's own bus is the shortest path to a correct number, not a workaround
+> for missing paperwork.
+>
+> That reference does independently confirm **DLC pins 2 and 10** — one more
+> source agreeing with the connector wiring in
+> [`../hardware/scp-rig/README.md`](../hardware/scp-rig/README.md).
+
 ## Order of work
 
 1. Build RX: comparator + RP2040, no TX stage.
