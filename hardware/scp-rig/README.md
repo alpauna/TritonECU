@@ -231,12 +231,45 @@ Drive them **open-drain**: GPIO as input for the idle state, output-low to
 assert. Never drive them high — the pull-up already does that, and it keeps the
 lines safe if the Pico is removed.
 
-The pin spend is worth it for a **commanded cold start**: shut the module down,
-bring it back, time the 32 s TTFF — without power-cycling the whole rig
-mid-capture.
+The pin spend still earns itself, but **not for the reason first written here**
+— see VBAT below. A commanded shutdown gives a **hot** start, not a cold one.
 
 V<sub>IH</sub> is 0.7 × V<sub>CC</sub> = **2.31 V** at 3.3 V, so the pull-up
 drives it with margin.
+
+### VBAT — tied to 3V3, which forfeits warm starts by design
+
+**As built: VBAT (pin 6) to 3V3 with a 100 nF cap.** In spec — the range is
+1.5–3.6 V and it draws **8 µA** — and it is the simple, correct choice. It just
+has one consequence worth knowing rather than discovering.
+
+VBAT exists to keep the RTC and the ephemeris SRAM alive **when VCC is gone**,
+which is what turns a 32 s cold start into a few-second hot one. Tied to the same
+rail as VCC, it dies with it:
+
+| Event | VBAT | Result |
+|---|---|---|
+| **ON/OFF shutdown** (GP5 low) | still powered | RTC + ephemeris retained → **hot start** |
+| **Rig power cycle** | dies with VCC | everything lost → **cold start, 32 s** |
+
+> **Correction to the ON/OFF note above.** Commanding a shutdown on GP5 and
+> bringing the module back gives a **hot** start, not a cold one, precisely
+> because VBAT survives it. To time a genuine 32 s cold TTFF, power-cycle the
+> whole rig. The GPIO is still worth having — it is how you get a *fast*
+> reacquisition mid-session without losing the fix.
+
+**Is a backup source worth adding?** Probably not here. The capture protocol
+already powers the rig up a minute before recording, and 32 s fits inside that.
+For reference if it ever matters:
+
+| Backup | Holds the RTC for |
+|---|--:|
+| CR2032 (220 mAh) | ~3 years |
+| 1 F supercap, 3.3 → 1.5 V | ~62 hours |
+| 0.1 F supercap | ~6 hours |
+
+A supercap is the tidy version — no battery to replace, and hours of hot-start
+capability covers several runs in one day.
 
 ### Antenna selection — three numbers to check
 
