@@ -101,19 +101,54 @@ needs faults to exist first.** The lamp is the cheap half of this job.
 
 ## Three layers of work
 
-### 1. The O/D cancel input
+### 1. The O/D cancel input — 12 V, not switch-to-ground
 
-A momentary switch on the shift lever, to ground. A `CustomPin` in
-`CPIN_INPUT_POLL` with an internal pull-up covers the electrical side; the state
-machine is firmware:
+**Corrected.** `4R70W-Transmission.png` labels PCM pin 29 *"12 V (switch
+closed)"*: the switch feeds **battery** down `224 TN/WH`, it does not pull to
+ground. An earlier version of this section assumed a `CPIN_INPUT_POLL` with an
+internal pull-up, which would have been wrong in both polarity and voltage.
+
+**It also cannot be a plain digital input.** With a 47k/10k divider — the same
+pair the board already uses for VBAT — the pin sits in the ESP32's undefined
+band across the normal operating range:
+
+| Battery | At the pin | ESP32 sees |
+|--:|--:|---|
+| 11.0 V | 1.93 V | **undefined** (V<sub>IH</sub> = 2.47, V<sub>IL</sub> = 0.82) |
+| 12.0 V | 2.11 V | **undefined** |
+| 14.4 V | 2.53 V | high |
+| 16.0 V | 2.81 V | high |
+
+A ratio that clears V<sub>IH</sub> at 11 V would exceed 3.3 V at 16. There is no
+plain divider that works, which is why this gets read as an **analog** value with
+the threshold in software — a `SensorDescriptor` on the MCP3204, where 14.4 V
+lands at 2.53 V, comfortably mid-scale against a 5 V reference.
+
+**Front end**, matching the oil sender's pattern:
+
+| Part | Value | Doing |
+|---|--:|---|
+| Series / top leg | **47 kΩ** | scaling, and limiting a fault to 0.63 mA at 35 V |
+| Bottom leg | **10 kΩ** | scaling, **and defining the open state** — the switch is a source, so with no pull-down the pin would float |
+| Clamp | BAT54 to the 5 V rail | load dump |
+| Filter | 100 nF | debounce in hardware, the rest in firmware |
+
+> **No three-state here, unlike the DTR.** The 270 Ω on the DTR sensor gives the
+> PCM distinguishable positions; this circuit's **820 Ω is on the lamp side**, so
+> it buys the switch input nothing. Switch-not-pressed and broken-wire both read
+> 0 V and cannot be told apart. Detecting a broken O/D switch wire would need a
+> series resistor added at the switch end.
+
+The state machine is unchanged and is firmware:
 
 - Each press **toggles** the cancel state.
-- **It resets to "overdrive enabled" on every key cycle** — that is stock Ford
-  behaviour, and a driver who expects it will be surprised by anything else.
-  Deliberately *not* persisted to config.
+- **It resets to "overdrive enabled" on every key cycle** — stock Ford behaviour,
+  and a driver who expects it will be surprised by anything else. Deliberately
+  *not* persisted to config.
 
-> Verify on the truck: momentary-to-ground is the assumption. Confirm before
-> wiring a pull-up to it.
+If ADC channels are tight, the alternative is a **2N7002 with the same 47k/10k on
+its gate** pulling a digital pin down: inverting, immune to the threshold
+problem, and the gate sees 6.1 V at a 35 V load dump against a ±20 V rating.
 
 ### 2. The lamp driver
 
