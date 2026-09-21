@@ -26,7 +26,35 @@ So the lamp has three states, not two:
 | **Flashing ~1 Hz** | **Transmission fault.** Takes precedence over steady |
 
 > **To verify on the truck**, rather than trusted from memory: the exact flash
-> cadence, and whether this cluster proves the bulb out at key-on.
+> cadence, and whether this indicator proves out at key-on.
+
+### Where the lamp actually is — settled
+
+**Not in the instrument cluster.** `InstramentCluster2/3/4.png` carry the low
+fuel, low oil pressure / high coolant, MIL, 4×4 low and high range, fuel reset,
+door ajar and anti-lock indicators — and no overdrive one. `dash-modules.md` has
+it: **C251, the transmission control switch assembly, is "29 in, 12 out" — the
+O/D switch *and* its indicator lamp.** The lamp is in the switch on the column.
+
+That matters, because `schematic-findings.md` establishes the cluster's only PCM
+connection is **SCP**, and the MIL is driven by the cluster's own micro with no
+wire to it. Had the O/D lamp been a cluster indicator it would have been an SCP
+message, there would be no wire to grab, and the watchdog design below would be
+impossible. It is not — it is a **discrete ground-switched LED**, which is also
+where the resistor in that circuit lives (the LED's own, per `eec-v-pinout.md`),
+so the ECU sinks milliamps.
+
+**PCM pin 12, not 79.** Two independent notes (`eec-v-pinout.md`,
+`dash-modules.md`) say the indicator is pin 12; `schematic-findings.md` says 79
+and flags that it appears "in no output list in this tree", which reads as its
+own doubt. Going with **12 in / 29 for the switch**, and worth a continuity check
+at C251 before anything is wired.
+
+> **The cluster's house style is open-to-warn**, which is worth knowing for
+> everything else on that connector: the oil pressure switch is *closed* for
+> normal, and the anti-lock indicator "receives an **open** from the ABS module
+> when there is a fault". The O/D lamp is the opposite — ground-switched to
+> illuminate — because it is an LED in a switch pod, not a cluster input.
 
 ## What the ECU is missing today
 
