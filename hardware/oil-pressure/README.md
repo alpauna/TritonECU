@@ -186,10 +186,13 @@ Three consequences, and they run through everything else here:
 1. **The switch never reaches the PCM.** It is a cluster input. That is why the
    board's `Dash` pin works at all — it intercepts a sender-to-cluster wire, not
    anything the PCM owns.
-2. **Grounded means NORMAL.** So Q1 must be **on** when pressure is fine and
-   **off** when it is low. Confirm the firmware drives it that way round; the
-   polarity is easy to get backwards and the bench symptom is an indicator that
-   is simply always wrong.
+2. **Grounded means NORMAL — confirmed by the builder as well as the sheet.**
+   Q1 is **on** while pressure is fine and **off** to warn. Note this is the
+   opposite of the board's original design intent, which was "ground the line to
+   turn the light on" — that is the *lamp*-type circuit Ford used on other
+   trucks, not the gauge-type cluster in this one. The polarity is a one-line
+   firmware flip, and the symptom of having it backwards is an indicator that is
+   simply always wrong.
 3. **Ford already made it fail-safe.** An open wire, a dead board, a FET that
    never turns on — all read LOW. **The audit's High finding is withdrawn**: a
    hung ATtiny releases the line through R1's gate pull-down and the cluster
@@ -254,17 +257,26 @@ is handled by picking `OP_LT` vs `OP_GT` in the rule — no invert flag needed.
 
 **So "switch or sender" is two fields in one sensor slot, not a firmware branch.**
 
-### The lamp
+### The dash output — and it is inverted
 
-A `FaultRule` — `sensorSlot` = the oil slot, `op` = `OP_LT`, `thresholdA` = 12,
-`debounceMs` ≈ 2000 so it does not flicker at a hot idle, `requireRunning` = true
-— driving a `CustomPin` output through an `OutputRule`.
+Because grounded means NORMAL, the ECU's output is **asserted when everything is
+fine**, not when it is wrong. In `OutputRule` terms that inversion is free: pick
+`ORULE_GT` with `thresholdA` = 12 instead of `ORULE_LT`, so the rule activates —
+and the line is grounded — while pressure is *above* the threshold.
 
-**One behavioural decision to make deliberately:** the stock lamp lights with the
-key on and the engine not running, as a bulb check. `requireRunning` suppresses
-exactly that. If the goal is to preserve stock behaviour, the *lamp* rule and the
-*fault* rule are not the same rule — lamp on when (key on AND not running) OR
-(running AND below 12).
+Three things follow, and all of them are the behaviour you want:
+
+- **A sensor fault releases the line.** `errorMin`/`errorMax` firing means the
+  rule cannot be satisfied, the output drops, and the cluster reads LOW. An open
+  sender wire, a shorted one, or a reading outside 0.5–4.5 V all warn.
+- **The prove-out is free.** From key-on until the ECU has booted, read the
+  sender and satisfied the rule, nothing grounds the line — so the cluster reads
+  LOW, exactly as it does on a stock truck with the engine not yet running.
+- **`requireRunning` is not needed for the indicator.** Oil pressure genuinely is
+  low before the engine starts, and the stock display says so. Let it.
+
+Keep a separate `FaultRule` with `debounceMs` ≈ 2000 and `requireRunning` = true
+for the *logged* fault, so a hot idle dipping briefly does not fill the log.
 
 ### Two things that are not free
 
