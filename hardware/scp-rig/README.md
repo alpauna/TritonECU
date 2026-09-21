@@ -190,6 +190,28 @@ can overload the front end, and under 15 dB may read as *open* to the detector.
 > **[CONFIRM]** whether RF_IN is internally DC-blocked, and whether the datasheet's
 > later pages carry a reference bias network. Pages 1–9 do not.
 
+### Control pins — ON/OFF is a shutdown input, active low
+
+| Pin | Datasheet | Meaning | Wire it |
+|--:|---|---|---|
+| 5 `ON/OFF` | *模块关断控制，低电平有效* — shutdown control, **active low** | **LOW = shut down**, HIGH = running | **Tie HIGH**, or drive from a GPIO |
+| 9 `nRESET` | *模块复位输入，低电平有效* — reset, active low, *不用时悬空* | LOW = reset | Leave floating — the datasheet says so explicitly |
+
+The name reads like a switch; it is really a shutdown line. **LOW turns it off.**
+
+**Do not float `ON/OFF`.** The datasheet says "leave floating when unused" for
+`nRESET` and says **nothing of the kind** for `ON/OFF`, whose electrical column
+is blank — so there is no documented internal pull-up to rely on. A floating CMOS
+input is the classic works-on-the-bench, fails-in-a-truck fault, and here it
+fails as "the GPS stopped logging somewhere on the highway".
+
+Driving it from a spare GPIO instead of strapping it is worth the pin: it allows
+a **commanded cold start** — shut the module down, bring it back, and time the
+32 s TTFF — without power-cycling the whole rig mid-capture.
+
+V<sub>IH</sub> is 0.7 × V<sub>CC</sub> = **2.31 V** at 3.3 V, so a Pico GPIO high
+drives it with margin.
+
 ### Antenna selection — three numbers to check
 
 Candidate: **Bingfu vehicle waterproof active GPS antenna, SMA male**
