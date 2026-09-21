@@ -115,18 +115,25 @@ erase — and during that pause the writer blocks. Without somewhere to put fram
 they are simply lost, and a dropped frame in the middle of a MIL transition is
 the one you needed.
 
-**Fix it with RAM, which the Pico has plenty of** (264 KB):
+**Fix it with RAM, which the Pico has plenty of** (264 KB). Built and tested —
+[`firmware/include/FrameRing.h`](firmware/include/FrameRing.h):
 
-| Ring buffer | Covers |
+| | |
 |---|--:|
-| 16 KB | 1.5 s |
-| **64 KB** | **6.0 s** |
-| 128 KB | 11.9 s |
+| Frames arriving in a 250 ms stall, busy bus | **125** |
+| Ring as built, 2048 slots × 24 B | **48 KB** |
+| **Occupancy at that worst stall** | **6.1 %** |
 
-**64 KB is the pick.** Capture writes into the ring from the PIO side; a second
-loop drains it to the card. Count and log ring overflows — a capture that
-silently dropped frames is worse than no capture, because nothing tells you the
-gap is there.
+The measured number is ~16× smaller than the earlier estimate, which had assumed
+a longer stall. The margin stays anyway: it is nearly free on 264 KB, a tired
+card can stall longer than its datasheet says, and a bursty bus can exceed 500
+frames/s briefly.
+
+Capture writes into the ring from the PIO side; a second loop drains it to the
+card. **Count and log ring overflows** — a capture that silently dropped frames
+is worse than no capture, because nothing tells you the gap is there. `highWater()`
+reports the deepest it ever got, so the sizing is a measurement after the first
+session rather than an article of faith.
 
 ### Four things that bite on a vehicle
 
