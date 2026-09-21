@@ -122,10 +122,45 @@ against an unplugged connector beats debugging a rig that was correct all along.
 |---|---|
 | **GP2** | Comparator output — PIO edge capture |
 | **GP3** | Loopback generator. **Set to INPUT whenever connected to a vehicle** |
-| GP0 / GP1 | UART to an optional GPS — puts road speed in the same log on the same timebase, which is what makes the speedometer correlation possible |
+| GP0 / GP1 | UART to the GPS — NMEA in |
+| **GP4** | **GPS 1PPS** — the edge that ties GPS time to the capture timebase |
 | GP25 | Onboard LED, frame activity |
 | 3V3 (pin 36) | Supplies the TLV7031 |
 | GND (pin 38) | **Common with vehicle ground** |
+
+## GPS — use the 1PPS, not the sentence timestamps
+
+**ATGM336H-5NR32** (AT6558R) fits without an adapter: 2.7–3.6 V so it runs off
+the Pico's 3V3, NMEA 0183 over UART, <26 mA at 3.3 V, TCXO, built-in LNA and SAW,
+and — the part that matters — **1PPS with the rising edge aligned to UTC**
+(§1.7).
+
+### Why PPS rather than the NMEA timestamp
+
+An NMEA sentence *describes* a fix that was taken at the second boundary, but it
+**arrives late and by a variable amount** — the sentence has to be composed and
+then clocked out of a UART. At 9600 baud a burst of sentences takes tens of
+milliseconds, and the delay changes with how many satellites are in view.
+
+Timestamping the *sentence arrival* therefore aligns GPS to the capture with an
+error of tens to hundreds of milliseconds. At 45 mph that is **up to 10 m of
+position error**, and worse, it is error that varies through the recording.
+
+**PPS inverts the problem.** Capture the PPS rising edge with the *same*
+microsecond counter used for bus frames, and let the NMEA sentence say only
+*which second that edge was*. The sentence can then arrive whenever it likes.
+Alignment goes from ~100 ms to **sub-millisecond**, and the drifting component
+disappears.
+
+### Practicalities
+
+| | |
+|---|---|
+| Wiring | UART on GP0/GP1, **PPS on GP4** — treat PPS as another timestamped event and put it in the same log |
+| Cold start | **TTFF 32 s**. Power it up a minute before recording, not as the engine starts |
+| Antenna | Active or passive supported. In a truck, on the dash or against the windscreen — a steel roof is a very good GNSS shield |
+| Speed | Take it from RMC/VTG (Doppler-derived), not from differencing positions. 2.5 m CEP50 position does not imply poor speed |
+| Rate | 1 Hz is plenty — the capture script marks speeds at held points rather than sweeping |
 
 ## Powering it
 
@@ -244,4 +279,5 @@ put back in order later.
 | D3 | SMF3.3 |
 | C1 | 100 nF |
 | J1 | OBD-II male connector or breakout — **verify pins 2 and 10 are populated**, see below |
-| opt. | GPS module (NMEA, UART), microSD breakout |
+| opt. | **ATGM336H-5NR32** GNSS module (AT6558R) — 2.7–3.6 V, UART NMEA 0183, **1PPS**, <26 mA at 3.3 V |
+| opt. | microSD breakout |
