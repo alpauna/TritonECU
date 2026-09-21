@@ -30,6 +30,27 @@ three-tier logic. If the MIL is SCP-only on this truck, **that pin lights
 nothing** and the tiers need an SCP message instead. If it is discrete, the wire
 is already there and the work is done.
 
+### New evidence, 2026-09-21 — `InstramentCluster-Interactive.png`
+
+A colourised cluster sheet, and it lands on the EVTM's side:
+
+- The **MALFUNCTION INDICATOR sits inside the cluster**, fed by the *theft
+  indicator micro cluster*, alongside LOW OIL/HIGH COOLANT, LOW FUEL, 4×4
+  HIGH/LOW, DOOR AJAR and the rest. No discrete wire reaches it.
+- The cluster's only link toward the PCM is **C237 pins 1 and 2** —
+  `TAN/ORG` and `PNK/LT BLU`, labelled *computer data lines system*. Those are
+  circuits 914 and 915: **SCP**.
+- **No `PNK/LT GRN` appears anywhere on the sheet.** The Chilton drawing's MIL
+  wire has no counterpart here.
+
+That is now two EVTM-family sources against one Chilton composite. The Chilton
+set spans 1997–2003 and several models, and early clusters were more discretely
+wired — which would explain its drawing being true of *a* truck but not this one.
+
+**Still settle it the way pin 12 was settled**, because paper lost to metal once
+already today: back-probe and watch which pin swings when the lamp lights. If
+nothing swings, it is SCP.
+
 **Test:** at the cluster connector, look for a **PNK/LT GRN** wire and check
 continuity to the PCM. Colour is the discriminator — the trans-control indicator
 on PCM pin 12 is **WHT/LT GRN**, a different circuit that is easy to confuse with
@@ -102,6 +123,27 @@ What is established is narrower and more useful: **`4R70W-Transmission.png` has 
 bad pin callout at the TCIL**, and a source being authoritative in general does
 not make it right in a particular. That is what the trust order above is for, and
 why the truck sits at the top of it.
+
+## Colour is not unique — a trap this harness sets twice
+
+`InstramentCluster-Interactive.png` makes something explicit that has already
+cost time here: **the same colour appears on unrelated circuits.**
+
+| Colour | Is circuit | At | And also |
+|---|---|---|---|
+| `WHT/RED` | **31**, engine oil pressure switch | cluster **C236 pin 20** | **Ignition coil 8** at PCM pin 79 |
+| `WHT/LT GRN` | **1215**, PATS transceiver TX | cluster **C237 pin 15** | **911**, the TCIL, at PCM pin 12 |
+
+Both pairs were live hazards in this project: `WHT/RED` is what confirmed pin 79
+is a coil, and `WHT/LT GRN` is the colour we were hunting for the indicator lamp.
+A wire identified by colour alone could have been either member of either pair.
+
+**So: cavity number first, then trace, and treat colour as corroboration only.**
+
+There is a third coincidence of the same kind, harmless but worth knowing: an
+**820 Ω** resistor exists *inside the cluster* on pin B19, and a different 820 Ω
+sits inside the TCS switch assembly feeding the O/D lamp. Same value, unrelated
+parts.
 
 ## Conflict 3 — who drives the 4×4 LOW RANGE indicator?
 
