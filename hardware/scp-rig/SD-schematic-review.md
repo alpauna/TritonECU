@@ -132,27 +132,57 @@ contact, 100 mΩ max contact resistance, and the `472192001` variant carries
 **20 µ″ gold** against the `472190001`'s 2 µ″ — the right choice for a socket
 that will be re-seated constantly during bring-up.
 
-## 4. The 3V3 rail is tighter than it looks
+## 4. ✅ Being solved — a dedicated 3.3 V source
 
-Everything hangs off the Pico's `3V3(OUT)`:
+The original finding: everything hung off the Pico's `3V3(OUT)`, peaking around
+**261 mA** if a GPS acquisition coincided with an SD write burst. A separate
+regulator removes that, and the reason it matters is not just current — a rail
+that sags during a card write shows up as **corrupt files, or as a GPS that
+quietly resets**, and the second gets diagnosed as a bad antenna for a week.
 
-| Load | Typ | Peak |
+### ⛔ One thing not to do
+
+**Do not tie a new 3.3 V supply onto the Pico's `3V3(OUT)` while the Pico's own
+regulator is still running.** Two regulators fighting over one net is a good way
+to destroy both. There are two clean topologies instead:
+
+| | Topology | Notes |
+|---|---|---|
+| **A** ⭐ | New LDO → **its own 3V3A rail for GPS + SD**. Pico keeps `3V3(OUT)` for the RP2040 and the TLV7031. Common ground | Simple, no interaction. Puts the **bursty loads on one rail and the measurement front end on the quiet one** |
+| B | New LDO powers **everything**: tie the Pico's **`3V3_EN` to ground** to disable its buck, then feed `3V3(OUT)` | One rail, but it must carry the Pico too, and `3V3_EN` **must** be grounded or you are back to two regulators fighting |
+
+**A is the better fit here.** The comparator is the instrument; leaving it on the
+rail that has no SD write bursts on it costs nothing.
+
+### Choosing the part — LDO, not a buck
+
+A switcher near a GNSS front end is a classic way to desense a receiver: its
+harmonics land in or near the band. Headroom is 1.7 V from USB 5 V, which is
+ample for any LDO, so there is no efficiency argument worth the risk.
+
+Dissipation is `(5 − 3.3) × I`:
+
+| Load | Current | Power |
 |---|--:|--:|
-| RP2040 + Pico | 25 mA | 40 mA |
-| ATGM336H V<sub>CC</sub> | 26 mA | **100 mA** |
-| Active antenna via `VCC_RF` | 15 mA | 20 mA |
-| microSD, idle → **write burst** | 5 mA | **100 mA** |
-| TLV7031 | ~0 | 1 mA |
-| **Total** | **71 mA** | **261 mA** |
+| GPS + SD idle | 46 mA | 0.08 W |
+| GPS acquiring | 120 mA | 0.20 W |
+| **GPS acq + SD write burst** | **220 mA** | **0.37 W** |
 
-Those peaks do not all coincide — but **GPS acquisition during an SD write is an
-ordinary combination, not a contrived one**, and that pair alone is ~200 mA.
+And the package decides whether that matters:
 
-- **Verify the Pico's 3V3(OUT) budget** against the RT6150's rating before
-  trusting it, rather than assuming the rail is free.
-- **Keep C9 local to the socket**, and consider raising it. A sagging rail during
-  a write shows up as corrupted files *or* as a GPS that quietly resets — and the
-  second one is diagnosed as "the antenna is bad" for a week.
+| Package | R<sub>θJA</sub> | Rise at idle | **Rise at burst** |
+|---|--:|--:|--:|
+| SOT-23-5 | 250 °C/W | 20 °C | **94 °C** ⚠ |
+| SOT-89 | 110 °C/W | 9 °C | 41 °C |
+| **SOT-223** | **65 °C/W** | **5 °C** | **24 °C** |
+
+Bursts are brief, so SOT-23-5 will survive — but **SOT-223 or SOT-89 with a
+copper pour costs nothing on a board this empty**, and takes the thermal question
+off the table entirely.
+
+Pick something rated **≥500 mA** with low noise: AP2112K-3.3, XC6220, TLV1117-33
+or NCP1117-3.3 all qualify. Keep **10 µF in and 10 µF out** minimum, and put the
+**output bulk local to the SD socket**, where the burst actually is.
 
 ## 5. Optional: series damping on CLK and MOSI
 
@@ -167,5 +197,5 @@ board-level run; worth having footprints for.
 | 1 | CS pull-up missing, SCLK pull-up redundant | **Move R5 to SPCS** |
 | 2 | Pin 8 on the DAT2 net | Relabel to DAT1 **and add R7, 10 kΩ** |
 | 3 | Pins 9–12 all grounded | ✅ **Correct — all shell GND, no CD switch.** Cover it in firmware |
-| 4 | 3V3 peak ~261 mA | Verify budget, keep bulk local |
+| 4 | 3V3 peak ~261 mA | ✅ **Dedicated 3.3 V being added.** LDO not buck; do **not** parallel it onto `3V3(OUT)` |
 | 5 | No series damping | Optional footprints |
