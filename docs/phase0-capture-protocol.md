@@ -134,6 +134,46 @@ SCP.
 > discrete MIL wire, that may be *why* Chilton drew one — and the 1999 could
 > still be SCP. Confirm on the truck being converted.
 
+## Capturing more than one truck
+
+Three vehicles are available — a **2001** with no codes, a **2003** with a
+standing EGR code, and the **1999** being converted. Capturing more than one is
+worth the time, and what it buys depends on how they come out:
+
+| Outcome | Means |
+|---|---|
+| MIL bit in the same place on 2001 and 2003 | The format is stable across the span. Raises confidence for the 1999 — still not proof |
+| They differ | **The year-variation hypothesis is confirmed**, which is the leading explanation for the Chilton/EVTM disagreement in [`source-conflicts.md`](source-conflicts.md) |
+| A header exists on one and not the other | Architecture, not data. Note it and move on |
+
+### The sharper version: make one truck look like the other
+
+The 2003 already stands with a code set; the 2001 stands clean. That is a
+**between-vehicle** difference of the same nominal state as the 2001's
+**within-vehicle** transition.
+
+So: capture the 2001 clean, induce the IAT fault, and capture it again. The bytes
+that **change on the 2001 and also differ from the 2003's clean-state values in
+the same direction** are the strongest MIL/DTC candidates available — two
+independent lines of evidence crossing at one byte.
+
+It may also find the **DTC count or status** field, which a single-vehicle
+transition cannot isolate on its own.
+
+### Discipline, or the diff is noise
+
+- **Run the identical scripted states on each truck.** Same idle duration, same
+  RPM points, same order. A diff between a five-minute idle and a two-minute one
+  is mostly about duration.
+- **Record the metadata in the log header**: year, engine, transmission, 2WD/4WD,
+  odometer, and which sensor was pulled. A 4.6 and a 5.4, or a 4R70W and a
+  4R100, put different modules on the bus and different values in the frames.
+- **Do not chase the bytes that are supposed to differ**: VIN and module IDs,
+  calibration IDs, odometer-derived values, engine hours, adaptive fuel trims.
+  Those differ between any two trucks and will eat an evening.
+- **Different calibrations can change content without changing format.** Two
+  trucks disagreeing on a value is not evidence the field moved.
+
 ## Finding the bytes
 
 1. **Diff frames with the same header.** Within one header ID, most bytes are
