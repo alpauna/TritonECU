@@ -4,6 +4,7 @@
 #include <functional>
 #include <TaskSchedulerDeclarations.h>
 #include "LampDriver.h"    // CEL cadence: steady for faults, slow flash for pre-faults
+#include "AlarmPolicy.h"   // buzzer auto-silence and re-arm
 
 class CrankSensor;
 class CamSensor;
@@ -48,6 +49,7 @@ struct EngineState {
     volatile uint8_t expanderFaults;
     volatile uint8_t celFaults;
     volatile uint8_t prefaultFaults;  // advisory only: CEL blinks, nothing acts
+    volatile bool    buzzerSilenced;  // fault still present, annunciator timed out
     volatile uint32_t overdwellCount;
     volatile bool fuelPumpOn;
     volatile bool fuelPumpPriming;
@@ -113,7 +115,9 @@ private:
     static const uint32_t BUZZ_CRITICAL_MS    = 10000;   // every 10 s
     static const uint8_t  BUZZ_FAULT_BEEPS    = 2;
     static const uint32_t BUZZ_FAULT_MS       = 60000;   // every 60 s
-    LampDriver _buzzer;
+    static const uint32_t BUZZ_AUTO_SILENCE_MS = 300000;  // 5 minutes
+    LampDriver  _buzzer;
+    AlarmPolicy _buzzerPolicy;
 
     CrankSensor* _crank;
     CamSensor* _cam;

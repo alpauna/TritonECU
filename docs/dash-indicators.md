@@ -203,8 +203,13 @@ self-test.
 
 ### Policy worth deciding before it is wired
 
-- **Silence/acknowledge**, and whether a *new* fault re-arms it. Without this,
-  the first long drive with a known fault ends with the buzzer disconnected.
+- ✅ **Silence/acknowledge — built.** `AlarmPolicy`: sounds for **5 minutes**,
+  then goes quiet, and re-arms on any **new fault bit** or an **escalation in
+  severity**. A bit that flaps in and out deliberately does *not* re-arm — that
+  is the behaviour which makes real alarms unsilenceable and gets them
+  disconnected. Clearing every fault ends the episode, so the next one is fresh.
+  The **lamp never silences**; only the noise does. `buzzerSilenced` is published
+  in `/state` so the UI can say why it is quiet.
 - **Never sound while cranking**, or during a sensor's `settleMs` window — the
   masking work already suppresses the faults themselves, so this comes free as
   long as the buzzer follows the fault masks rather than raw readings.

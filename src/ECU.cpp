@@ -43,6 +43,7 @@ ECU::ECU(Scheduler* ts)
       _pinSsA(DEF_PIN_SS_A), _pinSsB(DEF_PIN_SS_B), _pinSsC(DEF_PIN_SS_C), _pinSsD(DEF_PIN_SS_D),
       _pinSharedInt(0xFF) {
     memset(&_state, 0, sizeof(_state));
+    _buzzerPolicy.configure(BUZZ_AUTO_SILENCE_MS);
     memset(_firingOrder, 0, sizeof(_firingOrder));
     // Default coil/injector pins (MCP23S17 #4 and #5)
     for (uint8_t i = 0; i < 12; i++) {
@@ -572,15 +573,23 @@ void ECU::checkLimpMode() {
     // Buzzer follows the same tiers, minus pre-fault. It reads the fault masks
     // rather than raw sensor values, so cranking and settleMs windows suppress
     // it for free — the faults themselves are already masked there.
-    if (_limpActive) {
-        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_CRITICAL_BEEPS, BUZZ_CRITICAL_MS);
-    } else if (celOnly != 0) {
-        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_FAULT_BEEPS, BUZZ_FAULT_MS);
-    } else {
-        _buzzer.set(LampDriver::OFF);
-    }
-
+    //
+    // AlarmPolicy adds the part that keeps it connected: sound for five minutes,
+    // then go quiet, and speak up again the moment a NEW fault appears or the
+    // severity escalates. The lamp never silences — only the noise does.
     uint32_t nowMs = millis();
+    uint8_t audibleMask = (_limpActive ? _limpFaults : 0) | celOnly;
+    uint8_t audibleTier = _limpActive ? 2 : (celOnly != 0 ? 1 : 0);
+    bool sound = _buzzerPolicy.update(nowMs, audibleMask, audibleTier);
+    _state.buzzerSilenced = _buzzerPolicy.silenced();
+
+    if (!sound) {
+        _buzzer.set(LampDriver::OFF);
+    } else if (audibleTier == 2) {
+        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_CRITICAL_BEEPS, BUZZ_CRITICAL_MS);
+    } else {
+        _buzzer.setBurst(BUZZ_ON_MS, BUZZ_GAP_MS, BUZZ_FAULT_BEEPS, BUZZ_FAULT_MS);
+    }
     if (_i2cEnabled && _expander0Enabled) {
         xDigitalWrite(_pinCel, _celLamp.state(nowMs) ? HIGH : LOW);
         xDigitalWrite(_pinBuzzer, _buzzer.state(nowMs) ? HIGH : LOW);
