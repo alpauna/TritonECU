@@ -158,9 +158,57 @@ disappears.
 |---|---|
 | Wiring | UART on GP0/GP1, **PPS on GP4** — treat PPS as another timestamped event and put it in the same log |
 | Cold start | **TTFF 32 s**. Power it up a minute before recording, not as the engine starts |
-| Antenna | Active or passive supported. In a truck, on the dash or against the windscreen — a steel roof is a very good GNSS shield |
+| Antenna | See below. In a truck, on the dash or against the windscreen — a steel roof is a very good GNSS shield |
 | Speed | Take it from RMC/VTG (Doppler-derived), not from differencing positions. 2.5 m CEP50 position does not imply poor speed |
 | Rate | 1 Hz is plenty — the capture script marks speeds at held points rather than sweeping |
+
+### Antenna — the module supplies the bias, you do not
+
+**Do not inject 3.3 V into the RF path.** Pin **14 `VCC_RF` is an output**, 3.3 V,
+made for exactly this — *"+3.3V，可给天线供电"*. It carries the module's antenna
+diagnostics with it:
+
+| | |
+|---|--:|
+| `VCC_RF` | 3.3 V typ |
+| Antenna **short** protection | **50 mA** |
+| Antenna **open** detection current | **1 mA** |
+| Supported antenna gain | **15–30 dB** |
+
+Feeding an external rail up the coax bypasses the short protection *and* defeats
+the open/short detection, which is one of the few things that tells you the
+antenna fell off the windscreen.
+
+| Antenna | Wiring |
+|---|---|
+| **Passive patch** | RF_IN (pin 11) and ground. Leave `VCC_RF` unconnected. The module has its own LNA and SAW, and tracks to −162 dBm |
+| **Active** | `VCC_RF` → the antenna side of the RF trace through a bias network (RF choke / ferrite, high-Z at 1.6 GHz), with a DC block ahead of RF_IN if the module does not provide one |
+
+⚠ **Check the gain.** 15–30 dB is the supported window. A 40 dB active antenna
+can overload the front end, and under 15 dB may read as *open* to the detector.
+
+> **[CONFIRM]** whether RF_IN is internally DC-blocked, and whether the datasheet's
+> later pages carry a reference bias network. Pages 1–9 do not.
+
+### ⚠ The SMA connector may be RP-SMA — check before ordering an antenna
+
+**BWSMA-KWE-Z001**, PCB-end right-angle, 0–6000 MHz — electrically fine for
+1.6 GHz GNSS. But its own description reads *"With **External Thread and Internal
+Pin**"*, and that combination is **RP-SMA female**, not standard SMA female:
+
+| | Threads | Centre contact |
+|---|---|---|
+| SMA **female** (what a GNSS antenna mates with) | external | **socket** |
+| **RP-SMA female** | external | **pin** ← what the description says |
+
+Nearly every GNSS active antenna terminates in a **standard SMA male** — external
+nut, centre **pin**. Against an RP-SMA female, pin meets pin and it will not
+mate.
+
+**Look down the barrel before ordering the antenna.** A hole is standard SMA
+female and correct. A pin in the middle is RP-SMA, and the antenna must then be
+RP-SMA too. This is a cheap thing to get wrong and an annoying one to discover
+with the truck idling.
 
 ## Powering it
 
