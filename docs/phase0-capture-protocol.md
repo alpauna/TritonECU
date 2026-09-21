@@ -48,12 +48,51 @@ drive where everything changed is unidentifiable.
 | 2 | — | crank | cranking/run state, and whether anything is suppressed |
 | 3 | parked, in P | **RPM**: idle, 1200, 1500, 2000, 2500, 3000, back to idle | **tachometer bytes** — the cleanest correlation available, because road speed stays zero |
 | 4 | steady throttle | **road speed**: 15, 25, 35, 45 mph, GPS as reference | **speedometer bytes** |
-| 5 | idle | induce a fault — unplug the IAT sensor | the **MIL** bit, and the transition in both directions |
+| 5 | idle | induce a fault — see *On-demand MIL* below | the **MIL** bit, and the transition in both directions |
 | 6 | idle | press O/D OFF | whether the switch state appears on the bus at all |
 | 7 | — | key cycle with a valid key | the **PATS** exchange |
 
 **Record a reference channel alongside the bus.** RPM from the crank sensor and
 speed from GPS, on the same timebase. Without one, correlation is guesswork.
+
+### On-demand MIL, without breaking anything
+
+The 2003 truck has a **disconnected EGR** setting a code, which makes it a
+controllable MIL source rather than a broken one.
+
+The valuable recording is not the lamp being *on* — it is the moment it **goes**
+on, with everything else held still:
+
+1. Reconnect the EGR and clear the code.
+2. Idle the engine, warm, parked. Start recording.
+3. **Unplug the EGR connector while it is running.**
+4. Record through the lamp coming on.
+
+RPM, coolant, road speed and engine state are all steady across that boundary, so
+the bits that change are the MIL and whatever carries DTC state. Nothing else in
+the capture isolates a single bit that cleanly.
+
+**Two traps:**
+
+- **One-trip vs two-trip.** A circuit fault (open solenoid, DPFE) usually sets on
+  the trip it happens. A *flow* fault such as P0401 is two-trip and will not
+  light until the next key cycle — still usable, just record both trips and note
+  where the key cycle falls.
+- **Do not use the key-on prove-out.** The lamp lights for ~3 s at key-on, which
+  looks like a free transition — but the cluster may perform that self-test
+  **internally**, in which case nothing appears on the bus and the honest
+  conclusion "the MIL is not on SCP" would be wrong. Only a *fault-driven*
+  transition proves anything.
+
+While the lamp is lit, that is also the window for the back-probe test in
+[`source-conflicts.md`](source-conflicts.md): if no PCM pin is being sunk, it is
+SCP.
+
+> **The 2003 is a hint, not proof, for the 1999.** The Chilton set that started
+> the MIL disagreement spans 1997–2003, and "the architecture changed partway
+> through that span" is the leading explanation for it. If the 2003 has a
+> discrete MIL wire, that may be *why* Chilton drew one — and the 1999 could
+> still be SCP. Confirm on the truck being converted.
 
 ## Finding the bytes
 
