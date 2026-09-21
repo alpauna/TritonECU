@@ -122,8 +122,11 @@ against an unplugged connector beats debugging a rig that was correct all along.
 |---|---|
 | **GP2** | Comparator output — PIO edge capture |
 | **GP3** | Loopback generator. **Set to INPUT whenever connected to a vehicle** |
-| GP0 / GP1 | UART to the GPS — NMEA in |
+| GP0 / GP1 | UART0 to the GPS — NMEA in |
 | **GP4** | **GPS 1PPS** — the edge that ties GPS time to the capture timebase |
+| **GP5** | **GPS ON/OFF** — with a **10 k pull-up to 3V3**. See below |
+| **GP6** | **GPS nRESET** — with a **10 k pull-up to 3V3**. See below |
+| GP16–19 | SPI0 to the SD card (variant B) |
 | GP25 | Onboard LED, frame activity |
 | 3V3 (pin 36) | Supplies the TLV7031 |
 | GND (pin 38) | **Common with vehicle ground** |
@@ -205,11 +208,34 @@ is blank — so there is no documented internal pull-up to rely on. A floating C
 input is the classic works-on-the-bench, fails-in-a-truck fault, and here it
 fails as "the GPS stopped logging somewhere on the highway".
 
-Driving it from a spare GPIO instead of strapping it is worth the pin: it allows
-a **commanded cold start** — shut the module down, bring it back, and time the
-32 s TTFF — without power-cycling the whole rig mid-capture.
+#### The resistors set the safe state, not the firmware
 
-V<sub>IH</sub> is 0.7 × V<sub>CC</sub> = **2.31 V** at 3.3 V, so a Pico GPIO high
+**GP5 → ON/OFF with a 10 kΩ pull-up to 3V3. GP6 → nRESET with the same.**
+
+A Pico GPIO comes out of reset as an **input with no pull**, so between power-on
+and firmware configuring it, anything driven only by the MCU is floating. Strap
+the safe state in copper and let the GPIO override it:
+
+| | Resistor holds | GPIO as input | GPIO output LOW |
+|---|---|---|---|
+| ON/OFF | **HIGH — module runs** | runs | **shuts down** |
+| nRESET | HIGH — not in reset | not in reset | **held in reset** |
+
+The module is then alive from the instant it has power, whether or not the Pico
+ever boots, and the GPIOs are pure overrides. This is the same discipline as the
+DRV8837's `nSLEEP` being pulled **low** so the SCP bus is released before
+firmware runs — a rig that holds a bus down or a GPS off while it boots is a rig
+that fails in ways nobody thinks to look for.
+
+Drive them **open-drain**: GPIO as input for the idle state, output-low to
+assert. Never drive them high — the pull-up already does that, and it keeps the
+lines safe if the Pico is removed.
+
+The pin spend is worth it for a **commanded cold start**: shut the module down,
+bring it back, time the 32 s TTFF — without power-cycling the whole rig
+mid-capture.
+
+V<sub>IH</sub> is 0.7 × V<sub>CC</sub> = **2.31 V** at 3.3 V, so the pull-up
 drives it with margin.
 
 ### Antenna selection — three numbers to check
@@ -365,3 +391,4 @@ put back in order later.
 | J1 | OBD-II male connector or breakout — **verify pins 2 and 10 are populated**, see below |
 | opt. | **ATGM336H-5NR32** GNSS module (AT6558R) — 2.7–3.6 V, UART NMEA 0183, **1PPS**, <26 mA at 3.3 V |
 | opt. | microSD breakout |
+| R8, R9 | 10 kΩ — pull-ups on GPS ON/OFF and nRESET |
