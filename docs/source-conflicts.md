@@ -54,6 +54,7 @@ the EVTM outranks derived notes, and counting sources is not weighing them.**
 |---|---|
 | EVTM `4R70W-Transmission.png`, read at the pin row | **Transmission Control Indicator Lamp**, `911 WH/LG`, a low-side sink |
 | `eec-v-pinout.md` line 108, and its coil summary | **Ignition Coil 8**, IGNH, `WHT/RED` |
+| **The truck**, photographed at the connector | a **white/RED** wire — which matches coil 8, not the lamp |
 
 Both cannot be true of the same connector, and **this is the dangerous kind of
 disagreement**: a replacement ECU that drives a coil output onto a lamp circuit,
@@ -67,10 +68,29 @@ things survive. The EVTM is Ford's own and is drawn for this truck's
 transmission. It is the stronger source, but the cost of being wrong is high
 enough to warrant measuring.
 
-**Test, and it is a two-minute one:** at the PCM connector, read **pin 79's wire
-colour**. `WH/LG` is the indicator lamp; `WHT/RED` is coil 8. Then confirm by
-continuity from C251's lamp terminal. Do this **before** anything is wired to
-pin 79.
+### Truck observation, 2026-09-21
+
+`Pin79-Question.png`, photographed at the PCM connector: the wire in question is
+**white with a RED stripe** (builder's reading, on a faded 25-year-old harness —
+the photo itself is flash-washed and every pale wire in it measures hue ≈ 39°, so
+the colour call is the builder's, not the camera's).
+
+**`WHT/RED` is coil 8.** If that cavity is genuinely 79, then `eec-v-pinout.md`
+is right and the EVTM's pin callout is wrong for this truck — and the wrong-sheet
+escape is closed: [`transmission.md`](1999-Ford-F150-4wd-5.42v/transmission.md)
+confirms this truck is **4R70W, 4×4**, which is the sheet that shows 911 WH/LG
+at 79.
+
+**Still open: how the cavity was identified as 79.** Counted against the moulded
+numbers, or inferred? That is the whole question now.
+
+**The test that needs no colour and no counting — follow the wire.** Coil 8's
+wire runs *out to a coil on the engine*. The indicator wire runs *into the cabin*
+to C251 on the column. Twelve inches of tracing separates them absolutely, on a
+harness where every pale wire has faded toward tan.
+
+⛔ **Until that is done, nothing gets wired to pin 79.** If it is coil 8, a lamp
+sink there meets a coil primary.
 
 ## Conflict 3 — who drives the 4×4 LOW RANGE indicator?
 
