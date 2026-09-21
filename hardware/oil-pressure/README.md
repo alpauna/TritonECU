@@ -24,7 +24,8 @@ below 12 psi, the stock default.
 | ⬤ D2 | **A 5 V clamp protecting the ADC node**, on the R3 / `Sensor` side. Removed from the board | Builder |
 | ⬤ Sender | **100 PSI, 0.5–4.5 V ratiometric transducer** (what it was tested with) | Builder |
 | ○ U2 | A 78xx regulator, DPAK | Marking legibly starts `78…`, rest degraded |
-| ○ C1, C2, C3 | unread | |
+| ⬤ C1, C3 | **7.9 µF in-circuit** — almost certainly 10 µF MLCCs; regulator input and output | Meter |
+| ⬤ C2 | **100 nF** — the ADC filter at the `Sensor` node | Meter |
 
 > ⚠ **D1 and D2 are off the board as it sits.** It currently has *no* input
 > transient protection and *no* ADC clamp. Fine on a bench supply; do not put it
@@ -120,12 +121,53 @@ is instant.
 
 1. **The regulator's full marking** — which 78xx, and its absolute maximum,
    which is what sets D1's clamping ceiling.
-2. C1, C2, C3 values and **voltage ratings**.
+2. **C1's voltage rating** — the value is now known, the rating is not, and on
+   the input side that is the number that matters.
 3. **Reverse polarity** — a TVS does not protect against it. Is there a series
    diode anywhere, or was the harness simply trusted?
 4. Continuity: U1 pins → J2 (confirms ISP and the part's orientation); U1 pin →
    Q1 gate; U1 pin → sender divider; J3 → U1; `12+` → regulator input, and what
    is in between; Q1 drain → `Dash`, source → GND.
+
+## The capacitors
+
+C1 and C3 read **7.9 µF** in circuit, which is what a 10 µF MLCC measures on a
+typical meter once tolerance, test conditions and ageing are accounted for. C2
+is **100 nF**, sitting at the ADC node — which happens to be exactly what the
+replacement clamp options want, so that part of the re-spin is already fitted.
+
+With C2 at 100 nF the sender filter is:
+
+| R3 | τ | Corner |
+|--:|--:|--:|
+| 1k2 (as built) | 0.12 ms | 1326 Hz |
+| 10k | 1.0 ms | 159 Hz |
+| 47k | 4.7 ms | 34 Hz |
+
+All three are instant against oil pressure. The higher two also do useful noise
+rejection in an engine bay, which the 1.3 kHz corner does not.
+
+### Two things the value does not tell us
+
+**C1's voltage rating matters more than its value.** A 10 µF X5R 0805 rated 16 V
+loses 60–80 % of its capacitance at 12 V bias, so C1 may be **2–4 µF in service**
+even though it measures 7.9 at zero bias on the bench. On a 12 V automotive net
+the part wants a **50 V** rating — for the derating as much as for the survival.
+
+**There is no cold-crank ride-through, and capacitance cannot buy it.** At a
+30 mA load with 3 V of allowed droop, 10 µF holds the input up for **1 ms**:
+
+| Dip | Capacitance needed |
+|--:|--:|
+| 10 ms | 100 µF |
+| 100 ms | 1 000 µF |
+| 400 ms | 4 000 µF |
+
+A 7805 needs ~7 V in, and cranking dips last tens to hundreds of milliseconds, so
+this is not a capacitor problem. The two real answers are a **wide-input buck**
+that keeps regulating down to 6 V, or **accept the reset and stop letting the
+lamp depend on the MCU** — which is the High finding below, reached from a
+different direction.
 
 ## Audit against automotive reality
 
@@ -137,7 +179,7 @@ What is known so far, worst first:
 | **Q1 is 30 V** on a net tied to battery through the bulb | Medium, on paper | Clamped load dump is ~35 V. *But* the bulb is ~78 Ω hot, so the FET avalanches at 30 V passing only ~64 mA — ~1.9 W in a 160 W part that is explicitly avalanche-rated. It likely clamps the dump itself. A 60 V part costs the same and retires the question |
 | **R1 = 10 MΩ** gate pull-down | Low | 100 nA worst-case leakage × 10 MΩ = 1.0 V against a 0.8 V minimum threshold; and C<sub>rss</sub> 355 pF couples ~8.8 % of any drain step onto the gate, bled with τ = R × C<sub>iss</sub> = **40 ms**. 10 kΩ gives 40 µs and clears both by 1000×. In practice harmless here: real leakage at 1 V is picoamps and a lamp's drain does not slew fast. Fails toward lamp-on, which is the forgiving direction |
 | **D1's TVS value was never recorded** | Medium | There *was* a TVS, which is the right instinct. But the window is narrow and easy to miss: it must stand off **> 16 V** (charging system plus margin) and clamp **< 35 V** (a 78xx's absolute maximum). SMAJ/SMBJ **18A** clamps at 29.2 V ✓ and **20A** at 32.4 V ✓, while a **24A** clamps at 43 V ✗ — above the regulator's abs max, so it would protect nothing. If the original was a 24 V part it was decorative |
-| **Cold crank** | Medium | A 78xx needs ~2 V of headroom. The rail dips to 6 V and below while cranking, so the 5 V rail — and with it the sender supply *and* the ADC reference — collapses exactly when the reading matters |
+| **Cold crank** | Medium | A 78xx needs ~2 V of headroom and the rail dips to 6 V and below while cranking. C1 gives **1 ms** of ride-through where the dip is 10–400 ms, and no practical capacitor closes that gap — see above. The *reading* survives, because ratiometric sensing cancels a sagging rail; the **MCU** does not, and with it goes the lamp |
 
 ## What was right
 
