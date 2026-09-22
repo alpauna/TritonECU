@@ -50,8 +50,23 @@ root_fn  = 120;  // gear root circle
    the slot_y bug: at 126.2 the wheel dips 3.1 mm below the base top, and the old
    test ("does it punch out the BOTTOM") would have cut no slot at all. */
 wheel_od        = 126.2;  // MEASURED, caliper, across the tooth tips
-wheel_thk       =   3.175; // MEASURED 2026-09-22 = 0.125" exactly. The listing said
-                          // .120"/3.05 - wrong again, and in the same direction.
+/* ONE VARIABLE WAS DOING TWO JOBS, and they are not the same feature.
+   The hub thickness sets the SPIGOT LENGTH - how far the hub reaches through the
+   centre bore. The rim thickness sets the BASE SLOT WIDTH - what the tooth ring
+   has to pass through. On a stamped reluctor those differ routinely, and the
+   3.175 measured on 2026-09-22 is the CENTRE. Split, so a measurement of one can
+   never again be silently spent on the other. */
+wheel_thk_hub   =   3.175; // MEASURED 2026-09-22 = 0.125" exactly, AT THE CENTRE.
+                           // The listing said .120"/3.05 - wrong again, same direction.
+wheel_thk_rim   =   3.175; // ** MEASURE AT THE TEETH ** placeholder = hub value.
+                           // Only the base slot uses this. Gated below.
+
+/* THE MODEL ASSUMES A FLAT WHEEL, and until now assumed it silently. If the
+   tooth ring is dished out of the hub's mounting plane, the teeth are not at
+   x_wheel - and BOTH the base slot and the CKP sensor station are cut there.
+   A dished wheel with this left at 0 gives a base whose slot misses the teeth
+   and a sensor aimed at empty air. Positive = teeth toward +X. */
+wheel_tooth_off =   0;     // ** MEASURE ** axial offset, tooth ring vs hub face
 
 /* The product photo's RATIOS survived what its absolute dimension did not - a
    ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
@@ -335,13 +350,24 @@ echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
          " mm, ", foot_h + base_t - wheel_dip, " mm to ground; slot ", slot_y, " mm"));
 /* The base slot and the sensor bolt holes both track wheel_od directly, and
    wheel_od is still an estimate. Say so at render time, where it will be seen. */
-/* GATE LIFTED 2026-09-22. Every input the base depends on is now a caliper
-   reading: wheel_od 126.2 sets slot_y and y_ck, wheel_thk 3.175 sets the slot
-   width. Nothing here rides on the vendor listing or the photo grid any more.
-   What is still gated is the HUB, which needs wheel_bore and the keyway. */
-echo(str("BASE GATE LIFTED: wheel_od ", wheel_od, " and wheel_thk ", wheel_thk,
-         " both MEASURED -> slot ", slot_y, " x ", wheel_thk + 6,
-         " mm, y_ck ", y_ck, " mm. base/base_a/base_b are clear to print."));
+/* GATE LIFT RETRACTED 2026-09-22, same day it was granted. It was granted on a
+   3.175 thickness that turned out to be measured AT THE CENTRE, and the base
+   slot does not pass the centre - it passes the teeth. The teeth are BENT, so
+   the rim is thicker than the 0.125" sheet and wheel_thk_rim is a swept
+   ENVELOPE, not a material thickness. Bent to one side, that envelope is also
+   off-centre from the disc plane, which is what wheel_tooth_off carries.
+   wheel_od is still measured and still good; the slot is what is not. */
+base_gate_ok = (wheel_thk_rim != wheel_thk_hub) || (wheel_tooth_off != 0);
+echo(str("BASE GATE: wheel_od ", wheel_od, " MEASURED -> slot_y ", slot_y,
+         " mm, y_ck ", y_ck, " mm, both good.",
+         base_gate_ok ? "  Rim envelope set: slot width "
+                      : "  ** HELD ** wheel_thk_rim is still the HUB value, slot width ",
+         wheel_thk_rim + 6, " mm at x ", x_wheel + wheel_tooth_off, "."));
+if (!base_gate_ok)
+    echo(str("  DO NOT PRINT base/base_a/base_b. Measure ACROSS THE BENT TEETH",
+             " (envelope, not sheet) and the offset of that envelope from the hub",
+             " face. Both the slot AND the CKP sensor station are cut at x ",
+             x_wheel + wheel_tooth_off, " - a dished wheel misses with both."));
 echo(str("HUB GATE: wheel_bore ", wheel_bore, " and key ", key_w, " x ", key_d,
          " are STILL photo ratios off wheel_od. hub/wheel_hub/cam_target remain",
          " held - a spigot was 9.2 mm oversize once already."));
@@ -406,7 +432,7 @@ module hub() {
     difference() {
         union() {
             cylinder(d = hub_od, h = 16);
-            cylinder(d = wheel_bore - clr, $fn = fit_fn, h = 16 + wheel_thk);   // spigot locates the wheel
+            cylinder(d = wheel_bore - clr, $fn = fit_fn, h = 16 + wheel_thk_hub); // spigot: CENTRE thickness
         }
         translate([0,0,-1]) cylinder(d = shaft_dia + clr, $fn = fit_fn, h = 40); // shaft bore
         translate([-0.9, -hub_od, 8]) cube([1.8, hub_od, 40]);     // clamp slit
@@ -427,7 +453,7 @@ module hub() {
    modulation.
    =========================================================================== */
 wh_flange = wheel_bore + 22;
-wh_spig_l = wheel_thk + 3;
+wh_spig_l = wheel_thk_hub + 3;   // spigot through the centre bore
 module wheel_hub() {
     difference() {
         union() {
@@ -697,8 +723,8 @@ module base() {
                 cylinder(d = rod_d + 0.3, h = base_l + 2, center = true, $fn = fit_fn);
         // wheel slot, sized to the actual dip
         if (slot_y > 0)
-            translate([x_wheel, 0, 0])
-                cube([wheel_thk + 6, slot_y, base_t + 2], center = true);
+            translate([x_wheel + wheel_tooth_off, 0, 0])
+                cube([wheel_thk_rim + 6, slot_y, base_t + 2], center = true);
         // four bearing blocks, four bolts each
         for (st = [[x_brg1, 0], [x_brg2, 0], [x_cbrg1, cam_y], [x_cbrg2, cam_y]])
             for (dx = [-1,1], dy = [-1,1])
@@ -709,7 +735,7 @@ module base() {
             translate([x_motor + dx*(nema/2 + wall + 4), 3, -base_t/2 - 1])
                 cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
         // two sensor mounts — the mount's own feet are slotted for air gap
-        for (st = [[x_wheel, y_ck], [x_camtgt, y_cmp]])
+        for (st = [[x_wheel + wheel_tooth_off, y_ck], [x_camtgt, y_cmp]])
             for (dx = [-1,1])
                 translate([st[0] + dx*(sb/2 + 5), st[1], -base_t/2 - 1])
                     cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
@@ -817,7 +843,7 @@ else {
     color("lightgreen")  for (x = [x_cbrg1, x_cbrg2]) translate([x, cam_y, base_t]) bearing_block();
     color("orange")      translate([x_wheel - 9, 0, base_t + shaft_h]) rotate([0,90,0]) wheel_hub();
     color("gray")        translate([x_wheel, 0, base_t + shaft_h]) rotate([0,90,0])
-                             cylinder(d = wheel_od, h = wheel_thk, center = true, $fn = 120);
+                             cylinder(d = wheel_od, h = wheel_thk_rim, center = true, $fn = 120);
     color("gold")        translate([x_gear, 0, base_t + shaft_h]) rotate([0,-90,0]) spur_gear(crank_gear_teeth);
     color("gold")        translate([x_gear, cam_y, base_t + shaft_h]) rotate([0,-90,0]) spur_gear(cam_gear_teeth);
     color("tan")         translate([x_camtgt, cam_y, base_t + shaft_h]) rotate([0,-90,0]) cam_target();
