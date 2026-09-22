@@ -120,25 +120,38 @@ aux_hole_d      =  6.35;   // MEASURED = 0.25"
 aux_hole_r      = wheel_bore/2 + aux_edge_near + aux_hole_d/2;   // 29.3695
 aux_d_check     = aux_edge_far - aux_edge_near;                  // must match
 
-/* ** NOT MEASURED ** - the one number the jig exists to settle. It moved three
-   times before it settled, which is why the jig tolerates a range rather than
-   trusting a value:
+/* Thickness AT THE HOLE, which is not the thickness at the centre. The seated
+   jig's pin is cut to wheel_thk_hub and referenced off the front face, and it
+   stands ~0.2 mm proud of the back - so the material here is ~2.98, not 3.175.
+   Normal for a pierced hole in stamped stock, and it is the stack-up a bolt
+   through this hole actually sees, so the sandwich plate wants this number
+   rather than the centre one. */
+wheel_thk_hole  = 2.98;    // MEASURED by difference, +/-0.05
+
+/* MEASURED 2026-09-22 by the jig ladder: the 93 rung seats, 92 and 94 do not.
+   A round 6.10 pin in a 6.35 hole only enters within +/-0.24 deg, so seating IS
+   the measurement - there is nothing to read off and nothing to judge.
+
+   It took four values to get here, which is the case for building the ladder
+   rather than trusting any of them:
 
      ~95 deg    first estimate, by eye
      ~85 deg    revised - the wheel had been held upside down, and the photo
                 is the FRONT
-     92-98      pixels off that photo, bore-centre placement dominating the error
-     95         SETTLED here. Re-checked against the part, the eye estimate was
-                withdrawn in favour of the photo measurement.
+     92-98      pixels off that photo, bore-centre placement dominating
+     93         MEASURED, +/-0.24
 
-   Direction is CLOCKWISE from the key viewed from the FRONT, confirmed against
-   the photo: keyway at 12 o'clock, hole near 3 o'clock. Worth stating plainly
-   because an upside-down wheel reverses it, and that already happened once. */
-aux_hole_ang    = 95;      // deg CLOCKWISE from the key, viewed from the FRONT
+   Note the eye estimates bracketed it by 8 and 2 degrees in opposite
+   directions, and the photo range contained it. Direction is CLOCKWISE from the
+   key viewed from the FRONT - worth stating plainly, because an upside-down
+   wheel reverses it and that already happened once. */
+aux_hole_ang    = 93;      // MEASURED by ladder, deg CW from the key, FRONT view
 
 echo(str("AUX HOLE: R ", aux_hole_r, " mm (bolt circle ", 2*aux_hole_r,
          " = ", 2*aux_hole_r/25.4, " in), dia ", aux_hole_d,
-         ", angle ", aux_hole_ang, " deg CW from the key - UNCONFIRMED"));
+         ", angle ", aux_hole_ang, " deg CW from the key - CONFIRMED by ladder"));
+echo(str("  thickness at the hole ", wheel_thk_hole, " vs ", wheel_thk_hub,
+         " at the centre - use the former for anything bolted through it."));
 echo(str("  edge cross-check: far - near = ", aux_d_check, " vs measured dia ",
          aux_hole_d, "  -> ", (abs(aux_d_check - aux_hole_d) < 0.1)
            ? "AGREES, both readings stand"
@@ -989,9 +1002,8 @@ jig_tol = asin((aux_hole_d - jig_pin_d)/2 / aux_hole_r);
 echo(str("HOLE JIG: ", jig_t, " mm plate, plug ", wheel_bore - clr,
          ", ROUND pin ", jig_pin_d, " at R ", aux_hole_r, ", ",
          aux_hole_ang, " deg CW."));
-echo(str("  seats only within +/-", jig_tol, " deg, i.e. ",
-         aux_hole_ang - jig_tol, " to ", aux_hole_ang + jig_tol,
-         ". PRINT THE LADDER 92..98 - one jig will not find the angle."));
+echo(str("  seats only within +/-", jig_tol, " deg - which is what made it a",
+         " measurement. The 93 rung seated; 92 and 94 did not."));
 
 
 module fit_gauge() {
