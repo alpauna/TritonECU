@@ -99,13 +99,45 @@ Feeds a synthetic stream shaped like a real bus — two common short intervals, 
 rarer long one, and scattered noise — and checks that all three clusters are
 found with the right centroids and populations while the noise is rejected.
 
+## Building and running it
+
+```bash
+pio run                  # builds: 4.0% RAM, 1.8% flash on a Pico
+pio run -t upload        # hold BOOTSEL on the first flash
+pio device monitor       # 115200
+```
+
+`src/edge_capture.pio.h` is generated from `pio/edge_capture.pio` by `pioasm`,
+committed because PlatformIO does not run it — the same pattern as
+`hardware/vr-test-rig/firmware/src/stepgen.pio.h`. Regenerate with:
+
+```bash
+~/.platformio/packages/tool-pioasm-rp2040-earlephilhower/pioasm \
+    -o c-sdk pio/edge_capture.pio src/edge_capture.pio.h
+```
+
+### The loopback self-test
+
+`LOOPBACK 1` in `src/main.cpp` puts a **hardware PWM** square wave on GP3 —
+8 µs high, 16 µs low, the shape a J1850 PWM bus has. **Jumper GP3 to GP2** and
+the rig measures its own generated signal.
+
+PWM rather than bit-banging on purpose: it is free-running, so draining the FIFO
+cannot distort the very widths being measured. Bit-banged generation would put
+the drain time straight into the pulse width and then the test would be
+measuring itself.
+
+**Pass = two clusters at 8.000 and 16.000 µs.** Anything else means the capture
+chain is wrong, and it is far better to learn that on a jumper wire than on a
+truck.
+
+> ⚠ **Status: builds clean, not yet run on hardware.** The loopback test above is
+> pending a working micro-USB cable. Until it has passed, treat the PIO timing
+> and the count-to-nanosecond conversion as unverified.
+
 ## Still to write
 
 - J1850 PWM bit decode, **using the constants the histogram produces**.
 - Frame assembly and CRC.
 - SD writer draining the ring, flushing on a 1 s timer.
-- Optional GPS on UART for a shared timebase.
-
-> The PIO program is written but **has not run on hardware** — no Pico here.
-> Verify on the bench first: feed GP2 a known square wave and confirm the
-> reported intervals match, before trusting anything it says about a truck.
+- GPS on UART + PPS for a shared timebase.
