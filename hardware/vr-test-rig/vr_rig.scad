@@ -157,6 +157,31 @@ echo(str("  edge cross-check: far - near = ", aux_d_check, " vs measured dia ",
            ? "AGREES, both readings stand"
            : "** DISAGREE - one of the three numbers is wrong, do not print **"));
 
+/* CLAMP PLATE — sandwiches the wheel against the hub flange.
+   Geometry is forced, not chosen. The wheel is solid metal from the bore
+   outwards, so the flange's existing bolt circle at R 19.875 has nothing to
+   pass through: the aux hole is the ONLY through-feature the wheel has. And a
+   single bolt at R 29.37 has nothing to land in either, because the flange
+   stops at R 26.875. So the fasteners go into the SPIGOT END, which is the one
+   place with material: a 31.5 annulus over a 12.25 shaft bore, 9.6 mm of radial
+   meat, with 3.0 mm of it standing proud of the wheel. */
+cp_od        = 72;      // clears the aux hole (29.37 + 3.2) with 3 mm to spare
+cp_t         =  6.0;
+cp_recess_d  = 40;      // clears the spigot AND its key, whose corner is R 19.08
+cp_bolt_r    = 11;      // tap sits 3.6 mm off the shaft bore, 3.5 mm off the OD
+cp_bolt_tap  =  2.5;    // M3 self-tapping into PETG
+cp_bolt_dep  =  8;
+cp_land_i    = 24;      // bears on an annulus around the aux hole, where the
+cp_land_o    = 34;      // jig proved the face is flat. Everything else relieved.
+cp_relief    =  0.8;
+
+/* THE RECESS MUST BE DEEPER THAN THE SPIGOT PROTRUDES. If the plate bottoms on
+   the spigot end it stops before it touches the wheel, and a clamp that never
+   contacts the thing it clamps is worse than no clamp - it feels tight. Same
+   failure as a bearing pocket sized to the bearing rather than to the adhesive. */
+cp_spig_out  = (wheel_thk_hub + 3) - wheel_thk_hub;      // 3.0 mm proud
+cp_recess_h  = cp_spig_out + 0.4;
+
 /* Tooth width at the rim as an angle, tooth_w_deg = 360*tooth_mm/(pi*wheel_od).
    50 % duty is the usual drawing and is NOT a measurement. It no longer sets
    key_to_gap - see below - it only bounds the uncertainty, +/- (10-w)/2. */
@@ -601,6 +626,14 @@ module wheel_hub() {
         // wheel retention — bolts through the flange into the wheel, if it has holes
         for (a = [60:120:359]) rotate([0,0,a])
             translate([wheel_bore/2 + 4, 0, -1]) cylinder(d = 4.4, $fn = hole_fn, h = 12);
+        /* CLAMP PLATE anchors — 3 x M3 self-tapping into the spigot END. Placed
+           at 0/120/240 from the key so none of them meets the clamp slit, which
+           runs down x = 0 on the -Y side: the 240 hole sits at x = -5.5, clear
+           of the slit's +/-0.9. These can be drilled and tapped into an already
+           printed hub; no reprint. */
+        for (a = [0:120:359]) rotate([0,0,a])
+            translate([cp_bolt_r, 0, 10 + wh_spig_l - cp_bolt_dep])
+                cylinder(d = cp_bolt_tap, $fn = hole_fn, h = cp_bolt_dep + 1);
         // INDEX FLUTE on the flange OD, at key_to_gap from the key. Once the wheel
         // is on, the teeth all look alike and the gap is hard to find by eye. This
         // flute points at it, so the assembled rig has a visible angular zero to
@@ -1006,6 +1039,71 @@ echo(str("  seats only within +/-", jig_tol, " deg - which is what made it a",
          " measurement. The 93 rung seated; 92 and 94 did not."));
 
 
+/* The pin must NOT bottom out. It enters the aux hole, where the material is
+   wheel_thk_hole (2.98) rather than the 3.175 at the centre - which is exactly
+   why that was recorded as its own number. These live here rather than with the
+   other cp_ parameters because clr is not defined until further up the file. */
+cp_pin_d     = aux_hole_d - clr;          // 6.10, the fit the jig ladder proved
+cp_pin_l     = wheel_thk_hole - 0.3;      // 2.68, engaged but clear of the bottom
+
+/* ===========================================================================
+   CLAMP PLATE — the other half of the sandwich
+   ===========================================================================
+   Modelled in USE orientation: wheel below, plate above, pin and recess facing
+   down. The dispatcher flips it, so it exports flat-face-down with the pin as a
+   vertical column - no supports, and the recess prints as a plain step.
+
+   It is located by the PIN, not by a keyway. The recess clears the spigot key
+   entirely, so the only angular reference is the 6.10 pin in the 6.35 aux hole -
+   the same fit the jig ladder proved seats at 93 deg. That leaves +/-0.24 deg of
+   play, which is nothing for a clamp and saves cutting a second keyway that
+   would have to agree with the first.
+
+   It bears on an annulus from R 24 to R 34 and is relieved everywhere else. That
+   is not arbitrary: the jig sat flat with its pin in the aux hole at R 29.37, so
+   that band is the one part of the wheel face there is EVIDENCE is flat. The
+   photo suggests a raised ring nearer the hub, and a clamp that rocks on a ridge
+   applies its load through the ridge. */
+module clamp_plate() {
+    ang = -aux_hole_ang;               // CLOCKWISE from the key, front view
+    difference() {
+        union() {
+            translate([0,0,0]) cylinder(d = cp_od, h = cp_t, $fn = 180);
+            // pin, downward into the aux hole, with a lead-in taper
+            rotate([0,0,ang]) translate([aux_hole_r, 0, -cp_pin_l]) {
+                cylinder(d1 = cp_pin_d - 0.9, d2 = cp_pin_d, h = 0.8, $fn = 48);
+                translate([0,0,0.8])
+                    cylinder(d = cp_pin_d, h = cp_pin_l - 0.8, $fn = 48);
+            }
+        }
+        // recess over the protruding spigot and its key
+        translate([0,0,-0.01]) cylinder(d = cp_recess_d, h = cp_recess_h, $fn = 120);
+        // relief: contact only on the land
+        difference() {
+            translate([0,0,-0.01]) cylinder(d = cp_od + 2, h = cp_relief, $fn = 180);
+            translate([0,0,-1]) difference() {
+                cylinder(r = cp_land_o, h = cp_relief + 3, $fn = 180);
+                cylinder(r = cp_land_i, h = cp_relief + 3, $fn = 180);
+            }
+        }
+        // bolts through to the spigot end
+        for (a = [0:120:359]) rotate([0,0,a])
+            translate([cp_bolt_r, 0, -1]) cylinder(d = 3.6, $fn = hole_fn, h = cp_t + 2);
+        // shaft clearance, so the plate never touches the shaft
+        translate([0,0,-1]) cylinder(d = shaft_dia + 3, $fn = fit_fn, h = cp_t + 2);
+    }
+}
+
+echo(str("CLAMP PLATE: ", cp_od, " dia x ", cp_t, ", recess ", cp_recess_d,
+         " x ", cp_recess_h, " over a spigot standing ", cp_spig_out, " proud."));
+echo(str("  bears R ", cp_land_i, "..", cp_land_o, "; pin ", cp_pin_d, " x ",
+         cp_pin_l, " at ", aux_hole_ang, " deg into ", wheel_thk_hole,
+         " of material -> ", (cp_pin_l < wheel_thk_hole) ? "clear of the bottom"
+                                                         : "** BOTTOMS OUT **"));
+echo(str("  recess ", cp_recess_h, " vs spigot ", cp_spig_out, " -> ",
+         (cp_recess_h > cp_spig_out) ? "clamps the WHEEL"
+                                     : "** BOTTOMS ON THE SPIGOT, clamps nothing **"));
+
 module fit_gauge() {
     pitch = brg_od + 6; n = len(gauge_steps);
     w = n*pitch; h = brg_od + 2*wall + gauge_band; t = brg_w + 3;
@@ -1059,6 +1157,7 @@ else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
 else if (part == "hole_jig")      rotate([180,0,0]) hole_jig();  // export print-ready
+else if (part == "clamp_plate")   rotate([180,0,0]) clamp_plate(); // print-ready
 else if (part == "sensor_ckp")    vr_sensor(sensor_barrel_ckp, 25.4 + sensor_dia/2,
                                             sensor_flange_ckp, sensor_back_ckp, true);
 else if (part == "sensor_cmp")    vr_sensor(sensor_barrel_cmp, 19.1 + sensor_dia/2,
