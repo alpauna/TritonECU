@@ -23,6 +23,33 @@ static const uint LED_OUT  = LED_BUILTIN;
 static const float    PIO_HZ  = 16'000'000.0f;
 static const uint32_t NS_PER_COUNT = 125;
 
+// The counter cannot time the cycles the PIO spends detecting an edge and
+// pushing the word, so every interval reads SHORT by its service path.
+//
+// The two paths are not the same length. `jmp pin` only branches when the pin
+// is HIGH, so the falling-edge path needs one extra instruction to invert the
+// sense (`jmp pin, still_high` / `jmp fell`) where the rising path branches
+// straight to `rose`. That single cycle is the whole asymmetry:
+//
+//   interval ended HIGH (pushed at `fell`, level bit 0) -> 4 cycles lost
+//   interval ended LOW  (pushed at `rose`, level bit 1) -> 5 cycles lost
+//
+// Both numbers were measured, not assumed: an uncorrected loopback of a known
+// 8 us / 16 us wave read 7.749 and 15.687, which is 4 and 5 cycles at 16 MHz to
+// better than a nanosecond. Corrected, the same loopback must read 8.000 and
+// 16.000 -- that is the check that keeps these honest.
+// Residual after correction is +/- half a bin (62.5 ns), which is resolution,
+// not error. The loopback reads 7.999 and 15.937: the 8 us count dithers 61/62
+// because the generator's edges are asynchronous to the PIO clock, and that
+// dither averages the quantisation out. The 16 us count locks at 125, so it
+// reports its bin CENTRE -- and true 16000 ns sits exactly on a bin boundary,
+// reachable only as 15.937 or 16.062. Do NOT "fix" it by raising CAL_CYCLES_LOW
+// to 6; that just moves the same 62.5 ns to the other side.
+static const uint32_t CAL_CYCLES_HIGH = 4;
+static const uint32_t CAL_CYCLES_LOW  = 5;
+static const uint32_t CAL_HIGH_NS = (uint32_t)(CAL_CYCLES_HIGH * 1e9f / PIO_HZ + 0.5f);
+static const uint32_t CAL_LOW_NS  = (uint32_t)(CAL_CYCLES_LOW  * 1e9f / PIO_HZ + 0.5f);
+
 // Generated loopback widths. 8 us high / 16 us low is the shape a J1850 PWM bus
 // has, which makes a wrong answer obvious rather than plausible.
 static const uint32_t GEN_HIGH_US = 8;
@@ -67,7 +94,10 @@ void setup() {
 static void drain() {
     while (!pio_sm_is_rx_fifo_empty(pio, sm)) {
         const uint32_t w = pio_sm_get(pio, sm);
-        hist.add((w >> 1) * NS_PER_COUNT);      // LSB is the level, not the count
+        // LSB is the level AFTER the edge, so it says which interval just
+        // ended: 0 means the line had been high, 1 means it had been low.
+        // Each gets its own correction because the service paths differ.
+        hist.add((w >> 1) * NS_PER_COUNT + ((w & 1u) ? CAL_LOW_NS : CAL_HIGH_NS));
         edges++;
     }
     // A noblock push into a full FIFO sets RXSTALL. Count it — a capture that
