@@ -58,15 +58,24 @@ wheel_od        = 126.2;  // MEASURED, caliper, across the tooth tips
    never again be silently spent on the other. */
 wheel_thk_hub   =   3.175; // MEASURED 2026-09-22 = 0.125" exactly, AT THE CENTRE.
                            // The listing said .120"/3.05 - wrong again, same direction.
-wheel_thk_rim   =   3.175; // ** MEASURE AT THE TEETH ** placeholder = hub value.
-                           // Only the base slot uses this. Gated below.
+wheel_thk_rim   =   3.97;  // MEASURED 2026-09-22 at the outer edge = 5/32" exactly.
+                           // ENVELOPE of the bent teeth, not sheet: the bend adds
+                           // 3.97 - 3.175 = 0.794 = 1/32" over the 1/8" stock.
 
-/* THE MODEL ASSUMES A FLAT WHEEL, and until now assumed it silently. If the
-   tooth ring is dished out of the hub's mounting plane, the teeth are not at
-   x_wheel - and BOTH the base slot and the CKP sensor station are cut there.
-   A dished wheel with this left at 0 gives a base whose slot misses the teeth
-   and a sensor aimed at empty air. Positive = teeth toward +X. */
-wheel_tooth_off =   0;     // ** MEASURE ** axial offset, tooth ring vs hub face
+/* THE MODEL ASSUMES A FLAT WHEEL, and until now assumed it silently. Left at 0
+   on a genuinely dished wheel, the base cuts BOTH the slot and the CKP sensor
+   station in the wrong plane - one print, two misses. Positive = teeth to +X.
+
+   BOUNDED RATHER THAN MEASURED. The bend adds only 0.794 mm of envelope, so even
+   if every tooth is bent the same way the envelope centre cannot sit further than
+   half of that off the disc plane. Which side is unknown and does not need to be
+   known, because both consumers swallow it with room to spare - see the echoed
+   margins below. If a LATER wheel has a real dish (teeth on a pressed-in offset
+   ring rather than a bent lip) this stops being a rounding error, which is why
+   the parameter stays. */
+wheel_tooth_off =   0;     // bounded at +/-tooth_off_max, not measured
+tooth_bend      = wheel_thk_rim - wheel_thk_hub;   // 0.794 = 1/32"
+tooth_off_max   = tooth_bend / 2;                  // all-one-way worst case
 
 /* The product photo's RATIOS survived what its absolute dimension did not - a
    ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
@@ -357,7 +366,8 @@ echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
    ENVELOPE, not a material thickness. Bent to one side, that envelope is also
    off-centre from the disc plane, which is what wheel_tooth_off carries.
    wheel_od is still measured and still good; the slot is what is not. */
-base_gate_ok = (wheel_thk_rim != wheel_thk_hub) || (wheel_tooth_off != 0);
+rim_measured = true;   // set when wheel_thk_rim is a caliper reading AT THE TEETH
+base_gate_ok = rim_measured;
 echo(str("BASE GATE: wheel_od ", wheel_od, " MEASURED -> slot_y ", slot_y,
          " mm, y_ck ", y_ck, " mm, both good.",
          base_gate_ok ? "  Rim envelope set: slot width "
@@ -368,6 +378,19 @@ if (!base_gate_ok)
              " (envelope, not sheet) and the offset of that envelope from the hub",
              " face. Both the slot AND the CKP sensor station are cut at x ",
              x_wheel + wheel_tooth_off, " - a dished wheel misses with both."));
+/* The offset is bounded, not measured, so prove at render time that the bound is
+   harmless rather than asserting it. Worst case is the whole bend to one side. */
+echo(str("  OFFSET BOUND: bend ", tooth_bend, " mm -> envelope centre at worst ",
+         tooth_off_max, " mm off the disc plane."));
+echo(str("    slot clearance per side, nominal ", (wheel_thk_rim + 6 - wheel_thk_rim)/2,
+         " mm, worst case ", (wheel_thk_rim + 6 - wheel_thk_rim)/2 - tooth_off_max,
+         " mm  -> ", ((wheel_thk_rim + 6 - wheel_thk_rim)/2 - tooth_off_max > 1)
+                       ? "FINE" : "** TIGHT, measure the offset **"));
+echo(str("    CKP pole ", sensor_dia, " mm across a ", wheel_thk_rim,
+         " mm tooth; worst-case axial slip ", tooth_off_max, " mm = ",
+         100*tooth_off_max/wheel_thk_rim, " % of the tooth -> ",
+         (tooth_off_max < wheel_thk_rim/4) ? "still fully overlapped"
+                                           : "** check sensor alignment **"));
 echo(str("HUB GATE: wheel_bore ", wheel_bore, " and key ", key_w, " x ", key_d,
          " are STILL photo ratios off wheel_od. hub/wheel_hub/cam_target remain",
          " held - a spigot was 9.2 mm oversize once already."));
