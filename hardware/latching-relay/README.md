@@ -5,6 +5,44 @@ toggles a **5 V latching relay** that switches **mains ahead of the 36 V
 supply**. Push on, push off, and the relay holds its own state with **zero
 coil current** in between.
 
+> ## ✅ Outcome, 2026-09-22 — the PSU is working on a bought module
+>
+> An off-the-shelf **5 V latching relay module** is in service and doing the job.
+> This board is therefore **not needed to switch the supply** — only if the
+> behaviours listed below are wanted.
+>
+> ### The 12 V → 5 V conversion, found by comparing the two boards
+>
+> The vendor builds both variants on **one PCB**. The 5 V version is the 12 V
+> version with the on-board **5 V LDO omitted** and a **0 Ω 0805 link** fitted in
+> its place, feeding the input straight to the rail. The rest of the circuit is
+> already 5 V.
+>
+> So a 12 V module bought by mistake converts by bridging the LDO's in/out pads
+> with a 0 Ω 0805 — or a solder blob — and feeding it 5 V.
+>
+> > ⚠ **Check the relay coil before assuming this generalises.** It works because
+> > the logic *and the coil* are 5 V on both variants. A 12 V board fitted with a
+> > **12 V coil** would get 5 V on that coil after the bypass and simply not pull
+> > in, and would need the relay swapped as well. Measure the coil, or read the
+> > relay's part number, first.
+>
+> ### What the bought module does not do
+>
+> | | Bought module | This board + ATtiny |
+> |---|---|---|
+> | Toggle a latching relay from a button | ✅ | ✅ |
+> | **Fail-safe off after a blackout** | ❌ | ✅ reset pulse at boot |
+> | Brown-out interlock | ❌ | ✅ BOD fuse |
+> | State sense — where the relay actually is | ❌ | ✅ spare pole |
+> | A line to the ECU | ❌ | ✅ |
+>
+> **The second row is the one that matters**, and it is where this whole thread
+> started: a latching relay *remembers*, so after a power cut the 36 V supply
+> switches itself back on when the mains returns. If that is acceptable on a
+> bench supply, the bought module is the right answer and this board stays on the
+> shelf — a legitimate outcome, not a failed one.
+
 **Nothing on this board is ever mains.** The relay lives in the PSU enclosure
 with the mains wiring; the board carries 5 V, the button contacts and two coil
 wires. It is SELV end to end, which is the main reason the relay is on a header.
