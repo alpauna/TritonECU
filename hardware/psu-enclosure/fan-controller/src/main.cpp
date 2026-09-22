@@ -22,6 +22,7 @@
 
 #include <Arduino.h>
 #include "DHT22.h"
+#include <driver/gpio.h>
 
 /* 4 and 13 are interchangeable here - neither is a strapping pin, neither
  * glitches at boot, both drive and both take a pull-up - which is worth knowing
@@ -72,6 +73,11 @@ void setup() {
     pinMode(PIN_FAN, OUTPUT);
     digitalWrite(PIN_FAN, HIGH);
     fanOn = true;
+#ifdef FAN_TEST
+    // Read back the pad rather than the output register, so the bench test can
+    // tell "not commanded" from "commanded and held down" without a meter.
+    gpio_set_direction((gpio_num_t)PIN_FAN, GPIO_MODE_INPUT_OUTPUT);
+#endif
 
     Serial.begin(115200);
     delay(300);
@@ -89,6 +95,41 @@ void setup() {
     Serial.println("self-test done, entering control\n");
 }
 
+#ifdef FAN_TEST
+/* Bench mode: square wave on the output, sensor ignored. Separates "the
+ * firmware is not commanding it" from "the hardware is not following", which
+ * are the only two possibilities and want different fixes.
+ *
+ *   PLATFORMIO_BUILD_FLAGS=-DFAN_TEST pio run -t upload
+ */
+void loop() {
+    static uint32_t last = 0;
+    static bool on = true;
+    if (millis() - last < 2000) return;
+    last = millis();
+
+    /* Hold HIGH solid for the first 20 s. A meter probe touched once onto a
+     * 50/50 square wave reads 0 V half the time by luck, and that reading is
+     * indistinguishable from a pin that cannot drive. */
+    if (millis() < 20000) on = true; else on = !on;
+
+    digitalWrite(PIN_FAN, on ? HIGH : LOW);
+    delayMicroseconds(50);
+
+    /* GPIO_MODE_INPUT_OUTPUT (set in setup) means digitalRead returns the PAD,
+     * not the output register - so this is what the pin actually is, not what
+     * we asked for. Driven HIGH but reading LOW means something external is
+     * holding it down, and no amount of firmware will fix that. */
+    int pad = digitalRead(PIN_FAN);
+    bool disagree = (pad != (on ? HIGH : LOW));
+
+    Serial.printf("[%6lus] GPIO%u driven %-4s  pad reads %-4s  %s\n",
+                  millis()/1000, PIN_FAN, on ? "HIGH" : "LOW",
+                  pad ? "HIGH" : "LOW",
+                  disagree ? "*** DISAGREES - pin is loaded or shorted ***"
+                           : (on ? "ok, fan should be RUNNING" : "ok, stopped"));
+}
+#else
 void loop() {
     static uint32_t last = 0;
     if (millis() - last < SAMPLE_MS) return;
@@ -113,3 +154,4 @@ void loop() {
     if (!fanOn && t >= T_ON_C)  fanSet(true,  "above the on threshold");
     if ( fanOn && t <= T_OFF_C) fanSet(false, "below the off threshold");
 }
+#endif

@@ -75,6 +75,38 @@ Boot always starts the fan on, so thresholds *below* room temperature only prove
 it will not switch off. Put room temperature on the other side to see a real
 transition.
 
+## When the fan does nothing
+
+```bash
+PLATFORMIO_BUILD_FLAGS=-DFAN_TEST pio run -t upload
+```
+
+Ignores the sensor and drives the output as a square wave — HIGH solid for the
+first 20 s, then 2 s each way. The solid stretch matters: a meter probe touched
+once onto a 50/50 square reads 0 V half the time by luck, and that reading is
+indistinguishable from a pin that cannot drive at all.
+
+It also **reads the pad back**, not the output register (`GPIO_MODE_INPUT_OUTPUT`),
+which is the part that earns its keep:
+
+```
+GPIO4 driven HIGH  pad reads LOW   *** DISAGREES - pin is loaded or shorted ***
+```
+
+That single line separates *"firmware is not commanding it"* from *"firmware is
+commanding it and something external is winning"* — the only two possibilities,
+and they want opposite fixes. It needs no meter and cannot be fooled by probe
+timing. On first bring-up it was `In` and `GND` swapped at `H1` plus a dry
+joint, either of which alone gives a clean 0 V.
+
+Both headers are unlabelled two-pin connectors whose **pin 1 is ground**, on
+both `H1` and `H2`. That is the trap this board sets, and it sets it twice.
+
+If the pin toggles cleanly and the fan still does not move, the fault is
+downstream of `H1`. Short `H2` pin 2 to GND: if the fan spins, the supply side
+is fine and the transistor or its base path is at fault; if it does not, there
+is no 12 V or no common ground, and no amount of base drive will help.
+
 ## Sensor placement
 
 In the **END B exhaust**, not at the fan — intake air is room air and says
