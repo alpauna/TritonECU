@@ -44,17 +44,20 @@ root_fn  = 120;  // gear root circle
    on the photo - the 157 x 173 plate outline and the 101.4 mm pin-field slot -
    and they bracket the wheel at 128..141 mm.
 
-   135 BELOW IS STILL AN ESTIMATE. Put a caliper on it before printing ANY rig
-   part: this one number sets shaft height, wheel dip, the base slot and both
-   sensor stations, and it now drives the bore and keyway too. */
-wheel_od        = 135;    // ** MEASURE ** ~13.5 grid squares, was a bad 171.45
-wheel_thk       =   3.05; // .120" — vendor listing, and that listing is now suspect
+   MEASURED 2026-09-22: 126.2 mm on the Dorman wheel in hand. That is 8.8 mm
+   under the 135 photo estimate and OUTSIDE the +/-7 it was quoted with, so the
+   grid read was not merely imprecise. It also lands the rig on the wrong side of
+   the slot_y bug: at 126.2 the wheel dips 3.1 mm below the base top, and the old
+   test ("does it punch out the BOTTOM") would have cut no slot at all. */
+wheel_od        = 126.2;  // MEASURED, caliper, across the tooth tips
+wheel_thk       =   3.175; // MEASURED 2026-09-22 = 0.125" exactly. The listing said
+                          // .120"/3.05 - wrong again, and in the same direction.
 
 /* The product photo's RATIOS survived what its absolute dimension did not - a
    ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
    was 0.253 x the WRONG OD, which is how a good ratio produced a bad number.
    Deriving them keeps that from happening again: measure the OD and these follow. */
-wheel_bore      = 0.253 * wheel_od;        // photo ratio, ~34.2 at OD 135
+wheel_bore      = 0.253 * wheel_od;        // photo ratio, ~31.9 at OD 126.2
 key_w           = 0.15  * wheel_bore;      // 15 % of bore diameter
 key_d           = 0.19  * wheel_bore / 2;  // 19 % of bore radius
 
@@ -332,10 +335,16 @@ echo(str("shaft_h ", shaft_h, "  wheel dips ", wheel_dip,
          " mm, ", foot_h + base_t - wheel_dip, " mm to ground; slot ", slot_y, " mm"));
 /* The base slot and the sensor bolt holes both track wheel_od directly, and
    wheel_od is still an estimate. Say so at render time, where it will be seen. */
-echo(str("BASE GATE: slot_y ", slot_y, " mm and y_ck ", y_ck,
-         " mm both scale with wheel_od = ", wheel_od,
-         ".  +/-7 mm of OD moves y_ck by +/-3.5 mm, past a 4.4 mm hole.",
-         "  DO NOT PRINT base/base_a/base_b UNTIL wheel_od IS A CALIPER READING."));
+/* GATE LIFTED 2026-09-22. Every input the base depends on is now a caliper
+   reading: wheel_od 126.2 sets slot_y and y_ck, wheel_thk 3.175 sets the slot
+   width. Nothing here rides on the vendor listing or the photo grid any more.
+   What is still gated is the HUB, which needs wheel_bore and the keyway. */
+echo(str("BASE GATE LIFTED: wheel_od ", wheel_od, " and wheel_thk ", wheel_thk,
+         " both MEASURED -> slot ", slot_y, " x ", wheel_thk + 6,
+         " mm, y_ck ", y_ck, " mm. base/base_a/base_b are clear to print."));
+echo(str("HUB GATE: wheel_bore ", wheel_bore, " and key ", key_w, " x ", key_d,
+         " are STILL photo ratios off wheel_od. hub/wheel_hub/cam_target remain",
+         " held - a spigot was 9.2 mm oversize once already."));
 
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through

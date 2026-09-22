@@ -1759,7 +1759,7 @@ ones that touch it or aim at it.
 | `bearing_block` ×4 | `shaft_h` only — **after** the gauge sets the pocket |
 | `motor_mount` | `shaft_h` only |
 | `crank_gear`, `cam_gear` | Gear parameters only |
-| `cam_target` | No wheel dependency at all |
+| ~~`cam_target`~~ ⛔ **moved to hold** | **The "no wheel dependency" claim was wrong.** `cam_target` is built on `hub_od = max(wheel_bore + 16, 46)`, and `wheel_bore` is `0.253 * wheel_od`. Measuring the OD shrank its clamp body 50.16 -> 47.93 mm. Still gated on **`wheel_bore`**, which is a photo ratio. If `wheel_bore` measures under 30 mm the `46` floor takes over and it becomes genuinely independent |
 | `sensor_ckp`, `sensor_cmp` | Check models — their whole job is to be held up against the real thing |
 
 | ⛔ hold | gated on |
