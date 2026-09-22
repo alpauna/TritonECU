@@ -885,20 +885,24 @@ notch_d     = 1.5;   // over the bore there is only wall (4) to give away
    confirmed together: bore diameter, keyway width, keyway depth, centre
    thickness (the plug finishes flush), hole radius, and hole angle.
 
-   THE PIN IS OBROUND, AND THAT IS THE WHOLE DESIGN. A round pin cut to fit the
-   6.35 hole would seat only if the angle were right to +/-0.24 deg, and the
-   angle is known to about +/-3. Such a gauge fails on a perfect wheel and tells
-   you nothing about which number was wrong - it would be testing itself. So the
-   pin is cut tight RADIALLY and narrow CIRCUMFERENTIALLY:
+   THE PIN IS ROUND, because the hole is round. An earlier version made it
+   obround - tight radially, narrow circumferentially - so that one part would
+   seat across the whole +/-3 deg the angle was uncertain by. That was overruled,
+   and the reasoning is kept here only so the consequence is not a surprise:
 
-     radial        6.10 in a 6.35 hole  ->  radius pinned to +/-0.12 mm
-     circumferential 3.2                ->  seats anywhere within +/-3.3 deg
+     round 6.10 in a 6.35 hole  ->  0.12 mm radial slop  ->  +/-0.24 deg
 
-   READ THE ANGLE OFF THE SYMMETRY, not off a scale. A narrow pin leaves a
-   crescent of open hole on each side. Equal crescents mean the pin is centred
-   and the angle is nominal; a fat crescent on one side says which way to go and
-   roughly how far. Judging two gaps equal is something the eye does far better
-   than reading ticks, and it costs no extra geometry.
+   A ROUND PIN MAKES THIS A SET, NOT A PART. At +/-0.24 deg against an angle
+   known to +/-3, one jig at nominal has about one chance in twelve of seating
+   even on a flawless wheel. Print the ladder - 92 to 98 at 1 deg - and the one
+   that seats reports the angle to +/-0.24, which is far finer than any single
+   tolerant part could have managed. The looseness was doing the tolerating; the
+   ladder does it instead, and it does it better.
+
+     openscad -D 'part="hole_jig"' -D aux_hole_ang=93 -o jig_93.stl vr_rig.scad
+
+   Each part carries its own angle debossed on the arm, because seven jigs that
+   differ by one degree are otherwise indistinguishable in a pile.
 
    FAILURE IS DIAGNOSTIC, which matters for a gauge that checks six things. Every
    other number here is measured and cross-checked - the bore is 1.25" on the
@@ -924,21 +928,15 @@ notch_d     = 1.5;   // over the bore there is only wall (4) to give away
        column bulges slightly, and a chamfer beats discovering that in the bore.
    =========================================================================== */
 jig_t       = wheel_thk_hub;           // 1/8" - and it gauges the wheel's own
-jig_pin_rad = aux_hole_d - clr;        // 6.10 radial: tight, sets the radius
-jig_pin_cir = 3.2;                     // circumferential: deliberately narrow
+jig_pin_d   = aux_hole_d - clr;        // 6.10 round, to a round hole
 jig_arm_w   = 13;
 jig_hub_d   = wheel_bore + 12;         // arm rests on the face around the bore
 jig_lead    = 0.8;                     // PETG lead-in taper
 
-module jig_obround(h) {
-    // long axis RADIAL: hull of two circles offset along X
-    hull() for (dx = [-(jig_pin_rad - jig_pin_cir)/2, (jig_pin_rad - jig_pin_cir)/2])
-        translate([dx, 0, 0]) cylinder(d = jig_pin_cir, h = h, $fn = 32);
-}
-
 module hole_jig() {
     ang = -aux_hole_ang;               // CLOCKWISE from the key, front view
-    union() {
+    difference() {
+      union() {
         // plug: fills bore + keyway, finishing flush with the wheel face
         translate([0, 0, -jig_t]) {
             cylinder(d = wheel_bore - clr, h = jig_t, $fn = fit_fn);
@@ -951,24 +949,36 @@ module hole_jig() {
             rotate([0,0,ang]) translate([aux_hole_r, 0, 0])
                 cylinder(d = jig_arm_w, h = jig_t, $fn = 60);
         }
-        // pin: down into the hole, exactly as deep as the wheel is thick
-        rotate([0,0,ang]) translate([aux_hole_r, 0, -jig_t + jig_lead])
-            jig_obround(jig_t - jig_lead);
-        // lead-in taper, so a fat first perimeter cannot jam the entry
-        rotate([0,0,ang]) translate([aux_hole_r, 0, -jig_t])
-            hull() {
-                translate([0,0,jig_lead]) jig_obround(0.01);
-                scale([0.72, 0.72, 1]) jig_obround(0.01);
-            }
+        // pin: down into the hole, exactly as deep as the wheel is thick,
+        // with a lead-in taper so a fat first perimeter cannot jam the entry
+        rotate([0,0,ang]) translate([aux_hole_r, 0, -jig_t]) {
+            cylinder(d1 = jig_pin_d - 0.9, d2 = jig_pin_d, h = jig_lead, $fn = 48);
+            translate([0,0,jig_lead])
+                cylinder(d = jig_pin_d, h = jig_t - jig_lead, $fn = 48);
+        }
+      }
+      /* Angle CUT INTO the arm's upper face in use orientation - a deboss, not an
+         emboss. Raised text here would be 0.4 mm proud of what becomes the BED
+         face once the dispatcher flips the part, so the jig would stand on its
+         own label and print tilted. Caught by the z span, not by eye.
+
+         No mirroring. That face is read from +Z whether the jig is sitting on
+         the wheel or the printed part has just been lifted off the bed, so text
+         modelled to read from +Z reads correctly both ways. */
+      rotate([0,0,ang]) translate([aux_hole_r - 17, 0, jig_t - 0.6])
+          linear_extrude(1.2) rotate([0,0,-ang])
+              text(str(aux_hole_ang), size = 5, halign = "center",
+                   valign = "center", $fn = 24);
     }
 }
 
+jig_tol = asin((aux_hole_d - jig_pin_d)/2 / aux_hole_r);
 echo(str("HOLE JIG: ", jig_t, " mm plate, plug ", wheel_bore - clr,
-         ", pin ", jig_pin_rad, " x ", jig_pin_cir, " at R ", aux_hole_r,
-         ", ", aux_hole_ang, " deg CW."));
-echo(str("  seats over ", aux_hole_ang - 3.3, " to ", aux_hole_ang + 3.3,
-         " deg; crescent each side ", (aux_hole_d - jig_pin_cir)/2,
-         " mm when centred - equal crescents = nominal angle."));
+         ", ROUND pin ", jig_pin_d, " at R ", aux_hole_r, ", ",
+         aux_hole_ang, " deg CW."));
+echo(str("  seats only within +/-", jig_tol, " deg, i.e. ",
+         aux_hole_ang - jig_tol, " to ", aux_hole_ang + jig_tol,
+         ". PRINT THE LADDER 92..98 - one jig will not find the angle."));
 
 
 module fit_gauge() {
