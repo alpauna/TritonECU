@@ -81,17 +81,27 @@ tooth_off_max   = tooth_bend / 2;                  // all-one-way worst case
    ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
    was 0.253 x the WRONG OD, which is how a good ratio produced a bad number.
 
-   ALL THREE MEASURED 2026-09-22, and they split the verdict on the ratios above.
-   The BORE ratio was vindicated: 0.253 x 126.2 predicted 31.93 against a caliper
-   31.75, which is 0.18 mm on a 1.25" bore. The KEY WIDTH ratio was wrong by two
-   to one - 0.15 predicted 4.79 against a measured 9.525 - so the photo was very
-   likely read across half the keyway. That is the failure this rig cannot carry:
-   a half-width key still ENTERS the slot, clamps up, and feels right, while
-   leaving rotational slop. Slop on a crank trigger is timing error, which is the
-   one quantity the whole rig exists to measure. A ratio being right about one
-   feature says nothing about the next. */
+   ALL THREE MEASURED 2026-09-22, and all three ratios were vindicated:
+
+     wheel_bore   0.253 predicted 31.93   caliper 31.75    (1.25")   0.18 mm
+     key_w        0.15  predicted  4.7625 caliper  4.7625  (3/16")   exact
+     key_d        0.19  predicted  3.03   caliper  3.175   (1/8")    0.15 mm
+
+   CORRECTION, and it is the reason this paragraph is long. key_w was first
+   recorded here as 9.525 (3/8"), which made the ratio look wrong by two to one,
+   and a lesson was drawn from that - "a ratio being right about one feature says
+   nothing about the next". The 9.525 was a misread; 3/16 is the keyway. The
+   ratio was never wrong, and the lesson drawn from it was worse than useless,
+   because it argued for distrusting the one source that had been right three
+   times out of three.
+
+   What the episode actually shows is the opposite: a scale-free ratio held
+   against an OD that moved 8.8 mm. The thing to distrust is a fresh reading that
+   disagrees with a source already corroborated twice, which is exactly the check
+   that would have caught 9.525 on the day. */
 wheel_bore      = 31.75;   // MEASURED = 1.25" exactly
-key_w           =  9.525;  // MEASURED = 0.375", CIRCUMFERENTIAL width of the keyway
+key_w           =  4.7625; // MEASURED = 3/16" exactly. CIRCUMFERENTIAL width.
+                           // Was wrongly recorded as 9.525 (3/8") - see above.
 key_d           =  3.175;  // MEASURED = 0.125", RADIAL depth past the bore wall
 
 /* AUXILIARY HOLE - the second location feature, for sandwiching the wheel.
@@ -466,9 +476,12 @@ echo(str("  hub_od ", hub_od, ", spigot ", wheel_bore - clr, " dia x ", wh_spig_
 echo(str("  KEY FILL: ", key_w - clr, " / ", key_w, " = ",
          100*(key_w - clr)/key_w, " % of the keyway width, ", clr,
          " mm total slop -> ", (clr/(wheel_bore/2) * 180/PI),
-         " deg of backlash at the bore. The photo ratio would have given ",
-         0.15*wheel_bore, " mm here, a ", 100*(1 - 0.15*wheel_bore/key_w),
-         " % under-fill."));
+         " deg of backlash at the bore."));
+/* Cross-check the key against the photo ratio the same way the bore is checked,
+   so a misread like the 9.525 cannot sit here unchallenged a second time. */
+echo(str("  key_w vs photo ratio 0.15 x bore = ", 0.15*wheel_bore, " -> ",
+         (abs(key_w - 0.15*wheel_bore) < 0.3)
+           ? "AGREES" : "** DISAGREES - re-measure before printing the hub **"));
 
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through
