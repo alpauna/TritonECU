@@ -80,10 +80,19 @@ tooth_off_max   = tooth_bend / 2;                  // all-one-way worst case
 /* The product photo's RATIOS survived what its absolute dimension did not - a
    ratio is scale-free, so it cannot be wrong about size. The old wheel_bore 43.4
    was 0.253 x the WRONG OD, which is how a good ratio produced a bad number.
-   Deriving them keeps that from happening again: measure the OD and these follow. */
-wheel_bore      = 0.253 * wheel_od;        // photo ratio, ~31.9 at OD 126.2
-key_w           = 0.15  * wheel_bore;      // 15 % of bore diameter
-key_d           = 0.19  * wheel_bore / 2;  // 19 % of bore radius
+
+   ALL THREE MEASURED 2026-09-22, and they split the verdict on the ratios above.
+   The BORE ratio was vindicated: 0.253 x 126.2 predicted 31.93 against a caliper
+   31.75, which is 0.18 mm on a 1.25" bore. The KEY WIDTH ratio was wrong by two
+   to one - 0.15 predicted 4.79 against a measured 9.525 - so the photo was very
+   likely read across half the keyway. That is the failure this rig cannot carry:
+   a half-width key still ENTERS the slot, clamps up, and feels right, while
+   leaving rotational slop. Slop on a crank trigger is timing error, which is the
+   one quantity the whole rig exists to measure. A ratio being right about one
+   feature says nothing about the next. */
+wheel_bore      = 31.75;   // MEASURED = 1.25" exactly
+key_w           =  9.525;  // MEASURED = 0.375", CIRCUMFERENTIAL width of the keyway
+key_d           =  3.175;  // MEASURED = 0.125", RADIAL depth past the bore wall
 
 /* Tooth width at the rim as an angle, tooth_w_deg = 360*tooth_mm/(pi*wheel_od).
    50 % duty is the usual drawing and is NOT a measurement. It no longer sets
@@ -391,9 +400,35 @@ echo(str("    CKP pole ", sensor_dia, " mm across a ", wheel_thk_rim,
          100*tooth_off_max/wheel_thk_rim, " % of the tooth -> ",
          (tooth_off_max < wheel_thk_rim/4) ? "still fully overlapped"
                                            : "** check sensor alignment **"));
-echo(str("HUB GATE: wheel_bore ", wheel_bore, " and key ", key_w, " x ", key_d,
-         " are STILL photo ratios off wheel_od. hub/wheel_hub/cam_target remain",
-         " held - a spigot was 9.2 mm oversize once already."));
+echo(str("HUB GATE LIFTED: wheel_bore ", wheel_bore, " and key ", key_w, " x ",
+         key_d, " all MEASURED. hub/wheel_hub/cam_target clear to print."));
+echo(str("  hub_od ", hub_od, ", spigot ", wheel_bore - clr, " dia x ", wh_spig_l,
+         " long, key stands ", key_d, " proud at ", key_w - clr, " wide."));
+/* The key is the part that carries timing. Say what it is filling.
+
+   ON THE BACKLASH FIGURE, before it alarms someone: 0.9 deg sounds fatal on a
+   wheel with 10 deg between teeth, and it is not, for two reasons.
+
+   The key is NOT the torque path. The wheel is held by a split clamp and three
+   M4 bolts - friction drives it, and the key is anti-slip backup. It only sees
+   load if the clamp has already let go, which is a failure to fix rather than a
+   tolerance to budget.
+
+   And backlash is only error when the drive REVERSES. Spun one way by a stepper,
+   the key rests on one flank and stays there, so the slop is a constant phase
+   offset - it calibrates out in the same breath as the datum. It would matter on
+   reversal, on a stop-start, or under torque ripple hard enough to unload the
+   clamp. None of those is how this rig runs a sweep.
+
+   Tighten clr for the key only if a measured sweep shows tooth-to-tooth jitter
+   that tracks direction. Do not pre-emptively shrink it: a printed key that has
+   to be forced into a steel keyway splits along the layer lines. */
+echo(str("  KEY FILL: ", key_w - clr, " / ", key_w, " = ",
+         100*(key_w - clr)/key_w, " % of the keyway width, ", clr,
+         " mm total slop -> ", (clr/(wheel_bore/2) * 180/PI),
+         " deg of backlash at the bore. The photo ratio would have given ",
+         0.15*wheel_bore, " mm here, a ", 100*(1 - 0.15*wheel_bore/key_w),
+         " % under-fill."));
 
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through
