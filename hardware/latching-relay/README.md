@@ -55,6 +55,46 @@ wires. It is SELV end to end, which is the main reason the relay is on a header.
      button (remote, on a header)
 ```
 
+## Final version — bleed the 36 V output so "off" means off
+
+Today the supply **fades** rather than switching off: its output capacitance
+holds charge with nothing to discharge it. The fix is a **bleed resistor across
+the output, connected by a normally-closed contact** — open while the supply
+runs, closed when it is switched off, so the discharge is automatic and needs no
+logic. A latching relay's off position is stable, so an NC pole genuinely means
+"off".
+
+### Size it for the stuck-closed case, not for the discharge
+
+The discharge itself is trivial — **0.65 to 3 J** depending on capacitance, which
+any resistor absorbs as a pulse. What decides the value is the failure: **if that
+contact ever closes while the supply is on, the resistor sees V²/R
+continuously.**
+
+| R | τ at 2200 µF | 36 V → 5 V | Peak I | **P if stuck closed** |
+|--:|--:|--:|--:|--:|
+| 220 Ω | 0.48 s | 0.96 s | 164 mA | **5.9 W** 🔥 |
+| 470 Ω | 1.03 s | 2.04 s | 77 mA | 2.8 W |
+| **1 kΩ** | **2.20 s** | **4.3 s** | 36 mA | **1.3 W** |
+| 2.2 kΩ | 4.84 s | 9.6 s | 16 mA | 0.6 W |
+
+**1 kΩ in a 3 W package** is the pick: a few seconds to safe, and a stuck contact
+is a warm resistor rather than a fire. A 220 Ω would discharge in under a second
+and burn 5.9 W forever if the relay failed closed — the wrong trade for a
+difference nobody notices.
+
+**Measure the real capacitance first.** The supply's own output caps plus
+whatever the 36 V feeds downstream both sit across the bleed, and the total is
+what sets the time.
+
+### Two alternatives worth knowing
+
+- **No relay at all:** a permanent 10 kΩ across the output bleeds it in ~20 s and
+  wastes 0.13 W while running. Zero moving parts; often enough for a bench.
+- **Spare pole:** if the mains relay has one, its NC contact does this for free —
+  but that pole was also the candidate for **state sense**. Two jobs, one pole:
+  either a DPDT latching relay, or accept the choice.
+
 ## One layout, either relay
 
 The relay is on order and the coil type is not settled, so the board is laid out
