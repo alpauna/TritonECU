@@ -4,7 +4,7 @@
 //   render one part at a time:  part = "bearing_block" | "motor_mount"
 //                                      | "wheel_hub" | "cam_target" | "sensor_mount"
 //                                      | "crank_gear" | "cam_gear"
-//                                      | "base" | "assembly"
+//                                      | "base" | "hole_jig" | "assembly"
 
 part = "assembly";
 
@@ -93,6 +93,46 @@ tooth_off_max   = tooth_bend / 2;                  // all-one-way worst case
 wheel_bore      = 31.75;   // MEASURED = 1.25" exactly
 key_w           =  9.525;  // MEASURED = 0.375", CIRCUMFERENTIAL width of the keyway
 key_d           =  3.175;  // MEASURED = 0.125", RADIAL depth past the bore wall
+
+/* AUXILIARY HOLE - the second location feature, for sandwiching the wheel.
+   MEASURED 2026-09-22 off the wheel, from the bore WALL (not the axis):
+
+     near edge  10.319  = 13/32"
+     far edge   16.670  = 21/32"
+     diameter    6.35   =  1/4"
+
+   The two edge readings were taken independently of the diameter, so they check
+   it: 16.670 - 10.319 = 6.351 against a measured 6.35. That agreement is worth
+   more than either reading alone, and aux_d_check below keeps it enforced. */
+aux_edge_near   = 10.319;  // bore WALL to the nearest edge of the hole
+aux_edge_far    = 16.670;  // bore WALL to the furthest edge
+aux_hole_d      =  6.35;   // MEASURED = 0.25"
+aux_hole_r      = wheel_bore/2 + aux_edge_near + aux_hole_d/2;   // 29.3695
+aux_d_check     = aux_edge_far - aux_edge_near;                  // must match
+
+/* ** NOT MEASURED ** - the one number the jig exists to settle. It moved three
+   times before it settled, which is why the jig tolerates a range rather than
+   trusting a value:
+
+     ~95 deg    first estimate, by eye
+     ~85 deg    revised - the wheel had been held upside down, and the photo
+                is the FRONT
+     92-98      pixels off that photo, bore-centre placement dominating the error
+     95         SETTLED here. Re-checked against the part, the eye estimate was
+                withdrawn in favour of the photo measurement.
+
+   Direction is CLOCKWISE from the key viewed from the FRONT, confirmed against
+   the photo: keyway at 12 o'clock, hole near 3 o'clock. Worth stating plainly
+   because an upside-down wheel reverses it, and that already happened once. */
+aux_hole_ang    = 95;      // deg CLOCKWISE from the key, viewed from the FRONT
+
+echo(str("AUX HOLE: R ", aux_hole_r, " mm (bolt circle ", 2*aux_hole_r,
+         " = ", 2*aux_hole_r/25.4, " in), dia ", aux_hole_d,
+         ", angle ", aux_hole_ang, " deg CW from the key - UNCONFIRMED"));
+echo(str("  edge cross-check: far - near = ", aux_d_check, " vs measured dia ",
+         aux_hole_d, "  -> ", (abs(aux_d_check - aux_hole_d) < 0.1)
+           ? "AGREES, both readings stand"
+           : "** DISAGREE - one of the three numbers is wrong, do not print **"));
 
 /* Tooth width at the rim as an angle, tooth_w_deg = 360*tooth_mm/(pi*wheel_od).
    50 % duty is the usual drawing and is NOT a measurement. It no longer sets
@@ -836,6 +876,101 @@ gauge_notch = true;
 notch_w     = 6.0;
 notch_d     = 1.5;   // over the bore there is only wall (4) to give away
 
+
+/* ===========================================================================
+   HOLE JIG — one flat part that checks every wheel number at once
+   ===========================================================================
+   A 1/8" plate that plugs the bore and keyway, dog-legs up over the wheel face,
+   and drops a pin into the auxiliary hole. Seat it and six measurements are
+   confirmed together: bore diameter, keyway width, keyway depth, centre
+   thickness (the plug finishes flush), hole radius, and hole angle.
+
+   THE PIN IS OBROUND, AND THAT IS THE WHOLE DESIGN. A round pin cut to fit the
+   6.35 hole would seat only if the angle were right to +/-0.24 deg, and the
+   angle is known to about +/-3. Such a gauge fails on a perfect wheel and tells
+   you nothing about which number was wrong - it would be testing itself. So the
+   pin is cut tight RADIALLY and narrow CIRCUMFERENTIALLY:
+
+     radial        6.10 in a 6.35 hole  ->  radius pinned to +/-0.12 mm
+     circumferential 3.2                ->  seats anywhere within +/-3.3 deg
+
+   READ THE ANGLE OFF THE SYMMETRY, not off a scale. A narrow pin leaves a
+   crescent of open hole on each side. Equal crescents mean the pin is centred
+   and the angle is nominal; a fat crescent on one side says which way to go and
+   roughly how far. Judging two gaps equal is something the eye does far better
+   than reading ticks, and it costs no extra geometry.
+
+   FAILURE IS DIAGNOSTIC, which matters for a gauge that checks six things. Every
+   other number here is measured and cross-checked - the bore is 1.25" on the
+   nose, the edge readings agree with the hole diameter to 0.001 - so the angle
+   is the only genuinely unknown input. If it will not seat, the angle is the
+   first suspect, not the sixth.
+
+   PRINTING, AND WHAT PETG DOES TO IT. Modelled in USE orientation - wheel face
+   at z=0, plug and pin hanging below, arm above - because that is the
+   orientation in which "clockwise from the key" is unambiguous. The dispatcher
+   flips it for export, so the STL arrives arm-down on the bed with plug and pin
+   as vertical columns: no supports, and no bridging under the dog leg.
+   Consequences worth knowing before blaming the wheel:
+
+     - The fit surfaces are vertical walls, NOT the first layer, so elephant foot
+       lands on the arm outline where nothing fits. This is the reason for that
+       orientation beyond convenience.
+     - PETG runs wide. The same printer measured 0.15 mm of shrink on a
+       horizontal bore in fit_gauge, but an external column errs the other way,
+       so the pin and plug carry clr (0.25) off nominal rather than a shrink
+       allowance. If the plug will not enter, skim it - do not open the wheel.
+     - Pin and plug get a 0.8 mm lead-in taper. PETG's first perimeter on a small
+       column bulges slightly, and a chamfer beats discovering that in the bore.
+   =========================================================================== */
+jig_t       = wheel_thk_hub;           // 1/8" - and it gauges the wheel's own
+jig_pin_rad = aux_hole_d - clr;        // 6.10 radial: tight, sets the radius
+jig_pin_cir = 3.2;                     // circumferential: deliberately narrow
+jig_arm_w   = 13;
+jig_hub_d   = wheel_bore + 12;         // arm rests on the face around the bore
+jig_lead    = 0.8;                     // PETG lead-in taper
+
+module jig_obround(h) {
+    // long axis RADIAL: hull of two circles offset along X
+    hull() for (dx = [-(jig_pin_rad - jig_pin_cir)/2, (jig_pin_rad - jig_pin_cir)/2])
+        translate([dx, 0, 0]) cylinder(d = jig_pin_cir, h = h, $fn = 32);
+}
+
+module hole_jig() {
+    ang = -aux_hole_ang;               // CLOCKWISE from the key, front view
+    union() {
+        // plug: fills bore + keyway, finishing flush with the wheel face
+        translate([0, 0, -jig_t]) {
+            cylinder(d = wheel_bore - clr, h = jig_t, $fn = fit_fn);
+            translate([0, -(key_w - clr)/2, 0])
+                cube([wheel_bore/2 + key_d - 0.1, key_w - clr, jig_t]);
+        }
+        // dog leg: rests on the wheel face, carries the arm out to the hole
+        hull() {
+            cylinder(d = jig_hub_d, h = jig_t, $fn = 90);
+            rotate([0,0,ang]) translate([aux_hole_r, 0, 0])
+                cylinder(d = jig_arm_w, h = jig_t, $fn = 60);
+        }
+        // pin: down into the hole, exactly as deep as the wheel is thick
+        rotate([0,0,ang]) translate([aux_hole_r, 0, -jig_t + jig_lead])
+            jig_obround(jig_t - jig_lead);
+        // lead-in taper, so a fat first perimeter cannot jam the entry
+        rotate([0,0,ang]) translate([aux_hole_r, 0, -jig_t])
+            hull() {
+                translate([0,0,jig_lead]) jig_obround(0.01);
+                scale([0.72, 0.72, 1]) jig_obround(0.01);
+            }
+    }
+}
+
+echo(str("HOLE JIG: ", jig_t, " mm plate, plug ", wheel_bore - clr,
+         ", pin ", jig_pin_rad, " x ", jig_pin_cir, " at R ", aux_hole_r,
+         ", ", aux_hole_ang, " deg CW."));
+echo(str("  seats over ", aux_hole_ang - 3.3, " to ", aux_hole_ang + 3.3,
+         " deg; crescent each side ", (aux_hole_d - jig_pin_cir)/2,
+         " mm when centred - equal crescents = nominal angle."));
+
+
 module fit_gauge() {
     pitch = brg_od + 6; n = len(gauge_steps);
     w = n*pitch; h = brg_od + 2*wall + gauge_band; t = brg_w + 3;
@@ -888,6 +1023,7 @@ else if (part == "crank_gear")    spur_gear(crank_gear_teeth);
 else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
+else if (part == "hole_jig")      rotate([180,0,0]) hole_jig();  // export print-ready
 else if (part == "sensor_ckp")    vr_sensor(sensor_barrel_ckp, 25.4 + sensor_dia/2,
                                             sensor_flange_ckp, sensor_back_ckp, true);
 else if (part == "sensor_cmp")    vr_sensor(sensor_barrel_cmp, 19.1 + sensor_dia/2,
