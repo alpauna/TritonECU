@@ -398,6 +398,24 @@ date/time when a fix is available and a boot counter when it is not. A directory
 of `capture_0007.bin` with no timestamps is a capture you will not be able to
 put back in order later.
 
+## Reading the console
+
+Use the helper, not `cat`:
+
+```bash
+./tools/read-rig.py            # follow
+./tools/read-rig.py -s 20      # 20 seconds and stop
+```
+
+`cat /dev/ttyACM0` prints **nothing from a perfectly healthy rig**. The
+arduino-pico USB-CDC stack throws away writes until the host asserts DTR, and
+`cat` never asserts it. `stty` is worse: it can bounce DTR and reset the board
+mid-read. Both look exactly like dead firmware.
+
+The rig prints a report every 5 s *unconditionally*, with no bus activity
+required. So if the helper shows nothing, the fault is in `setup()` — not in the
+signal you are trying to capture.
+
 ## Build order
 
 1. **Assemble RX only.** Confirm with a meter: 2.5 V at IN+ when SCP+ is held at
