@@ -88,6 +88,16 @@ top_x0    = (leg_x - top_dx) / 2;   // 3.10
 top_y0    = (deep  - top_dy) / 2;   // 2.75
 side_y    = deep / 2;               // 25.00 — "the midline of the longer leg"
 
+/* Size markings. This part takes TWO different screws — M2 in the standoffs,
+   M3 clearance in the upright — and an M3 driven into an M2 boss splits it: the
+   wall is 1.35 mm and an M3 major is 1 mm larger than the hole. That happened.
+   So the part now says which is which, debossed where the hand holding a screw
+   is already looking. Cheap insurance against a failure whose only cause is
+   memory. */
+mark       = true;
+mark_size  = 4.0;    // cap height ~2.8 mm
+mark_depth = 0.6;    // deboss; shallower than this disappears under a brim
+
 /* Optional corner ribs. OFF by default: the drawing has none and the upright
    does not need them (see the 10 kg above). Turn them on if the load is ever
    sideways rather than down — the case a flat plate is poor at. */
@@ -131,6 +141,24 @@ module bracket() {
 
             if (gusset) ribs();
         }
+
+        // "M2" on the short leg's top face, between the two hole columns
+        if (mark)
+            translate([leg_x / 2, deep / 2, leg_z - mark_depth])
+                linear_extrude(mark_depth + 0.1)
+                    text("M2", size = mark_size, halign = "center",
+                         valign = "center", $fn = 16);
+
+        // "M3" on the upright's INNER face (x = wall_x), between the two side
+        // bores. rotate([90,0,-90]) extrudes toward -x, so the start point is
+        // mark_depth OUTBOARD of the face and the cut runs into it. Getting
+        // that sign backwards puts the text in mid-air and removes nothing.
+        if (mark)
+            translate([wall_x + mark_depth, side_y, side_z0 + side_dz / 2])
+                rotate([90, 0, -90])
+                    linear_extrude(mark_depth + 0.1)
+                        text("M3", size = mark_size, halign = "center",
+                             valign = "center", $fn = 16);
         // the four 2 mm bores — through the short leg AND any standoff on it
         for (i = [0, 1], j = [0, 1])
             translate([top_x0 + i * top_dx, top_y0 + j * top_dy, top_z - 1])

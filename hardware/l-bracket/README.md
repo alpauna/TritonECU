@@ -72,6 +72,41 @@ The 50 is taken as **overall height**, top face to the free end, and the 30 as
 **tip to the outer face of the upright** — the same convention as the 44.5 on
 hardware/psu-platform.
 
+## ⚠ Two screw sizes, and the part now says so
+
+**M2 in the standoffs. M3 clearance in the upright.** One bracket, two threads —
+which is how an M3 came to be driven into an M2 boss and split it.
+
+| | Modelled | Finishes | Screw |
+|---|--:|--:|---|
+| Four standoffs, short leg | **2.30** | ~2.0 | **M2** |
+| Pair in the upright | 3.80 | ~3.5 | **M3 clearance** |
+
+An M3's major diameter is **3.0 mm going into a ~2.0 mm hole**, against a boss
+wall of only **1.35 mm**. It acts as a wedge; the boss splits. Nothing about the
+print was wrong.
+
+**The part is now marked**: `M2` debossed on the short leg's top face between the
+hole columns, `M3` on the upright's inner face between the two bores, 0.6 mm
+deep. `mark = false` removes them.
+
+### If M3 really is wanted, the plate has to grow
+
+The binding constraint is not the boss — it is that **a 44.5 pattern in a 50 mm
+deep plate leaves 2.75 mm of edge**, so no boss above Ø5.5 fits without
+overhanging.
+
+| Option | `deep` | Bore | Wall | Boss to edge |
+|---|--:|--:|--:|--:|
+| **1. As built — just use M2** | 50 | 2.30 | 1.35 | 0.25 |
+| 2. Tougher M2: `standoff_d = 6` | **51** | 2.30 | **1.85** (+37 %) | 0.25 |
+| 3. M3: `top_d = 3.5`, `standoff_d = 6.5` | **52** | 3.80 | 1.35 | 0.50 |
+| ~~M3 on the existing 50 plate~~ | 50 | 3.80 | 1.35 | **−0.50 ⛔** |
+
+That last row is the one to avoid: an M3 boss on the current depth **overhangs
+the edge by half a millimetre**, so enlarging the bore alone is not a fix — it
+trades a split boss for one hanging in mid-air.
+
 ## Read this before you order screws
 
 > **A nut fits under all four holes — but only if you move the pattern off
