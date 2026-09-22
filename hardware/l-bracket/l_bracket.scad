@@ -46,7 +46,9 @@ top_dx  = 21.8;  // the four top holes, centre to centre ACROSS the short leg.
                  // DRAWN 23.8 — corrected off the module on 2026-09-20, the
                  // pattern is 2 mm narrower than the sketch said.
 top_dy  = 44.5;  // the four top holes, centre to centre ALONG the 50
-top_d   =  2.0;  // "2 mm holes in the centre of the standoffs"
+top_d   =  2.0;  // "2 mm holes in the centre of the standoffs" — CLEARANCE
+                 // for an M2 machine screw. Overridden when top_mode is
+                 // "selftap"; see below.
 
 side_d  =  3.5;  // the pair in the tall leg
 side_dz = 25.4;  // centre to centre, up the leg
@@ -88,6 +90,24 @@ top_x0    = (leg_x - top_dx) / 2;   // 3.10
 top_y0    = (deep  - top_dy) / 2;   // 2.75
 side_y    = deep / 2;               // 25.00 — "the midline of the longer leg"
 
+/* HOW THE TOP HOLES ARE USED — clearance or pilot.
+   ---------------------------------------------------------------------------
+   These are two different holes and the difference is not small.
+
+     "clearance"  a machine screw passes through. The bore must be BIGGER than
+                  the screw. M2 -> 2.0 finished.
+     "selftap"    a thread-forming screw cuts into the boss. The bore must be
+                  SMALLER than the screw, near its root diameter, so there is
+                  material to form a thread from. ~0.80 x major in PETG/PLA.
+
+   Driving a self-tapper into a clearance hole gives it nothing to bite and
+   everything to wedge — which splits a boss exactly as an oversized machine
+   screw does. The hole looks right in both cases; only the number differs. */
+top_mode      = "selftap";  // "clearance" or "selftap"
+selftap_major =  2.0;       // the SCREW's major diameter, not the hole's
+selftap_ratio =  0.80;      // pilot = ratio x major. 0.75 for stiffer material,
+                            // 0.85 if the boss is splitting
+
 /* Size markings. This part takes TWO different screws — M2 in the standoffs,
    M3 clearance in the upright — and an M3 driven into an M2 boss splits it: the
    wall is 1.35 mm and an M3 major is 1 mm larger than the hole. That happened.
@@ -109,7 +129,10 @@ gusset_l  = 12;     // how far each rib reaches along each leg
 /* ---------------------------------------------------------------------------
    Geometry
    --------------------------------------------------------------------------- */
-top_r  = (top_d  + hole_comp) / 2;
+// The pilot is a FINISHED size like top_d is, so the same print compensation
+// applies: model it oversize and let the squeezed first layer bring it back.
+top_nom = (top_mode == "selftap") ? selftap_major * selftap_ratio : top_d;
+top_r  = (top_nom + hole_comp) / 2;
 side_r = (side_d + hole_comp) / 2;
 wall_x = leg_x - t;              // 27.00 — inner face of the tall leg
 top_z  = leg_z - t;              // 47.00 — underside of the short leg
@@ -183,8 +206,22 @@ echo(str("outside              ", leg_x, " x ", deep, " x ", leg_z, " mm"));
 echo(str("short leg (platform) ", leg_x, " x ", deep, ", the four top holes"));
 echo(str("tall leg  (upright)  ", leg_z, " x ", deep, ", t = ", t,
          ", inner face at x ", wall_x));
-echo(str("TOP holes  modelled dia ", top_d + hole_comp, "  (", top_d,
-         " nominal + ", hole_comp, " print compensation)"));
+echo(str("TOP holes  mode \"", top_mode, "\"  modelled dia ", top_nom + hole_comp,
+         "  (", top_nom, " finished + ", hole_comp, " print compensation)"));
+if (top_mode == "selftap") {
+    echo(str("  self-tap screw major  ", selftap_major,
+             "   pilot ", top_nom, " = ", selftap_ratio * 100, "% of major"));
+    echo(str("  boss OD / screw major ", standoff_d / selftap_major,
+             "x", (standoff_d / selftap_major < 2.0)
+                   ? "  <-- UNDER 2x: the boss will split. Widen it, or use a"
+                     + " smaller screw" : "  (ok, 2x is the floor and 2.5x is comfortable)"));
+    echo(str("  thread engagement     ", t + standoff_h, " mm = ",
+             (t + standoff_h) / selftap_major, "x major",
+             (((t + standoff_h) / selftap_major) < 2.0)
+               ? "  <-- UNDER 2x, it will strip" : "  (ok)"));
+    echo(str("  wall around the pilot ", (standoff_d - (top_nom + hole_comp)) / 2,
+             " mm"));
+}
 echo(str("  centres  x       ", top_x0, " and ", top_x0 + top_dx));
 echo(str("  centres  y       ", top_y0, " and ", top_y0 + top_dy));
 echo(str("  plate to the tip     ", top_x0 - top_r, " mm"));
@@ -215,17 +252,17 @@ echo(str("  window ", (nut_x0 >= boss_x0)
 if (standoff) {
     echo(str("standoffs             4 x ", standoff_d, " dia x ", standoff_h,
              " tall, on the short leg's TOP face"));
-    echo(str("  wall around bore    ", (standoff_d - (top_d + hole_comp)) / 2,
+    echo(str("  wall around bore    ", (standoff_d - (top_nom + hole_comp)) / 2,
              " mm",
-             ((standoff_d - (top_d + hole_comp)) / 2 < 0.8)
+             ((standoff_d - (top_nom + hole_comp)) / 2 < 0.8)
                ? "  <-- UNDER 2 extrusion widths, raise standoff_d" : "  (ok)"));
     echo(str("  boss to the tip     ", top_x0 - standoff_d / 2, " mm",
              (top_x0 - standoff_d / 2 < 0) ? "  <-- OVERHANGS the edge" : ""));
     echo(str("  boss to the y edge  ", top_y0 - standoff_d / 2, " mm",
              (top_y0 - standoff_d / 2 < 0) ? "  <-- OVERHANGS the edge" : ""));
     echo(str("  thread stack        ", t + standoff_h,
-             " mm of plate + standoff — ", (t + standoff_h) / top_d,
-             " diameters of M2 if tapped"));
+             " mm of plate + standoff — ", (t + standoff_h) / top_nom,
+             " diameters of the hole"));
     echo(str("  overall height      ", leg_z + standoff_h,
              " mm to the standoff tips (part itself is still ", leg_z, ")"));
 }

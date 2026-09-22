@@ -79,12 +79,44 @@ which is how an M3 came to be driven into an M2 boss and split it.
 
 | | Modelled | Finishes | Screw |
 |---|--:|--:|---|
-| Four standoffs, short leg | **2.30** | ~2.0 | **M2** |
-| Pair in the upright | 3.80 | ~3.5 | **M3 clearance** |
+| Four standoffs, short leg | **1.90** | ~1.6 | **M2 self-tapping — a PILOT** |
+| Pair in the upright | 3.80 | ~3.5 | M3 clearance |
+
+### Clearance and pilot are opposite holes
+
+`top_mode` picks which, and the difference is not a detail:
+
+| Mode | Bore vs screw | For |
+|---|---|---|
+| `"clearance"` | **bigger** than the screw — 2.0 for M2 | a machine screw passing through to a nut or a tapped part |
+| **`"selftap"`** ⭐ as built | **smaller** than the screw — 1.6 for a 2 mm screw | a thread-forming screw cutting into the boss |
+
+A self-tapper driven into a *clearance* hole has nothing to bite and everything
+to wedge, and splits the boss exactly as an oversized machine screw does. **The
+hole looks correct in both cases; only the number differs**, which is why this is
+worth a mode rather than a comment.
+
+The pilot is `selftap_ratio × selftap_major`, default **0.80** — right for PETG
+and PLA. Drop it to 0.75 in stiffer material, raise it to 0.85 if a boss still
+splits.
+
+### The three ratios the render checks
+
+| | As built | Rule |
+|---|--:|---|
+| Boss OD ÷ screw major | **2.5×** | 2× is the floor, 2.5× comfortable. Below 2× the hoop stress splits it |
+| Thread engagement ÷ major | **3.0×** | 2× minimum or it strips |
+| Wall around the pilot | **1.55 mm** | vs 1.35 mm with a clearance bore — the smaller hole is also the stronger boss |
+
+**This is why a 3 mm self-tapper cannot go in this boss**: Ø5 ÷ 3 = 1.67×, under
+the 2× floor, regardless of pilot size.
 
 An M3's major diameter is **3.0 mm going into a ~2.0 mm hole**, against a boss
 wall of only **1.35 mm**. It acts as a wedge; the boss splits. Nothing about the
 print was wrong.
+
+**And if that screw was self-tapping, it was doubly wrong** — a clearance hole is
+the wrong hole for a thread-former even at the right diameter.
 
 **The part is now marked**: `M2` debossed on the short leg's top face between the
 hole columns, `M3` on the upright's inner face between the two bores, 0.6 mm
