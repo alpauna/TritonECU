@@ -8,7 +8,7 @@
  * entirely on this fan, and it holds a warm supply and a mains connection, so
  * "off" is the expensive way to be wrong:
  *
- *   the gate carries an external 10k pull-up, so a floating pin means ON
+ *   the base carries an external 470R pull-up, so a floating pin means ON
  *   setup() drives it ON first, before serial, before the sensor
  *   a crash or reset floats the pin on the way through, so the pull-up covers
  *     the reset window as well as the boot
@@ -29,7 +29,7 @@
  * wiring, and simultaneously in the wiring to match the firmware. Landed back
  * where it started. If it ever moves again, ../dht-scan finds the sensor by
  * probing every free pin rather than by asking. */
-static const uint8_t PIN_FAN = 4;    // -> 220R -> gate. 10k pull-up to 3V3.
+static const uint8_t PIN_FAN = 4;    // -> 470R pull-up to 3V3, then H1-2 -> R1 -> base
 static const uint8_t PIN_DHT = 13;   // 10k pull-up to 3V3
 
 /* Hysteresis on the EXHAUST air, which is air that has already crossed the

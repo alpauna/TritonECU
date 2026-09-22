@@ -6,9 +6,9 @@ through the low-side FET on the [`2N7002 Driver`](../../2N7002%20Driver) board.
 ## Wiring
 
 ```
-GPIO4  --[220R]--+-- gate (SOT-23 pin 1)
-                 |
-              [10k] -- 3V3        fail-safe: floating gate = fan RUNS
+GPIO4  --+-- [470R] -- 3V3       fail-safe: floating pin = fan RUNS
+         |
+         +-- H1 pin 2 (In) -> R1 220R -> SS8050 base
 
 GPIO13 ----------+-- DHT22 DATA
                  |
@@ -25,21 +25,29 @@ pull-up there sets the flash rail to 1.8 V and the board will not boot at all.
 and **34–39** are input-only with no pull-ups, so they cannot drive a gate or do
 the DHT22's bidirectional handshake.
 
-## Change the FET before you build this
+## Fit an SS8050, not the 2N7002
 
-The driver BOM ships a **2N7002**, and it is the wrong part for a 3.3 V gate.
-`Vgs(th)` runs 1.0–2.5 V and `Rds(on)` is specified at `Vgs = 10 V`, so at 3.3 V
-you may have 0.8 V of overdrive in a region no datasheet guarantees. At the
-fan's ~100 mA that is somewhere between 100 mW and 350 mW in a SOT-23 rated for
-200–350 — it works on the bench and dies on a warm day.
+Full reasoning in the [driver board README](../../2N7002%20Driver/README.md).
+Short version: the 2N7002 characterises `Rds(on)` at 10 V and 5 V and **nothing
+below 5 V**, so 3.3 V is off the end of its own curve — and `Id` falls from
+115 mA to **75 mA at 100 °C**, against a ~100 mA fan, in a box that is hot
+precisely when the fan is needed. `L2N7002LT1G` is the same part; the `L` is the
+manufacturer, Leshan Radio, not a logic-level suffix.
 
-**AO3400A** or **SI2302**: same SOT-23 footprint, same G/S/D pinout, `Rds(on)`
-specified down to 2.5 V. AO3400A at 100 mA drops 3 mV and burns 0.3 mW.
+An SS8050 in SOT-23 drops into the same footprint (base/emitter/collector is the
+same pin order as gate/source/drain) and sidesteps the threshold problem
+entirely, because a BJT is current-driven. ~0.15 V `Vce(sat)`, 15 mW, 1.5 A
+rating, 1 W package.
 
-**The BOM also has no flyback diode.** Switching a fan low-side puts a spike on
-the drain at turn-off. A 60 V 2N7002 shrugs it off; a 20 V SI2302 may not. Add a
-diode across the fan, **cathode to +12 V** — the enclosure BOM already carries
-1N5819.
+**The pull-up is 470 Ω, not 10 k, and it lives at this end** — the driver board
+has no 3.3 V rail. A BJT base needs *current*: through 10 k you would get
+0.26 mA, a forced beta of 385 against an hFE that may be 85, and the fan would
+turn at half speed while the transistor burned a third of a watt looking like it
+worked.
+
+No flyback diode. A 2-wire brushless fan commutates internally behind its own
+input capacitor; what is left is ~2.5 nJ of lead inductance, switched slowly,
+into 13 V of headroom.
 
 ## Fail-safe
 

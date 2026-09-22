@@ -1,6 +1,6 @@
 ﻿"Quantity","Comment","Designator","Footprint","Value","Manufacturer Part","Manufacturer","Supplier Part","Supplier","No."
 "2","PZ254V-11-02P","H1,H2","HDR-TH_2P-P2.54-V-M","","PZ254V-11-02P","XFCN(兴飞)","C492401","LCSC","1"
-"1","2N7002","Q1","SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR","","2N7002","JSMSEMI(杰盛微)","C916396","LCSC","2"
+"1","SS8050 NPN - SEE README, do NOT fit 2N7002","Q1","SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR","","SS8050","(marking J3Y)","","","2"
 "1","220Ω","R1","R0805","220Ω","0805W8F2200T5E","UNI-ROYAL(厚声)","C17557","LCSC","3"
 "1","10kΩ","R2","R0805","10kΩ","FRC0805F1002TS","FOJAN(富捷)","C2907219","LCSC","4"
 "2","Screw-Hole-M2","SCREW1,SCREW2","Screw-Hole-M2","","","","","","5"
