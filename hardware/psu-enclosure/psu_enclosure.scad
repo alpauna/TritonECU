@@ -109,7 +109,11 @@ fan_pitch    = 32;    // bolt centres, from the drawing
 fan_screw    =  2.6;  // M3 self-tapping through the fan's own 3.5 mm holes
 fan_bore     = 38;
 fan_pad      = 46;
-fan_pad_t    =  5;
+fan_pad_t    =  6;    /* 6, not 5. M3 self-tapping wants >= 2x major engagement -
+                         this project's own L-bracket rule - and 5 gives 1.67x.
+                         It mattered less with a 10 mm fan; a 20 mm one has twice
+                         the mass hanging off the same four screws. Costs 1 mm of
+                         bed footprint, 290 -> 291, still inside a 300 bed. */
 fan_guard    = true;  // concentric webs over the bore
 fan_web      =  2.0;
 

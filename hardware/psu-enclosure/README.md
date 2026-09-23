@@ -423,6 +423,32 @@ Clearances are to the **bodies**, not the bores: a binding post is ~12 mm across
 the nut and a button bezel ~16, so clearing the holes by 8 mm left 0.25 mm
 between the parts. 14 mm gives 6.25.
 
+### One fan, and it is the thick one
+
+Settled: **a single 40 × 40 × 20**, not two 40 × 40 × 10. The exhaust decides it.
+
+| | exhaust ratio |
+|---|---|
+| one 40 × 40 × **20** | **2.19×** — same 38 mm bore, nothing changes |
+| two 40 × 40 × 10 | **1.10×** |
+
+At 1.10× the exhaust is as restrictive as the intake, so the second fan does not
+buy double — it buys perhaps a third more, for two fans of noise and a second
+hole in the tub. The thicker fan roughly doubles airflow and spends no grid
+budget at all.
+
+**Nothing in this model knew the fan's thickness.** It provides a pad, a bore and
+four screw pilots; a 20 mm fan mounts on the same pad. The only change is screw
+length: **M3 × 25 minimum**, against 15 for the 10 mm fan.
+
+`fan_pad_t` went 5 → 6 mm. M3 self-tapping wants ≥ 2× major engagement — this
+project's own L-bracket rule — and 5 gave 1.67×. It mattered less with a 10 mm
+fan; a 20 mm one hangs twice the mass off the same four screws. Costs 1 mm of
+bed footprint, 290 → 291, still inside a 300 bed.
+
+**If a second fan ever does go in, the grid has to grow with it.** That coupling
+is the whole reason one thick fan beats two thin ones here.
+
 ### The grid wall is a legitimate home, not just a hack
 
 The first build put the jacks through the END B grid, and they land on it
