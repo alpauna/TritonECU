@@ -148,17 +148,35 @@ and the setpoint together and the crossing does not shift.
 
 ### Wire it as a rheostat, and mind which end the wiper goes to
 
+Specified part: **ALPS RK09K11300DR** — 9 mm vertical, 10 kΩ, taper `1B`
+(linear), 280° travel, 3 × Ø1 mm pins on a 10.6 × 7 pattern.
+
 ```
-   +5V --[R8 6k8]--o 1
-                     RV1 10k          wiper (2) tied to terminal 3 —
-                   o 3 --+-- PA4      the ADC side, NOT the supply side
+   +5V --[R8 6k8]--o 3
+                     RV1 10k        terminal 2 is the WIPER (datasheet p.315)
+                   o 1 --+-- PA4    tie it to terminal 1, the ADC side
                    o 2 --+
                          |
         GND --[R9 20k]---+
 ```
 
-Span is **556–763 counts, about 29–51 °C**. Turning toward 0 Ω raises the
-setpoint; toward 10 kΩ lowers it.
+Span is **556–763 counts, about 29–51 °C**, and clockwise **raises** the
+setpoint. That falls out of feeding R8 into terminal 3 rather than 1: ALPS
+increase R(1→2) clockwise, so R(3→2) *decreases* clockwise, the node rises, and
+the knob reads the way a knob should.
+
+### ±20 %, and why it does not matter
+
+The pot is ±20 %, so the bottom of the span moves — 26.4 °C on a +20 % part,
+31.9 °C on a −20 % one. The **top does not move at all**: at 0 Ω the pot
+contributes nothing to the divider, so 51.4 °C is tolerance-free.
+
+**For setting it, this is irrelevant.** You turn the knob watching the display,
+not reading the dial — which is the dividend from putting the setpoint through
+the same LUT as the measurement. A ±20 % part just shifts where in the travel a
+given temperature lands.
+
+It matters in exactly one place: the fault window has to clear 527, not 556.
 
 **A rheostat beats a 3-terminal divider here, and the reason is the failure
 mode.** If the wiper contact goes open, the track is still intact, so the
@@ -178,8 +196,9 @@ been setpoints nobody would choose for this box.
 
 **R8 and R9 still earn their place**, because the wiring cannot catch a broken
 *lead*: R8 open pulls the node to ground, R9 open pulls it to the rail, and a
-missing pot leaves it grounded through R9. All three land outside 506–813 and
-are caught. On that fault the firmware falls back to the compiled default rather
+missing pot leaves it grounded through R9. All three land near 0 or 1023, so the
+window sits at **450–850** — wide enough for a +20 % pot at full travel, and
+still nowhere near a real fault. On that fault the firmware falls back to the compiled default rather
 than to fan-on — a known-good threshold beats a fan that runs forever — and the
 display flags that the pot is being ignored.
 

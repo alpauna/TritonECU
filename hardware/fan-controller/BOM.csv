@@ -18,6 +18,6 @@
 "1","Momentary button - wakes the display","SW1","SW-TH_4P-L6.0-W6.0","","","to GND, internal pull-up","17"
 "2","I2C pull-ups","R6,R7","R0805","4k7","","only if the OLED module does not already fit them - most do","18"
 "1","4-way header for the display tail","J4","HDR-TH_4P-P2.54","","","SDA SCL 5V GND","19"
-"1","Setpoint pot - WIRE AS RHEOSTAT, wiper to the ADC-side terminal","RV1","POT-TH_3P","10k lin","","open wiper then fails to the LOWEST setpoint, fan earliest","20"
+"1","Setpoint pot - RHEOSTAT: R8 to pin 3, tie wiper(2) to pin 1","RV1","ALPS RK09K 9mm vertical, 3x1mm on 10.6x7","10k lin 1B","RK09K11300DR","+/-20% moves only the LOW end. Open wiper -> lowest setpoint, fan earliest","20"
 "1","Pot span top - sets the upper end","R8","R0805","6k8","","with R9 gives 556-763 counts, ~29-51 C","21"
 "1","Pot span bottom - AND makes a broken LEAD detectable","R9","R0805","20k","","open wiper is handled by the rheostat wiring, not by these","22"

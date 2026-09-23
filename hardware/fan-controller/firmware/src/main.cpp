@@ -64,8 +64,13 @@ static const uint16_t HYST        =  61;   // counts. See README for the degrees
  * The window below still catches LEAD faults, which the wiring cannot: R8 open
  * pulls the node to ground (0), R9 open pulls it to the rail (1023), and a
  * missing pot leaves it grounded through R9. */
-static const uint16_t POT_MIN = 506;
-static const uint16_t POT_MAX = 813;
+/* WIDENED for the pot's +/-20% tolerance (ALPS RK09K11300DR). Only the LOW end
+ * of the span moves - at 0 ohm the pot contributes nothing to the divider, so
+ * 763 is tolerance-free - but a +20% part reads 527 at full travel, and the old
+ * 506 left 21 counts of margin. That would have flagged a good pot as broken.
+ * A fault still reads ~0 or ~1023, so this window catches them by a mile. */
+static const uint16_t POT_MIN = 450;
+static const uint16_t POT_MAX = 850;
 
 /* AN OPEN NTC IS THE DANGEROUS FAULT. Open the top leg and the divider reads
  * near zero, which looks like VERY COLD and would hold the fan off forever. A
