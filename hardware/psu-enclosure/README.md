@@ -390,6 +390,52 @@ run the length of the bay past the inlet's terminals.
 the `.scad` asserts that its boss clears the plug pad, so a bad value stops the
 render.
 
+## Front wall — jacks and two buttons
+
+```
+|-- DC-DC 18.7..109.3 --|   36V 10A   0-30V 3A   5V 3A        POWER
+                            (o)(o)    (o)(o)     (o)(o)         (o)
+                                                              THERMAL
+                                                                (o)
+```
+
+**The 12.5 mm hole was never a gland.** It was drawn for a PG7 carrying the 36 V
+output; in the build it took the latching relay's power button, and the 36 V now
+leaves on banana jacks instead. A second identical button wakes the fan
+controller's display.
+
+**The two buttons stack vertically** at the far right. Side by side they cost
+40 mm of a wall with 145 to share between them and six jacks; stacked they cost
+20, and that difference is what lets the jack pairs sit far enough apart to read
+as pairs.
+
+**19.05 mm (0.75") within a pair is a standard, not a preference** — it is what
+lets a dual banana plug drop into both posts at once. The gap between pairs is
+then whatever is left, and it has to be clearly larger. At 31.15 mm it is 1.64×
+the within-pair pitch; the render asserts it stays above 1.5×, because six posts
+in an even row is the mistake that puts a 5 V load across 36 V.
+
+Everything is labelled on the outer face — voltage and current above each pair,
+`POWER` and `THERMAL` by their buttons. Two identical buttons 26 mm apart are
+otherwise a coin toss, and one of them cuts the supply.
+
+Clearances are to the **bodies**, not the bores: a binding post is ~12 mm across
+the nut and a button bezel ~16, so clearing the holes by 8 mm left 0.25 mm
+between the parts. 14 mm gives 6.25.
+
+### The jacks in the exhaust grid cost 12 %
+
+The first build put them through the END B grid, which works and is worth
+knowing the price of: three holes per pair, nine of 78, **2808 → 2484 mm²**.
+Against one fan that is still 2.19× the bore and fine.
+
+Against **two** fans it is 1.10×, and even the untouched grid would only be
+1.24×. So the grid was already the limit for a second fan before the jacks
+touched it — which is the strongest argument yet for the
+[thicker fan](#one-fan-may-not-be-enough-under-load--measure-before-adding):
+a 40 × 40 × 20 uses the same 38 mm bore and doubles airflow without spending any
+grid budget at all.
+
 ## Safety
 
 The box is plastic, so there is nothing to bond to earth — but the C14's earth

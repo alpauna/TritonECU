@@ -154,9 +154,22 @@ plug_x = out_l/2;      // nothing else is on this wall; slide it freely
 plug_z = psu_z0 + psu_h/2;
 
 /* DC output. PG7 gland or a rubber grommet; same wall, same bay. */
-gland_d =  12.5;
-gland_x = out_l - 45;
-gland_z = psu_z0 + psu_h/2;
+/* THIS IS A PUSH BUTTON, NOT A GLAND. The 12.5 hole was drawn for a PG7 gland
+   carrying the 36 V output; in the build it took the latching relay's power
+   button instead, and the 36 V now leaves on banana jacks (below). A second
+   identical button wakes the fan controller's display.
+
+   The two buttons STACK VERTICALLY at the far right. Side by side they would
+   cost 40 mm of a wall that has 145 to share between them and six jacks;
+   stacked they cost 20, and that difference is what lets the jack pairs sit far
+   enough apart to read as pairs. */
+btn_d   =  12.5;
+btn_x   = out_l - 22;                 // far right, past everything
+btn_dz  =  26;                        // vertical separation, clears the bezels
+btn1_z  = psu_z0 + psu_h/2 + btn_dz/2;   // latching relay - power
+btn2_z  = psu_z0 + psu_h/2 - btn_dz/2;   // fan controller - wake the display
+
+
 
 /* ---------------------------------------------------------------------------
    DC-DC module — LONG SIDE (y = out_w), END A end of the bay
@@ -208,6 +221,39 @@ mod_face_y  = out_w + mod_boss;  // the panel the module snaps into
 
 /* Boss outline: bezel footprint, plus a wall each side, plus a little margin. */
 mod_bw = mod_cut_w + 2*mod_flange + 2*wall + 6;
+
+/* BANANA JACKS — 36 V 10 A, 0.5-30 V 3 A, 5 V 3 A.
+   19.05 mm (0.75") within a pair is not a preference: it is the standard that
+   lets a dual banana plug drop into both at once. The gap BETWEEN pairs is then
+   whatever is left, and it has to be clearly larger or the six posts read as one
+   row of six rather than three pairs - which is the mistake that puts a 5 V load
+   across 36 V. */
+bp_d     =  8.0;                      // panel hole for the binding post
+bp_pitch =  19.05;                    // 0.75" - standard dual-plug spacing
+bp_pad_t =  2.0;                      // extra material inside, for the nut
+bp_z     = psu_z0 + psu_h/2;
+/* 14, not 8. A binding post is ~12 mm across the nut and a button bezel ~16,
+   so clearing the HOLES by 8 leaves the bodies almost touching - 0.25 mm at the
+   button end. Clear the bodies, not the bores. */
+bp_body  = 14;
+bp_lo    = mod_x + mod_bw/2 + bp_body;   // clear of the DC-DC boss
+bp_hi    = btn_x - btn_d/2 - bp_body;    // clear of the buttons
+bp_gap   = ((bp_hi - bp_lo) - 3*bp_pitch) / 2;
+bp_x0    = bp_lo;
+bp_label = ["36V 10A", "0-30V 3A", "5V 3A"];
+
+assert(bp_gap > bp_pitch * 1.5,
+       str("banana pairs too close: gap ", bp_gap, " vs pitch ", bp_pitch,
+           " - move btn_x right or the DC-DC left"));
+
+echo(str("FRONT WALL, left to right:"));
+echo(str("  DC-DC boss   x ", mod_x - mod_bw/2, " .. ", mod_x + mod_bw/2));
+echo(str("  banana pairs x ", bp_x0, " .. ", bp_x0 + 3*bp_pitch + 2*bp_gap,
+         "   pitch ", bp_pitch, " within, ", bp_gap, " between"));
+echo(str("  buttons      x ", btn_x, "  z ", btn2_z, " (THERMAL) and ", btn1_z, " (POWER)"));
+echo(str("  pair separation is ", bp_gap/bp_pitch,
+         "x the within-pair pitch -> ",
+         (bp_gap > bp_pitch*1.5) ? "reads as three pairs" : "** reads as one row of six **"));
 mod_bh = mod_cut_h + 2*mod_flange + 2*wall + 6;
 
 /* Low-voltage output — END A, in the bay's corner.
@@ -229,7 +275,7 @@ assert(mod_clear_behind > 8,
        "DC-DC module: not enough bay left behind it for terminals. Raise mod_boss.");
 assert(mod_x + mod_bw/2 < out_l - wall && mod_x - mod_bw/2 > wall,
        "DC-DC runs off the end of the bay wall. Move mod_x.");
-assert(abs(mod_x - gland_x) > mod_bw/2 + gland_d,
+assert(abs(mod_x - btn_x) > mod_bw/2 + btn_d,
        "DC-DC boss runs into the DC output gland. Move mod_x or gland_x.");
 /* --- the inlet, now on the back wall --- */
 assert(plug_x + plug_pad_w/2 <= out_l && plug_x - plug_pad_w/2 >= 0,
@@ -350,9 +396,42 @@ module plug_cuts() {
             rotate([-90, 0, 0]) cylinder(d = plug_hole_d, h = d, $fn = hole_fn);
 }
 
-module gland_cut() {
-    translate([gland_x, out_w - wall - 1, gland_z])
-        rotate([-90, 0, 0]) cylinder(d = gland_d, h = wall + 2, $fn = fit_fn);
+module btn_cuts() {
+    for (z = [btn1_z, btn2_z])
+        translate([btn_x, out_w - wall - 1, z])
+            rotate([-90, 0, 0]) cylinder(d = btn_d, h = wall + 2, $fn = fit_fn);
+    /* Labelled, because two identical buttons 26 mm apart are otherwise a
+       coin toss - and one of them cuts the 36 V supply. Same mirror as the
+       jack labels: from outside the wall, world +x runs left. */
+    for (t = [[btn1_z, "POWER"], [btn2_z, "THERMAL"]])
+        translate([btn_x, out_w + 0.1, t[0] + btn_d/2 + 5])
+            rotate([90,0,0]) linear_extrude(0.7)
+                mirror([1,0,0]) text(t[1], size = 4.5, halign = "center",
+                                     valign = "center", $fn = 24);
+}
+
+/* Local thickening INSIDE the wall. A binding post's nut clamping on 3 mm of
+   PETG is how you crack a panel; 5 mm is comfortable and still leaves plenty of
+   thread. Inside, so the outer face stays flat for the labels. */
+module banana_pad_solid() {
+    w = 3*bp_pitch + 2*bp_gap + 24;
+    translate([bp_x0 + (3*bp_pitch + 2*bp_gap)/2 - w/2,
+               out_w - wall - bp_pad_t, bp_z - 16])
+        cube([w, bp_pad_t, 32]);
+}
+
+module banana_cuts() {
+    for (p = [0:2]) for (k = [0,1])
+        translate([bp_x0 + p*(bp_pitch + bp_gap) + k*bp_pitch,
+                   out_w - wall - bp_pad_t - 1, bp_z])
+            rotate([-90,0,0]) cylinder(d = bp_d, h = wall + bp_pad_t + 2, $fn = fit_fn);
+    /* Labels, cut into the OUTER face. Mirrored in x: seen from outside the
+       wall, world +x runs to the left, so unmirrored text reads backwards. */
+    for (p = [0:2])
+        translate([bp_x0 + p*(bp_pitch + bp_gap) + bp_pitch/2, out_w + 0.1, bp_z + 14])
+            rotate([90,0,0]) linear_extrude(0.7)
+                mirror([1,0,0]) text(bp_label[p], size = 5, halign = "center",
+                                     valign = "center", $fn = 24);
 }
 
 /* The boss the module's panel sits on. Drafted 45 degrees on its UNDERSIDE —
@@ -444,6 +523,7 @@ module tub() {
                     cube([out_l, out_w, out_h]);
                     fan_pad_solid();
                     plug_pad_solid();
+                    banana_pad_solid();
                     mod_boss_solid();
                 }
                 cavity();
@@ -453,7 +533,8 @@ module tub() {
         fan_cuts();
         grid_cuts();
         plug_cuts();
-        gland_cut();
+        btn_cuts();
+        banana_cuts();
         mod_cuts();
         mod_panel_relief();
         lv_gland_cut();
