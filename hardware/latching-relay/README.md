@@ -118,6 +118,14 @@ so a 5 V rail drives it with no bootstrap. Two SO-8s replace four SOT-23s. It
 costs 37 mm² more and about 40× the money, so it is a preference, not an
 improvement — but it is a legitimate one.
 
+> **This choice reaches outside this board.** The enclosure fan controller can
+> use the 5 V rail as an interlock — lose the rail, the coil drops, the 36 V
+> supply dies and there is nothing left to cool, so no thermal switch is needed.
+> **That only holds with an ordinary relay.** A latching relay's stable off
+> position means a 5 V loss leaves the contacts where they were and the supply
+> running, which removes the interlock without changing anything visible here.
+> See [`../fan-controller`](../fan-controller/README.md#the-5-v-rail-is-an-interlock--if-you-wire-it-that-way).
+
 ## Or use an ordinary 5 V relay
 
 There are plain 5 V relays in the drawer, and they build today rather than

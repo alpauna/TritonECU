@@ -334,6 +334,42 @@ What this still **cannot** cover is losing 12 V while the supply runs hot. That
 wants a **KSD9700 60 °C normally-open** across `Q1`, which closes when hot
 whatever the firmware is doing, including when it is unpowered.
 
+## The 5 V rail is an interlock — if you wire it that way
+
+The case firmware cannot cover is losing the MCU's power while the supply keeps
+running hot. In this enclosure that case can be designed out instead of guarded
+against, because **the same 5 V that runs this board can be the 5 V that holds
+the 36 V supply on**:
+
+```
+mains ─► 5V always-on module ─► latch ─► relay coil ─► mains ─► 36 V PSU
+                │                                                   │
+                └──────────► THIS BOARD                      DC-DC ─► fixed 5V
+```
+
+Lose that rail and the relay drops, the supply dies, and there is nothing left
+to cool. No thermal switch required.
+
+**It only works under two conditions, and both are easy to get wrong.**
+
+**1. An ordinary relay, not a bistable latching one.** See the table in
+[`../latching-relay`](../latching-relay/README.md#or-use-an-ordinary-5-v-relay):
+a latching relay's off position is *stable*, which is its whole appeal — zero
+holding current — and it means a 5 V loss leaves the contacts exactly where they
+were, with the supply still running. The fail-safe-off behaviour is free on an
+ordinary relay and absent on a latching one. **Populating the latching version
+silently removes this interlock**, and nothing in that folder currently says so.
+
+**2. This board fed from the ALWAYS-ON module, not the DC-DC's 5 V.** The DC-DC
+is fed *from* the 36 V, so its rail can fail while the always-on module keeps
+the relay held and the supply running. Feeding this board from the rail that
+holds the relay is what ties the two together; feeding it from the DC-DC leaves
+the hole open and looks identical on the bench.
+
+**Fit the KSD9700 if either condition is not met** — and fit it anyway if you
+want cover for a failed-open `Q1` or a gate stuck low, which no rail interlock
+reaches.
+
 ## Tune the thresholds before you build this
 
 650/589 come from the Beta equation, not from the box. Run the ESP32 rig in the
