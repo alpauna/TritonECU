@@ -334,6 +334,34 @@ What this still **cannot** cover is losing 12 V while the supply runs hot. That
 wants a **KSD9700 60 °C normally-open** across `Q1`, which closes when hot
 whatever the firmware is doing, including when it is unpowered.
 
+## Silkscreen
+
+**Back — the explanation.** Too long for the front of a 54.86 × 16.13 mm board,
+and nothing here is needed while you are wiring:
+
+- **Setpoint range `32–51 °C`**, and it is deliberately *not* the nominal 29–51.
+  The top end cannot move — at 0 Ω the pot contributes nothing to the divider —
+  but a **−20 % pot bottoms out at 31.9 °C**. Print 29 and one day a board that
+  will not turn down that far gets diagnosed as faulty. 32 is true for every
+  part that can be fitted.
+- **`CW = HOTTER`**, which falls out of R6 feeding pot terminal 3 rather than 1
+  and cannot be inferred by looking at the board.
+- The pull-up note, mirroring the schematic: *pull up not pull down, fan runs if
+  something wrong*.
+
+**Front — what you need with your hands on the connector.** The back is
+unreadable once the board is mounted face-up:
+
+```
+H1   1 LOAD   2 FLYBACK   3 GND
+H2   GND  5V  STATUS  WAKE  UPDI  SCL  SDA
+```
+
+`H1` puts a live drain on pin 1 and ground on pin 3. The unlabelled two-pin
+headers on [`../2N7002 Driver`](../2N7002%20Driver/README.md) are exactly what
+produced a reversed In/GND that took an hour to find, on a board with no 12 V
+anywhere near it. This one has.
+
 ## The 5 V rail is an interlock — if you wire it that way
 
 The case firmware cannot cover is losing the MCU's power while the supply keeps
