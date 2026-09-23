@@ -398,6 +398,53 @@ the hole open and looks identical on the bench.
 want cover for a failed-open `Q1` or a gate stuck low, which no rail interlock
 reaches.
 
+## Staging: fit two boards, turn the knobs
+
+The setpoint pot turns one board into a stage. Fit a second board with a higher
+setpoint and it waits, engaging its own fans only when the first cannot cope —
+**no firmware change, same binary, different knob**.
+
+```
+stage 1   set 38   releases 32     one fan,  light load
+stage 2   set 45   releases 38.3   two more, heavy load
+```
+
+**It self-regulates, and that is not luck.** Stage 2's NTC sits downstream of
+stage 1's airflow, so once fan 1 runs, stage 2 sees *cooled* air and stays off.
+It only trips when the exhaust keeps climbing despite fan 1 — which is the
+definition of stage 1 being out of capacity. Two thermostats in the same
+airstream measure each other's effect.
+
+### Put stage 2's RELEASE at stage 1's SET point
+
+Not the set points — the release. Each stage should own a distinct regime:
+
+| setpoint | releases | band |
+|---|---|---|
+| 38 | 32.0 | 6.0 |
+| 42 | 35.6 | 6.4 |
+| **45** | **38.3** | 6.7 |
+| 48 | 40.9 | 7.1 |
+
+With stage 1 at 38, stage 2 belongs at **45** — it hands back exactly where
+stage 1 takes over. Put it at 42 and it stays on down to 35.6, *below* where
+stage 1 even engages, so three fans run in a regime one could handle. Both
+values sit inside the pot's 32–51 span.
+
+The band widens with setpoint (5.8 °C at 36, 7.6 °C at 51) because the NTC's
+counts-per-degree falls. The higher stage therefore gets more run-on, which is
+the direction you want.
+
+### A second board probably wants no display
+
+Pot and LED are enough on stage 2 — you set it once. But `setup()` calls
+`oled.begin()` unconditionally, so **check a headless board does not hang on the
+missing I2C device** before building one. Nothing else differs: same firmware,
+same BOM minus the display and its tail.
+
+Electrically there is room. `Q1` is rated 5.7 A; stage 2 driving two 100 mA fans
+is 200 mA.
+
 ## Tune the thresholds before you build this
 
 650/589 come from the Beta equation, not from the box. Run the ESP32 rig in the
