@@ -6,7 +6,7 @@
 "1","LAIL-PZ2.54-8P-L","H2","CONN-TH_LAIL-PZ2.54-8P-L","","LAIL-PZ2.54-8P-L","GND +5V Status Wake UPDI SCL SDA - display and programming tail"
 "1","AO3400A","Q1","SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR","","AO3400A","logic level, Rds(on) specified to 2.5V. NOT a 2N7002 - see README"
 "1","220Ω","R1","R0805","220Ω","0805W8F2200T5E","gate resistor"
-"2","10kΩ","R2,R4","R0805","10kΩ","FRC0805F1002TS","R2 = gate pull. ** R2 MUST GO TO +5V, NOT GND - see As built ** R4 = NTC divider leg, 1%"
+"2","10kΩ","R2,R4","R0805","10kΩ","FRC0805F1002TS","R2 = gate PULL-UP to +5V (not GND: floating pin must RUN the fan). R4 = NTC divider leg, 1%"
 "1","KNTC0805/10KF3950","R3","R0805","","KNTC0805/10KF3950","NTC. ON THE ISOLATED TONGUE between the two routed slots"
 "1","10kΩ","R5","RES-TH_RK09K113004U","10kΩ","RK09K11300DR","RHEOSTAT: R6 to pin 3, tie wiper(2) to pin 1. +/-20% moves only the LOW end"
 "1","6.8kΩ","R6","R0805","6.8kΩ","FRC0805F6801TS","pot span top, 1%"

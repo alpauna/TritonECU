@@ -4,9 +4,9 @@ A thermostat for the [PSU enclosure](../psu-enclosure) fan. Sensor on the board
 on a thermally isolated tongue, setpoint on a pot, and an OLED on a tail showing
 the exhaust temperature.
 
-**Built.** `Schematic/` carries the EasyEDA schematic, gerbers and BOM as
-fabricated: **54.86 × 16.13 mm**, 3 × M2. Read [As built](#as-built) before
-ordering — one net needs changing. Replaces the ESP32 bench rig in
+**Built and ready to order.** `Schematic/` carries the EasyEDA schematic,
+gerbers and BOM as fabricated: **54.86 × 16.13 mm**, 3 × M2. See
+[As built](#as-built) for what differs from the sketch and why. Replaces the ESP32 bench rig in
 [`../psu-enclosure/fan-controller`](../psu-enclosure/fan-controller), which
 proved the control law and the driver but wants a whole dev board and a USB
 cable to do it.
@@ -31,9 +31,9 @@ Logic runs on **5 V**, fed in on `H2`. The fan's 12 V never touches this board �
 
    PA7 (pin 5) --[R1 220R]--+-- gate  Q1 AO3400A
                             |
-                         [R2 10k]  ** see As built - this must go to +5V **
+                         [R2 10k]  PULL-UP, not pulldown - see As built
                             |
-                           GND
+                           +5V
 
    H1  1 Load (drain)   2 Flyback   3 GND      D1 1N4148W: drain -> Flyback pin
    H2  GND  +5V  Status(PA6)  Wake(PA2)  UPDI(PA0)  SCL(PB0)  SDA(PB1)
@@ -70,19 +70,24 @@ logic-level suffix. See [`../2N7002 Driver`](../2N7002%20Driver/README.md).
 The fabricated board differs from the sketch above it in three ways. Two are
 improvements; one is a fault.
 
-### ⚠ R2 is a pulldown. It must be a pull-up.
+### ✅ R2 is a pull-up, and the board says why
 
-`R2` 10 kΩ runs from the gate to **GND**, so a floating `PA7` — during reset,
-during boot, after a watchdog trip — holds the gate low and **stops the fan**.
-That is backwards. This box's airflow depends entirely on this fan and it holds a
-warm supply and a mains connection, so a floating pin must *run* it.
+`R2` 10 kΩ runs from the gate to **+5 V**, so a floating `PA7` — during reset,
+during boot, after a watchdog trip — pulls the gate *high* and **runs the fan**.
 
-**Fix: R2's lower end goes to +5 V, not GND.** One net in EasyEDA. On a board
-already made, lift that end and wire it to the +5 V pour.
+V1.0 had it to GND, which is the same part in the same place doing the exact
+opposite thing, and it would have passed any check that only asked whether a
+10 k gate resistor was fitted. The schematic now carries the reason next to the
+part:
 
-Until then, `setup()` driving the fan on still covers a clean start, but nothing
-covers a hang or the reset window, and the KSD9700 stops being a backstop and
-becomes the only defence.
+> *Pull up not pull down — fan runs if something wrong*
+
+That note is worth more than the fix. A pulldown is what a gate resistor
+normally is, so without it written down this gets "corrected" back the next time
+someone tidies the sheet.
+
+The watchdog is part of the same chain: a hung MCU resets, reset floats `PA7`,
+and the pull-up runs the fan.
 
 ### ⚠ `Status` has no series resistor
 
