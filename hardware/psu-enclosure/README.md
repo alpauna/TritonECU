@@ -143,6 +143,39 @@ a small fixed buck of its own — **not** off the DC-DC's adjustable rail, for t
 reason in [The fan is not a load for the adjustable
 rail](#the-fan-is-not-a-load-for-the-adjustable-rail).
 
+### One fan may not be enough under load — measure before adding
+
+Everything measured so far was **unloaded**, which tells you nothing: the fan
+never reached its threshold. The one real data point is that a comparable 36 V
+supply shipped with **three fans**, which is a manufacturer sizing the same
+problem.
+
+| load | heat | airflow at a 15 °C rise |
+|---|---|---|
+| VR rig, ~100 W drawn | ~14 W | 1.6 CFM |
+| moderate | ~25 W | 2.9 CFM |
+| near this supply's capacity | ~45 W | 5.3 CFM |
+
+A 40 × 40 × **10** is 5–7 CFM free-air and perhaps **2–3 CFM** through a box and
+a grid. That covers the VR rig with thin margin and little else.
+
+**The grid is not the limit**, which is the useful part: 78 × 6 mm diamonds is
+2808 mm² against a 1134 mm² fan bore — **2.48×**. If it were restricting, extra
+intake would buy almost nothing. It is not, so extra intake delivers.
+
+**Try a thicker fan before a second one.** A 40 × 40 × **20** keeps the 32 mm
+bolt pattern and the 38 mm bore, roughly doubles airflow and static pressure,
+and fits the existing pad with **longer screws and no change to this model**.
+A second fan means a second pad, a second bore and a reprint of the tub.
+
+Electrically there is nothing to do in either case: the fan controller's
+AO3400A is rated 5.7 A, so three fans in parallel is 300 mA.
+
+**Get the number first.** Run the VR rig with the ESP32 controller still fitted
+— it prints exhaust temperature every 2.5 s — and see where it settles. That is
+what it was built for, and it also sets the real thresholds, which are still the
+38/32 guess made before anything had run.
+
 ### The grid is diamonds, not squares
 
 A square hole in a vertical wall has a flat top edge that has to bridge. A
