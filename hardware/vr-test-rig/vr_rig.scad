@@ -387,6 +387,20 @@ foot_h   =  34;                      /* leg height. Set by wheel clearance, not
                                         instead would cost ~30 % of the
                                         brackets' stiffness. */
 shaft_h  =  60;                      // shaft centreline above the base top
+/* BOLT RELIEF — the gussets used to sit on top of their own mounting bolts.
+   An M4 washer is 9 mm across and both braces ran straight through where it has
+   to sit: on the bearing block the gusset's outer face lands exactly on the bolt
+   centreline, and on the motor mount the bolt is mid-gusset. Neither could be
+   fixed by moving the brace - on the motor mount there is nowhere to move it to.
+
+   So the brace spans OVER the bolt instead, and the opening is PEAKED rather
+   than round. A flat-topped hole in a vertical wall has to bridge; an apex is
+   self-supporting, which is the same reason the enclosure's exhaust grid is
+   diamonds and not squares. These print with the foot on the bed, so a round
+   relief would bridge its full width in the middle of a structural brace. */
+nut_clear = 11;   // M4 washer is 9 across, plus a margin each side
+nut_h     = 14;   // washer + nut + enough shank for a driver to engage
+
 blk_w    = brg_od + 2*wall;
 /* Axial thickness of the upright. THIS is the rig's soft spot, not the shaft:
    at 16 mm the bracket was EI 24.6 N.m^2, below even the old 8 mm shaft and 8x
@@ -524,6 +538,28 @@ echo(str("  key_w vs photo ratio 0.15 x bore = ", 0.15*wheel_bore, " -> ",
 /* ===========================================================================
    BEARING BLOCK  x2 — 608 bearings, shaft through
    =========================================================================== */
+/* Cuts a self-supporting opening through a brace, centred on a bolt. The
+   profile lives in world Y-Z and is extruded along X, so it clears a brace of
+   any thickness wherever it sits. */
+module bolt_relief(bx, by) {
+    r    = nut_clear/2;
+    sgn  = (bx >= 0) ? 1 : -1;
+    /* BOUNDED IN X, and it has to be. In both parts the bolt sits exactly on
+       the gusset's OUTER face, with the gusset one wall thick inboard of it, so
+       the relief only needs to run from just inside the body out past the
+       washer. An unbounded cut reaches straight through the part: a centred
+       80 mm extrusion at x = +22 and another at -22 met in the middle and
+       removed a slot through the whole block at y = +/-11. It rendered, it
+       looked plausible, and only a control probe on solid material found it. */
+    inb  = wall + 1.5;              // just inside the body, so the washer clears
+    len  = inb + r + 1;
+    translate([bx + sgn*(len/2 - inb), by, 0]) rotate([90,0,90])
+        linear_extrude(height = len, center = true)
+            polygon([[-r, base_t], [r, base_t],
+                     [r, base_t + nut_h], [0, base_t + nut_h + r],
+                     [-r, base_t + nut_h]]);
+}
+
 module bearing_block() {
     difference() {
         union() {
@@ -542,8 +578,10 @@ module bearing_block() {
             cylinder(d = brg_od - 4, h = blk_t + 4, $fn = fit_fn);
         // FOUR M4 feet. Two bolts on the centreline is a hinge: the rotating
         // radial load has nothing but bolt preload resisting sideways rock.
-        for (x = [-blk_w/2 - 4, blk_w/2 + 4], y = [-11, 11])
+        for (x = [-blk_w/2 - 4, blk_w/2 + 4], y = [-11, 11]) {
             translate([x, y, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+            bolt_relief(x, y);       // brace spans over it
+        }
     }
 }
 
@@ -567,8 +605,10 @@ module motor_mount() {
                 rotate([0,0,a]) translate([nema_bolt/sqrt(2), 0, 0])
                     translate([0,0,-1]) cylinder(d = 3.4, $fn = hole_fn, h = wall + 4);
         }
-        for (x = [-nema/2 - wall - 4, nema/2 + wall + 4])
+        for (x = [-nema/2 - wall - 4, nema/2 + wall + 4]) {
             translate([x, 3, -1]) cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
+            bolt_relief(x, 3);       // brace spans over it
+        }
     }
 }
 
