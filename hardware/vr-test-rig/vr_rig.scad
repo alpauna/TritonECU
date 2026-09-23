@@ -399,6 +399,11 @@ shaft_h  =  60;                      // shaft centreline above the base top
    diamonds and not squares. These print with the foot on the bed, so a round
    relief would bridge its full width in the middle of a structural brace. */
 nut_clear = 11;   // M4 washer is 9 across, plus a margin each side
+/* Where the braces may live, derived from the relief rather than typed in, so
+   they track if nut_clear or wall changes. */
+gus_half   = 11 - nut_clear/2;                        // bearing block, in Y
+mm_bolt_x  = 42.3/2 + wall + 4;                       // motor mount bolt
+mm_gus_x   = mm_bolt_x - (wall + 1.5) - wall;         // motor mount, in X
 nut_h     = 14;   // washer + nut + enough shank for a driver to engage
 
 blk_w    = brg_od + 2*wall;
@@ -565,10 +570,15 @@ module bearing_block() {
         union() {
             translate([-blk_w/2, -blk_t/2, 0]) cube([blk_w, blk_t, blk_h]);
             translate([-blk_w/2 - 8, -foot_y/2, 0]) cube([blk_w + 16, foot_y, base_t]);
+            /* Gusset SHORTENED AND CENTRED to clear the bolt reliefs. It used
+               to run y -12..+2 and the relief at y = -11 ate y -12..-5.5 - the
+               TALL end of the triangle, which is the half that does the work.
+               It cannot move inboard in x instead: that would bury it inside
+               the block. So it keeps full height and loses 3 mm of base. */
             for (s = [-1, 1]) scale([s,1,1])
-                translate([blk_w/2, -blk_t/2, 0])
+                translate([blk_w/2, -gus_half, 0])
                     rotate([90,0,90]) linear_extrude(wall)
-                        polygon([[0,0],[14,0],[0,blk_h*0.6]]);
+                        polygon([[0,0],[2*gus_half,0],[0,blk_h*0.6]]);
         }
         // Bearing pocket, BLIND with a shoulder — a 24 mm deep bore would let an
         // 8 mm wide bearing wander. The shoulder lands on the outer race only.
@@ -594,8 +604,14 @@ module motor_mount() {
         union() {
             translate([-nema/2 - wall, -wall, 0]) cube([nema + 2*wall, wall, h]);
             translate([-nema/2 - wall - 8, -wall, 0]) cube([nema + 2*wall + 16, wall + 14, base_t]);
+            /* Gusset MOVED INBOARD, off the bolt entirely. Here the bolt sits
+               mid-gusset in y, so trimming y leaves two 1.5 mm slivers and no
+               brace at all. Moving it in x instead keeps the full 14 mm base
+               and full height; it now stands on the wall's back face rather
+               than off its edge, which braces the same fold. It clears the NEMA
+               bolt circle (17.2) and the boss bore (11.5) with room. */
             for (s = [-1,1]) scale([s,1,1])
-                translate([nema/2 + wall, -wall, 0])
+                translate([mm_gus_x, -wall, 0])
                     rotate([90,0,90]) linear_extrude(wall)
                         polygon([[0,0],[14,0],[0,h*0.6]]);
         }
