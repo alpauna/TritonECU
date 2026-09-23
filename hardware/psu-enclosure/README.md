@@ -441,10 +441,28 @@ budget at all.
 four screw pilots; a 20 mm fan mounts on the same pad. The only change is screw
 length: **M3 × 25 minimum**, against 15 for the 10 mm fan.
 
-`fan_pad_t` went 5 → 6 mm. M3 self-tapping wants ≥ 2× major engagement — this
-project's own L-bracket rule — and 5 gave 1.67×. It mattered less with a 10 mm
-fan; a 20 mm one hangs twice the mass off the same four screws. Costs 1 mm of
-bed footprint, 290 → 291, still inside a 300 bed.
+### The fan is through-bolted, and the holes were drawn for self-tappers
+
+`fan_screw` was **2.6** — a pilot for an M3 self-tapper to cut its own thread
+in. An M3 through-bolt goes through it, but tightly, which is what the first
+build found. It is now **3.6**: M3 clearance, opened past the nominal 3.4
+because an FDM hole finishes undersize and a fan bolt should drop in rather than
+be driven.
+
+`fan_cuts` already drilled the full `fan_pad_t + wall`, so the bolt reaches the
+bay and takes a nut with 10 mm of plenum behind it. No structural change was
+needed — `fan_pad_t` stays at **5**. It was briefly 6 to give self-tappers the
+2× major engagement this project's L-bracket rule asks for, but a nut does not
+care how thick the pad is, and 5 keeps the lower screw 2 mm inside the pad's
+drafted bottom edge rather than 1.
+
+**Nut traps on the inner face.** Through-bolting by feel in a 10 mm plenum means
+holding a nut against a wall you cannot see, at arm's length, four times. The
+trap takes the nut, stops it turning, and the job is done from outside with one
+hand. The hex sits **vertex up** so its roof is self-supporting — this wall
+prints vertically and a flat-topped pocket would bridge, the same reason the
+exhaust grid is diamonds. 2.8 mm deep into 8 mm of pad and wall leaves 5.2 mm
+carrying the bolt.
 
 **If a second fan ever does go in, the grid has to grow with it.** That coupling
 is the whole reason one thick fan beats two thin ones here.

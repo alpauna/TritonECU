@@ -106,14 +106,34 @@ standoff_xy = [ for (x = [psu_x0 + 12, psu_x0 + psu_l/2, psu_x0 + psu_l - 12],
    instead of 3, and its underside is drafted at 45 so it needs no support. */
 fan_sq       = 40;
 fan_pitch    = 32;    // bolt centres, from the drawing
-fan_screw    =  2.6;  // M3 self-tapping through the fan's own 3.5 mm holes
+fan_screw    =  3.6;  /* M3 CLEARANCE, not a self-tap pilot. The fan is through-
+                         bolted: M3 passes the fan's own 3.5 holes, through the
+                         pad and the wall - fan_cuts already drills the full
+                         fan_pad_t + wall - and takes a nut in the plenum, which
+                         has 10 mm behind the inner face. 3.6 rather than the
+                         nominal 3.4 because an FDM hole finishes undersize and
+                         a fan bolt should drop in, not be driven. */
 fan_bore     = 38;
 fan_pad      = 46;
-fan_pad_t    =  6;    /* 6, not 5. M3 self-tapping wants >= 2x major engagement -
-                         this project's own L-bracket rule - and 5 gives 1.67x.
-                         It mattered less with a 10 mm fan; a 20 mm one has twice
-                         the mass hanging off the same four screws. Costs 1 mm of
-                         bed footprint, 290 -> 291, still inside a 300 bed. */
+fan_pad_t    =  5;    /* Back to 5. It was briefly 6 to give M3 self-tappers the
+                         2x-major engagement this project's L-bracket rule asks
+                         for - but the fan is THROUGH-BOLTED, and a nut does not
+                         care how thick the pad is. 5 also keeps the lower screw
+                         2 mm inside the pad's drafted bottom edge rather than 1. */
+/* NUT TRAPS, because through-bolting a fan by feel in a 10 mm plenum is
+   miserable - you are holding a nut against a wall you cannot see, at arm's
+   length, four times. With a trap the nut drops in, cannot turn, and the whole
+   job is done from outside with one hand.
+
+   The hex has a VERTEX UP, so its roof is self-supporting: this wall prints
+   vertically and a flat-topped pocket would bridge. Same reason the exhaust
+   grid is diamonds. $fn=6 already puts a vertex at local 180, which this
+   rotation maps to +z, so it needs no extra turn - but it does need checking if
+   anyone changes the rotation.
+
+   2.8 deep into pad+wall = 8 mm leaves 5.2 mm of material carrying the bolt. */
+fan_nut_af   =  5.7;  // M3 nut is 5.5 across flats, plus a print allowance
+fan_nut_d    =  2.8;  // M3 nut is 2.4 thick
 fan_guard    = true;  // concentric webs over the bore
 fan_web      =  2.0;
 
@@ -361,9 +381,14 @@ module fan_cuts() {
             cylinder(d = fan_bore, h = h, $fn = fit_fn);
         if (fan_guard) fan_webs();
     }
-    for (dy = [-1, 1], dz = [-1, 1])
+    for (dy = [-1, 1], dz = [-1, 1]) {
         translate([-fan_pad_t - 1, fan_cy + dy*fan_pitch/2, fan_cz + dz*fan_pitch/2])
             rotate([0, 90, 0]) cylinder(d = fan_screw, h = h, $fn = hole_fn);
+        // nut trap, opening on the INNER face so the nut drops in from the bay
+        translate([wall - fan_nut_d, fan_cy + dy*fan_pitch/2, fan_cz + dz*fan_pitch/2])
+            rotate([0, 90, 0])
+                cylinder(d = fan_nut_af / cos(30), h = fan_nut_d + 0.5, $fn = 6);
+    }
 }
 
 module grid_cuts() {
