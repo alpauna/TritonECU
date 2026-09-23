@@ -29,13 +29,31 @@ static const uint8_t PIN_NTC  = PIN_PA3;   // AIN3, divider midpoint
 static const uint8_t PIN_FAN  = PIN_PA7;   // -> R3 -> SS8050 base
 static const uint8_t PIN_LED  = PIN_PA6;   // status, flashed at each wake
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
+static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
+                                           // PA5 deliberately free - fan tach
 
 /* Thresholds in ADC counts, 10-bit, VCC reference. 10k NTC B=3950 as the top
  * leg, 10k 1% to ground. 10.1 counts per degree near 35 C, so the 61 counts
  * between these is 6 C of hysteresis — wide on purpose, because the plant is a
  * box of air and a narrow band only cycles the fan. */
-static const uint16_t ADC_ON  = 650;   // 38 C
-static const uint16_t ADC_OFF = 589;   // 32 C
+/* THE POT IS NOT CONVERTED TO DEGREES AND NOT CALIBRATED. It is another divider
+ * on the same ADC against the same reference, so the setpoint is compared
+ * against the sensor directly and the fan trips where the two readings cross.
+ * No mapping constants, no LUT in the control path.
+ *
+ * That also makes the comparison supply-immune in a way a mapped setpoint would
+ * not be: BOTH dividers are ratiometric off VCC, so a sagging rail moves the
+ * sensor and the setpoint together and the crossing stays put. */
+static const uint16_t ADC_DEFAULT = 650;   // 38 C, used only if the pot is faulty
+static const uint16_t HYST        =  61;   // counts. See README for the degrees
+                                           // this rides across the range.
+
+/* RV1 carries end resistors (6k8 / 20k), so its wiper physically cannot leave
+ * 556..834. Anything outside is an open wiper or a broken lead - which without
+ * those resistors would be indistinguishable from a legitimate setting, and
+ * would let a broken connection quietly pick the trip temperature. */
+static const uint16_t POT_MIN = 506;
+static const uint16_t POT_MAX = 884;
 
 /* AN OPEN NTC IS THE DANGEROUS FAULT. Open the top leg and the divider reads
  * near zero, which looks like VERY COLD and would hold the fan off forever. A
@@ -56,9 +74,11 @@ static const uint16_t LUT[16] PROGMEM = {
     669, 713, 753, 788, 819, 846, 870, 890
 };
 
-static bool     fanOn   = false;
-static bool     fault   = false;
-static uint16_t lastAdc = 0;
+static bool     fanOn    = false;
+static bool     fault    = false;   // NTC open or shorted
+static bool     potFault = false;   // wiper open or lead broken
+static uint16_t lastAdc  = 0;
+static uint16_t setpoint = ADC_DEFAULT;
 
 static int16_t countsToCentiC(uint16_t adc) {
     uint16_t lo = pgm_read_word(&LUT[0]);
@@ -76,10 +96,10 @@ static int16_t countsToCentiC(uint16_t adc) {
 
 static void fanSet(bool on) { fanOn = on; digitalWrite(PIN_FAN, on ? HIGH : LOW); }
 
-static uint16_t readSensor() {
-    (void)analogRead(PIN_NTC);            // discard the first, settles the mux
+static uint16_t readAvg(uint8_t pin) {
+    (void)analogRead(pin);                // discard the first, settles the mux
     uint32_t sum = 0;
-    for (uint8_t i = 0; i < 8; i++) sum += analogRead(PIN_NTC);
+    for (uint8_t i = 0; i < 8; i++) sum += analogRead(pin);
     return (uint16_t)(sum / 8);
 }
 
@@ -118,12 +138,19 @@ void loop() {
     static bool     displayOn      = true;
 
     wdt_reset();
-    lastAdc = readSensor();
+    lastAdc = readAvg(PIN_NTC);
+
+    /* A faulty pot falls back to the compiled default, NOT to fan-on. A
+     * known-good threshold beats a fan that runs forever, and the display says
+     * the pot is being ignored. The NTC is the opposite case - see below. */
+    uint16_t pot = readAvg(PIN_SET);
+    potFault = (pot < POT_MIN) || (pot > POT_MAX);
+    setpoint = potFault ? ADC_DEFAULT : pot;
 
     fault = (lastAdc < ADC_OPEN) || (lastAdc > ADC_SHORT);
-    if (fault)                        fanSet(true);         // fail to cooling
-    else if (!fanOn && lastAdc >= ADC_ON)  fanSet(true);
-    else if ( fanOn && lastAdc <= ADC_OFF) fanSet(false);
+    if (fault)                                    fanSet(true);   // fail to cooling
+    else if (!fanOn && lastAdc >= setpoint)        fanSet(true);
+    else if ( fanOn && lastAdc <= setpoint - HYST) fanSet(false);
 
     if (digitalRead(PIN_WAKE) == LOW) { displayOn = true; displayOnSince = millis(); }
     if (displayOn && (millis() - displayOnSince > DISPLAY_TIMEOUT_MS)) {
@@ -142,9 +169,14 @@ void loop() {
             oled.print(F(" C   "));
         }
         oled.setCursor(0, 2);
-        oled.print(fanOn ? F("FAN ON   ") : F("fan off  "));
+        oled.print(fanOn ? F("FAN ON  ") : F("fan off "));
+        /* Setpoint through the SAME LUT as the reading, so both carry identical
+         * calibration and any error in the table cancels between them. */
+        int16_t sp = countsToCentiC(setpoint);
+        oled.print(F("set ")); oled.print(sp / 100);
+        oled.print(potFault ? F("! ") : F("  "));
     }
 
-    flash(fault ? 3 : (fanOn ? 2 : 1));
+    flash(fault || potFault ? 3 : (fanOn ? 2 : 1));
     delay(1000);
 }

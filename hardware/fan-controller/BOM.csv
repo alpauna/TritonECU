@@ -18,3 +18,6 @@
 "1","Momentary button - wakes the display","SW1","SW-TH_4P-L6.0-W6.0","","","to GND, internal pull-up","17"
 "2","I2C pull-ups","R6,R7","R0805","4k7","","only if the OLED module does not already fit them - most do","18"
 "1","4-way header for the display tail","J4","HDR-TH_4P-P2.54","","","SDA SCL 5V GND","19"
+"1","Setpoint pot - trip temperature","RV1","POT-TH_3P","10k lin","","compared against the NTC directly; no calibration","20"
+"1","Pot span top - sets the upper end","R8","R0805","6k8","","with R9 gives 556-834 counts, ~29-63 C","21"
+"1","Pot span bottom - AND makes an open wiper detectable","R9","R0805","20k","","without these a broken lead looks like a valid setting","22"

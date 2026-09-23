@@ -34,6 +34,7 @@ cable to do it.
                             |             GND
                           +5V
                    PA6 o--[R5 2k2]--[LED1]--GND      status
+                   PA4 o---- RV1 wiper (setpoint, see below)
 
          I2C tail to the front panel:  SDA/SCL/5V/GND -> SSD1306 0.96"
          SW1 (momentary, to GND)      wakes the display
@@ -127,6 +128,72 @@ cannot reach the thermostat.
 The display times out after a few minutes and wakes on the button. An OLED left
 showing a static number burns its pixels in, and an always-on 15 mA is 75 mW
 that has to leave the box somehow.
+
+## Setpoint pot — compared against the sensor, not converted
+
+`RV1` on PA4 sets the trip temperature. **It is not mapped into degrees and it
+is not calibrated.** The pot is simply another divider on the same ADC against
+the same reference, so the firmware compares the two readings directly and the
+fan trips wherever they cross:
+
+```
+    ntc >= pot          -> fan on
+    ntc <= pot - HYST   -> fan off
+```
+
+No conversion, no constants, no LUT anywhere in the control path. And the
+comparison is immune to the supply in a way a mapped setpoint would not be:
+**both** dividers are ratiometric off VCC, so a sagging rail moves the sensor
+and the setpoint together and the crossing does not shift.
+
+### The pot has end resistors, and they earn their place
+
+```
+   +5V --[R8 6k8]--+
+                   |
+                 [RV1 10k]---- PA4
+                   |
+        GND --[R9 20k]--+
+```
+
+Those set the span to **556–834 counts, about 29–63 °C** — the useful range and
+nothing else. They also turn an otherwise invisible fault into a loud one: a
+wiper physically cannot read outside that band, so **below 506 or above 884
+means an open wiper or a broken lead**. Without them the pot spans rail to rail
+and an open wiper is indistinguishable from a legitimate setting, which would
+let a broken connection quietly choose a trip temperature.
+
+On that fault the firmware falls back to the compiled default rather than to
+fan-on. A known-good threshold beats a fan that runs forever, and the display
+says the pot is being ignored.
+
+### One pot, not two
+
+There is deliberately no second pot for the release point.
+
+**Two independent pots can be set to a state that cannot work** — nothing stops
+OFF being placed above ON, and a quarter turn gives you a fan that trips and
+immediately releases, or never releases at all.
+
+**And the hysteresis width is a property of the plant, not a preference.** The
+thing being controlled is a box of air with a long time constant; a narrow band
+only cycles the fan without moving the average temperature. A knob for it is a
+control whose sole available use is to make the system worse. It stays fixed at
+61 counts, which rides across the range as:
+
+| setpoint | releases at | band |
+|---|---|---|
+| 30 °C | 24.5 | 5.5 |
+| 38 °C | 32.0 | 6.0 |
+| 45 °C | 38.3 | 6.7 |
+| 60 °C | 50.7 | 9.3 |
+
+A fixed count band widens in degrees as it gets hotter, because the NTC's
+counts-per-degree falls. That is the right direction to drift: a higher setpoint
+means a hotter box, where you want the fan to run on longer rather than trip
+in and out.
+
+**PA5 stays free** — a tach input if a 3-wire fan is ever fitted.
 
 ## Fail-safe
 
