@@ -147,7 +147,16 @@ void setup() {
 
     delay(SELFTEST_MS);        // exercise the fan; a controller that has never
                                // proven the fan turns has not been tested
-    wdt_enable(WDTO_8S);
+    /* tinyAVR 0/1-series has the NEW watchdog, not the classic AVR one, so
+     * wdt_enable(WDTO_8S) does not exist here - the period goes straight into
+     * WDT.CTRLA behind the configuration-change protection. 8K cycles of the
+     * 1.024 kHz OSCULP32K divider is 8 s, which is long against a 1 s loop and
+     * short against a box heating up.
+     *
+     * The reset it causes IS part of the fail-safe: a reset floats PA7, and
+     * once R2 is a pull-up (see README, As built) a floating PA7 runs the fan.
+     * wdt_reset() is just the WDR instruction and works on any AVR. */
+    _PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);
 }
 
 void loop() {

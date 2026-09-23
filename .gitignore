@@ -12,3 +12,7 @@ secrets.ini
 
 # Service manual archive — 95 MB, and a Ford copyright
 docs/**/*.zip
+
+# EasyEDA interactive BOM - 7.8 MB of embedded images, regenerable from the
+# project in one click, and the CSV next to it carries the same part list.
+hardware/fan-controller/Schematic/*-Int-BOM.html

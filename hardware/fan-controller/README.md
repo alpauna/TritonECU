@@ -1,46 +1,125 @@
 # Enclosure fan controller — ATtiny
 
-A self-contained thermostat for the [PSU enclosure](../psu-enclosure) fan. One
-12 V input, one fan output, sensor on the board, and an OLED on a tail showing
-the exhaust temperature. Replaces the ESP32 bench rig in
+A thermostat for the [PSU enclosure](../psu-enclosure) fan. Sensor on the board
+on a thermally isolated tongue, setpoint on a pot, and an OLED on a tail showing
+the exhaust temperature.
+
+**Built.** `Schematic/` carries the EasyEDA schematic, gerbers and BOM as
+fabricated: **54.86 × 16.13 mm**, 3 × M2. Read [As built](#as-built) before
+ordering — one net needs changing. Replaces the ESP32 bench rig in
 [`../psu-enclosure/fan-controller`](../psu-enclosure/fan-controller), which
 proved the control law and the driver but wants a whole dev board and a USB
 cable to do it.
 
 ## Schematic
 
-```
-        +12V o---+-------------------------------+----------------o fan +
-                 |                               |
-              [U1 MCP1703A-5002]              (FAN, 40x40x10, ~100 mA)
-              12V -> 5V, SOT-89                  |
-                 |  Iq = 2 uA                    |
-        +5V o----+----+----+                     |
-                 |    |    |                     |
-              [C1] [R1 10k NTC 0805]             |
-              1uF    |                           |
-                 |   +---- PA3/AIN3 (NTC sense)  |
-                 |   |                           |
-                 |  [R2 10k 1% 0805]             |
-                 |   |                           |
-        GND o----+---+------+--------------------|----------------o fan -
-                            |                    |               (via Q1)
-                            |              +-----+
-                  [ATtiny1614 - 16K]        |
-                            |              C
-                   PA7 o--[R3 470R]--B  [Q1 SS8050]
-                            |              E
-                        [R4 1k]            |
-                            |             GND
-                          +5V
-                   PA6 o--[R5 2k2]--[LED1]--GND      status
-                   PA4 o---- RV1 wiper (setpoint, rheostat - see below)
+Logic runs on **5 V**, fed in on `H2`. The fan's 12 V never touches this board —
+`Q1` only switches its low side out through `H1`.
 
-         I2C tail to the front panel:  SDA/SCL/5V/GND -> SSD1306 0.96"
-         SW1 (momentary, to GND)      wakes the display
+```
+   +5V o--+--[C2 10u]--[C1 100n]--+-- U1 VDD (ATTINY1614-SSN, SOIC-14)
+          |                       |
+       [R6 6k8]           [R3 NTC 10k B3950]      <- on the isolated tongue
+          |                       |
+        o 3 RV1 10k               +-- PA3  (pin 13)
+        o 1 --+-- PA4 (pin 2)     |
+        o 2 --+              [R4 10k 1%]
+              |                   |
+          [R7 20k]               GND
+              |
+             GND
+
+   PA7 (pin 5) --[R1 220R]--+-- gate  Q1 AO3400A
+                            |
+                         [R2 10k]  ** see As built - this must go to +5V **
+                            |
+                           GND
+
+   H1  1 Load (drain)   2 Flyback   3 GND      D1 1N4148W: drain -> Flyback pin
+   H2  GND  +5V  Status(PA6)  Wake(PA2)  UPDI(PA0)  SCL(PB0)  SDA(PB1)
 ```
 
-`R4` pulls the base high, so a floating MCU pin runs the fan. See **Fail-safe**.
+`PA5`, `PA1`, `PB2`, `PB3` are deliberately unconnected. `PA5` is the one worth
+keeping free — a fan tach input if a 3-wire fan is ever fitted.
+
+### The flyback is opt-in, which is the right call
+
+`D1` is fitted, but its cathode lands on `H1` pin 2 rather than on a supply. Wire
+that pin to +12 V and the diode sits across the fan; leave it and it does nothing.
+
+For this fan it does nothing worth having. A 2-wire brushless fan commutates its
+windings internally behind its own input capacitor, so switching the supply does
+not break inductive current the way a relay coil does. What is left is roughly
+0.5 µH of lead inductance at 100 mA — about **2.5 nJ** — turned off over
+microseconds by `R1`, into a 30 V part on a 12 V rail. Connect pin 2 if the load
+ever becomes a relay, a solenoid or a brushed motor.
+
+## The FET
+
+`Q1` is an **AO3400A**: 30 V, 5.7 A, `Rds(on)` ~30 mΩ specified down to 2.5 V.
+At 100 mA it drops 3 mV.
+
+**Do not substitute a 2N7002.** It characterises `Rds(on)` at 10 V and 5 V and
+**nothing below**, and `Id` falls from 115 mA to 75 mA at 100 °C — against a
+~100 mA fan, in a box that is hot precisely when the fan is needed. `L2N7002LT1G`
+is the same part; the leading `L` is Leshan Radio, the manufacturer, not a
+logic-level suffix. See [`../2N7002 Driver`](../2N7002%20Driver/README.md).
+
+## As built
+
+The fabricated board differs from the sketch above it in three ways. Two are
+improvements; one is a fault.
+
+### ⚠ R2 is a pulldown. It must be a pull-up.
+
+`R2` 10 kΩ runs from the gate to **GND**, so a floating `PA7` — during reset,
+during boot, after a watchdog trip — holds the gate low and **stops the fan**.
+That is backwards. This box's airflow depends entirely on this fan and it holds a
+warm supply and a mains connection, so a floating pin must *run* it.
+
+**Fix: R2's lower end goes to +5 V, not GND.** One net in EasyEDA. On a board
+already made, lift that end and wire it to the +5 V pour.
+
+Until then, `setup()` driving the fan on still covers a clean start, but nothing
+covers a hang or the reset window, and the KSD9700 stops being a backstop and
+becomes the only defence.
+
+### ⚠ `Status` has no series resistor
+
+`PA6` goes raw to `H2` pin 3 and there is no pad for one. An LED straight onto it
+kills the pin or the LED. Put it in the tail or the LED module, and note it on
+the silkscreen.
+
+### ✅ No LDO — and that is better
+
+The board takes 5 V in rather than regulating 12 V down. The LDO would have been
+the largest heat source on a board whose entire problem is self-heating beside
+its own sensor, so removing it makes the sleep argument stronger rather than
+weaker. The enclosure already has a fixed 5 V rail.
+
+### ✅ AO3400A rather than the SS8050
+
+An SS8050 NPN was the earlier plan, because a BJT is current-driven and the
+gate-threshold question disappears. But that was the better answer to a *3.3 V
+gate*, not the better part: the BJT needs continuous base current and drops
+~0.15 V where the AO3400A drops 0.003 V. `R1` is now a gate resistor rather than
+base drive, which is fine — it damps the edge and nothing here switches fast.
+
+### ✅ The thermal tongue is real
+
+Verified in the gerbers rather than assumed:
+
+```
+slot 1   x 18.50..19.16   y 0.40..4.54     0.66 x 4.14 mm
+tongue         1.64 mm wide, NTC 0805 at x 19.94, y 1.29 / 3.29
+slot 2   x 20.80..21.46   y 0.40..4.54
+```
+
+Nothing else sits on it — the next components are at y ≥ 6.1, past the slot ends.
+
+One floor that no isolation removes: the NTC dissipates about **0.6 mW**, which
+on an 0805 is 0.15–0.3 °C of self-heating. That is inside the thermistor's own
+tolerance and not worth chasing, but it is the accuracy limit.
 
 ## The sensor is on the board, which decides two things
 
@@ -58,9 +137,9 @@ second matters more than the first:
   than copper. Put `U1` and `Q1` at the far end of the board from it.
 - **Sleep.** Not for power — for *measurement*. The MCU wakes on the watchdog,
   converts, decides, and goes back down, awake maybe 1 ms in 1000. A board that
-  does not dissipate has no self-heating to isolate. That is why `U1` is a 2 µA
-  LDO and not a 78L05, whose 5 mA quiescent alone would be 35 mW of permanent
-  error sat next to the sensor.
+  does not dissipate has no self-heating to isolate. The as-built board goes
+  further and drops the regulator entirely, taking 5 V in, which removes what
+  would have been the largest standing heat source of the lot.
 
 ## Why an NTC and not a DHT22 or a DS18B20
 
