@@ -48,12 +48,24 @@ static const uint16_t ADC_DEFAULT = 650;   // 38 C, used only if the pot is faul
 static const uint16_t HYST        =  61;   // counts. See README for the degrees
                                            // this rides across the range.
 
-/* RV1 carries end resistors (6k8 / 20k), so its wiper physically cannot leave
- * 556..834. Anything outside is an open wiper or a broken lead - which without
- * those resistors would be indistinguishable from a legitimate setting, and
- * would let a broken connection quietly pick the trip temperature. */
+/* RV1 is wired as a RHEOSTAT - wiper tied to the terminal on the ADC side - in
+ * the top leg, between 6k8 and 20k. That pins the node to 556..763 counts,
+ * about 29..51 C.
+ *
+ * WHY A RHEOSTAT AND NOT A 3-TERMINAL DIVIDER. If the wiper contact fails, the
+ * track is still intact, so the resistance goes to FULL scale and the node
+ * lands at 556 - the lowest setpoint, fan earliest. It degrades toward cooling
+ * by construction, with nothing to detect. A 3-terminal pot would leave the
+ * node floating and the reading anyone's guess.
+ *
+ * It also spends the whole knob on settings worth having: a divider would have
+ * reached 62 C, and nobody wants a 62 C setpoint in this box.
+ *
+ * The window below still catches LEAD faults, which the wiring cannot: R8 open
+ * pulls the node to ground (0), R9 open pulls it to the rail (1023), and a
+ * missing pot leaves it grounded through R9. */
 static const uint16_t POT_MIN = 506;
-static const uint16_t POT_MAX = 884;
+static const uint16_t POT_MAX = 813;
 
 /* AN OPEN NTC IS THE DANGEROUS FAULT. Open the top leg and the divider reads
  * near zero, which looks like VERY COLD and would hold the fan off forever. A

@@ -34,7 +34,7 @@ cable to do it.
                             |             GND
                           +5V
                    PA6 o--[R5 2k2]--[LED1]--GND      status
-                   PA4 o---- RV1 wiper (setpoint, see below)
+                   PA4 o---- RV1 wiper (setpoint, rheostat - see below)
 
          I2C tail to the front panel:  SDA/SCL/5V/GND -> SSD1306 0.96"
          SW1 (momentary, to GND)      wakes the display
@@ -146,26 +146,42 @@ comparison is immune to the supply in a way a mapped setpoint would not be:
 **both** dividers are ratiometric off VCC, so a sagging rail moves the sensor
 and the setpoint together and the crossing does not shift.
 
-### The pot has end resistors, and they earn their place
+### Wire it as a rheostat, and mind which end the wiper goes to
 
 ```
-   +5V --[R8 6k8]--+
-                   |
-                 [RV1 10k]---- PA4
-                   |
-        GND --[R9 20k]--+
+   +5V --[R8 6k8]--o 1
+                     RV1 10k          wiper (2) tied to terminal 3 —
+                   o 3 --+-- PA4      the ADC side, NOT the supply side
+                   o 2 --+
+                         |
+        GND --[R9 20k]---+
 ```
 
-Those set the span to **556–834 counts, about 29–63 °C** — the useful range and
-nothing else. They also turn an otherwise invisible fault into a loud one: a
-wiper physically cannot read outside that band, so **below 506 or above 884
-means an open wiper or a broken lead**. Without them the pot spans rail to rail
-and an open wiper is indistinguishable from a legitimate setting, which would
-let a broken connection quietly choose a trip temperature.
+Span is **556–763 counts, about 29–51 °C**. Turning toward 0 Ω raises the
+setpoint; toward 10 kΩ lowers it.
 
-On that fault the firmware falls back to the compiled default rather than to
-fan-on. A known-good threshold beats a fan that runs forever, and the display
-says the pot is being ignored.
+**A rheostat beats a 3-terminal divider here, and the reason is the failure
+mode.** If the wiper contact goes open, the track is still intact, so the
+resistance goes to full scale and the node lands at 556 counts — the lowest
+setpoint, fan earliest. It degrades *toward cooling by construction*, with
+nothing to detect and no firmware involved. A 3-terminal pot would leave the
+node floating and the reading anyone's guess.
+
+**Tie the wiper to terminal 3, the ADC side.** On terminal 1 an open wiper
+disconnects the node from the supply, it is pulled to ground through R9, reads
+0 counts, and is caught by the fault window as a fallback to the compiled
+default. Safe — but by detection rather than by construction, which is weaker.
+
+It also spends the whole knob on settings worth having. A divider across the
+same resistors would have reached 62 °C, and a third of the travel would have
+been setpoints nobody would choose for this box.
+
+**R8 and R9 still earn their place**, because the wiring cannot catch a broken
+*lead*: R8 open pulls the node to ground, R9 open pulls it to the rail, and a
+missing pot leaves it grounded through R9. All three land outside 506–813 and
+are caught. On that fault the firmware falls back to the compiled default rather
+than to fan-on — a known-good threshold beats a fan that runs forever — and the
+display flags that the pot is being ignored.
 
 ### One pot, not two
 
