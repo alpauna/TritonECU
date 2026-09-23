@@ -423,11 +423,27 @@ Clearances are to the **bodies**, not the bores: a binding post is ~12 mm across
 the nut and a button bezel ~16, so clearing the holes by 8 mm left 0.25 mm
 between the parts. 14 mm gives 6.25.
 
-### The jacks in the exhaust grid cost 12 %
+### The grid wall is a legitimate home, not just a hack
 
-The first build put them through the END B grid, which works and is worth
-knowing the price of: three holes per pair, nine of 78, **2808 → 2484 mm²**.
-Against one fan that is still 2.19× the bore and fine.
+The first build put the jacks through the END B grid, and they land on it
+*exactly*:
+
+```
+grid          13 columns x 6 rows = 78 diamonds
+three pairs   3x3 + 2x2 = 13 columns    <- the entire top row, edge to edge
+```
+
+That is not a coincidence worth discarding. **Two grid pitches is 20 mm and the
+banana standard is 19.05** — 0.95 mm apart — so every post falls within half a
+millimetre of a hole centre. The grid was drawn for airflow and happens to be a
+0.75" jack jig.
+
+Tightening the gaps from two holes to one gives `3x3 + 2x1 = 11` columns and
+leaves two spare, which is worth knowing but does not recover any open area:
+the gap holes were never blocked. Only the nine under the posts are.
+
+**The price is 12 % of the grid:** three holes per pair, nine of 78,
+**2808 → 2484 mm²**. Against one fan that is 2.19× the bore and fine.
 
 Against **two** fans it is 1.10×, and even the untouched grid would only be
 1.24×. So the grid was already the limit for a second fan before the jacks
@@ -435,6 +451,10 @@ touched it — which is the strongest argument yet for the
 [thicker fan](#one-fan-may-not-be-enough-under-load--measure-before-adding):
 a 40 × 40 × 20 uses the same 38 mm bore and doubles airflow without spending any
 grid budget at all.
+
+**Front or grid is a real choice.** The front is modelled above and is where a
+bench supply's outputs belong; the grid costs 12 % of the exhaust but is proven,
+self-jigging and leaves the front to the DC-DC and the two buttons.
 
 ## Safety
 
