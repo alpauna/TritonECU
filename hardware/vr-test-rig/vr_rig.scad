@@ -231,6 +231,17 @@ key_to_gap      =   5.0;  // exact, half a pitch; +/-2.5 from the gap's own widt
    CMP 38.1 mm). The mount is a through-bore clamp, so ONE part serves both —
    the sensor simply sits further in or out. */
 sensor_dia      =  14.3;  // barrel diameter, both sensors
+/* THE BORE IS SIZED BY THE LIP, NOT THE BARREL. There is a step just ahead of
+   the o-ring that is wider than the 14.3 barrel, and it will not pass a bore cut
+   to the barrel. Measured on the part: +1.5 mm on RADIUS.
+
+   Opening the bore stops it locating the sensor, and that is fine here. The air
+   gap is set along Y by the mount's slotted feet; the bore only fixes X and Z,
+   and both are second order - 1.5 mm of Z sag moves the sensor 0.011 mm further
+   from the wheel centre (slop^2 / 2y at y_ck = 106), and 1.5 mm of X shift still
+   leaves a 14.3 mm pole fully covering a 3.97 mm tooth with 5.2 mm to spare.
+   What actually holds the sensor is the flange bolted flat to the plate. */
+sensor_lip      = sensor_dia + 3.0;   // MEASURED: lip before the o-ring
 sensor_ckp_len  =  57.0;  // body length, crank
 sensor_cmp_len  =  38.1;  // body length, cam
 
@@ -915,7 +926,7 @@ module sensor_mount() {
         }
         /* Barrel bore, through, along the sensor axis */
         translate([0, -plate_t, shaft_h]) rotate([-90,0,0])
-            cylinder(d = sensor_dia + clr, h = 3*plate_t, $fn = fit_fn);
+            cylinder(d = sensor_lip + clr, h = 3*plate_t, $fn = fit_fn);
         /* Flange bolt, PARALLEL to the barrel. Slotted so one printed part takes
            both sensors: CKP sits 21.15 mm above the barrel axis, CMP 19.85. */
         hull() for (dz = [sensor_flange_cmp - 2, sensor_flange_ckp + 2])
@@ -1114,6 +1125,10 @@ module hole_jig() {
 }
 
 jig_tol = asin((aux_hole_d - jig_pin_d)/2 / aux_hole_r);
+echo(str("SENSOR MOUNT: bore ", sensor_lip + clr, " for a ", sensor_lip,
+         " lip over a ", sensor_dia, " barrel -> ", (sensor_lip - sensor_dia)/2,
+         " mm on radius. Air gap is set by the slotted feet, not this bore."));
+
 echo(str("HOLE JIG: ", jig_t, " mm plate, plug ", wheel_bore - clr,
          ", ROUND pin ", jig_pin_d, " at R ", aux_hole_r, ", ",
          aux_hole_ang, " deg CW."));
