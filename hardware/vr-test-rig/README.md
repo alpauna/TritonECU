@@ -677,6 +677,36 @@ Bounding boxes match design intent to 0.02 mm, and `cam_target` was checked to
 confirm the counterweight boss stays inside the 30 mm rim — it must never
 protrude toward the sensor across a 1 mm air gap.
 
+## The bearing bore was 90 degrees off the shaft
+
+Found during assembly, which is an expensive place to find it and still far
+cheaper than after the shaft went in.
+
+```
+base    blocks at x -30 and +30, both y 0   -> shaft on X
+base    wheel slot narrow in x, long in y   -> shaft on X
+wheel   rotate([0,90,0]) disc               -> axis on X
+block   rotate([-90,0,0]) bore              -> bore on Y   <-- wrong
+```
+
+The block was not internally wrong. `blk_t` is sized to the bearing's **width**
+and `blk_w` to its **diameter**, so its body is correct for a Y bore. What never
+matched was its orientation on the base — and nothing in the model compared the
+two, so both halves rendered cleanly and looked right for as long as nobody
+tried to put a shaft through them.
+
+**Blocks printed before this fix are still good.** The part did not change, only
+how it sits: turn one 90° and the bore lands on X. What moves is the **base's**
+bolt pattern — ±22 x / ±11 y becomes **±11 x / ±22 y**.
+
+On an already-printed base that is 16 new holes, four per station. The old ones
+foul nothing: the rotated foot spans ±17 in x, so the old ±22 holes sit just
+outside it.
+
+Verified by sweeping a rod along each axis through the bearing centre — clear on
+X, solid on Y, and solid on X at two heights *below* the bearing so the test had
+a way to fail.
+
 ## Two things that check caught
 
 **The key was not a key.** It spanned `wheel_bore/2 - key_d` to `wheel_bore/2`,
