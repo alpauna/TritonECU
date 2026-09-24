@@ -235,12 +235,19 @@ sensor_dia      =  14.3;  // barrel diameter, both sensors
    the o-ring that is wider than the 14.3 barrel, and it will not pass a bore cut
    to the barrel. Measured on the part: +1.5 mm on RADIUS.
 
+   TWO NUMBERS, NOT ONE. The lip is 16.5 - measured, +1.1 on radius - and that is
+   the floor. The bore is 17.55, +1.5, and the extra 0.4 on radius is not slop:
+   the o-ring stands PROUD of the lip, so it, not the lip, is the widest thing
+   that has to get in. Cut the bore to the lip and the o-ring has to shear its
+   way past on every insertion.
+
    THE O-RING CENTRES IT, so the bore has a ceiling as well as a floor. An
    opened-out bore looks like it abandons alignment, and it would if the barrel
    were the only thing in it - but the o-ring is compressed against the bore wall
    and holds the sensor concentric. That makes this a fit, not a clearance hole:
 
-     floor    17.55  - below it the lip will not pass
+     floor    16.75  - the lip will not pass below this
+     chosen   17.55  - 0.4 on radius more, so the o-ring enters without shearing
      ceiling  the o-ring's free OD - above it the o-ring loses contact
 
    A radial o-ring wants 15-25% squeeze on its cord, so a 2.0-3.0 mm cord wants a
@@ -253,7 +260,12 @@ sensor_dia      =  14.3;  // barrel diameter, both sensors
    order (1.5 mm of Z sag is 0.011 mm of gap at y_ck = 106; 1.5 mm of X still
    leaves a 14.3 pole covering a 3.97 tooth). But forgiving is not the same as
    centred, and the o-ring is what makes it centred. */
-sensor_lip      = sensor_dia + 3.0;   // MEASURED: lip before the o-ring
+sensor_lip      = sensor_dia + 2*1.1;  // MEASURED: 16.5, +1.1 on radius
+sensor_bore     = 17.55;   /* CHOSEN, +1.5 on radius over the 14.55 barrel bore.
+                              Written as a literal rather than sensor_dia + clr
+                              + 3: clr is not defined until 77 lines further
+                              down, and this is a chosen fit anyway, not a
+                              computed clearance. */
 sensor_ckp_len  =  57.0;  // body length, crank
 sensor_cmp_len  =  38.1;  // body length, cam
 
@@ -938,7 +950,7 @@ module sensor_mount() {
         }
         /* Barrel bore, through, along the sensor axis */
         translate([0, -plate_t, shaft_h]) rotate([-90,0,0])
-            cylinder(d = sensor_lip + clr, h = 3*plate_t, $fn = fit_fn);
+            cylinder(d = sensor_bore, h = 3*plate_t, $fn = fit_fn);
         /* Flange bolt, PARALLEL to the barrel. Slotted so one printed part takes
            both sensors: CKP sits 21.15 mm above the barrel axis, CMP 19.85. */
         hull() for (dz = [sensor_flange_cmp - 2, sensor_flange_ckp + 2])
@@ -1137,9 +1149,11 @@ module hole_jig() {
 }
 
 jig_tol = asin((aux_hole_d - jig_pin_d)/2 / aux_hole_r);
-echo(str("SENSOR MOUNT: bore ", sensor_lip + clr, " clears a ", sensor_lip,
-         " lip over a ", sensor_dia, " barrel (+", (sensor_lip - sensor_dia)/2,
-         " on radius)."));
+echo(str("SENSOR MOUNT: barrel ", sensor_dia, ", lip ", sensor_lip,
+         " (+", (sensor_lip - sensor_dia)/2, " r, MEASURED), bore ", sensor_bore,
+         " (+", (sensor_bore - 0.25 - sensor_dia)/2, " r, CHOSEN)."));
+echo(str("  the extra ", (sensor_bore - 0.25 - sensor_lip)/2,
+         " on radius is o-ring ENTRY - it stands proud of the lip."));
 echo(str("  The O-RING centres the sensor in it, so this is a FIT, not clearance:",
          " check the o-ring's free OD is ~18.2-19.1 for a 2-3 mm cord.",
          " Under ~18 and it cannot reach the wall."));
