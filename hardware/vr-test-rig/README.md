@@ -707,6 +707,31 @@ Verified by sweeping a rod along each axis through the bearing centre — clear 
 X, solid on Y, and solid on X at two heights *below* the bearing so the test had
 a way to fail.
 
+### The motor mount had it too
+
+Spur gears will not mesh unless their axes are parallel, and the gears are
+placed `rotate([0,-90,0])` — axes on X. The motor mount bored on Y like the
+bearing block, so the motor would have driven at 90° to the gears it turns. It
+also couples **directly** to the crank shaft (`x_motor = -95`, gears at
+`x_gear = 70`), so its bore has to be not merely parallel but coaxial.
+
+Same fix, same consequence: printed mounts are fine, and the base's two motor
+bolts move from `(x_motor ±29.15, 3)` to `(x_motor − 3, ±29.15)`.
+
+### The invariant that would have caught both
+
+Every part that turns about the shaft is placed with `rotate([0,±90,0])`:
+
+| part | placement | axis |
+|---|---|---|
+| `wheel_hub`, wheel disc | `rotate([0,90,0])` | X ✓ |
+| `spur_gear` ×2, `cam_target` | `rotate([0,-90,0])` | X ✓ |
+| ~~`bearing_block`~~, ~~`motor_mount`~~ | *placed unrotated* | **Y ✗** |
+
+The two that were wrong are exactly the two placed without a rotation, and an
+audit of the assembly block finds them in one pass. The sensor mounts are
+brackets rather than bearings, so they have no axis to get wrong.
+
 ## Two things that check caught
 
 **The key was not a key.** It spanned `wheel_bore/2 - key_d` to `wheel_bore/2`,

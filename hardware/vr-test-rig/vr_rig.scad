@@ -611,7 +611,16 @@ module bearing_block_body() {
 /* ===========================================================================
    MOTOR MOUNT — NEMA 17 face plate
    =========================================================================== */
-module motor_mount() {
+/* ROTATED FOR THE SAME REASON THE BEARING BLOCK IS. The gears are placed with
+   rotate([0,-90,0]) so their axes are on X, and spur gears will not mesh unless
+   the motor's shaft is parallel to them. The body below bores on Y - correct in
+   its own frame, wrong on the base - so the whole part turns 90 degrees.
+
+   Printed mounts are fine; only the base's two bolts move, from
+   (x_motor +/-29.15, 3) to (x_motor - 3, +/-29.15). */
+module motor_mount() { rotate([0,0,90]) motor_mount_body(); }
+
+module motor_mount_body() {
     h = shaft_h + nema/2 + wall;
     difference() {
         union() {
@@ -960,8 +969,9 @@ module base() {
                 translate([st[0] + dx*11, st[1] + dy*(blk_w/2 + 4), -base_t/2 - 1])
                     cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
         // motor mount
-        for (dx = [-1,1])
-            translate([x_motor + dx*(nema/2 + wall + 4), 3, -base_t/2 - 1])
+        // Follows the mount's rotated frame: (x, 3) becomes (-3, x).
+        for (dy = [-1,1])
+            translate([x_motor - 3, dy*(nema/2 + wall + 4), -base_t/2 - 1])
                 cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
         // two sensor mounts — the mount's own feet are slotted for air gap
         for (st = [[x_wheel + wheel_tooth_off, y_ck], [x_camtgt, y_cmp]])
