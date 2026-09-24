@@ -241,6 +241,13 @@ sensor_dia      =  14.3;  // barrel diameter, both sensors
    that has to get in. Cut the bore to the lip and the o-ring has to shear its
    way past on every insertion.
 
+   A COUNTERBORE WAS CONSIDERED AND REJECTED. Opening only the outer end would
+   keep a tight barrel fit deeper in, and would be mandatory if the bore were
+   what located the sensor - you cannot open a locating fit by 3 mm. But the
+   sensor hangs on its MOUNTING TANG, bolted flat to the plate, so the bore
+   never had that job. Straight through is one feature instead of two, needs no
+   guess at how deep the lip sits, and cannot be got wrong by a millimetre.
+
    THE O-RING CENTRES IT, so the bore has a ceiling as well as a floor. An
    opened-out bore looks like it abandons alignment, and it would if the barrel
    were the only thing in it - but the o-ring is compressed against the bore wall
