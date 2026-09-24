@@ -434,9 +434,23 @@ Intel wants **25 kHz**, 21–28 acceptable. `analogWrite()` uses `PER = 255`:
 | 10 MHz | 39.06 kHz ✗ | 50.00 kHz ✗ |
 | 20 MHz | 78.13 kHz ✗ | 100.0 kHz ✗ |
 
-8-bit `analogWrite` misses the window at **every** clock. `TCA0.PER = 199` at
-the existing 5 MHz gives exactly 25.000 kHz with 200 duty steps — far more
-resolution than a thermostat can use, and no clock change.
+8-bit `analogWrite` misses the window at **every** clock — 255 is outside the
+usable `PER` range each time:
+
+| f_cpu | usable PER | `analogWrite` |
+|---|---|---|
+| 5 MHz | 177–237 | 255 ✗ |
+| 10 MHz | 356–475 | 255 ✗ |
+| 20 MHz | 713–951 | 255 ✗ |
+
+`TCA0.PER = 199` at the existing 5 MHz gives exactly 25.000 kHz with 200 duty
+steps — far more resolution than a thermostat can use, and no clock change.
+
+**And no crystal.** The 21–28 kHz window is **±14 % wide**; the ATtiny's
+factory-calibrated internal oscillator is ±2 % at 5 V/25 °C and a few percent
+across temperature and voltage. Even at ±5 % that is 23.75–26.25 kHz, still
+comfortably inside. Worth writing down before someone adds a crystal footprint
+"to be safe" to a board with no room for one.
 
 ### The spec's fail-safe is already this project's
 
