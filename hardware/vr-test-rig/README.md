@@ -725,8 +725,13 @@ Every part that turns about the shaft is placed with `rotate([0,±90,0])`:
 | part | placement | axis |
 |---|---|---|
 | `wheel_hub`, wheel disc | `rotate([0,90,0])` | X ✓ |
-| `spur_gear` ×2, `cam_target` | `rotate([0,-90,0])` | X ✓ |
+| `crank_gear`, `cam_gear`, `cam_target` | `rotate([0,-90,0])` | X ✓ |
 | ~~`bearing_block`~~, ~~`motor_mount`~~ | *placed unrotated* | **Y ✗** |
+
+> Those are *placements*, not quantities. `crank_gear` and `cam_gear` are both
+> rendered by the `spur_gear` module with different tooth counts, and you print
+> **one of each** — 20T on the crank, 40T on the cam. An earlier revision of this
+> table said "`spur_gear` ×2", which reads as a print quantity and is not one.
 
 The two that were wrong are exactly the two placed without a rotation, and an
 audit of the assembly block finds them in one pass. The sensor mounts are

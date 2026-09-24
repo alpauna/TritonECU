@@ -440,8 +440,8 @@ not a redesign.
 | 4 | `bearing_block` | on its back — two shafts, two each |
 | 1 | `motor_mount` | on its back |
 | 1 | `wheel_hub` | **bore axis vertical** (concentricity = runout = air gap) |
-| 1 | `crank_gear` | **teeth flat on the bed** |
-| 1 | `cam_gear` | **teeth flat on the bed** |
+| 1 | `crank_gear` | 20T, tip radius **22 mm**. **Teeth flat on the bed** |
+| 1 | `cam_gear` | 40T, tip radius **42 mm**. **Teeth flat on the bed** |
 | 1 | `cam_target` | bore axis vertical |
 | 2 | `sensor_mount` | upright — **one part serves both sensors** |
 
