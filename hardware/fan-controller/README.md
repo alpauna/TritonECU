@@ -398,6 +398,77 @@ the hole open and looks identical on the bench.
 want cover for a failed-open `Q1` or a gate stuck low, which no rail interlock
 reaches.
 
+## v2 — 3- and 4-wire Intel fans
+
+Planned, not built. The changes are larger than "add a PWM pin".
+
+### Q1 stops being the control element
+
+A 3- or 4-wire fan keeps **+12 V and GND connected permanently**; its own
+controller does the speed control. Switching the ground — which is all v1 does —
+kills that controller and garbages the tach every time it opens. So `Q1` demotes
+from *the* control to a **hard off**, held on whenever a 3/4-wire fan is fitted.
+
+That is a topology change, not an addition, and it is why this is v2.
+
+### The PWM output must be OPEN DRAIN, and the 2N7002 is finally right
+
+The fan pulls its PWM line up internally, to **3.3 V or 5 V depending on the
+fan**. Drive it push-pull from a 5 V part and a 3.3 V-pull-up fan gets back-fed.
+The spec says open drain, so the MCU sinks the line through a small N-FET and
+never sources it.
+
+This is the one job on this board the **2N7002** is the right part for. It sinks
+a few milliamps, and at a 5 V gate it has 3 V of overdrive against its 2.0 V
+worst-case `Vgs(th)` — comfortably inside the region its datasheet actually
+characterises, which was the whole objection to it as a
+[fan switch](../2N7002%20Driver/README.md). Same part, correct application.
+
+### `analogWrite()` cannot produce 25 kHz
+
+Intel wants **25 kHz**, 21–28 acceptable. `analogWrite()` uses `PER = 255`:
+
+| f_cpu | PER=255 | PER=199 |
+|---|---|---|
+| 5 MHz | 19.53 kHz ✗ | **25.000 kHz ✓** |
+| 10 MHz | 39.06 kHz ✗ | 50.00 kHz ✗ |
+| 20 MHz | 78.13 kHz ✗ | 100.0 kHz ✗ |
+
+8-bit `analogWrite` misses the window at **every** clock. `TCA0.PER = 199` at
+the existing 5 MHz gives exactly 25.000 kHz with 200 duty steps — far more
+resolution than a thermostat can use, and no clock change.
+
+### The spec's fail-safe is already this project's
+
+Intel requires that a fan with **its PWM line undriven runs at full speed**. So
+an open-drain buffer that fails open gives 100 % fan, which is the same
+behaviour the whole v1 design was built around — and strictly better than the
+low-side switch, where the equivalent failure *stops* the fan.
+
+### Tach turns the boot self-test into continuous monitoring
+
+`PA5` was left free for this. Open collector, **2 pulses per revolution**, rated
+to 5.25 V so it pulls up to 5 V and feeds a 5 V ATtiny directly. `RPM = pulses/s
+× 30`.
+
+v1 exercises the fan for 3 s at boot because *"a controller that has never
+proven the fan turns is one that finds out about a seized bearing during the
+event it was installed to prevent."* Tach makes that check continuous: commanded
+to run and reporting 0 RPM **is** a seized bearing, and the controller can say so
+rather than waiting for the temperature to climb.
+
+### Still to decide
+
+- **Minimum duty and kick-start.** Most fans will not start below 20–30 %, and
+  below that behaviour is undefined — some stop, some hold minimum. Needs a duty
+  floor and a ~300 ms 100 % kick on any stopped→running transition.
+- **How the board knows its fan.** A jumper on `PA1`/`PB2`/`PB3` (all free) is
+  the simple answer. Auto-detection is possible — tach present means 3 or
+  4-wire, and RPM responding to duty separates 4 from 3 — but it is a lot of
+  behaviour to get wrong for a setting that changes once.
+- **Connector.** Standard keyed 4-pin, 2.54 mm: 1 GND, 2 +12 V, 3 TACH, 4 PWM.
+  `H1` grows from 3 to 4 and gains a key.
+
 ## Staging: fit two boards, turn the knobs
 
 The setpoint pot turns one board into a stage. Fit a second board with a higher
