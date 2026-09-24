@@ -235,12 +235,24 @@ sensor_dia      =  14.3;  // barrel diameter, both sensors
    the o-ring that is wider than the 14.3 barrel, and it will not pass a bore cut
    to the barrel. Measured on the part: +1.5 mm on RADIUS.
 
-   Opening the bore stops it locating the sensor, and that is fine here. The air
-   gap is set along Y by the mount's slotted feet; the bore only fixes X and Z,
-   and both are second order - 1.5 mm of Z sag moves the sensor 0.011 mm further
-   from the wheel centre (slop^2 / 2y at y_ck = 106), and 1.5 mm of X shift still
-   leaves a 14.3 mm pole fully covering a 3.97 mm tooth with 5.2 mm to spare.
-   What actually holds the sensor is the flange bolted flat to the plate. */
+   THE O-RING CENTRES IT, so the bore has a ceiling as well as a floor. An
+   opened-out bore looks like it abandons alignment, and it would if the barrel
+   were the only thing in it - but the o-ring is compressed against the bore wall
+   and holds the sensor concentric. That makes this a fit, not a clearance hole:
+
+     floor    17.55  - below it the lip will not pass
+     ceiling  the o-ring's free OD - above it the o-ring loses contact
+
+   A radial o-ring wants 15-25% squeeze on its cord, so a 2.0-3.0 mm cord wants a
+   free OD of roughly 18.2-19.1 to seat properly in this bore. MEASURE IT. If the
+   free OD is under about 18 the bore is too open to centre anything, and this
+   number has to come down and the lip clearance be found another way.
+
+   Even without the o-ring the geometry would be forgiving - the air gap is set
+   along Y by the slotted feet, and the bore only fixes X and Z, both second
+   order (1.5 mm of Z sag is 0.011 mm of gap at y_ck = 106; 1.5 mm of X still
+   leaves a 14.3 pole covering a 3.97 tooth). But forgiving is not the same as
+   centred, and the o-ring is what makes it centred. */
 sensor_lip      = sensor_dia + 3.0;   // MEASURED: lip before the o-ring
 sensor_ckp_len  =  57.0;  // body length, crank
 sensor_cmp_len  =  38.1;  // body length, cam
@@ -1125,9 +1137,12 @@ module hole_jig() {
 }
 
 jig_tol = asin((aux_hole_d - jig_pin_d)/2 / aux_hole_r);
-echo(str("SENSOR MOUNT: bore ", sensor_lip + clr, " for a ", sensor_lip,
-         " lip over a ", sensor_dia, " barrel -> ", (sensor_lip - sensor_dia)/2,
-         " mm on radius. Air gap is set by the slotted feet, not this bore."));
+echo(str("SENSOR MOUNT: bore ", sensor_lip + clr, " clears a ", sensor_lip,
+         " lip over a ", sensor_dia, " barrel (+", (sensor_lip - sensor_dia)/2,
+         " on radius)."));
+echo(str("  The O-RING centres the sensor in it, so this is a FIT, not clearance:",
+         " check the o-ring's free OD is ~18.2-19.1 for a 2-3 mm cord.",
+         " Under ~18 and it cannot reach the wall."));
 
 echo(str("HOLE JIG: ", jig_t, " mm plate, plug ", wheel_bore - clr,
          ", ROUND pin ", jig_pin_d, " at R ", aux_hole_r, ", ",
