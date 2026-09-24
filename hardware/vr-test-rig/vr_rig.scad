@@ -565,7 +565,20 @@ module bolt_relief(bx, by) {
                      [-r, base_t + nut_h]]);
 }
 
-module bearing_block() {
+/* THE BORE MUST LIE ALONG THE SHAFT, AND THE SHAFT RUNS ALONG X. The blocks sit
+   at x -30 and +30 with the wheel straddled between them, and the base's wheel
+   slot is narrow in x and long in y - all of which says the shaft is on x. The
+   body below is built with its bore on Y, because blk_t is sized to the bearing
+   WIDTH and blk_w to its DIAMETER; rotating the whole part is what reconciles
+   the two, and it leaves the body's own proportions correct.
+
+   Printed parts from before this fix are FINE. The part is unchanged - only its
+   orientation on the base is - so a block already on the bench just turns 90
+   degrees. What moves is the base's bolt pattern: +/-22 x, +/-11 y becomes
+   +/-11 x, +/-22 y. */
+module bearing_block() { rotate([0,0,90]) bearing_block_body(); }
+
+module bearing_block_body() {
     difference() {
         union() {
             translate([-blk_w/2, -blk_t/2, 0]) cube([blk_w, blk_t, blk_h]);
@@ -939,9 +952,12 @@ module base() {
             translate([x_wheel + wheel_tooth_off, 0, 0])
                 cube([wheel_thk_rim + 6, slot_y, base_t + 2], center = true);
         // four bearing blocks, four bolts each
+        /* Bolt pattern follows the block's ROTATED frame: the bore is on x, so
+           the 36 mm across-bore dimension is on y and the 24 mm along-bore one
+           on x. Swapped from +/-22 x, +/-11 y. */
         for (st = [[x_brg1, 0], [x_brg2, 0], [x_cbrg1, cam_y], [x_cbrg2, cam_y]])
             for (dx = [-1,1], dy = [-1,1])
-                translate([st[0] + dx*(blk_w/2 + 4), st[1] + dy*11, -base_t/2 - 1])
+                translate([st[0] + dx*11, st[1] + dy*(blk_w/2 + 4), -base_t/2 - 1])
                     cylinder(d = 4.4, $fn = hole_fn, h = base_t + 2);
         // motor mount
         for (dx = [-1,1])
