@@ -71,8 +71,11 @@ as a filter.
 
 ## Still open
 
-- **`3V3_EN` on the Pico socket.** With 3.3 V supplied externally the Pico's own
-  regulator should be *disabled* — that pin wants grounding, not feeding.
+- ~~`3V3_EN` on the Pico socket.~~ **Withdrawn — it is already grounded.** `U3`
+  pin 1 lands on Pico pin 40, so the header runs 40, 39, 38, 37: pins **3 and 4
+  are GND and `3V3_EN`**, both tied to ground. The internal regulator is
+  disabled and 3.3 V is fed into `3V3(OUT)`, which is exactly right. The
+  schematic was clear; the reviewer was not.
 - **`D3` SMAJ3.3A on the 3.3 V rail.** Its standoff is 3.3 V, i.e. exactly the
   rail, so it sits at the top of its leakage curve. Not wrong, but a 3.6 V part
   would idle cooler.
