@@ -160,6 +160,38 @@ independent lines of evidence crossing at one byte.
 It may also find the **DTC count or status** field, which a single-vehicle
 transition cannot isolate on its own.
 
+### The timing constant is a different target, and two engines check it
+
+Separate from byte-hunting: the same capture rig can settle
+`CKP_GAP_TO_TDC_DEG` electrically, by logging **commanded spark advance from the
+bus** alongside **gap-to-spark from the VR channels**:
+
+```
+CKP_GAP_TO_TDC = gap-to-spark + advance_reported
+```
+
+That holds at *any* operating point, so it averages over a hundred of them
+rather than resting on one careful reading with a degree tape. See
+[`measurements-wanted.md`](measurements-wanted.md).
+
+**Two engines make it check itself.** A **5.4** and a **4.6**, both 2V modular,
+both EEC-V. They share the 36-1 wheel, so `key_to_gap = 5.00°` — the wheel's
+half — is common to both. What need *not* be common is the other half: where the
+CKP sensor bolts is a **block** property, and these are different blocks.
+
+| Outcome | Means |
+|---|---|
+| The two agree | It is a **family constant**. Trust it for any 2V modular |
+| They differ | It is **engine-specific**. The 5.4 is the number that matters — it is the truck being converted; the 4.6 was the control |
+
+Either result is worth having, which is the mark of a measurement worth taking.
+
+**And the 4.6 validates the decoder, not just the constant.** Two PCMs of the
+same family broadcasting the same PIDs: if the decoder reads both consistently,
+that is evidence about the *decoder*. If it reads one cleanly and garbles the
+other, the fault is in the decode rather than in either truck — a distinction a
+single vehicle cannot offer.
+
 ### Discipline, or the diff is noise
 
 - **Run the identical scripted states on each truck.** Same idle duration, same
