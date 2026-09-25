@@ -36,18 +36,27 @@ divider, `H3` injects `LOOP` into Bus+ through 1 kΩ. Driving `LOOP` high puts
 That is the failure worth annotating — injecting a test pattern onto a live SCP
 bus while the PCM is talking on it.
 
-## Verify before layout: what C15 connects to
+## C15 — confirmed on the clamp rail
 
-`C15` 100 nF sits near the comparator inputs and the clamp rail. If it decouples
-the **+3.3 V clamp rail** it is good practice — the clamp needs somewhere
-low-impedance to dump into. If it sits on an **input node** it ends the project:
+**Confirmed: clamp-rail decoupling for transients**, which is the right place
+for it and settles the only blocking question on this page.
+
+It matters because an **LDO can only source, never sink**. When a transient
+arrives down the 100 kΩ and the BAT54S upper diode dumps it into the 3.3 V rail,
+that current has nowhere to go but the rail's capacitance. `C7` 22 µF and `C8`
+10 µF have the *charge* to absorb it — 367 µA of injection for 100 µs moves a
+32 µF rail by about 1 mV — but they are across the board with trace inductance
+between, so they do not have the *bandwidth* for the edge. `C15` local to the
+clamp takes the fast part; the bulk takes the energy.
+
+The alternative was the one worth ruling out. On an **input** node instead:
 
 ```
 50k Thevenin x 100 nF = 5 ms.  An 8 us pulse reaches 0.16%.
 ```
 
-That is not a degraded signal, it is no signal, and it would look like a dead
-comparator rather than a filter.
+Not a degraded signal — no signal, presenting as a dead comparator rather than
+as a filter.
 
 ## Verified correct
 
