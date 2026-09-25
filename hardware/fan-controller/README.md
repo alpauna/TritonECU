@@ -89,6 +89,25 @@ someone tidies the sheet.
 The watchdog is part of the same chain: a hung MCU resets, reset floats `PA7`,
 and the pull-up runs the fan.
 
+### ⚠ The M2 mounting holes are 2.00 mm — open them before ordering
+
+EasyEDA's stock `Screw-Hole-M2` footprint drills **2.00 mm**, and an M2 screw
+will not pass it:
+
+```
+M2 major diameter      1.98 mm
+2.00 drill, plated     finishes ~1.90
+ISO 273 clearance      2.2 close / 2.4 normal
+```
+
+Read 2.00 as the finished size instead and it is 0.02 mm on a 1.98 screw — an
+interference fit rather than a clearance hole.
+
+**Open to 2.2 minimum before the order goes out.** Five boards is fifteen holes
+to drill by hand otherwise, in a part that is 54 mm long and awkward to clamp.
+The [SCP rig](../scp-rig/SCP-schematic-review.md) has the same footprint and the
+same problem.
+
 ### ⚠ `Status` has no series resistor
 
 `PA6` goes raw to `H2` pin 3 and there is no pad for one. An LED straight onto it
