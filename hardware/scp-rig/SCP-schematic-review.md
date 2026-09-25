@@ -69,12 +69,12 @@ as a filter.
 - **`D2` STTH112A** reverse protection on the OBD feed, and a buck + LDO so the
   Pico's own switcher is not sitting beside the GNSS front end.
 
-## Gerber review — M2 holes are 2.00 mm and will not pass an M2
+## Gerber review — clean
 
-90.55 × 37.34 mm, 2 layer, one outline contour, 51 vias at 0.305.
+90.55 × 37.34 mm, 2 layer, one outline contour, 51 vias at 0.305, no slots.
 
-**The four mounting holes are 2.00 mm**, at the board corners. That is EasyEDA's
-stock `Screw-Hole-M2` footprint and it is too tight:
+**Mounting holes fixed to 2.200 mm.** They were 2.00 — EasyEDA's stock
+`Screw-Hole-M2` footprint — which an M2 does not pass:
 
 ```
 M2 major diameter      1.98 mm
@@ -82,12 +82,12 @@ M2 major diameter      1.98 mm
 ISO 273 clearance      2.2 close / 2.4 normal
 ```
 
-Even reading 2.00 as the *finished* size, that is 0.02 mm on a 1.98 screw — an
-interference fit, not a clearance hole. **Open them to 2.2 minimum.**
+The re-export changed that one entry and nothing else, drill table verified
+line by line.
 
-**This is systematic, not a slip on this board.** The
-[fan controller](../fan-controller) carries the same 2.00 mm holes from the same
-footprint, and that one is about to be ordered five up.
+> ⚠ **The [fan controller](../fan-controller) still has 2.00 mm holes** from the
+> same footprint, and is the board about to be ordered five up. Worth fixing the
+> library part rather than each board.
 
 ## Still open
 
