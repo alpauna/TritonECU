@@ -8,7 +8,7 @@ the domain above those: **PGND, which is not a ground at all.**
 | domain | carries | reaches the vehicle via |
 |---|---|---|
 | **PGND** — fault plane | D1 clamp current, only when D1 fires | **dedicated twisted pair with B+**, direct to battery negative |
-| **GND** — real ground plane | the board's DC return | three header pins → 104-pin connector |
+| **GND** — real ground plane | the board's DC return | four M3 standoffs + three header pins → carrier board → 104-pin |
 | signal returns | sensor and reference returns | separate 104-pin pins, star point in the box |
 
 ## PGND is a two-node net and is deliberately not tied to GND
@@ -69,29 +69,44 @@ voltage **plus whatever PGND rises relative to GND**. Negligible for load dump;
 for fast edges it is the inductance term above. Same argument for the short
 twisted pair, arriving from the protected side instead of the source side.
 
-## GND return budget: three header pins
+## GND return: four standoffs and three header pins, in parallel
 
-Normal return leaves on **three header ground pins** — two on the power header,
-one on the status/I²C header.
+GND reaches the carrier board by two routes at once:
 
-The loads are **off-board**: 5 V and 3.3 V leave through the headers to the rest
-of the ECU and their return comes back through these pins. So the budget is the
-**sum of the off-board rail currents**, not the input current:
+| route | what it is |
+|---|---|
+| **four M3 standoffs** (`U2`–`U5`, SMTSO30100CTJ) | soldered to the GND plane at the corners, screwed to the carrier's ground plane. **Primary** — microohms, and distributed |
+| **three header ground pins** | two on the power header, one on the status/I²C header. Parallel backup |
 
-```
-header GND return  =  I(5V loads)  +  I(3.3V loads)
-```
+The loads are **off-board**: 5 V and 3.3 V leave through the headers and their
+return comes back, so the total is the **sum of the off-board rail currents**,
+not the input current.
 
-3 A per 2.54 mm post is the usual figure, so three pins give **6–9 A** against a
-worst case set by the converters' combined capability. Adequate, with two
-qualifications:
+**DC sharing follows resistance, and a screwed M3 standoff beats a 2.54 mm post
+by orders of magnitude.** The standoffs therefore carry nearly all of it — which
+resolves what would otherwise be the real worry here, that the status/I²C
+header's ground pin doubles as a power return. It is the pin the three status
+lines and the INA238 reference against, and the standoffs keep power current off
+it far more effectively than geometry alone could.
 
-- **Sharing is by impedance, not by pin count.** Three pins do not mean three
-  equal thirds; trace geometry decides, and one pin can take well over its share.
-- **The status/I²C header's ground pin doubles as a power return.** That is the
-  pin the status signals and the INA238's I²C reference against. It is one net so
-  the division cannot be forced — only geometry keeps return current off it.
-  Worth a look during layout, and worth measuring under load.
+### Why both paths matter
+
+A standoff is a **mechanical** joint. Torque relaxation, plating wear, corrosion
+and engine-bay vibration degrade it in ways a solder joint does not. The header
+pins in parallel are what make the arrangement robust: **lose a standoff and the
+return survives.** Neither path alone would be a good design; together they are
+redundant by construction.
+
+The four corner bonds also tie the two ground planes together with low inductance
+at four distributed points — good for return current, and good for any signal
+crossing between boards, which then has a short return path near it.
+
+### Bench caution
+
+**An unmounted board has no standoff return.** Bench measurements therefore run on
+a different return topology than the installed board — whatever ground wire is
+clipped on at the time. This is structural to testing off the carrier, not a
+mistake in any one setup, and it is worth stating before every session.
 
 ## Open items
 
@@ -102,5 +117,10 @@ qualifications:
 - [ ] **Confirm the 104-pin connector allocates multiple pins to GND.** Three
       ground pins on the board accomplish nothing if they funnel into one harness
       pin downstream.
-- [ ] **Measure the return split** across the three pins under load, to see
-      whether the status header's ground is carrying power current.
+- [ ] **Confirm the carrier has matching ground pads at all four standoff
+      positions.** [`carrier-board.md`](carrier-board.md) does not mention them,
+      so the primary return path is currently unspecified on the other side.
+- [ ] **Specify standoff screw torque and plating**, since this is the primary
+      return and it is a mechanical joint.
+- [ ] **Measure the return split** between standoffs and header pins under load,
+      to confirm the status header's ground is not carrying power current.

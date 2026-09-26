@@ -241,43 +241,36 @@ clamp current when D1 fires, and routing that anywhere near a reference corrupts
 every reading on the board during the one event most worth surviving. Keeping it
 away from sensitive signal grounds is the design, not an oversight.
 
-**What is missing is a DC return for GND.** CN1 has only two pins, so with no tie
-the board's ground reference reaches the outside world *only* through the four
-mounting standoffs (U2–U5) and the two headers. Consequences:
+**And nothing is missing.** GND returns to the carrier board through the **four
+M3 standoffs (U2–U5) bonded to its ground plane**, with **three header ground
+pins** in parallel. CN1 was never meant to carry it:
 
 | | |
 |---|---|
-| **The board cannot be powered through CN1 alone** | B+ and PGND give it no return |
-| **All return current would flow through the standoffs** | into the enclosure, if they are even bonded to vehicle ground |
-| **On the bench, the return has been coming from whatever else was attached** | the Nucleo's ground wire through U7 |
+| **The board cannot be powered through CN1 alone** | by design — B+ and PGND are the protected input and the fault path, nothing else |
+| **The standoffs are the primary return** | four corner bonds, microohms, distributed; the header pins are parallel backup |
+| **On the bench, the return came from whatever else was attached** | the Nucleo's ground wire through U7 — because an unmounted board has no standoffs |
 
 That last row is the **fourth instance** of the session's recurring shape, and
 the sharpest: not the instrument drawing power from the board, but the instrument
 **supplying the board's return path**.
 
-### The fix does not compromise the isolation
+### There is nothing to fix — and one caution for the bench
 
-A tie at `CN1_2` puts **no** surge current on GND, which is exactly why the v1
-review chose it over `D1_2`:
+No tie belongs at `CN1_2` or anywhere else. Adding one would turn a fault path
+into the board's DC trunk and put operating current through PGND permanently,
+which is the opposite of what it exists for. The v1 review's §8 request to
+*"confirm the two are joined at exactly one point"* rested on an assumption that
+turned out not to hold: GND does not need CN1, because it leaves through the
+standoffs and headers. **Zero tie points is the correct answer, not a defect.**
 
-| tie at | what GND rides on |
-|---|---|
-| **`CN1_2`** ✅ | the vehicle ground entry. Surge has already *left* the board by the time it gets there |
-| `D1_2` ❌ | the far end of the run — the whole 17.7 mm of IR and L·di/dt appears across GND |
+> **Bench caution.** An unmounted board has no standoff return, so bench
+> measurements run on a different return topology than the installed board —
+> whatever ground wire happens to be clipped on. That is the fourth instance
+> above, and it is structural to testing this board off the carrier rather than a
+> mistake in any one setup.
 
-Same "one point", opposite outcome. With a 2-pin `WJ2EDGRC-5.08` and no third pin
-for signal ground, and with a chassis return through the standoffs being a poor
-reference once engine currents share the loop, the `CN1_2` tie is the only option
-actually on the table.
-
-**Make it a component, not copper: a 0 Ω 0805 link or a net-tie at `CN1_2`.**
-
-- The single point is enforced by construction and cannot silently become two
-  when a plane is re-poured.
-- It is an inspectable decision rather than geometry a reviewer must measure off
-  the gerbers — which is what left this open across two board revisions.
-- **Lifting it becomes a one-component operation** — the exact isolation
-  performed on 2026-09-26, by design instead of by rework.
+Full write-up: [`grounding-architecture.md`](../../docs/grounding-architecture.md).
 
 ## Why the M7 and not the INA238
 
