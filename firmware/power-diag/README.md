@@ -95,6 +95,24 @@ knew. The MAX25239 absorbed it and hiccupped. That is the behaviour you want on
 a vehicle: a harness short on 5 V costs a hiccup, **not** the minutes-long
 protector cooldown a short on VIN produces.
 
+**A DMM in the short read 2.7 A.** That is the *average*, not the limit — the
+buck bursts to its 8.2 A limit and backs off, and a meter shows the mean, which
+implies roughly a **33 % duty cycle**. Three things confirm hiccup rather than
+regulation:
+
+| evidence | why it rules out regulation |
+|---|---|
+| rails collapsed | a buck holding 5 V would not drop the 3.3 V rail |
+| input < 200 mA | delivering 5 V × 2.7 A would draw **625 mA** at 24 V |
+| the DMM averages | it cannot show a burst |
+
+The power balance agrees: ~0.4–0.7 W reaches the short against up to 4.8 W going
+in, the rest being switching and inrush loss.
+
+**2.7 A is nevertheless the number worth keeping.** 8.2 A is what the silicon
+does; 2.7 A sustained is what a real harness short pulls, and that is what sizes
+fuses and traces.
+
 Two limits of this particular measurement:
 
 - **The gap includes hold time.** 2–7 s is contact duration plus recovery, not
