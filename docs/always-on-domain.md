@@ -33,15 +33,40 @@ both feeds go at once: connector pull, battery disconnect, main fuse. Then the
 1120 µF on `C3`/`C4` is all there is.
 
 ```
-E = ½C(V1² − V2²) = ½ × 1120 µF × (14² − 6²) = 89.6 mJ
-                     ~76 mJ usable at ~85 % converter efficiency
+E = ½C(V1² − V2²)                     ~85 % converter efficiency usable
 ```
 
-| ECU load | holdup |
-|---|--:|
-| 2 W | ~38 ms |
-| **5 W** | **~15 ms** |
-| 10 W | ~7.6 ms |
+**v3 adds a third 560 µF**, since there is board room and this is the right place
+to spend it — energy goes as V², so a µF on the 14 V protected rail is worth about
+**8× the same µF on 5 V**. `C3`/`C4`'s position was already optimal.
+
+| ECU load | 1120 µF (v2) | **1680 µF (v3)** |
+|---|--:|--:|
+| 2 W | 38 ms | **57 ms** |
+| **5 W** | 15 ms | **23 ms** |
+| 10 W | 7.6 ms | **11 ms** |
+
+**Inrush is not the limit.** `power-supply.md` flagged that TMR must outlast it,
+sized then against 1000 µF at a 2 A limit. At the measured 5 A limit:
+
+```
+t = C·dV/I = 1680 µF × 14 V / 5 A = 4.7 ms      vs 594 ms TMR
+```
+
+Two orders of margin, and Q1's inrush dissipation rises only 0.11 J → 0.165 J per
+key-on — brief against the 1 in² of copper already specified.
+
+**The real tradeoff is filter Q.** The v2 review requires these parts stay
+electrolytic because their ESR *is* the input filter's damping. Three in parallel
+cut ESR to ⅔ while raising C by 1.5×, and both push the same way:
+
+```
+Q = (1/R)·sqrt(L/C)   with  C -> nC,  R -> R/n   gives   Q proportional to sqrt(n)
+n: 2 -> 3   =>   Q x 1.22
+```
+
+**About 22 % more peaking** — near Q ≈ 2.1 if the two-cap figure is 1.7. Still
+damped, but it is the one thing that gets worse, so re-run it rather than assume.
 
 **Size the emergency save against the holdup, not against FLT#.** The three fault
 modes give completely different warning, and the worst gives none:
@@ -88,6 +113,16 @@ draws before ours.
 | INA238 in shutdown | ~2 µA |
 | ADC battery-sense divider, **180 k / 30 k**, **on the battery lead** | **67 µA** |
 | **Total** | **≈ 184 µA** |
+
+> ⚠ **This table omits bulk capacitor leakage.** Because KAPWR joins the
+> **protected rail**, `C3`/`C4` (and the v3 third cap) sit **energised with the key
+> off**. Datasheet-max aluminium leakage runs to tens of µA each — long-soak is far
+> lower, but it is not zero and it is not listed.
+>
+> **Not a blocker:** even at 80 µA per cap this is ~0.3 % of a 25 mA vehicle
+> budget. But the table reads as complete when it is not, and the third cap makes
+> the missing term 50 % larger. Measure it rather than model it — the parked
+> current is directly measurable with the INA238 already on the board.
 
 > ⚠ **This table read 944 µA until the feed was defined.** The LTC4364's 750 µA
 > was 80 % of it, and it is now zero — with KAPWR joining the **protected rail**
