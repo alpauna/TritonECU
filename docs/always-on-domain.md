@@ -121,8 +121,18 @@ draws before ours.
 >
 > **Not a blocker:** even at 80 µA per cap this is ~0.3 % of a 25 mA vehicle
 > budget. But the table reads as complete when it is not, and the third cap makes
-> the missing term 50 % larger. Measure it rather than model it — the parked
-> current is directly measurable with the INA238 already on the board.
+> the missing term 50 % larger. Measure it rather than model it.
+>
+> **The INA238 cannot make that measurement.** It senses across `R1`, the
+> LTC4364's shunt on the **input** side, while KAPWR joins the **protected rail** —
+> downstream of the protector and therefore downstream of `R1`. Parked current
+> never crosses the shunt, so the on-board ammeter reads **zero** for the one
+> current the always-on design most needs to know.
+>
+> Parked drain has to be metered **in series with the KAPWR feed**, externally.
+> This is the session's recurring shape once more: the instrument is on the wrong
+> side of the topology to see the thing that matters — see
+> [`firmware/power-diag/README.md`](../firmware/power-diag/README.md).
 
 > ⚠ **This table read 944 µA until the feed was defined.** The LTC4364's 750 µA
 > was 80 % of it, and it is now zero — with KAPWR joining the **protected rail**
