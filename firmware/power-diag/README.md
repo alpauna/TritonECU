@@ -56,6 +56,30 @@ The earlier "drops out above 24 V" was an artifact of the bench setup: the
 Nucleo was powered *from the board*, and the FB node was being probed at 3 %
 margin. Both are now understood — see the git history.
 
+### Current limit measured: 4.96 / 5.16 A against 5.00 designed
+
+Deliberate shorts, with the INA238 at 50 µs conversions and peak-hold running in
+the sampling loop rather than the print loop:
+
+```
+design      10 mOhm x 50 mV threshold  =  5.000 A
+measured    4.962 A   and   5.157 A       within 1-3%
+```
+
+That validates two things which could not be separated any other way: `Rsns`
+really is 10 mΩ, and the LTC4364's threshold really is 50 mV. Either being off
+would have moved this.
+
+**The first attempt measured nothing, and the instrument was at fault.** An
+`INPUT_PULLDOWN` on the status pins fought the board's own 10 kΩ pull-ups,
+making an 8 kΩ node at 2.6 V that picked up 10,508 spurious edges in four
+minutes — and printing them at ~3 ms a line starved the INA238 poll, so the
+peak-hold never ran. The event happened; the diagnostic was busy.
+
+**A diagnostic that prints without a budget can starve the thing it is
+diagnosing, and that failure looks exactly like "the event did not happen."**
+The edge drain is bounded to four per pass now, with drops counted and flagged.
+
 ### Two things the trace taught that outlive this fault
 
 **`5_GOOD` rises again 18.3 ms later with ENOUT still low and VBUS at 2.86 V.**
