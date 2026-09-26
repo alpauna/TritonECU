@@ -30,6 +30,43 @@ only in order, by microseconds:
 5_GOOD falls first, then 3.3_ENOUT   -> buck failed, protector reacted
 ```
 
+## Result — 2026-09-26: no fault. The board clamps as designed.
+
+```
+>>> EDGE  3.3_ENOUT  FALL
+>>> EDGE      3.611 us  5_GOOD  FALL
+dropped out at 26.74 V, peak current 25 mA
+```
+
+**The protector turned off first; the buck followed 3.6 µs later** — just its
+output caps coasting before PGOOD let go. So the MAX25239 is innocent and the
+min-on-time hypothesis is dead. The current-limit path is dead too: 25 mA peak
+against a 5 A limit.
+
+| | |
+|---|---|
+| dropped out at | **26.74 V** |
+| FB clamp, by design | 26.99 V (R3 105k / R8 5.1k) |
+| the sheet's own note | *"VIN is max 27 volts"* |
+
+That is the LTC4364 clamping at its FB-set voltage, running the 594 ms timer and
+shutting down. **Working as drawn.**
+
+The earlier "drops out above 24 V" was an artifact of the bench setup: the
+Nucleo was powered *from the board*, and the FB node was being probed at 3 %
+margin. Both are now understood — see the git history.
+
+### Two things the trace taught that outlive this fault
+
+**`5_GOOD` rises again 18.3 ms later with ENOUT still low and VBUS at 2.86 V.**
+That is not recovery. PGOOD is open-drain with a pull-up, so a converter that
+has lost its own bias *releases* the pin and the pull-up takes it high.
+**5_GOOD high does not mean good when the part is unpowered** — firmware must
+not trust it during startup or brownout.
+
+**The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
+so it reads as time since boot. Only deltas after the first event count.
+
 ## Why the M7 and not the INA238
 
 The INA238 is on the right shunt — the same 10 mΩ the LTC4364 uses — but it
