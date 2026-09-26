@@ -75,19 +75,63 @@ GND reaches the carrier board by two routes at once:
 
 | route | what it is |
 |---|---|
-| **four M3 standoffs** (`U2`–`U5`, SMTSO30100CTJ) | soldered to the GND plane at the corners, screwed to the carrier's ground plane. **Primary** — microohms, and distributed |
-| **three header ground pins** | two on the power header, one on the status/I²C header. Parallel backup |
+| **four M3 standoffs** (`U2`–`U5`, SMTSO30100CTJ) | soldered to the GND plane on the **backside**, screwed to the carrier's ground plane. **Primary — 30 A each, 120 A total** |
+| **three header ground pins** | two on the power header, one on the status/I²C header. ~3 A per 2.54 mm post, so ~9 A. Parallel backup |
+
+**The two paths are an order of magnitude apart**, which is what makes "primary"
+and "backup" the right words rather than a guess about impedance.
 
 The loads are **off-board**: 5 V and 3.3 V leave through the headers and their
 return comes back, so the total is the **sum of the off-board rail currents**,
 not the input current.
 
-**DC sharing follows resistance, and a screwed M3 standoff beats a 2.54 mm post
-by orders of magnitude.** The standoffs therefore carry nearly all of it — which
+**DC sharing follows resistance, and a 30 A brass standoff beats a 3 A post by
+more than a decade.** The standoffs therefore carry nearly all of it — which
 resolves what would otherwise be the real worry here, that the status/I²C
 header's ground pin doubles as a power return. It is the pin the three status
 lines and the INA238 reference against, and the standoffs keep power current off
 it far more effectively than geometry alone could.
+
+### Standoff and screw specification
+
+From the Sinhoo datasheet, `SMTSO`-`30`-`100` decodes as **M3×0.5, 10.0 mm long**:
+
+| | |
+|---|---|
+| rated current | **30 A** |
+| **max tightening torque** | **5 kgf·cm = 0.49 N·m ≈ 4.3 lbf·in** |
+| material | **brass C3604 (H59)** — stated because a current is rated |
+| min. solder pad OD | **6.2 mm** |
+| hole size in sheet | 4.22 mm (+0.08) |
+| min. sheet thickness | 1.53 mm |
+| process | **reflow only — wave soldering is not applicable** |
+
+> **The torque is a maximum, not a target.** The datasheet is explicit that
+> exceeding it destroys the element *and the PCB*. At 0.49 N·m this is finger-tight
+> with a driver, not a wrench — and it is the one assembly step that can crack the
+> board it is supposed to be grounding.
+
+**The four M3 screws belong in the BOM** — they are not incidental hardware, they
+are what closes the primary ground return.
+
+| | |
+|---|---|
+| thread | M3×0.5 |
+| length | **6 mm** (≈4 mm engagement through a 1.6 mm carrier plus a washer). 8 mm is better engagement and still safe |
+| **never** | ≥10 mm — the screw would bottom against the POWER board and jack the joint apart, prying on the solder fillet |
+| head | pan or socket cap, with a flat washer to spread clamp load |
+| plating | nickel-plated steel or brass mates with brass C3604 better than bare stainless. [`enclosure.md`](enclosure.md) puts the ECU in the cabin, so this is modest — but one end straddles the firewall |
+
+### The electrical joint is compression, not solder
+
+Current crosses **brass end face against the carrier's ground pad**; the screw
+supplies clamp force. So the carrier side has to be built for it:
+
+- **Bare exposed metal, ENIG preferred** — flatter and oxide-free, which matters
+  for a compression joint in a way it does not for solder.
+- **Pad ≥6.2 mm diameter**, matching the datasheet's solder-pad figure. Take the
+  exact contact annulus off the dimensional drawing before committing.
+- **No soldermask under the contact area**, and plenty of vias into the plane.
 
 ### Why both paths matter
 
@@ -119,8 +163,9 @@ mistake in any one setup, and it is worth stating before every session.
       pin downstream.
 - [ ] **Confirm the carrier has matching ground pads at all four standoff
       positions.** [`carrier-board.md`](carrier-board.md) does not mention them,
-      so the primary return path is currently unspecified on the other side.
-- [ ] **Specify standoff screw torque and plating**, since this is the primary
-      return and it is a mechanical joint.
+      so the primary return path is currently unspecified on the other side —
+      bare ENIG, ≥6.2 mm, no mask, well stitched.
+- [ ] **Add the four M3×6 screws and washers to the assembly BOM.** No mechanical
+      hardware list exists yet; `enclosure.md` has no hardware section.
 - [ ] **Measure the return split** between standoffs and header pins under load,
       to confirm the status header's ground is not carrying power current.
