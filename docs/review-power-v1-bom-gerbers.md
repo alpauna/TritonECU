@@ -815,7 +815,11 @@ this board does. **PGND is the trunk and GND hangs off it.**
 > **zero** tie points, not one. D1's surge loop still closes through `CN1_2` to
 > vehicle ground, but the 118-pin GND plane reaches the outside world only via
 > the four mounting standoffs and the two headers — so **the board cannot be
-> powered through CN1 alone.** Add the single-point tie at `CN1_2`. See
+> powered through CN1 alone.** The isolation is intentional and right — PGND
+> carries clamp current and must stay off any reference — so the fix is not to
+> merge the nets but to give GND a return where surge has already left the board:
+> a **0 Ω link or net-tie at `CN1_2`**, never at `D1_2`. As a component the single
+> point is enforced by construction and can be lifted deliberately. See
 > [`firmware/power-diag/README.md`](../firmware/power-diag/README.md).
 
 ## Where the tie belongs: at `CN1_2`, not at D1

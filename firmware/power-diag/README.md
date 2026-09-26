@@ -236,8 +236,13 @@ answer is zero points, not one.
 crosses D1, and leaves at `CN1_2` to vehicle ground without ever touching the
 board's GND plane. That is exactly what the review said to aim for.
 
-**The GND plane is the problem.** CN1 has only two pins, so with no tie the
-board's ground reference reaches the outside world *only* through the four
+**The isolation itself is intentional and correct.** PGND's whole job is to carry
+clamp current when D1 fires, and routing that anywhere near a reference corrupts
+every reading on the board during the one event most worth surviving. Keeping it
+away from sensitive signal grounds is the design, not an oversight.
+
+**What is missing is a DC return for GND.** CN1 has only two pins, so with no tie
+the board's ground reference reaches the outside world *only* through the four
 mounting standoffs (U2–U5) and the two headers. Consequences:
 
 | | |
@@ -250,9 +255,29 @@ That last row is the **fourth instance** of the session's recurring shape, and
 the sharpest: not the instrument drawing power from the board, but the instrument
 **supplying the board's return path**.
 
-**Fix:** tie PGND to GND at `CN1_2`, one point, as the v1 review specified — at
-the connector, never at `D1_2`, so GND sits at the *end* of the surge path and
-never carries any of it. This is now a confirmed defect, not a checklist item.
+### The fix does not compromise the isolation
+
+A tie at `CN1_2` puts **no** surge current on GND, which is exactly why the v1
+review chose it over `D1_2`:
+
+| tie at | what GND rides on |
+|---|---|
+| **`CN1_2`** ✅ | the vehicle ground entry. Surge has already *left* the board by the time it gets there |
+| `D1_2` ❌ | the far end of the run — the whole 17.7 mm of IR and L·di/dt appears across GND |
+
+Same "one point", opposite outcome. With a 2-pin `WJ2EDGRC-5.08` and no third pin
+for signal ground, and with a chassis return through the standoffs being a poor
+reference once engine currents share the loop, the `CN1_2` tie is the only option
+actually on the table.
+
+**Make it a component, not copper: a 0 Ω 0805 link or a net-tie at `CN1_2`.**
+
+- The single point is enforced by construction and cannot silently become two
+  when a plane is re-poured.
+- It is an inspectable decision rather than geometry a reviewer must measure off
+  the gerbers — which is what left this open across two board revisions.
+- **Lifting it becomes a one-component operation** — the exact isolation
+  performed on 2026-09-26, by design instead of by rework.
 
 ## Why the M7 and not the INA238
 
