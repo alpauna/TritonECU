@@ -122,6 +122,44 @@ Two limits of this particular measurement:
   last level on pin capacitance — no threshold crossing, no interrupt. For
   rail-collapse tests **the gap is the instrument and the edges are not.**
 
+### A 3.3 V short is contained too — and the on-board indicators lie about it
+
+Dead short on 3.3 V: **1849 mA** sustained, audible, no input peak above 200 mA,
+no INA238 gap. Retry cadence measured from the edge timing:
+
+```
+13 intervals, mean 9.32 ms  ->  107 Hz
+```
+
+That is the buzz. The 2 MHz switching is inaudible; what you hear is the
+TLV62085 retrying a hundred times a second.
+
+**The 5 V rail sagged 5.13 → 5.06 V. 1.4 %.** Fully contained.
+
+### The indicators cannot measure this fault, and that is structural
+
+All three status signals — `5_GOOD`, `3.3_GOOD`, `3.3_ENOUT` — have their
+pull-ups on the **3.3 V rail being shorted.** So the trace showed 18 `5_GOOD`
+edges and 30 `3.3_ENOUT` edges during a fault that touched neither:
+
+```
+5.06 V sits 6.5-10% ABOVE any plausible PGOOD threshold (92-95% of 5 V)
+```
+
+`5_GOOD` had no business deasserting. Those edges were the pull-up losing
+supply. Only a meter on the rail itself could tell the difference.
+
+**This is the third time the same shape appeared in one session:**
+
+| | instrument fed by the thing it measured |
+|---|---|
+| 1 | Nucleo powered from the board — died mid-capture |
+| 2 | status pull-ups on the board's rail — a dead board read `111` |
+| 3 | `5_GOOD`'s pull-up on the shorted rail — 18 phantom edges |
+
+Each time it produced *confident, plausible, wrong* data rather than an obvious
+failure. **When measuring a rail, the observer must not be powered by it.**
+
 ### Two things the trace taught that outlive this fault
 
 **`5_GOOD` rises again 18.3 ms later with ENOUT still low and VBUS at 2.86 V.**
