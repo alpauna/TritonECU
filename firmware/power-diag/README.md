@@ -171,7 +171,11 @@ not trust it during startup or brownout.
 **The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
 so it reads as time since boot. Only deltas after the first event count.
 
-## Reverse polarity: nothing measurable. Proven by removing the part that hides it.
+## Reverse polarity: nothing measurable — but the pass signature is ambiguous
+
+> **Provisional.** A zero reading is also what a floating board gives, and the
+> test as run cannot separate the two. See *The open-circuit confound* below.
+
 
 Run with **D1 (SMDJ43A) removed**, input reversed at **13.4 V**, supply limited
 to **0.2 A**, and the Nucleo **disconnected** — its shared ground is invalid once
@@ -210,6 +214,38 @@ reverse input to **−40 V** — 13.4 V is a third of rating.
 > the last-ditch clamp above the 43.2 V trip; without it a fast harness
 > transient lands on Q1's 100 V `Vds` with nothing in front of it. Its 43 V
 > standoff breaks down near 47.8 V, so it does not overlap the OV trip.
+
+### The open-circuit confound
+
+`review-power-v1-bom-gerbers.md` §*PGND is a two-node net* is decisive:
+
+```
+GND    118 pins
+PGND     2 pins  --  D1_2 and CN1_2, that is the entire net
+```
+
+**PGND is the board's only return to the vehicle.** CN1 has two pins, so GND
+never reaches the connector — it hangs off PGND through one copper tie. The
+single-point tie that makes D1 trivial to isolate is therefore also the cut that
+removes *the whole circuit*.
+
+| cut | consequence |
+|---|---|
+| **D1's own pad** off the PGND copper | D1 isolated, return intact → the 38 µA prediction holds, pass stands |
+| **the PGND↔GND tie** | the 118-pin plane floats off CN1_2, but `D1_2` and `CN1_2` are still one net, so D1 stays in the reverse path and should have crowbarred at ~0.8 V |
+
+No current was seen, which argues for the first. But **38 µA and a floating
+board both read as zero on a bench supply** — the stated pass condition is one an
+open circuit also satisfies. That is a flaw in the test specification, not in
+the board.
+
+**Resolve it with one probe:** reversed, meter `CN1_2` to a GND reference
+(mounting pads U2–U5). ≈0 V means the tie held and the pass stands; ≈13.4 V means
+the plane was floating and nothing was under test.
+
+**Better, if repeating it:** isolate D1 by lifting **`D1_1`**, its B+ end. The
+return is then provably intact, because the board powers up normally in forward
+polarity on that same wiring — no separate proof needed.
 
 ## Why the M7 and not the INA238
 
