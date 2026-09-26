@@ -61,6 +61,11 @@ static uint8_t ina_addr = 0;
  * in well under the print interval, and a lapped ring prints stale entries as
  * if they were fresh - deltas that look like real timing and are not. Dropped
  * events are counted so an overflow announces itself rather than lying. */
+/* Peak-hold on the shunt. A current limit event is over in half a second and
+ * the print loop runs at 2 Hz, so the peak has to be caught in the sampling
+ * loop or it is simply not seen. Held until reported, then rearmed. */
+static int16_t peak_raw = 0;
+
 struct Event { uint32_t cyc; uint8_t pin; uint8_t level; };
 static volatile Event  ring[256];
 static volatile uint32_t dropped = 0;
@@ -108,14 +113,19 @@ void setup() {
     DWT->CTRL  |= DWT_CTRL_CYCCNTENA_Msk;
     OUT("DWT at %lu Hz -> %lu cycles per us\n", (unsigned long)F_CPU, (unsigned long)CYC_PER_US);
 
-    /* PULLDOWN, not plain INPUT. All three status pull-ups live on the BOARD's
-     * own 3.3 V rail - so when the board is dead those pins float, and a
-     * high-impedance input reads them HIGH. "All rails good" and "board has no
-     * power" then look identical, which is exactly backwards for a diagnostic.
-     * A pulldown here makes an unpowered board read 000. */
-    pinMode(PIN_ENOUT, INPUT_PULLDOWN);
-    pinMode(PIN_5GOOD, INPUT_PULLDOWN);
-    pinMode(PIN_3GOOD, INPUT_PULLDOWN);
+    /* Plain INPUT, NOT pulldown. A pulldown here was a mistake that cost a
+     * measurement: all three lines already carry a 10k pull-up on the board, so
+     * adding the STM32's ~40k internal pulldown turns a firmly driven line into
+     * an 8k divider at 2.6 V - noise-susceptible on a flying lead. It produced
+     * 10,508 spurious edges in four minutes.
+     *
+     * The problem it was meant to fix - a dead board reading 111 because those
+     * pull-ups sit on ITS rail - is solved below instead, by reporting the pins
+     * as unknown when VBUS says there is no board. Do not fight a pull-up with
+     * a weaker pull-down; decide from something that is actually true. */
+    pinMode(PIN_ENOUT, INPUT);
+    pinMode(PIN_5GOOD, INPUT);
+    pinMode(PIN_3GOOD, INPUT);
     attachInterrupt(digitalPinToInterrupt(PIN_ENOUT), isr_enout, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_5GOOD), isr_5good, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_3GOOD), isr_3good, CHANGE);
@@ -134,14 +144,23 @@ void setup() {
 
     ina_write(REG_CONFIG, 0x8000); delay(5);       // reset
     ina_write(REG_CONFIG, 0x0000);                 // ADCRANGE = 0, see above
-    ina_write(REG_ADCCFG, 0xFB68);                 // continuous, 1052 us, avg 1
+    /* 0xB000 = continuous shunt + bus, 50 us each, no averaging -> ~100 us per
+     * pair. The default 1052 us setting gives 534 samples across a 594 ms fault,
+     * which sees THAT it tripped; this gives ~5400, which reads the limit
+     * PLATEAU. Design is 10 mOhm x 50 mV = 5.0 A, about 10000 counts. */
+    ina_write(REG_ADCCFG, 0xB000);
     OUT("\ncyc-delta   pin        edge     (deltas are from the previous event)\n");
 }
 
 void loop() {
     static uint32_t last = 0, prev_cyc = 0;
 
-    while (tail != head) {
+    /* Bounded per pass. An edge burst prints faster than the sampling loop can
+     * run - 3 ms per line at 115200 - so an unbounded drain starves the INA238
+     * poll below and the peak-hold never executes. That is how a short went
+     * unmeasured: the flood ate the measurement, not the event. */
+    uint8_t budget = 4;
+    while (tail != head && budget--) {
         uint8_t t = tail & 255;
         uint32_t cyc = ring[t].cyc; uint8_t pin = ring[t].pin, lvl = ring[t].level;
         tail++;
@@ -154,15 +173,32 @@ void loop() {
             NAME[pin], lvl ? "RISE" : "FALL");
     }
 
+    /* Poll the shunt as fast as the bus allows, every pass, and keep the peak.
+     * This is the measurement; the 2 Hz line below is only the report. */
+    if (ina_addr) {
+        int16_t vs_fast;
+        if (ina_read(REG_VSHUNT, vs_fast) && vs_fast > peak_raw) peak_raw = vs_fast;
+    }
+
     if (millis() - last >= 500) {
         last = millis();
         int16_t vs, vb;
         if (ina_addr && ina_read(REG_VSHUNT, vs) && ina_read(REG_VBUS, vb)) {
             int32_t mv = (int32_t)vb * 25 / 8;
             int32_t ma = (int32_t)vs / 2;
-            OUT("[%6lus] VBUS %ld.%03ld V   I %ld mA   ENOUT %d 5G %d 3G %d\n",
-                millis()/1000, mv/1000, (mv<0?-mv:mv)%1000, (long)ma,
-                digitalRead(PIN_ENOUT), digitalRead(PIN_5GOOD), digitalRead(PIN_3GOOD));
+            long peak_ma = (long)peak_raw / 2;
+            uint32_t drop = dropped; dropped = 0;
+            /* Below 3 V there is no board, so its pull-ups are dead and the pin
+             * reads mean nothing. Say so rather than printing a confident 111. */
+            if (mv < 3000)
+                OUT("[%6lus] VBUS %ld.%03ld V   I %ld mA   PEAK %ld mA   pins --- (no board)\n",
+                    millis()/1000, mv/1000, (mv<0?-mv:mv)%1000, (long)ma, peak_ma);
+            else
+                OUT("[%6lus] VBUS %ld.%03ld V   I %ld mA   PEAK %ld mA   ENOUT %d 5G %d 3G %d%s\n",
+                    millis()/1000, mv/1000, (mv<0?-mv:mv)%1000, (long)ma, peak_ma,
+                    digitalRead(PIN_ENOUT), digitalRead(PIN_5GOOD), digitalRead(PIN_3GOOD),
+                    drop ? "  [edges dropped]" : "");
+            peak_raw = 0;                      // rearm for the next window
         }
     }
 }
