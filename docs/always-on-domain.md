@@ -25,6 +25,55 @@ Same for FLT#: the 44 ms warning stops being a race against the MCU's own death
 and becomes an ordinary interrupt with plenty of time to shed loads and record
 the event.
 
+### NARROWED: one case this does not retire — total loss of both feeds
+
+"Nothing collapses" holds because **KAPWR joins the protected rail**, so an
+LTC4364 fault leaves the converters fed and the 3.3 V up. It does **not** hold when
+both feeds go at once: connector pull, battery disconnect, main fuse. Then the
+1120 µF on `C3`/`C4` is all there is.
+
+```
+E = ½C(V1² − V2²) = ½ × 1120 µF × (14² − 6²) = 89.6 mJ
+                     ~76 mJ usable at ~85 % converter efficiency
+```
+
+| ECU load | holdup |
+|---|--:|
+| 2 W | ~38 ms |
+| **5 W** | **~15 ms** |
+| 10 W | ~7.6 ms |
+
+**Size the emergency save against the holdup, not against FLT#.** The three fault
+modes give completely different warning, and the worst gives none:
+
+| case | warning before the rail falls |
+|---|---|
+| FLT# overcurrent / TMR timeout | 44 ms — *and the MCU survives anyway, via KAPWR* |
+| FLT# overvoltage | **1.12 ms** (`schematic-review-power.md`) |
+| **total loss of both feeds** | **none** |
+
+### Do not trigger it from PGOOD
+
+`5_GOOD` **rose again 18.3 ms into the 2026-09-26 fault**, with ENOUT still low and
+VBUS at 2.86 V. Open-drain PGOOD releases when the converter loses its own bias and
+the pull-up takes it high, so a detector built on PGOOD reads *recovered* partway
+through dying. See [`firmware/power-diag/README.md`](../firmware/power-diag/README.md).
+
+The upstream signal is the INA238's VBUS on the protected node — it falls first and
+monotonically, and `ADCCFG = 0xB000` already gives 50 µs conversions.
+
+### The threshold cannot discriminate cranking from dying
+
+Both feeds come from the same battery, so a crank dip pulls VBUS down exactly as a
+disconnect does. The LTC4364's UV sits at 4.47 V specifically so the board rides
+cranking through, and the converters drop out around 6 V — which leaves almost no
+room between "cranking, do not panic" and "actually dying."
+
+**So do not try to separate them by voltage.** Make the save cheap and idempotent —
+a small record, safe to write on every start — and fire it generously. A false
+trigger then costs nothing, which is what buys the freedom to set the threshold
+high enough to be useful.
+
 ## The number that decides it: parasitic drain
 
 A parked vehicle tolerates roughly **25–50 mA** total, and the truck has its own
