@@ -171,6 +171,46 @@ not trust it during startup or brownout.
 **The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
 so it reads as time since boot. Only deltas after the first event count.
 
+## Reverse polarity: nothing measurable. Proven by removing the part that hides it.
+
+Run with **D1 (SMDJ43A) removed**, input reversed at **13.4 V**, supply limited
+to **0.2 A**, and the Nucleo **disconnected** — its shared ground is invalid once
+the input flips.
+
+```
+supply current        no deflection at all
+downstream of Q1/Q2   0 V
+5 V rail              0 V
+3.3 V rail            0 V
+```
+
+**Taking D1 out is what made this a measurement instead of a stress test.** The
+SMDJ43A is unidirectional: in reverse it forward-conducts like a plain diode,
+crowbars at ~0.8 V, and that conducting path *masks everything behind it*. You
+learn the TVS works and nothing else. With it gone there is no forward path, so
+the only reverse current is the UV/OV divider — roughly 350 kΩ, about **38 µA at
+13.4 V**, which is why the supply never twitched. Any real current would have
+been unmistakable.
+
+### The destructive path does not exist on this board
+
+The one outcome worth fearing was reverse-biasing the 1120 µF of aluminum
+electrolytic. It cannot happen — **C3/C4 sit downstream of the protector**, not
+at the connector. [`power-supply.md`](../../docs/power-supply.md) has the order:
+
+```
+Battery ─ fuse ─ TVS ─ LTC4364-2 ─┬─ 1000 µF ─ converter
+```
+
+The review's phrase "input electrolytics" means input *to the converter*. The
+back-to-back body diodes block ahead of them, and the LTC4364-2 is specified for
+reverse input to **−40 V** — 13.4 V is a third of rating.
+
+> **D1 must be reinstalled before OV testing or anything vehicle-side.** It is
+> the last-ditch clamp above the 43.2 V trip; without it a fast harness
+> transient lands on Q1's 100 V `Vds` with nothing in front of it. Its 43 V
+> standoff breaks down near 47.8 V, so it does not overlap the OV trip.
+
 ## Why the M7 and not the INA238
 
 The INA238 is on the right shunt — the same 10 mΩ the LTC4364 uses — but it
