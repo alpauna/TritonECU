@@ -73,7 +73,7 @@ pole.
 C22 = 2.2 nF is correct. C23 = 3.3 pF is the low-stray option discussed for
 C<sub>p</sub> and is fine.
 
-## 3. BLOCKING — ENOUT sits at V<sub>IN</sub> and reaches the MCU header
+## 3. ~~BLOCKING~~ RESOLVED in the 2026-09-18 revision — ENOUT is level shifted
 
 R3 pulls ENOUT to **VIN**, which is correct and necessary: ENOUT must enable the
 MAX25239 before any downstream rail exists, so it cannot be pulled to 3.3 V or
@@ -83,17 +83,27 @@ MAX25239 before any downstream rail exists, so it cannot be pulled to 3.3 V or
 three GOOD signals — a header that is otherwise entirely 3.3 V logic. During a
 clamped overvoltage that pin carries **27 V into the MCU.**
 
-Fix, in order of preference:
+**Fixed by option 2** — the *Level Shifted Enable Out for MCPU* block:
 
-1. **Remove ENOUT from U8.** It has a job on this board — driving the MAX25239's
-   EN — and the MCU does not need it.
-2. If the MCU should see it, add a divider or a small open-drain level shift to
-   3.3 V, sized so the MAX25239's EN still sees its logic threshold.
+```
+ENOUT -> Q4 BSS123 -> R16 10k pull-up to +3.3V -> 3.3_ENOUT -> header pin 8
+```
+
+The header carries `3.3_ENOUT`, not `ENOUT`, and measures **3.3 V** on the built
+board. `ENOUT` keeps its job driving the MAX25239's EN at V<sub>IN</sub> where it
+belongs; the MCU sees an open-drain copy.
+
+The original options were:
+
+1. Remove ENOUT from the header. It has a job on this board and the MCU does not
+   need it.
+2. A divider or small open-drain level shift to 3.3 V, sized so the MAX25239's
+   EN still sees its logic threshold. ← **taken**
 
 Worth a check across every header pin: **U8 is otherwise safe** (VIN-ALERT,
 5_GOOD, 3.3_GOOD are pulled to 3.3 V; M_SYNC and U_SHDN are MCU-driven).
 
-## 4. HIGH — C7 is 1.5 µF, should be 2.2 µF
+## 4. ~~HIGH~~ RESOLVED in the 2026-09-18 revision — the TMR cap is now 2.2 µF
 
 Sized for the 400 ms ISO 7637 load dump, which has to survive X7R tolerance:
 
@@ -106,6 +116,9 @@ capacitance tolerance ±10 %, X7R tempco ±15 %  →  worst case ≈ −23 %
 
 Specify **X7R or C0G, 16 V, 0805** — the TMR pin charges at 5 µA, and tantalum
 leakage is specified in microamps, the same order as the charging current.
+
+**Fixed: the TMR cap is `C8 = 2.2 µF`.** It changed designator from C7 to C8 in
+the revision, which is why the change is easy to miss when diffing by reference.
 
 ## 5. Items to confirm
 
@@ -164,14 +177,19 @@ The symbol shows PGND1 on pin 5 and PGND2 on pin 9. The datasheet assigns
 
 ## Summary
 
-**POWER2 revised 2026-09-13; POWER1 is unchanged from the reviewed version.**
+> ⚠ **This table was stale.** It was written 2026-09-13 against the schematic of
+> that date; **POWER1 and POWER2 were both revised 2026-09-18** and items 3 and 4
+> were fixed then. The status column was not updated, so the review read as
+> blocking for a board that had already been corrected — and was corrected here
+> only after the built board measured 3.3 V on the pin the review said carried
+> V<sub>IN</sub>. Check the schematic date against this file's before trusting it.
 
 | # | Sheet | Change | Status |
 |---|---|---|---|
 | 1 | POWER2 | U11 → MAX25239AFF*A*/VY+ (2100 kHz) | **✓ fixed** |
 | 2 | POWER2 | R19 → 78.7 kΩ | **✓ fixed** |
-| 3 | **POWER1** | **Remove ENOUT from U8**, or level-shift it | **open — blocking** |
-| 4 | **POWER1** | C7 → 2.2 µF X7R/C0G 16 V | **open — high** |
+| 3 | POWER1 | ENOUT level shifted via Q4/R16 to `3.3_ENOUT` | **✓ fixed 09-18** |
+| 4 | POWER1 | TMR cap → 2.2 µF, now `C8` | **✓ fixed 09-18** |
 | 5 | Confirm R<sub>SNS</sub> 8 mΩ is intentional (5.6 A limit) | medium |
 | 6 | Fixed FB loses the loop-injection point | medium |
 | 7 | TLV62085: check FB leakage vs 4.9 µA, and feedforward cap | medium |
