@@ -122,6 +122,59 @@ are what closes the primary ground return.
 | head | pan or socket cap, with a flat washer to spread clamp load |
 | plating | nickel-plated steel or brass mates with brass C3604 better than bare stainless. [`enclosure.md`](enclosure.md) puts the ECU in the cabin, so this is modest — but one end straddles the firewall |
 
+### Reflow: paste the annulus, not the pad
+
+The soldered face is a **tube, not a disc**. With a 5.56 mm OD over an M3 bore the
+contact annulus is only about **19 mm²**, and the 6.2 mm pad exists to leave a
+fillet outside it.
+
+**Cut the aperture as a segmented annulus, not a solid circle.**
+
+| why | |
+|---|---|
+| **flux has to escape** | a flat brass face on a flat pad is the QFN thermal-pad voiding problem at 5.5 mm scale — volatiles trapped mid-joint have nowhere to go. Arc segments give them channels |
+| **volume control** | a full-disc deposit floats the part and squeezes out |
+| **keep paste out of the bore** | the datasheet warns that solder wicking blocks the inner hole. Wick into the M3 thread and the screw will not enter — discovered at final assembly, on the joint that *is* the ground return. Make the aperture ID comfortably larger than the thread |
+
+### Reflow: the brass lags, and you cannot see the joint
+
+~1.5 g of C3604 on a 6.2 mm pad is a large mass beside 0402s and a VSON-7. It
+reaches liquidus late, or not at all on a profile tuned for the small parts.
+
+**Put a thermocouple on a standoff pad** and confirm it clears liquidus +20–30 °C
+while peak on the smallest parts stays in limits. The joint is hidden under the
+part, not reworkable without removing it, and a partly-wetted joint still holds
+mechanically while carrying a fraction of its rated current.
+
+### Reflow: double-sided order
+
+Backside standoffs mean two passes, and whichever side goes first is inverted and
+remelted during the second.
+
+```
+standoff inverted:  6.2 mm pad = 0.047 in^2
+                    ~30 g/in^2 retention  ->  ~1.4 g held
+                    part                  ->  ~1.5 g
+```
+
+**Marginal** — verify against the actual part weight. The topside has its own
+heavy parts, the two `HV1V567M1010PZ` 560 µF cans at 10.3×10.3 mm and `Q1` in
+TO-263, so neither order is free.
+
+**Bolt the standoffs to a scrap plate with the four M3 screws for the
+standoff-down pass.** A bolted standoff cannot fall off its pad, and the plate's
+mass helps the brass come up to temperature instead of lagging. Watch that it does
+not heatsink the board enough to shift the profile — another reason for the
+thermocouple.
+
+### Acceptance test
+
+**Milliohm-check each standoff body to the GND plane after reflow.** Four readings
+that agree is the pass; one outlier is a joint that did not wet. This is the only
+point at which that defect is visible. Undetected, it diverts return current onto
+the three header pins — including the one the status lines and the INA238
+reference against.
+
 ### The electrical joint is compression, not solder
 
 Current crosses **brass end face against the carrier's ground pad**; the screw
