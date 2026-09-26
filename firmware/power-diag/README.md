@@ -171,10 +171,11 @@ not trust it during startup or brownout.
 **The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
 so it reads as time since boot. Only deltas after the first event count.
 
-## Reverse polarity: nothing measurable — but the pass signature is ambiguous
+## Reverse polarity: the test was void, and the topology forbids it
 
-> **Provisional.** A zero reading is also what a floating board gives, and the
-> test as run cannot separate the two. See *The open-circuit confound* below.
+> **Void, not provisional.** PGND was depinned at the connector with only B+
+> connected, so there was no return and the circuit was open. Zero current is
+> exactly what that gives. Nothing about Q1/Q2 was exercised.
 
 
 Run with **D1 (SMDJ43A) removed**, input reversed at **13.4 V**, supply limited
@@ -234,18 +235,35 @@ removes *the whole circuit*.
 | **D1's own pad** off the PGND copper | D1 isolated, return intact → the 38 µA prediction holds, pass stands |
 | **the PGND↔GND tie** | the 118-pin plane floats off CN1_2, but `D1_2` and `CN1_2` are still one net, so D1 stays in the reverse path and should have crowbarred at ~0.8 V |
 
-No current was seen, which argues for the first. But **38 µA and a floating
-board both read as zero on a bench supply** — the stated pass condition is one an
-open circuit also satisfies. That is a flaw in the test specification, not in
-the board.
+What was actually done was neither: **PGND was depinned at the connector**, B+
+left in place. So the supply had no return at all and the circuit was open.
+38 µA and a floating board both read as zero on a bench supply, so the pass
+condition never discriminated — a flaw in the test specification, not in the
+board.
 
-**Resolve it with one probe:** reversed, meter `CN1_2` to a GND reference
-(mounting pads U2–U5). ≈0 V means the tie held and the pass stands; ≈13.4 V means
-the plane was floating and nothing was under test.
+**The topology forbids the powered test as conceived.** PGND is at once D1's
+ground return *and* the board's only return to the vehicle. Isolating D1 at its
+ground end always removes the whole circuit with it. The only powered version
+that works is lifting **`D1_1`**, the B+ end, leaving PGND intact as the return.
 
-**Better, if repeating it:** isolate D1 by lifting **`D1_1`**, its B+ end. The
-return is then provably intact, because the board powers up normally in forward
-polarity on that same wiring — no separate proof needed.
+### The unpowered check is the right tool anyway
+
+What is genuinely in question is whether **Q1 and Q2 are back-to-back as drawn**
+— an assembly fact, not a stress response. A DMM reads it with no power:
+
+```
+probe B+ <-> protector output (C3/C4 +), diode range, both polarities
+correctly back-to-back  ->  OPEN both ways
+a drop either way       ->  reverse voltage would pass
+```
+
+D1 can stay installed: it sits B+-to-PGND, not in the B+-to-output path, and a
+meter's ~3 V test voltage is far below its 43 V standoff.
+
+This is worth confirming because **a single series FET does not block reverse.**
+Its body diode runs source→drain, i.e. output→input, so a negative input drags
+the output down to within a diode of itself. Q2 is what prevents that, and its
+orientation is the one thing that can be wrong on an assembled board.
 
 ## Why the M7 and not the INA238
 
