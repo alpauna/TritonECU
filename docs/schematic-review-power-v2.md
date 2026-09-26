@@ -138,6 +138,56 @@ and it adds an OE pin to get right. The pull-up simply stops pulling. The case
 that matters is the **44 ms early warning**, when the rail is still up and FLT#
 reads correctly.
 
+### Why ENOUT cannot also move to 3.3 V — and why Q4 stays
+
+Asked during v3: since Fault brings the 3.3 V rail next to the chip, could ENOUT
+pull up there too and save the BSS123? **No — it is a bootstrap deadlock.**
+
+```
+LTC4364 ─ ENOUT ─► MAX25239 EN ─► 5 V ─► TLV62085 ─► 3.3 V
+   ^                                                    │
+   └──────────── pull-up from here? ◄───────────────────┘
+```
+
+EN could never assert, so the 5 V never comes up, so the TLV62085 never runs, so
+the 3.3 V meant to pull EN high never exists. **V<sub>IN</sub> is the only rail
+alive at the moment ENOUT has a job.**
+
+Reinforcing it: ENOUT is **latched**, resetting when OUT falls below 2.2 V, so its
+whole value lies in startup and brownout — precisely when 3.3 V is absent or
+marginal. And the pull-up value is tied to V<sub>IN</sub> operation anyway: §*9*
+sizes it at 100 kΩ because 27 V through 10 kΩ draws 2.7 mA and exceeds the 2 mA
+sink rating.
+
+**The test for whether a shifter earns its place:**
+
+| | only consumer | must work before 3.3 V exists? | verdict |
+|---|---|---|---|
+| **FLT#** | the MCU | no — the MCU is not alive either | **pull up to 3.3 V, no shifter** |
+| **ENOUT** | MAX25239 EN, at V<sub>IN</sub> | **yes** | **V<sub>IN</sub> pull-up + shifted copy** |
+
+Same part, same open-drain structure, opposite answer.
+
+### RETRACTED: "the MCU does not need ENOUT"
+
+Option 1 above proposed removing ENOUT from the header, on the grounds that the
+MCU "would always read good" since it only exists once the converter is running.
+
+**That was wrong, and the 2026-09-26 bring-up disproved it.** Its steady state is
+indeed useless, but its **falling edge** is the most valuable diagnostic signal on
+the board:
+
+```
+>>> EDGE  3.3_ENOUT  FALL
+>>> EDGE      3.611 us  5_GOOD  FALL
+```
+
+That ordering is what proved the protector faulted first and the MAX25239 was
+innocent — see [`firmware/power-diag/README.md`](../firmware/power-diag/README.md).
+Without `3.3_ENOUT` on a header pin the dropout would still be unexplained.
+
+**Net for v3: delete the Fault shifter, keep Q4.**
+
 > **Designator note.** This document uses `U8` for a header, matching the
 > schematic and the board owner's usage. The V2 BOM CSV lists `U8` as the INA238 —
 > stale numbering. Resolve before the v3 BOM is cut.
