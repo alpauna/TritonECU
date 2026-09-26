@@ -80,6 +80,30 @@ peak-hold never ran. The event happened; the diagnostic was busy.
 diagnosing, and that failure looks exactly like "the event did not happen."**
 The edge drain is bounded to four per pass now, with drops counted and flagged.
 
+### A 5 V short hiccups locally — it does not reach the protector
+
+Repeated dead shorts on the 5 V rail:
+
+```
+GAP 7.01 s   GAP 5.00 s   GAP 2.00 s    rails down, INA238 unpowered
+0 peaks over 200 mA                     input side never saw it
+recovered every time
+```
+
+**Input current stayed under 200 mA** — under 5 W at 24 V — so the LTC4364 never
+knew. The MAX25239 absorbed it and hiccupped. That is the behaviour you want on
+a vehicle: a harness short on 5 V costs a hiccup, **not** the minutes-long
+protector cooldown a short on VIN produces.
+
+Two limits of this particular measurement:
+
+- **The gap includes hold time.** 2–7 s is contact duration plus recovery, not
+  the buck's hiccup period, which is tens of milliseconds underneath.
+- **Zero edges is expected, not a miss.** When the board's 3.3 V dies its status
+  pull-ups die with it, and the Nucleo's high-impedance inputs then hold their
+  last level on pin capacitance — no threshold crossing, no interrupt. For
+  rail-collapse tests **the gap is the instrument and the edges are not.**
+
 ### Two things the trace taught that outlive this fault
 
 **`5_GOOD` rises again 18.3 ms later with ENOUT still low and VBUS at 2.86 V.**
