@@ -103,6 +103,45 @@ The original options were:
 Worth a check across every header pin: **U8 is otherwise safe** (VIN-ALERT,
 5_GOOD, 3.3_GOOD are pulled to 3.3 V; M_SYNC and U_SHDN are MCU-driven).
 
+### v3: Fault does NOT need the same treatment
+
+The v3 board adds `Fault` from the LTC4364's FLT# pin, level-shifted on the
+pattern above. **Delete the shifter — FLT# needs only a pull-up.** The datasheet
+is quoted in [`schematic-review-power.md`](schematic-review-power.md) §*Drive
+capability confirmed*:
+
+> *The internal FET is capable of sinking up to **2 mA** and can withstand up to
+> **80 V**. Connect to GND if unused.*
+
+Open-drain, confirmed rather than assumed. It has no high-side drive, so whatever
+it is pulled up to *is* its logic high — FLT# is not "at" any voltage of its own,
+and the 80 V withstand is what makes the choice free.
+
+**Why ENOUT differed.** ENOUT's pull-up *has* to sit at V<sub>IN</sub>, because
+its primary job is driving the MAX25239's EN. A 3.3 V copy therefore needed a
+separate stage, and Q4/R16 is the right answer there. **FLT# has no second job** —
+it goes nowhere but the MCU. Pull it to 3.3 V directly and there is nothing left
+to shift.
+
+```
+FLT#  ──[ 10k to 3.3V ]──  MCU     330 uA, 6x inside the 2 mA sink rating
+      ──[ 1 nF at the MCU pin ]    RC = 10 us, invisible against a 44 ms event
+```
+
+**Keep the 1 nF.** This board low-side switches eight ignition coils and a 10 kΩ
+pull-up is a high-impedance line running past them; the filter is there so a coil
+event cannot trigger a spurious shutdown sequence.
+
+**And a resistor cannot glitch.** A shifter powered from 3.3 V dies with the rail
+exactly as the pull-up does, but on the way down its output can go indeterminate,
+and it adds an OE pin to get right. The pull-up simply stops pulling. The case
+that matters is the **44 ms early warning**, when the rail is still up and FLT#
+reads correctly.
+
+> **Designator note.** This document uses `U8` for a header, matching the
+> schematic and the board owner's usage. The V2 BOM CSV lists `U8` as the INA238 —
+> stale numbering. Resolve before the v3 BOM is cut.
+
 ## 4. ~~HIGH~~ RESOLVED in the 2026-09-18 revision — the TMR cap is now 2.2 µF
 
 Sized for the 400 ms ISO 7637 load dump, which has to survive X7R tolerance:

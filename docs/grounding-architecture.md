@@ -76,21 +76,45 @@ GND reaches the carrier board by two routes at once:
 | route | what it is |
 |---|---|
 | **four M3 standoffs** (`U2`–`U5`, SMTSO30100CTJ) | soldered to the GND plane on the **backside**, screwed to the carrier's ground plane. **Primary — 30 A each, 120 A total** |
-| **three header ground pins** | two on the power header, one on the status/I²C header. ~3 A per 2.54 mm post, so ~9 A. Parallel backup |
+| **five header ground pins** | two on the power header, **three on U7** (2×7, v3). ~3 A per 2.54 mm post, so ~15 A. Parallel backup |
 
 **The two paths are an order of magnitude apart**, which is what makes "primary"
 and "backup" the right words rather than a guess about impedance.
+
+**v3 raised U7 to 2×7 with three grounds**, taking the header total to five. That
+matters for more than capacity: at ~15 A the header alone carries the board's
+output, so a missing or degraded standoff bond is no longer a single point of
+failure. It de-risks the one item still unverified on the carrier side.
 
 The loads are **off-board**: 5 V and 3.3 V leave through the headers and their
 return comes back, so the total is the **sum of the off-board rail currents**,
 not the input current.
 
 **DC sharing follows resistance, and a 30 A brass standoff beats a 3 A post by
-more than a decade.** The standoffs therefore carry nearly all of it — which
-resolves what would otherwise be the real worry here, that the status/I²C
-header's ground pin doubles as a power return. It is the pin the three status
-lines and the INA238 reference against, and the standoffs keep power current off
-it far more effectively than geometry alone could.
+more than a decade.** The standoffs therefore carry nearly all of it.
+
+### With three grounds on U7, placement matters more than count
+
+U7 now carries **two 3.3 V feeds** out and the reference for **five signals** —
+three status lines, I²C, and Fault. Three grounds is ample capacity, but they are
+one net, so current division cannot be forced electrically. **Pin order does it
+geometrically:**
+
+- **Pair each 3.3 V pin with an adjacent GND.** A tight go/return loop lowers
+  inductance, cuts radiated noise, and steers that feed's return into the pin
+  beside it rather than through the signal reference.
+- **Put the third GND inside the signal group**, ideally between I²C and the
+  status lines — SCL is a clock edge in a bay with eight coils firing.
+- **Do not cluster the three grounds together.** Interleaved beats adjacent for
+  exactly the same reason a twisted pair beats two parallel wires.
+
+```
+3V3_1  GND   3V3_2  GND   Fault  ENOUT  5_GOOD
+GOOD3  SCL   GND    SDA   ...    ...    ...
+```
+
+One arrangement, not the only one — the principle is that every power pin has a
+return neighbour and the signal group has its own local reference.
 
 ### Standoff and screw specification
 
