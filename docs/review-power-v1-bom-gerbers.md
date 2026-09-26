@@ -811,6 +811,13 @@ this board does. **PGND is the trunk and GND hangs off it.**
 > GND are distinct nets with distinct names, so they are joined in *copper*
 > somewhere, not through a pin. That copper join is what §8 asked about.
 
+> **RESOLVED on hardware, 2026-09-26: there is no copper join.** The answer is
+> **zero** tie points, not one. D1's surge loop still closes through `CN1_2` to
+> vehicle ground, but the 118-pin GND plane reaches the outside world only via
+> the four mounting standoffs and the two headers — so **the board cannot be
+> powered through CN1 alone.** Add the single-point tie at `CN1_2`. See
+> [`firmware/power-diag/README.md`](../firmware/power-diag/README.md).
+
 ## Where the tie belongs: at `CN1_2`, not at D1
 
 Both choices are "one point". They are not equivalent:

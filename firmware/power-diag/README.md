@@ -171,16 +171,11 @@ not trust it during startup or brownout.
 **The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
 so it reads as time since boot. Only deltas after the first event count.
 
-## Reverse polarity: the test was void, and the topology forbids it
+## Reverse polarity: no measurable current, and the test was valid
 
-> **Void, not provisional.** PGND was depinned at the connector with only B+
-> connected, so there was no return and the circuit was open. Zero current is
-> exactly what that gives. Nothing about Q1/Q2 was exercised.
-
-
-Run with **D1 (SMDJ43A) removed**, input reversed at **13.4 V**, supply limited
-to **0.2 A**, and the Nucleo **disconnected** — its shared ground is invalid once
-the input flips.
+Run with **D1 (SMDJ43A) out of the path**, **13.5 V driven into the GND plane**
+with the return on **B+**, supply limited to **0.2 A**, and the Nucleo
+**disconnected** — its shared ground is invalid once the input flips.
 
 ```
 supply current        no deflection at all
@@ -189,13 +184,19 @@ downstream of Q1/Q2   0 V
 3.3 V rail            0 V
 ```
 
+**Why this is a real result and not an open circuit.** D1's ground sits on PGND,
+a two-pin island (`D1_2`, `CN1_2`) with **no copper tie to GND** — see below. So
+lifting PGND floats D1's anode and takes it out of the path, while the 118-pin
+GND plane, which is what the converters and the LTC4364 actually reference, stays
+fully connected. Feeding the plane directly is what keeps the circuit complete:
+the return does **not** have to enter at `CN1_2`.
+
 **Taking D1 out is what made this a measurement instead of a stress test.** The
 SMDJ43A is unidirectional: in reverse it forward-conducts like a plain diode,
 crowbars at ~0.8 V, and that conducting path *masks everything behind it*. You
-learn the TVS works and nothing else. With it gone there is no forward path, so
-the only reverse current is the UV/OV divider — roughly 350 kΩ, about **38 µA at
-13.4 V**, which is why the supply never twitched. Any real current would have
-been unmistakable.
+learn the TVS works and nothing else. With it gone the only reverse path is the
+UV/OV divider — roughly 350 kΩ, about **38 µA at 13.5 V** — which is why the
+supply never twitched.
 
 ### The destructive path does not exist on this board
 
@@ -209,61 +210,49 @@ Battery ─ fuse ─ TVS ─ LTC4364-2 ─┬─ 1000 µF ─ converter
 
 The review's phrase "input electrolytics" means input *to the converter*. The
 back-to-back body diodes block ahead of them, and the LTC4364-2 is specified for
-reverse input to **−40 V** — 13.4 V is a third of rating.
+reverse input to **−40 V** — 13.5 V is a third of rating.
 
 > **D1 must be reinstalled before OV testing or anything vehicle-side.** It is
 > the last-ditch clamp above the 43.2 V trip; without it a fast harness
 > transient lands on Q1's 100 V `Vds` with nothing in front of it. Its 43 V
 > standoff breaks down near 47.8 V, so it does not overlap the OV trip.
 
-### The open-circuit confound
+## What this settled: PGND and GND are joined at zero points
 
-`review-power-v1-bom-gerbers.md` §*PGND is a two-node net* is decisive:
+`schematic-review-power.md` §8 asked to *"confirm the two are joined at exactly
+one point."* It was filed **low** and never closed.
+[`review-power-v1-bom-gerbers.md`](../../docs/review-power-v1-bom-gerbers.md)
+narrowed it to a two-node net but could not settle it from the netlist:
 
 ```
 GND    118 pins
 PGND     2 pins  --  D1_2 and CN1_2, that is the entire net
 ```
 
-**PGND is the board's only return to the vehicle.** CN1 has two pins, so GND
-never reaches the connector — it hangs off PGND through one copper tie. The
-single-point tie that makes D1 trivial to isolate is therefore also the cut that
-removes *the whole circuit*.
+**Confirmed on hardware 2026-09-26: they are not tied in copper at all.** The
+answer is zero points, not one.
 
-| cut | consequence |
+**D1's own loop is fine** — arguably textbook. Surge current enters at `CN1_1`,
+crosses D1, and leaves at `CN1_2` to vehicle ground without ever touching the
+board's GND plane. That is exactly what the review said to aim for.
+
+**The GND plane is the problem.** CN1 has only two pins, so with no tie the
+board's ground reference reaches the outside world *only* through the four
+mounting standoffs (U2–U5) and the two headers. Consequences:
+
+| | |
 |---|---|
-| **D1's own pad** off the PGND copper | D1 isolated, return intact → the 38 µA prediction holds, pass stands |
-| **the PGND↔GND tie** | the 118-pin plane floats off CN1_2, but `D1_2` and `CN1_2` are still one net, so D1 stays in the reverse path and should have crowbarred at ~0.8 V |
+| **The board cannot be powered through CN1 alone** | B+ and PGND give it no return |
+| **All return current would flow through the standoffs** | into the enclosure, if they are even bonded to vehicle ground |
+| **On the bench, the return has been coming from whatever else was attached** | the Nucleo's ground wire through U7 |
 
-What was actually done was neither: **PGND was depinned at the connector**, B+
-left in place. So the supply had no return at all and the circuit was open.
-38 µA and a floating board both read as zero on a bench supply, so the pass
-condition never discriminated — a flaw in the test specification, not in the
-board.
+That last row is the **fourth instance** of the session's recurring shape, and
+the sharpest: not the instrument drawing power from the board, but the instrument
+**supplying the board's return path**.
 
-**The topology forbids the powered test as conceived.** PGND is at once D1's
-ground return *and* the board's only return to the vehicle. Isolating D1 at its
-ground end always removes the whole circuit with it. The only powered version
-that works is lifting **`D1_1`**, the B+ end, leaving PGND intact as the return.
-
-### The unpowered check is the right tool anyway
-
-What is genuinely in question is whether **Q1 and Q2 are back-to-back as drawn**
-— an assembly fact, not a stress response. A DMM reads it with no power:
-
-```
-probe B+ <-> protector output (C3/C4 +), diode range, both polarities
-correctly back-to-back  ->  OPEN both ways
-a drop either way       ->  reverse voltage would pass
-```
-
-D1 can stay installed: it sits B+-to-PGND, not in the B+-to-output path, and a
-meter's ~3 V test voltage is far below its 43 V standoff.
-
-This is worth confirming because **a single series FET does not block reverse.**
-Its body diode runs source→drain, i.e. output→input, so a negative input drags
-the output down to within a diode of itself. Q2 is what prevents that, and its
-orientation is the one thing that can be wrong on an assembled board.
+**Fix:** tie PGND to GND at `CN1_2`, one point, as the v1 review specified — at
+the connector, never at `D1_2`, so GND sits at the *end* of the surge path and
+never carries any of it. This is now a confirmed defect, not a checklist item.
 
 ## Why the M7 and not the INA238
 
