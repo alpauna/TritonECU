@@ -93,3 +93,8 @@ Reproduce that. Injector and coil return currents are large and pulsed, and if
 they share copper with the sensor returns they will appear as sensor noise —
 which is exactly the error the MAF's dedicated return exists to avoid. Star
 point inside the box, and nowhere else.
+
+**Above all three sits a domain that is not a ground.** PGND carries D1's clamp
+current and is deliberately tied to nothing — it leaves on its own twisted pair
+to the battery negative, never through the 104-pin connector. See
+[`grounding-architecture.md`](grounding-architecture.md).
