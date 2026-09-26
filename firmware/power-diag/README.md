@@ -224,12 +224,29 @@ measurement; the INA238 is context around it.
 ## Wiring — POWER board U7 (2.54 2×5)
 
 ```
-+3.3V ---- 3V3          SCL ------ D15 (PB8)
-GND ------ GND          SDA ------ D14 (PB9)
-3.3_ENOUT- D7  (PF13)
+GND ------ GND          SCL ------ D15 (PB8)
+3.3_ENOUT- D7  (PF13)   SDA ------ D14 (PB9)
 5_GOOD --- D4  (PF14)
 3.3_GOOD - D2  (PF15)
+
++3.3V ---- do NOT connect      <- Nucleo runs on USB power
 ```
+
+**GND is the only power-domain connection.** Tying the board's 3.3 V to the
+Nucleo's `3V3` pin is the first of the three observer mistakes above, and it is
+worse once the Nucleo is on USB: two regulators on one node with no ORing, the
+higher one sourcing into the lower, and during a 3.3 V short test the Nucleo's
+LDO feeding the short.
+
+Nothing else needs it:
+
+- The three status signals are pulled up by the **board's own 10k** resistors to
+  the **board's** 3.3 V. The Nucleo reads them as inputs and needs only a common
+  return. When that rail collapses the pull-ups collapse with it and the pins
+  read low — **that is the measurement**, and it is where the 18 phantom
+  `5_GOOD` edges came from.
+- SCL/SDA are open-drain: the STM32 only ever pulls them *low*, and the INA238's
+  pull-ups are on the board. No back-feed, no reference needed.
 
 D2/D4/D7 sit on EXTI 15/14/13 — **different lines, so all three can interrupt at
 once**. STM32 shares an EXTI line across ports by *pin number*, so pins that look
