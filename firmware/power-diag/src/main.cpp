@@ -57,8 +57,13 @@ static const uint32_t CYC_PER_US = 216;
 
 static uint8_t ina_addr = 0;
 
+/* 256, not 64. A hiccupping board produced a burst that lapped a 64-entry ring
+ * in well under the print interval, and a lapped ring prints stale entries as
+ * if they were fresh - deltas that look like real timing and are not. Dropped
+ * events are counted so an overflow announces itself rather than lying. */
 struct Event { uint32_t cyc; uint8_t pin; uint8_t level; };
-static volatile Event  ring[64];
+static volatile Event  ring[256];
+static volatile uint32_t dropped = 0;
 static volatile uint8_t head = 0, tail = 0;
 
 /* Fields written one at a time, not as a struct. A volatile array element
@@ -66,7 +71,7 @@ static volatile uint8_t head = 0, tail = 0;
  * non-volatile reference - and volatile is not decoration here: the ISR writes
  * what the main loop reads. */
 static inline void log_edge(uint8_t pin, uint8_t level) {
-    uint8_t h = head & 63;
+    uint8_t h = head & 255;
     ring[h].cyc   = DWT->CYCCNT;
     ring[h].pin   = pin;
     ring[h].level = level;
@@ -103,9 +108,14 @@ void setup() {
     DWT->CTRL  |= DWT_CTRL_CYCCNTENA_Msk;
     OUT("DWT at %lu Hz -> %lu cycles per us\n", (unsigned long)F_CPU, (unsigned long)CYC_PER_US);
 
-    pinMode(PIN_ENOUT, INPUT);
-    pinMode(PIN_5GOOD, INPUT);
-    pinMode(PIN_3GOOD, INPUT);
+    /* PULLDOWN, not plain INPUT. All three status pull-ups live on the BOARD's
+     * own 3.3 V rail - so when the board is dead those pins float, and a
+     * high-impedance input reads them HIGH. "All rails good" and "board has no
+     * power" then look identical, which is exactly backwards for a diagnostic.
+     * A pulldown here makes an unpowered board read 000. */
+    pinMode(PIN_ENOUT, INPUT_PULLDOWN);
+    pinMode(PIN_5GOOD, INPUT_PULLDOWN);
+    pinMode(PIN_3GOOD, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(PIN_ENOUT), isr_enout, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_5GOOD), isr_5good, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_3GOOD), isr_3good, CHANGE);
@@ -132,7 +142,7 @@ void loop() {
     static uint32_t last = 0, prev_cyc = 0;
 
     while (tail != head) {
-        uint8_t t = tail & 63;
+        uint8_t t = tail & 255;
         uint32_t cyc = ring[t].cyc; uint8_t pin = ring[t].pin, lvl = ring[t].level;
         tail++;
         uint32_t d = cyc - prev_cyc; prev_cyc = cyc;
