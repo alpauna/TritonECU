@@ -10,5 +10,5 @@ render() {
 export -f render
 printf "%s\n" fit_gauge hole_jig clamp_plate base base_a base_b bearing_block motor_mount wheel_hub \
               sensor_ckp sensor_cmp \
-              crank_gear cam_gear cam_target sensor_mount \
+              crank_gear cam_gear cam_target sensor_mount hub \
   | xargs -P "$(nproc)" -I{} bash -c 'render {}'
