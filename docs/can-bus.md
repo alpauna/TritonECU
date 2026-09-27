@@ -188,6 +188,37 @@ controller and the Pico rigs — **the protocol and bit rate are free choice**, 
 both ends are ours. Keep 500 kbit/s anyway, for off-the-shelf optionality later
 rather than for present compatibility.
 
+### Topology: two nodes, both ends terminated
+
+The display is **the other end of the bus** — a two-node point-to-point pair with
+termination at each end, no stubs and no mid-bus taps. The best-behaved CAN
+topology there is, and it mirrors the prior build on this truck, where
+[`f150-1999-target.md`](f150-1999-target.md) records the MS3Pro and MicroSquirt as
+"the two units as the ends of the CAN bus".
+
+It also lands on the datasheet's own test condition: TJA1042T/3 static
+characteristics are specified at **`RL = 60 Ω`**, which is exactly two 120 Ω
+terminations in parallel.
+
+> ⚠ **Both terminations are now spent.** A third device — logger, second gauge —
+> taps in as an **unterminated stub** and must not bring its own 120 Ω.
+>
+> ```
+> 2 terminations -> 60 ohm   design case, datasheet RL
+> 3 terminations -> 40 ohm   differential amplitude falls, and dominant
+>                            drive rises ~1.5x, from 45 mA typ toward
+>                            the 70 mA max
+> ```
+>
+> This is the classic CAN mistake and it is **more** likely here because the display
+> is in-house: a future third node built by copying the display schematic inherits
+> its termination. **Put a note in the schematic at both ends.**
+
+**A bonus of two nodes:** if the display is switched with ignition while the ECU
+sits in standby, the display powering up **wakes the ECU via bus activity** — the
+TJA1042's remote wake-up doing real work, potentially in place of a dedicated wake
+input.
+
 ### Warnings do not belong on this path
 
 **Send a flag, not a threshold.** The ECU knows the limits; a display that decides
