@@ -11,7 +11,7 @@ LTC4364's supervisor inputs:
 | path | measured | threshold |
 |---|---|---|
 | UV | 6.78 V | 1.25 V — 5× over |
-| OV | 0.70 V | 1.25 V — would need 43.2 V |
+| OV | 0.70 V | 1.25 V — would need 43.2 V *(later confirmed: 45 V applied, no damage)* |
 | FB clamp | clamps at 28.2 V | *above* the dropout |
 
 So either the protector is faulting on **current limit**, or the MAX25239 is
@@ -170,6 +170,53 @@ not trust it during startup or brownout.
 
 **The first delta printed is meaningless.** It is measured from `prev_cyc = 0`,
 so it reads as time since boot. Only deltas after the first event count.
+
+## Overvoltage, tested for real: 45 V clean, 70 V sacrifices D1 and only D1
+
+Two applied-voltage tests closed the last open item on this board, and the
+protection behaved exactly in the designed order.
+
+| applied | result |
+|---|---|
+| **45 V** | **no damage.** Below D1's 47.8 V minimum breakdown, above the ~42.7 V OV trip — the protector opens, D1 stays dormant. **OV is now proven empirically**, not just from the divider ratio |
+| **70 V** | **D1 cooked, shorted. Nothing else damaged.** Replaced, board fully functional |
+
+**70 V is essentially D1's clamping voltage** — [`always-on-domain.md`](../../docs/always-on-domain.md)
+already records *"SMDJ43A clamp 69.4 V ← what raw B+ actually sees"*. The SMDJ43A is
+a 3000 W part **for 10/1000 µs pulses**; in an SMC package its steady-state
+dissipation is a few watts. Held at 70 V DC it conducts hard and takes whatever the
+supply offers — 200 mA is already 14 W into a ~5 W package.
+
+### It failed in the safe direction, and the failure announces itself
+
+**D1 failed short.** That is the preferred mode: a shorted TVS crowbars the input, so
+in a vehicle the 5 A fuse clears and the board is isolated. It is also
+self-announcing — the board will not run, so the clamp cannot be silently missing.
+Failing *open* would have removed transient protection with no symptom at all.
+
+The short is also most likely **what saved Q1 and Q2**: once D1 went, B+ collapsed
+rather than standing at 69 V across two series FETs whose off-state division is set
+by leakage.
+
+### The fuse is external — this belongs on the bench checklist
+
+[`schematic-review-power-v2.md`](../../docs/schematic-review-power-v2.md) records
+*"PPTCs removed, external 5 A fuse noted"*. **Nothing on the board limits this
+current.** The scheme is **D1 clamps, the fuse clears**, and a bench supply without
+the fuse gives D1 the first job and none of the second.
+
+> **Put the 5 A fuse inline for bench work.** Same shape as the observer mistakes
+> below: the test configuration was missing a protective element the installed
+> configuration has.
+
+### Still open: Q2's Vds rating
+
+`Q2` is a **YJQ40G10A** and the part number *hints* at 40 V, which would put the
+~42.7 V OV trip **above the rating of the pass element the protector switches**.
+Surviving 45 V and 70 V is evidence against that reading — but D1's collapse limited
+what Q2 actually saw, so the test is not conclusive. **Settle it from the datasheet**
+for the design record. Part-number inference is not evidence; this project has
+already been wrong that way once, on the `L2N7002LT1G`.
 
 ## Reverse polarity: no measurable current, and the test was valid
 
