@@ -311,7 +311,30 @@ cam_head_thk    =   5.5;  // M8 head height
    already does about a fifth of the job.
    Capacity is 25 g brass / 34 g lead, so either material reaches balance.
    The fill must be NON-FERROUS: the boss reaches r 29.7 against a 30 mm rim, so
-   it passes the sensor every revolution and steel would be a second VR trigger. */
+   it passes the sensor every revolution and steel would be a second VR trigger.
+
+   *** THE TWO METAL PIECES ON THIS PART HAVE OPPOSITE MAGNETIC REQUIREMENTS. ***
+   A VR sensor works on flux change, so:
+
+     M8 TRIGGER BOLT   MUST be ferromagnetic. It IS the signal. Plain carbon steel,
+                       grade 8.8 zinc-plated. If stainless is wanted for corrosion
+                       it has to be 400-series (410/416/430) - MARTENSITIC or
+                       FERRITIC, which are magnetic. A2/A4 (304/316) bolts are
+                       austenitic and very nearly non-magnetic: almost no signal.
+
+     COUNTERWEIGHT     MUST NOT be ferromagnetic, or it is a second trigger at the
+                       same radius. Brass, lead, or AUSTENITIC stainless (304/316).
+                       NEVER 400-series here.
+
+   So "stainless" answers both questions and gets one of them wrong. The grade
+   family is the specification, not the word.
+
+   TEST IT WITH A MAGNET before fitting - five seconds, and decisive. Note that
+   cold-worked 304 picks up some permeability, still far below carbon steel.
+
+   Density if substituting for the fill: 304 is ~8.0 g/cm3 against brass 8.5 and
+   lead 11.3, so cut the rod slightly longer. Pocket capacity is then ~23.5 g
+   against the ~20 g the fill has to supply, which still fits. */
 cw_r            =  19.5;  // pocket centre radius
 cw_dia          =  13.4;  // slip fit on 13 mm rod stock — CUT THE ROD TO BALANCE
 cw_depth        =  21.0;  // deeper than needed, so there is length to trim
@@ -795,10 +818,23 @@ module cam_target() {
         // hex pocket for the head — anti-rotation, and the load-bearing face
         translate([hub_od/2 - 1, 0, 2.5]) rotate([0,90,0])
             cylinder(d = cam_head_af / cos(30), h = cam_head_thk, $fn = 6);
-        // THROUGH-BOLT into a TAPPED SHAFT, same as hub(). Phase is adjusted at the
-        // CAM GEAR, not here — the counterweight pocket leaves only 0.63 mm of
-        // wall at the offset a pinch bolt would need. See spur_gear().
-        translate([-hub_od/2 - 1, 0, 11]) rotate([0,90,0]) cylinder(d = pinch_bolt, $fn = hole_fn, h = hub_od + 2);
+        /* THROUGH-BOLT into a TAPPED SHAFT, same as hub(). Phase is adjusted at the
+           CAM GEAR, not here — the counterweight pocket leaves only 0.63 mm of
+           wall at the offset a pinch bolt would need. See spur_gear().
+
+           ON THE Y AXIS, NOT X. Everything else on this part lives on X: the M8
+           trigger bolt at +X, the counterweight boss and pocket at -X, and the
+           counterweight grub screw. On X this bolt did not merely crowd them, it
+           INTERSECTED the pocket in all three axes:
+
+               counterweight pocket   x -26.2..-12.8  y -6.7..6.7  z 2..24
+               bolt on X              x -24.9.. 24.9  y -2.2..2.2  z 8.8..13.2
+
+           so drilling it broke into the lead. On Y at x = 0 the pocket is not
+           present at all (it starts at x -12.8), and the trigger bolt clears in Z
+           (z -1.7..6.7 against 8.8..13.2). It also puts the driver on a free face
+           instead of behind the trigger bolt. */
+        translate([0, -hub_od/2 - 1, 11]) rotate([-90,0,0]) cylinder(d = pinch_bolt, $fn = hole_fn, h = hub_od + 2);
     }
 }
 
