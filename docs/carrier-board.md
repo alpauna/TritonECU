@@ -21,7 +21,25 @@ into E5V** and makes its own 3.3 V, and it draws far more than the 30 mA the
 old 5 V digital rail was sized for — roughly **150 mA, or ~300 mA with Ethernet
 active**.
 
-Revised:
+> ⚠ **The tree below is superseded.** It predates the **2026-09-08** decision that
+> replaced the LM5155-Q1 SEPIC with the **MAX25239 buck-boost at 5.0 V**. There is
+> no 6 V main rail any more, and the consequence is a simplification:
+>
+> ```
+>  12 V ─[fuse]─[TVS]─[LTC4364-2]─► MAX25239 buck-boost ──► 5.0 V ──┬─► Nucleo E5V
+>                                                                   ├─► AD7606 AVDD,
+>                                                                   │   MAX9926, 74HCT541
+>                                                                   └─► TLV62085 ─► 3.3 V
+> ```
+>
+> **The carrier's 5 V buck is redundant.** The POWER board already delivers
+> regulated 5.0 V, which is exactly what E5V wants — so E5V connects to it
+> directly with nothing in between.
+>
+> **VREF does not come off the 5 V rail** — an LDO cannot make 5.00 V from 5.0 V.
+> See [`vref-supply.md`](vref-supply.md), which already handles this.
+
+Superseded tree, kept for the reasoning:
 
 ```
  12 V ─[fuse]─[TVS]─[LTC4364-2]─► LM5155-Q1 SEPIC ──► 6.0 V main
@@ -56,13 +74,41 @@ rail is also below VIN's minimum, so VIN is not an option for this design at
 all — E5V is the only sensible feed, and the 5 V buck in the rail tree exists
 precisely for it.
 
-**The supply-select jumper must be moved** off its U5V default, or external
-power on either pin does nothing. **[CONFIRM]** the designation on your board
-revision from UM1974 rather than trusting a remembered reference number.
+**RESOLVED against UM1974 Rev 11** — the remembered designation was right. `JP3`
+selects the source, and **E5V is CN11 pin 6, rated 500 mA** (Table 7):
 
-Note the ST-Link USB and the carrier's supply are independent: the board can be
-powered from the carrier while the ST-Link USB is unplugged — it simply cannot
-be programmed then, since SWD arrives over that same cable.
+| JP3 | source |
+|---|---|
+| **pins 1–2** | **E5V** ← what this design uses |
+| pins 3–4 | U5V, ST-LINK VBUS — the factory default |
+| pins 5–6 | VIN |
+
+At ~150 mA (Ethernet off) the 500 mA limit is comfortable; ~300 mA with Ethernet
+active leaves less margin.
+
+### The power-up order is mandatory, not advisory
+
+The earlier note here — that the carrier supply and the ST-LINK USB are simply
+independent — is true but incomplete. **UM1974 §7.4.2 specifies an order**, and
+violating it puts the *PC* at risk, not the board:
+
+```
+1. JP3 on pins 1-2 (E5V)
+2. Check JP1 is REMOVED
+3. Connect the carrier's 5 V to E5V
+4. Power on
+5. Confirm green LD6 lights
+6. THEN connect USB to the PC
+```
+
+> If USB comes first, the board enumerates on U5V and then has an external supply
+> applied on top. The manual's stated risks: **the PC may be damaged** or current
+> limited, and since JP1 must be off the board requests **300 mA at enumeration**,
+> which a host may refuse — leaving LD6 dark and the board unpowered.
+
+`JP1` declares the USB current budget: **OFF = 300 mA**, ON = 100 mA. Leave it off.
+
+**Bench rule: power the ECU first, plug USB second.** Every time.
 
 ## Pins to avoid on the morpho headers
 
@@ -76,9 +122,45 @@ Some Nucleo-144 pins are already committed and must not be reused:
 | LEDs | PB0, PB7, PB14 |
 | User button | PC13 |
 
-**[CONFIRM]** this list against the Nucleo-144 user manual before assigning —
-it is from memory of the board family, not from the document, and a wrong entry
-here is a wasted board spin.
+**RESOLVED against UM1974 Rev 11 — every entry above is correct.** The list was
+from memory and it verified exactly, Ethernet included (Table 11 lists those same
+nine pins).
+
+### But none of them are permanently lost
+
+This is the part that changes carrier pin assignment: **each is committed only by a
+solder bridge or jumper**, and clearing it returns the pin to the morpho header.
+
+| Pin | Committed to | Free it by |
+|---|---|---|
+| PA1 | RMII Ref Clock | SB13 **OFF** |
+| PA2 | RMII MDIO | SB160 **OFF** |
+| PC1 | RMII MDC | SB164 **OFF** |
+| PA7 | RMII RX Data Valid | **JP6 OFF** — a jumper, no rework |
+| PC4 | RMII RXD0 | SB178 **OFF** |
+| PC5 | RMII RXD1 | SB181 **OFF** |
+| PG11 | RMII TX Enable | SB183 **OFF** |
+| PG13 | RMII TXD0 | SB182 **OFF** |
+| PB13 | RMII TXD1 | **JP7 OFF** — a jumper, no rework |
+| PA9 | USB VBUS | SB127 **OFF** |
+| PA10 | USB ID | SB125 **OFF** |
+| PA11 | USB DM | SB133 **OFF** |
+| PA12 | USB DP | SB132 **OFF** |
+| PA8 | USB SOF | **no bridge** — already on the Zio as D70 |
+| PB0 | LD1 green | SB120 OFF / SB119 ON |
+| PD8 | VCP TX (USART3) | SB5 OFF **and** SB7 ON |
+| PD9 | VCP RX (USART3) | SB6 OFF **and** SB4 ON |
+
+**So "pins to avoid" is really "pins to avoid unless a bridge is cleared."**
+
+### The Ethernet decision is worth making explicitly
+
+Dropping Ethernet buys **two things at once**: it frees **nine pins**, and it halves
+the E5V draw from ~300 mA to ~150 mA against the 500 mA limit. Two of the nine are
+jumpers (JP6, JP7); the other seven are solder-bridge rework.
+
+**Decide before the carrier is laid out**, because assigning those nine to carrier
+functions is the commitment — not the bridges, which can be cleared at any time.
 
 Even after all of that, ~114 I/O against 37 needed leaves the assignment
 unconstrained. That is the point of the platform change.
