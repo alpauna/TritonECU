@@ -130,17 +130,44 @@ regardless.
 - **Local decoupling matters.** Normal-mode dominant is **50 mA typ, 70 mA max**, so
   100 nF hard against `VCC` plus local bulk — this is a pulsed load, not a static one.
 - **Absolute limits:** `VCANH`/`VCANL` −58 V to +58 V, differential ±27 V.
-- **Termination as a fitted option, not hardwired.** 120 Ω belongs at the two
-  *physical ends* of the bus, and whether this ECU is an end depends on topology
-  that is not decided yet. Use a jumper or a 0 Ω link — same reasoning as making
-  a ground tie a component: the decision stays visible and reversible.
+- **Termination: DECIDED — this ECU is a bus end and terminates.** Fit passive
+  split termination, not a single 120 Ω:
+
+  ```
+  CANH --[ 60.4R 1% ]--+--[ 60.4R 1% ]-- CANL
+                       |
+                   [ 4.7nF ]
+                       |
+                      GND
+  ```
+
+  **Why split.** The midpoint capacitor shunts common-mode noise to ground, which
+  matters in a bay where eight coils fire past the harness. Corner is about
+  `1/(2*pi*30R*4.7nF) = 1.1 MHz` — well above 500 kbit/s signalling, so it filters
+  without distorting bits. The `/3` has no `SPLIT` pin to bias the midpoint, so
+  this is passive; in Standby the transceiver biases the bus to ground anyway.
+
+  **The resistors must be matched, 1 % or better.** Mismatch converts common-mode
+  into differential noise — the exact thing the network exists to prevent, so an
+  unmatched split termination is *worse* than a single 120 Ω. `60.4 Ω` is the
+  standard E96 value and 2× gives 120.8 Ω, inside CAN's ±10 %.
+
+  **Keep it an identifiable schematic block.** The decision is made, but if the
+  device list ever puts this ECU mid-bus the whole network has to come out — much
+  easier to find if it was drawn as one thing.
+
+  **Sizing for bus faults:** with the midpoint capacitor there is no DC path to
+  ground, so a sustained CANH-to-B+ short drives ~117 mA through both resistors in
+  series — about **0.8 W each**, which will cook an 0805 or a 1206. It fails *open*,
+  costing termination quality rather than the node, and the transceiver survives on
+  its own ±58 V rating. Use 2512 only if surviving a sustained bus short matters.
 - **Harness-facing protection.** CAN_H/CAN_L leave the box, so they fall under
   [`harness-protection.md`](harness-protection.md) like any other external pin.
 
 ## Open
 
-- [ ] Decide bit rate and whether this ECU terminates. Both follow from the device
-      list, so they wait on it.
+- [ ] Decide bit rate — it follows from the device list. Termination is settled:
+      this ECU is a bus end.
 - [ ] Confirm the transceiver's ground treatment against
       [`grounding-architecture.md`](grounding-architecture.md) — it is harness-facing.
 - [ ] Assign `RXD` to an **EXTI-capable** pin — bus wake-up depends on it.
