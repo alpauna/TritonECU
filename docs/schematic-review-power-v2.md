@@ -232,6 +232,64 @@ put it "at the MCU pin", so the carrier is its proper home.
 **Fix is BOM-only:** same 0402, move `R5` from the 100 kΩ line to the 10 kΩ line.
 No layout change.
 
+### ❌ Standoff hole and pad are both under the Sinhoo minimum
+
+The four 4.2 mm holes sit exactly at `U2`–`U5` (delta 0.000 mm), so they are the
+standoffs' locating bosses, not separate mounting holes.
+
+| | board | Sinhoo M3 spec | |
+|---|--:|--:|---|
+| locating hole | **4.20 mm** | **4.22 mm** (+0.08 → 4.22–4.30) | 0.02 under |
+| solder pad OD | **6.00 mm** | **6.2 mm min** | 0.20 under |
+
+Small individually, but this joint is **the primary ground return, the mechanical
+mount, and uninspectable after assembly**, all at once — see
+[`grounding-architecture.md`](grounding-architecture.md).
+
+**The hole is the one that matters.** If it lands on the small side of tolerance the
+boss will not seat, and a standoff sitting proud gives a gapped solder joint *and* a
+wrong board-to-board height, so the screw may not reach the thread. Drill wear only
+ever makes holes smaller.
+
+**Set the hole to 4.25 mm** (mid-range of the allowed 4.22–4.30) and **the pad to
+6.2 mm**, which also recovers ~11 % of solder area:
+
+```
+6.00 pad / 4.20 hole  ->  14.4 mm2
+6.20 pad / 4.25 hole  ->  16.0 mm2
+```
+
+Both are footprint edits, one re-export.
+
+### Two items the netlist cannot settle — check in CAD
+
+Both are the ones §*Three layout items that are hard to fix later* named.
+
+**`Q1` copper.** The tab pad is **88.8 mm² = 0.138 in²**, against a spec of ~1 in² of
+*pour*. Pad area is only a lower bound — the `B+` pour extends past it and carries
+several vias, suggesting inner-layer spreading. **Measure the `B+` pour area around
+`Q1`.** Not determinable from the netlist, and an error-prone polygon computation
+from raw Gerber.
+
+**`R1` Kelvin routing.** Both sense pairs share the nets, which is normal — Kelvin is
+a routing property, not a netlist one. But note what `VIN` is:
+
+```
+VIN: 36 nodes - C3, C4, C29, C5, C6, C7, C27, C28, U10_2, U10_3,
+     U6_3, U6_4, R3_2, R4_2, U1_1, U8_8, U8_9, + vias
+```
+
+Full load current, bulk caps, converter input and header pins all sit on the copper
+that `U1_1` and `U8_8`/`U8_9` sense from. Whether those taps leave from the **inner
+edges of the shunt pads** or off the current-carrying pour is geometry — and at the
+measured 4.96 A limit, **1 mΩ of tap error is 9 % of the current limit**.
+
+### ✅ Also reconciled
+
+Drill counts match exactly: **20 × 1.0 mm** = `U6`'s 6 plus `U7`'s 14 pins, and
+**2 × 1.7 mm** at `CN1`. Board is roughly 76 × 45 mm. `R5` is now **10 kΩ** with
+`R4`/`R7` correctly left at 100 kΩ.
+
 ### ⚠ Silkscreen pin labels are wrong on the v3 gerber
 
 Reported by the board owner. Connectivity is unaffected — the netlist is
