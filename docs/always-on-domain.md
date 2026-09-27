@@ -99,6 +99,32 @@ a small record, safe to write on every start — and fire it generously. A false
 trigger then costs nothing, which is what buys the freedom to set the threshold
 high enough to be useful.
 
+## DECIDED: 3.3 V stays cascaded off 5 V, not fed from VIN
+
+Asked during v3: since the always-on domain keeps **both** converters running with
+the key off, would a separate 3.3 V rail direct from VIN be better — letting the
+MAX25239 shut down when parked?
+
+**No.** Three reasons, none close:
+
+| | |
+|---|---|
+| **parked saving** | the MAX25239's 95 µA is ~half the parked total, but the total is 184 µA against a 25 mA vehicle budget. Shutting it off saves **0.34 %** |
+| **cranking** | the 5 V rail is a MAX25239 **buck-boost** — it *holds* through a crank sag rather than dropping out, so the TLV62085 always sees a solid input. See [`review-ignition-injection.md`](review-ignition-injection.md) |
+| **UV consistency** | the LTC4364's 4.47 V UV is set below the sag on purpose, and the buck-boost is what makes that threshold meaningful |
+
+A cascade off a *regulated* 5 V is a **better** input condition for the TLV62085
+than a direct feed off a sagging VIN would be. There is no weakness to fix.
+
+> The table below reads as though it is fighting a constraint. It is not — it was
+> written to kill the LTC4364's 750 µA, which **was** 80 % of the total, and that is
+> already done. Do not re-optimise the remainder.
+
+**The one genuine cost:** with a cascade, a MAX25239 failure takes 3.3 V and the MCU
+with it, so nothing logs which converter died. Independent rails would keep it alive
+to report. Not worth another converter, inductor and area for a fault that already
+stops the engine.
+
 ## The number that decides it: parasitic drain
 
 A parked vehicle tolerates roughly **25–50 mA** total, and the truck has its own
