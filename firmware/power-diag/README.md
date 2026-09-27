@@ -209,14 +209,29 @@ the fuse gives D1 the first job and none of the second.
 > below: the test configuration was missing a protective element the installed
 > configuration has.
 
-### Still open: Q2's Vds rating
+### RESOLVED: Q2 is a 100 V part, and the hierarchy is correct
 
-`Q2` is a **YJQ40G10A** and the part number *hints* at 40 V, which would put the
-~42.7 V OV trip **above the rating of the pass element the protector switches**.
-Surviving 45 V and 70 V is evidence against that reading — but D1's collapse limited
-what Q2 actually saw, so the test is not conclusive. **Settle it from the datasheet**
-for the design record. Part-number inference is not evidence; this project has
-already been wrong that way once, on the `L2N7002LT1G`.
+The YJQ40G10A datasheet gives **`VDS` = 100 V, `BVDSS` = 100 V min, `ID` = 40 A** —
+so the "40" is the *current* and the "10" is the *voltage*. There is no rating
+mismatch, and the concern that the OV trip might sit above the pass element's rating
+was unfounded.
+
+```
+D1   SMDJ43A      43 V standoff, ~47.8 V breakdown   <- deliberately weakest
+U1   LTC4364      80 V
+Q1   IRF540N     100 V
+Q2   YJQ40G10A   100 V
+```
+
+**The sacrificial element is also the cheapest and easiest to replace, and it is
+rated at less than half of everything behind it.** D1 goes first, always — which is
+what happened at 70 V, and why the FETs were never at risk however the off-state
+voltage divided between them.
+
+> **Second part-number inference wrong in one session.** `L2N7002LT1G`'s `L` was read
+> as "logic-level" when it was the manufacturer prefix; `YJQ40G10A`'s digits were read
+> as volts-then-amps when the convention is amps-then-volts. **Part numbers are not
+> specifications.** Both times the datasheet settled it in one read.
 
 ## Reverse polarity: no measurable current, and the test was valid
 
