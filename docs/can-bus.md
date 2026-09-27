@@ -51,8 +51,45 @@ few percent of bus load.
 
 ## What it needs beyond the two pins
 
-- **A 3.3 V-capable transceiver** — TJA1051T/3, TCAN1042, MCP2562FD. Prefer one
-  rated for harness bus faults; the TJA1051 withstands ±58 V on CAN_H/CAN_L.
+### Transceiver: NOT the TJA1051T/3 — it has no low-power mode
+
+The TJA1051T/3 was recommended first and it is the wrong variant. Verified against
+its datasheet (`VCC` = 5 V):
+
+| mode | min | typ | max |
+|---|--:|--:|--:|
+| **Silent** | 0.1 | **1** | 2.5 mA |
+| **Normal, recessive** | 2.5 | **5** | 10 mA |
+| Normal, dominant | 20 | 50 | 70 mA |
+
+> *"In Silent mode the transmitter is disabled... **All other IC functions,
+> including the receiver, continue to operate as in Normal mode.**"*
+
+**Silent is not a power-saving state.** Against the 184 µA parked budget in
+[`always-on-domain.md`](always-on-domain.md), Normal recessive is **27×** and Silent
+is still **5.4×**. And it *would* be powered when parked, because the always-on
+decision keeps the 5 V rail up to feed the TLV62085.
+
+**Use the TJA1042T/3.** Same family, same `/3` meaning a `VIO` pin for 3.3 V logic,
+same ±58 V bus fault rating — plus a real **Standby mode at ~10 µA**, which fits
+the budget instead of destroying it, and **remote wake-up on bus activity**, which
+an always-on design actively wants. A dash or logger powering up can wake the ECU.
+
+**Expected drop-in:** same SO8, pins 1–7 identical, only pin 8 changes meaning —
+`S` (Silent) on the 1051, `STB` (Standby) on the 1042. **Route pin 8 to a GPIO** and
+the footprint serves either part, so layout need not wait on the decision.
+**[CONFIRM]** against the TJA1042T/3 datasheet before ordering.
+
+### What it needs beyond the two pins
+
+- **`VCC` must be 5 V, not 3.3 V** (4.5–5.5 V). CAN's differential levels are
+  defined around a 5 V supply, so the bus side runs from the MAX25239's rail.
+- **`VIO` = 3.3 V, tied to the same rail the STM32 uses** — its only job is matching
+  the MCU's logic levels, so it must track them. `VIO` draw is small: 200 µA max
+  recessive, 500 µA dominant.
+- **Local decoupling matters.** Normal-mode dominant is **50 mA typ, 70 mA max**, so
+  100 nF hard against `VCC` plus local bulk — this is a pulsed load, not a static one.
+- **Absolute limits:** `VCANH`/`VCANL` −58 V to +58 V, differential ±27 V.
 - **Termination as a fitted option, not hardwired.** 120 Ω belongs at the two
   *physical ends* of the bus, and whether this ECU is an end depends on topology
   that is not decided yet. Use a jumper or a 0 Ω link — same reasoning as making
@@ -64,5 +101,9 @@ few percent of bus load.
 
 - [ ] Decide bit rate and whether this ECU terminates. Both follow from the device
       list, so they wait on it.
-- [ ] Choose the transceiver, and confirm its ground treatment against
+- [ ] **[CONFIRM]** the TJA1042T/3 pinout and standby current against its own
+      datasheet — the drop-in claim is from family architecture, not the document.
+- [ ] Confirm the transceiver's ground treatment against
       [`grounding-architecture.md`](grounding-architecture.md) — it is harness-facing.
+- [ ] Decide whether `STB` is GPIO-driven or strapped. GPIO costs 1 pin (83 of ~114)
+      and is what makes the standby saving reachable at all.
