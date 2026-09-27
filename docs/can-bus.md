@@ -142,10 +142,12 @@ regardless.
   ```
 
   **Why split.** The midpoint capacitor shunts common-mode noise to ground, which
-  matters in a bay where eight coils fire past the harness. Corner is about
-  `1/(2*pi*30R*4.7nF) = 1.1 MHz` — well above 500 kbit/s signalling, so it filters
-  without distorting bits. The `/3` has no `SPLIT` pin to bias the midpoint, so
-  this is passive; in Standby the transceiver biases the bus to ground anyway.
+  matters in a bay where eight coils fire past the harness. **It sits in the
+  common-mode path only** — differential signalling sees 120.8 Ω and is unaffected
+  at any bit rate, so there is no bit-integrity tradeoff to weigh. Common-mode
+  corner is about `1/(2*pi*30R*4.7nF) = 1.1 MHz`. The `/3` has no `SPLIT` pin to
+  bias the midpoint, so this is passive; in Standby the transceiver biases the bus
+  to ground anyway.
 
   **The resistors must be matched, 1 % or better.** Mismatch converts common-mode
   into differential noise — the exact thing the network exists to prevent, so an
@@ -164,10 +166,33 @@ regardless.
 - **Harness-facing protection.** CAN_H/CAN_L leave the box, so they fall under
   [`harness-protection.md`](harness-protection.md) like any other external pin.
 
+## Bit rate: design for 500 kbit/s, decide in firmware
+
+The device list is not settled, and it does not need to be. **Bit rate is a bxCAN
+prescaler value, not a hardware property** — nothing about the transceiver, the
+termination or the layout changes between 125 kbit/s and 1 Mbit/s. Deferring
+commits nothing.
+
+**Avoid one terminology trap.** "Low-speed CAN" also names **ISO 11898-3
+fault-tolerant CAN**, a different physical layer: different transceivers (TJA1055
+and family), no 120 Ω termination, single-wire fallback. Specifying that later would
+invalidate both choices above. **Stay on ISO 11898-2 and run a slow bit rate if
+wanted.**
+
+**And slow is not the lower-risk default here.** The binding constraint is device
+compatibility, not signal integrity:
+
+| | |
+|---|---|
+| bus length in a truck | a few metres — spec reach at 500 kbit/s is ~100 m |
+| aftermarket dashes and loggers | commonly default to **500 kbit/s**, some 250 |
+| 125 kbit/s | more an industrial rate than an automotive one |
+
+So **design around 500 kbit/s**: it costs nothing in margin on a bus this short, and
+it avoids buying a device that cannot go slow enough to meet us.
+
 ## Open
 
-- [ ] Decide bit rate — it follows from the device list. Termination is settled:
-      this ECU is a bus end.
 - [ ] Confirm the transceiver's ground treatment against
       [`grounding-architecture.md`](grounding-architecture.md) — it is harness-facing.
 - [ ] Assign `RXD` to an **EXTI-capable** pin — bus wake-up depends on it.
