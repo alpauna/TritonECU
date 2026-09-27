@@ -162,8 +162,43 @@ jumpers (JP6, JP7); the other seven are solder-bridge rework.
 **Decide before the carrier is laid out**, because assigning those nine to carrier
 functions is the commitment — not the bridges, which can be cleared at any time.
 
-Even after all of that, ~114 I/O against 37 needed leaves the assignment
-unconstrained. That is the point of the platform change.
+Even after all of that, ~114 I/O leaves the assignment unconstrained. That is the
+point of the platform change.
+
+> **Correction: the requirement is 80, not 37.** 37 was the ESP32-era figure.
+> Going native — dropping the MCP23S17 expander chain — is what took it to
+> **80 of ~114, 32 spare after SWD** ([`pin-budget.md`](pin-budget.md)). Freeing
+> the nine Ethernet pins takes that to **41 spare**.
+
+## DECIDED: no Ethernet, and the Nucleo-144 stays
+
+Ethernet is dropped — USB is sufficient for tuning. That prompted the reasonable
+question of whether a smaller STM32 board would now do. **It will not.**
+
+| package | ~GPIO | vs 80 needed |
+|---|--:|---|
+| LQFP64 (Nucleo-64) | ~50 | **short by 30** |
+| LQFP100 | ~82 | 2, and **0 after SWD** |
+| **LQFP144 (F767ZI)** | **~114** | **32 spare** ✓ |
+
+A smaller footprint is not a trim, it is unbuildable. LQFP100 counts to 80 on
+paper and leaves nothing for a test point, a mistake, or the future-proofing
+[`platform-decision.md`](platform-decision.md) names as an explicit goal.
+
+**Nor is an Ethernet-free Nucleo-144 worth switching to.** Seven solder bridges
+and two jumpers free all nine pins on the board already in hand; moving to, say,
+an F446ZE to skip that rework would cost 216 → 180 MHz, 2 MB → 512 KB flash and
+512 KB → 128 KB RAM.
+
+**Where dropping Ethernet pays is the raw-chip board:** no PHY, no magnetics, no
+RJ45, less area. Record it as a requirement for that stage — it costs nothing now
+and is a real BOM saving later.
+
+> ⚠ **Consequence to confirm.** With no radio *and* no Ethernet, the tuning and
+> telemetry path is **USB only** — a laptop physically connected. Fine for tuning,
+> but the ESP32 design's web UI, WebSocket and MQTT do not survive without a
+> network interface. If anything must reach a dash or a phone with the engine
+> running, that is the gap, and it wants naming now rather than at integration.
 
 ## Setting up a Nucleo from scratch
 
