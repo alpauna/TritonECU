@@ -188,9 +188,55 @@ Without `3.3_ENOUT` on a header pin the dropout would still be unexplained.
 
 **Net for v3: delete the Fault shifter, keep Q4.**
 
-> **Designator note.** This document uses `U8` for a header, matching the
-> schematic and the board owner's usage. The V2 BOM CSV lists `U8` as the INA238 —
-> stale numbering. Resolve before the v3 BOM is cut.
+> **Designator note — RESOLVED, and against this document.** Where this review says
+> `U8` for a header it means **`U7`**. The v3 netlist puts every signal attributed
+> to "U8" — VIN-ALERT, 5_GOOD, 3.3_GOOD, M_SYNC, U_SHDN — on `U7`, and `U8` is the
+> INA238 exactly as the BOM says. **The BOM was right; this document was wrong.**
+
+## v3 verification against the netlist — one change needed
+
+Checked `FlyingProbeTesting.json` from the v3 gerbers.
+
+### ✅ Confirmed
+
+| | |
+|---|---|
+| **Fault shifter deleted** | `FLT` = `U1_13` → `R5` → `+3.3V` → `U7_13`. No BSS123 |
+| **ENOUT keeps Q4** | gate `+3.3V`, source `3.3_ENOUT`, drain `ENOUT` — correct topology |
+| **`R4` = 100 kΩ to VIN** | right value for ENOUT, per §9 |
+| **U7 = 2×7, grounds interleaved** | GND on **2, 8, 14** — start, middle, end. Both `+3.3V` pins (1, 3) have a ground neighbour at 2; 8 lands in the I²C/status group; 14 anchors the FLT end |
+| **PGND still isolated** | `{C1_1, CN1_2, D1_2}` + pads, against **128** GND nodes. Fault plane intact |
+| **five header grounds** | `U6` 2× GND / 2× VIN / 2× +5V, plus `U7`'s three |
+| **third 560 µF** | `C3, C4, C29` |
+
+### ❌ `R5` is 100 kΩ where it must be 10 kΩ
+
+It appears to have inherited `R4`'s value. The two pull-ups need *different* values,
+for reasons this review already gave in the opposite direction at §9:
+
+| pull-up | to | correct | why |
+|---|---|---|---|
+| `R4` ENOUT | **VIN**, 27 V at the clamp | **100 kΩ** | 10 kΩ draws 2.7 mA, past the 2 mA sink limit |
+| `R5` FLT# | **+3.3 V** | **10 kΩ** | only 330 µA, and low impedance *is* the point |
+
+§9 warned that *"10 kΩ — the correct value for FLT# into a 3.3 V MCU — is wrong
+here"* for ENOUT. Both ended up at ENOUT's value.
+
+**This is not a sink-current problem** — 33 µA is harmless. It is **noise immunity**.
+`schematic-review-power.md` §*FLT# wiring* chose 10 kΩ because this board low-side
+switches **eight ignition coils** and FLT# is a high-impedance line running past
+them. At 100 kΩ it is **10× more susceptible**, on a signal whose false assertion
+triggers a shutdown sequence. No 1 nF sits on the net either, though that review
+put it "at the MCU pin", so the carrier is its proper home.
+
+**Fix is BOM-only:** same 0402, move `R5` from the 100 kΩ line to the 10 kΩ line.
+No layout change.
+
+### ⚠ Silkscreen pin labels are wrong on the v3 gerber
+
+Reported by the board owner. Connectivity is unaffected — the netlist is
+authoritative and was used for everything above — but the silk is what gets read
+during assembly and while probing the carrier. Fix before the order.
 
 ## 4. ~~HIGH~~ RESOLVED in the 2026-09-18 revision — the TMR cap is now 2.2 µF
 
