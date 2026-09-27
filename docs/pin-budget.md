@@ -41,6 +41,8 @@ counted as handled when only a pin had been reserved.
 | Supervisory — `SHDN#`, `FLT#`, `PGOOD`, `ALERT` | 4 | — |
 | **subtotal, formerly on the expander** | **40** | *(38 + the O2 excitation DAC + CCS)* |
 | **TOTAL** | **80** | of ~114. **32 spare** after SWD *(+1 TSS, +1 CCS for the 4R100 superset)* |
+| **CAN_TX, CAN_RX** — external device bus | **+2** | transceiver, harness-facing — [`can-bus.md`](can-bus.md) |
+| **TOTAL with CAN** | **82** | **30 spare**, or **39** once the nine Ethernet pins are freed |
 
 74HCT541 **#3**'s `OE` costs no pin — it shares the watchdog net that drives
 `OE2` on #1.

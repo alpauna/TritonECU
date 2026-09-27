@@ -199,6 +199,11 @@ and is a real BOM saving later.
 > but the ESP32 design's web UI, WebSocket and MQTT do not survive without a
 > network interface. If anything must reach a dash or a phone with the engine
 > running, that is the gap, and it wants naming now rather than at integration.
+>
+> **RESOLVED — add one CAN channel.** 2 pins, a transceiver, and the externals bus
+> problem is solved properly rather than through a laptop. See
+> [`can-bus.md`](can-bus.md). A 1999 F-150 has no factory CAN, so it is a private
+> bus; and the prior MegaSquirt build on this truck already ran one.
 
 ## Setting up a Nucleo from scratch
 
