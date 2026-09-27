@@ -704,10 +704,11 @@ module hub() {
             cylinder(d = wheel_bore - clr, $fn = fit_fn, h = 16 + wheel_thk_hub); // spigot: CENTRE thickness
         }
         translate([0,0,-1]) cylinder(d = shaft_dia + clr, $fn = fit_fn, h = 40); // shaft bore
-        translate([-0.9, -hub_od, 8]) cube([1.8, hub_od, 40]);     // clamp slit
-        // clamp screw, M4 across the slit
-        translate([-hub_od/2 - 1, 0, 24]) rotate([0,90,0]) cylinder(d = 4.4, $fn = hole_fn, h = hub_od + 2);
-        translate([ 1.5, 0, 24]) rotate([0,90,0]) cylinder(d = 7.6, h = hub_od, $fn = 6); // nut trap
+        // THROUGH-BOLT into a TAPPED SHAFT. No slit and no nut trap: the shaft is
+        // the nut, and a slit here would only cut bearing area on a joint the
+        // bolt locks positively. Crank reference is set by the wheel on this hub,
+        // so nothing on this shaft needs adjusting — see spur_gear().
+        translate([-hub_od/2 - 1, 0, 24]) rotate([0,90,0]) cylinder(d = pinch_bolt, $fn = hole_fn, h = hub_od + 2);
         // wheel bolts — 3 x M4 on a circle, adjust to the wheel you buy
         for (a = [0:120:359]) rotate([0,0,a])
             translate([hub_od/2 - 7, 0, -1]) cylinder(d = 4.4, $fn = hole_fn, h = 20);
@@ -794,10 +795,10 @@ module cam_target() {
         // hex pocket for the head — anti-rotation, and the load-bearing face
         translate([hub_od/2 - 1, 0, 2.5]) rotate([0,90,0])
             cylinder(d = cam_head_af / cos(30), h = cam_head_thk, $fn = 6);
-        // split clamp, same pattern as hub()
-        translate([-0.9, -hub_od, 6]) cube([1.8, hub_od, 40]);
-        translate([-hub_od/2 - 1, 0, 11]) rotate([0,90,0]) cylinder(d = 4.4, $fn = hole_fn, h = hub_od + 2);
-        translate([ 1.5, 0, 11]) rotate([0,90,0]) cylinder(d = 7.6, h = hub_od, $fn = 6);
+        // THROUGH-BOLT into a TAPPED SHAFT, same as hub(). Phase is adjusted at the
+        // CAM GEAR, not here — the counterweight pocket leaves only 0.63 mm of
+        // wall at the offset a pinch bolt would need. See spur_gear().
+        translate([-hub_od/2 - 1, 0, 11]) rotate([0,90,0]) cylinder(d = pinch_bolt, $fn = hole_fn, h = hub_od + 2);
     }
 }
 
@@ -839,22 +840,77 @@ module gear_blank(m, z, w) {
     }
 }
 
+/* PINCH LOCK vs THROUGH-BOLT — the clamp bolt's Y is the only difference.
+
+   At y = 0 the bolt runs down the bore AXIS, straight through the shaft. That is
+   a THROUGH-BOLT: the shaft must be cross-drilled, it locks very solidly, and the
+   angular position is fixed at drill time. The slit beside it does nothing,
+   because the bolt is not crossing it through material.
+
+   Offset to y = -pinch_y the bolt clears the shaft and crosses the slit through
+   solid material on BOTH sides, so tightening actually closes the slit and the
+   bore grips by friction. That is a PINCH LOCK: continuously adjustable.
+
+   WHICH PARTS PINCH. Only the CAM GEAR. Cam phase against the crank is the one
+   dimension this rig exists to reproduce, and it has to be dialled in against the
+   sensor rather than drilled to. Everything else through-bolts: the crank
+   reference is set by the wheel on its hub, and nothing there needs adjusting.
+
+   WHY NOT cam_target(), which would seem the natural place — its counterweight
+   pocket is in the way. At the natural bolt offset the numbers are:
+
+       counterweight pocket edge   y = -6.70   (13.4 pocket, brass or lead rod)
+       pinch bolt near edge        y = -7.33
+       wall between them                0.63 mm
+
+   They do not intersect, but 0.63 mm of PETG between a clamp bolt and a pocket
+   holding lead at speed is not a wall. Pinching the gear achieves the same
+   adjustment: loosen it, rotate the cam shaft carrying the target, re-clamp. */
+/* Sized from the WEB, not the centre distance — the bolt's EDGE is what the
+   material has to survive, and a first pass at this left only 1.2 mm. */
+pinch_bolt = 4.4;    // M4 clearance
+pinch_web  = 4.0;    // PETG either side of the bolt: to the bore, and outboard
+pinch_y    = (shaft_dia + clr)/2 + pinch_web + pinch_bolt/2;
+/* The 30 mm boss the through-bolt gears use CANNOT hold this: from the bore wall
+   at 6.125 to the boss at 15 there is 8.875 mm, and a 4.4 bolt with 4 mm webs
+   needs 12.4. So the pinch gear gets its own larger boss, derived not typed. */
+pinch_boss = 2*(pinch_y + pinch_bolt/2 + pinch_web);
+
+assert(pinch_y - pinch_bolt/2 - (shaft_dia + clr)/2 >= 3,
+       "pinch bolt leaves under 3 mm of web to the shaft bore");
+assert(pinch_boss/2 < gear_module*cam_gear_teeth/2 - 1.25*gear_module,
+       "pinch boss is larger than the cam gear root circle");
+echo(str("  cam gear PINCH: boss ", pinch_boss, " dia, bolt centre y ", pinch_y,
+         ", web to shaft ", pinch_y - pinch_bolt/2 - (shaft_dia + clr)/2,
+         " mm, web outboard ", pinch_boss/2 - pinch_y - pinch_bolt/2, " mm"));
+
 /* Gear on its own split-clamp boss. The slit stops at the gear face so it never
    cuts a tooth — the boss does the gripping, the gear body is along for the
    ride. Print TEETH FLAT ON THE BED for the same reason the hub prints bore-up:
    the profile is then an X-Y path, not a layer stack. */
-module spur_gear(z) {
+module spur_gear(z, pinch = false) {
     rf = gear_module*z/2 - 1.25*gear_module;
-    hb = min(2*rf - 8, 30);
+    hb = pinch ? pinch_boss : min(2*rf - 8, 30);
     difference() {
         union() {
             gear_blank(gear_module, z, gear_w);
             cylinder(d = hb, h = gear_w + 10);
         }
         translate([0, 0, -1]) cylinder(d = shaft_dia + clr, $fn = fit_fn, h = gear_w + 20);
-        translate([-0.9, -hb, gear_w]) cube([1.8, hb, 12]);
-        translate([-hb/2 - 1, 0, gear_w + 5]) rotate([0,90,0]) cylinder(d = 4.4, $fn = hole_fn, h = hb + 2);
-        translate([ 1.5, 0, gear_w + 5]) rotate([0,90,0]) cylinder(d = 7.6, h = hb, $fn = 6);
+        if (pinch) {
+            // PINCH: slit closes, bolt offset clear of the shaft, nut on the far side
+            translate([-0.9, -hb, gear_w]) cube([1.8, hb, 12]);
+            translate([-hb/2 - 1, -pinch_y, gear_w + 5]) rotate([0,90,0])
+                cylinder(d = pinch_bolt, $fn = hole_fn, h = hb + 2);
+            translate([ 1.5, -pinch_y, gear_w + 5]) rotate([0,90,0])
+                cylinder(d = 8.4, h = hb, $fn = 6);   // M4 nut, 8.08 across CORNERS
+        } else {
+            // THROUGH-BOLT into a TAPPED SHAFT — the shaft is the nut, so no trap
+            // and no slit: a slit would only remove bearing area and add a stress
+            // riser on a joint the bolt already locks positively.
+            translate([-hb/2 - 1, 0, gear_w + 5]) rotate([0,90,0])
+                cylinder(d = pinch_bolt, $fn = hole_fn, h = hb + 2);
+        }
     }
 }
 
@@ -1285,8 +1341,8 @@ else if (part == "base_b")        base_half(x_seam, base_l/2 + 1);
 else if (part == "motor_mount")   motor_mount();
 else if (part == "hub")           hub();
 else if (part == "wheel_hub")     wheel_hub();
-else if (part == "crank_gear")    spur_gear(crank_gear_teeth);
-else if (part == "cam_gear")      spur_gear(cam_gear_teeth);
+else if (part == "crank_gear")    spur_gear(crank_gear_teeth);       // through-bolt, cross-drilled
+else if (part == "cam_gear")      spur_gear(cam_gear_teeth, true);   // PINCH — adjustable phase
 else if (part == "cam_target")    cam_target();
 else if (part == "sensor_mount")  sensor_mount();
 else if (part == "hole_jig")      rotate([180,0,0]) hole_jig();  // export print-ready
