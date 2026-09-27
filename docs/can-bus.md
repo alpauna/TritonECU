@@ -166,6 +166,40 @@ regardless.
 - **Harness-facing protection.** CAN_H/CAN_L leave the box, so they fall under
   [`harness-protection.md`](harness-protection.md) like any other external pin.
 
+## First device: a small readout — oil pressure, ECT, TFT
+
+The intended first consumer is a small display showing **oil pressure, engine
+temperature and transmission temperature**. All three inputs already exist:
+[`oil-pressure.md`](oil-pressure.md), [`tft-sensor.md`](tft-sensor.md), and ECT in
+the sensor set.
+
+```
+3 values, 3 bytes of payload, one frame
+at 10 Hz on 500 kbit/s   =   ~0.02 % bus load
+```
+
+Temps have thermal time constants in seconds, so 10 Hz is generous. **CAN is
+heavily over-provisioned for this** — which is fine, because the three pins are
+already spent and extensibility is the point: a logger or second gauge joins later
+with no rework.
+
+**If the display is built in-house** — likely, on the pattern of the ATtiny fan
+controller and the Pico rigs — **the protocol and bit rate are free choice**, since
+both ends are ours. Keep 500 kbit/s anyway, for off-the-shelf optionality later
+rather than for present compatibility.
+
+### Warnings do not belong on this path
+
+**Send a flag, not a threshold.** The ECU knows the limits; a display that decides
+for itself needs its own calibration, and a lost frame becomes a missed warning.
+
+**And keep the oil-pressure warning off CAN entirely.** Low oil pressure is the one
+reading that destroys the engine, and a bus plus a display inserts two more failure
+points between sensor and driver. That warning belongs on **SCP to the factory
+cluster** — already being built — or a dedicated lamp output.
+
+**The CAN display is a convenience readout, not a safety path.** Design it as one.
+
 ## Bit rate: design for 500 kbit/s, decide in firmware
 
 The device list is not settled, and it does not need to be. **Bit rate is a bxCAN
