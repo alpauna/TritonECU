@@ -138,7 +138,8 @@ draws before ours.
 | STM32F767 Standby + RTC + backup SRAM | **3 µA** |
 | INA238 in shutdown | ~2 µA |
 | ADC battery-sense divider, **180 k / 30 k**, **on the battery lead** | **67 µA** |
-| **Total** | **≈ 184 µA** |
+| **TJA1042T/3 CAN transceiver, Standby** | **≈ 20 µA** (10 µA `VCC` + 5–14 µA `VIO`) |
+| **Total** | **≈ 204 µA** |
 
 > ⚠ **This table omits bulk capacitor leakage.** Because KAPWR joins the
 > **protected rail**, `C3`/`C4` (and the v3 third cap) sit **energised with the key

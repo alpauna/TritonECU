@@ -39,8 +39,11 @@ Each bus for what it is good at, and none of them overlapping.
 ## Pin and peripheral cost
 
 ```
-CAN_TX + CAN_RX = 2 pins       41 spare -> 39
+CAN_TX + CAN_RX + STB = 3 pins       41 spare -> 38
 ```
+
+`STB` **must be a GPIO, not strapped** — it is what makes the 20 µA standby
+reachable, and what the host drives to return to Normal after a wake-up.
 
 The F767 carries **3 × bxCAN**, so a second or third channel is available if a
 reason ever appears. One is enough: at 500 kbit/s a full ECU dataset at 50 Hz is a
@@ -75,10 +78,47 @@ same ±58 V bus fault rating — plus a real **Standby mode at ~10 µA**, which 
 the budget instead of destroying it, and **remote wake-up on bus activity**, which
 an always-on design actively wants. A dash or logger powering up can wake the ECU.
 
-**Expected drop-in:** same SO8, pins 1–7 identical, only pin 8 changes meaning —
-`S` (Silent) on the 1051, `STB` (Standby) on the 1042. **Route pin 8 to a GPIO** and
-the footprint serves either part, so layout need not wait on the decision.
-**[CONFIRM]** against the TJA1042T/3 datasheet before ordering.
+**CONFIRMED against the TJA1042T/3 datasheet — a genuine drop-in.**
+
+```
+1 TXD   2 GND   3 VCC   4 RXD   5 VIO   6 CANL   7 CANH   8 STB
+```
+Identical to the TJA1051T/3 in all eight positions; only pin 8's meaning differs,
+`S` (Silent) → `STB` (Standby). And the numbers justify the swap outright:
+
+| | TJA1051T/3 | **TJA1042T/3** |
+|---|--:|--:|
+| low-power `ICC` | 1 mA (Silent) | **10 µA typ, 15 µA max** |
+| `VIO` in that mode | — | 5–14 µA |
+| **total parked** | ~1000 µA | **~20 µA typ** |
+| Normal recessive | 5 mA | 5 mA — *identical* |
+| Normal dominant | 50 mA | 45 mA |
+| `VCANH`/`VCANL` | ±58 V | ±58 V |
+
+**~50× less parked current for no operational penalty** — 20 µA is ~11 % of the
+184 µA budget rather than 27× it.
+
+### `RXD` must land on an EXTI-capable pin
+
+Wake-up is signalled **on `RXD`**, not on a dedicated pin, and §*Standby mode* is
+explicit that a transition to Normal "will not be triggered until `STB` is" driven
+low by the host. So the sequence is: the MCU sleeps, `RXD` asserts on bus activity,
+an interrupt wakes it, **then** firmware releases `STB`.
+
+A **bus-dominant time-out** in Standby stops a stuck-dominant bus generating a
+permanent wake request — worth knowing, because without it a shorted bus would hold
+the ECU awake indefinitely.
+
+### The `/3` trades `SPLIT` for `VIO`
+
+On the plain TJA1042T, pin 5 is `SPLIT` — a common-mode stabilization output
+intended for exactly the split termination suggested below. **The `/3` uses that pin
+for `VIO`.** You cannot have both on an SO8, and 3.3 V logic is essential where
+`SPLIT` is a nicety.
+
+So split termination here is **passive** — 2 × 60 Ω with a capacitor to ground at
+the midpoint — not actively driven. In Standby the bus lines are biased to ground
+regardless.
 
 ### What it needs beyond the two pins
 
@@ -101,9 +141,6 @@ the footprint serves either part, so layout need not wait on the decision.
 
 - [ ] Decide bit rate and whether this ECU terminates. Both follow from the device
       list, so they wait on it.
-- [ ] **[CONFIRM]** the TJA1042T/3 pinout and standby current against its own
-      datasheet — the drop-in claim is from family architecture, not the document.
 - [ ] Confirm the transceiver's ground treatment against
       [`grounding-architecture.md`](grounding-architecture.md) — it is harness-facing.
-- [ ] Decide whether `STB` is GPIO-driven or strapped. GPIO costs 1 pin (83 of ~114)
-      and is what makes the standby saving reachable at all.
+- [ ] Assign `RXD` to an **EXTI-capable** pin — bus wake-up depends on it.
