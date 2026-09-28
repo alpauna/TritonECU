@@ -93,6 +93,37 @@ read off a diagram.
 > **[CONFIRM]** the coil supply circuit and whether all eight share one feed,
 > from ignition diagram 21-1 or 21-4.
 
+### PARTLY CONFIRMED 2026-09-28 — by teardown, not by diagram
+
+A scrapped OEM EEC-V module carries a **Motorola multi-channel ignition power
+device** (marked `1034SE01`) landing on the coil lines. A power stage of that class
+inside the ECU means **the ECU grounds the coil primary** — so the coils are dumb
+and the igniters are ECU-side. **The ISL9V3040 architecture is right**, which is the
+half that mattered, since getting it backwards is expensive in both directions:
+logic-level drive into a dumb coil gives no spark, and IGBT drive into a smart coil
+destroys its igniter.
+
+**Still open:** whether all eight share one feed. That is a harness question and no
+ECU teardown can answer it — diagrams 21-1 / 21-4 are still wanted.
+
+**Scope of the evidence.** The scrap board is from a *different vehicle*, so this is
+family evidence for EEC-V COP rather than proof for the 5.4L specifically. Its case
+label (`F##Z-12A650-##`) identifies the exact application if that needs tightening.
+**Do not map that board's pin assignments onto this harness** — the EEC-V connector
+is shared across applications but the assignments are not.
+
+**Why we keep eight discrete parts anyway.** Ford integrated several channels into
+one package for cost and area, and paid for it thermally: a multi-channel device
+concentrates the whole dwell dissipation in one junction. Eight ISL9V3040s spread it
+across eight packages, which is the easier thermal problem, not the harder one.
+
+> **Two markings on that board — `70068FB` and `71016SB` — are house numbers**, `7` +
+> four digits + two letters, as is `1034SE01`. Ford/Visteon used custom-masked
+> silicon, so no datasheet exists to find. A web search on `70068FB` returns
+> auto-generated aggregator text describing a 28 nm 1.2 GHz dual-core DSP — which is
+> impossible for a part on a 2001 board, since 28 nm did not reach volume production
+> until around 2011. **Identify these by function**, by ringing out to the connector.
+
 ---
 
 ## 4. Checked and clear
