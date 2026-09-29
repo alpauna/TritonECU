@@ -130,6 +130,16 @@ correct, not a fault.
 PA13/PA14 are **not** on the morpho headers of a Nucleo-144, so they are not an
 alternative. CN2's target-side pins are, if the jumpers are pulled.
 
+**What a bad VTREF actually looks like** — because it is *not* an upload
+failure, which is why it went unnoticed for a while. With VTREF unconnected the
+probe reports `Target voltage: 0.0016`, warns `target voltage may be too low
+for reliable debugging`, and then **programs and verifies the flash anyway**.
+What breaks is everything with the core *running*: memory reads fail
+intermittently with `Fail reading CTRL/STAT register. Force reconnect` and
+`Polling failed, trying to reexamine`, while the same reads succeed after a
+`halt`. Fixed on 2026-09-29 by wiring VTREF to a real 3V3 pin; the probe now
+reads `Target voltage: 3.284631` and running-core reads are clean.
+
 Success looks like:
 
 ```
@@ -284,6 +294,8 @@ which is what you want when the debugger is the thing misbehaving.*
 | Wrong `/dev/ttyACMn` | numbering shifts between boards | use the `by-id` path |
 | `Debug adapter doesn't support 'hla_swd'` | external V3 vs. a board file written for V2.1 | drive OpenOCD directly — §3b |
 | `target voltage may be too low` | VTREF not on a real 3.3 V rail | CN6 pin 1 is a *sense input*, not a supply |
+| Upload verifies, but live reads fail (`Fail reading CTRL/STAT`) | same — VTREF at 0 V; only running-core access suffers | wire VTREF to 3V3; expect `Target voltage: 3.28` |
+| `mdw` prints nothing in a `-c` batch | command output is a Tcl return value here | `echo "[read_memory 0x40021414 32 1]"` |
 | `unable to connect to the target` | wrong connector or jumper state | CN6 **with** CN2 jumpers fitted |
 | `error executing cortex_m crc algorithm` | usually: nothing was written | program the **ELF**, not the `.bin` |
 | Upload succeeds, old firmware runs | `.bin` has no load address | program the **ELF**; keep `verify` on |
