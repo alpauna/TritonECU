@@ -93,10 +93,10 @@ Final: **37 assigned of 40, 3 spare (GPIO42, 43, 44).**
 Levers still in reserve if they are ever needed: semi-sequential injection
 (8 → 4 drivers, +4) and moving tach and VSS onto SCP (+2).
 
-`OE2` on the same buffer is driven by a hardware watchdog rather than a GPIO,
-so it costs no pin — see [`output-drivers.md`](output-drivers.md). The
-watchdog's kick line can share the expander chain or take a freed pin if the SD
-card moves to 1-bit SDMMC.
+`OE2` on the same buffer is driven by the hardware watchdog — a TPS3823A-33
+through a BSS138 inverter, with its `RESET` also on `NRST` — rather than a
+GPIO, so it costs no pin; see [`output-drivers.md`](output-drivers.md). The
+kick line is one GPIO, counted in [`pin-budget.md`](pin-budget.md).
 
 If more headroom is wanted, in order of least pain:
 1. **SD in 1-bit SDMMC** — CLK, CMD, D0 only. Frees 3.

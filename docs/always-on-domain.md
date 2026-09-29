@@ -139,7 +139,8 @@ draws before ours.
 | INA238 in shutdown | ~2 µA |
 | ADC battery-sense divider, **180 k / 30 k**, **on the battery lead** | **67 µA** |
 | **TJA1042T/3 CAN transceiver, Standby** | **≈ 20 µA** (10 µA `VCC` + 5–14 µA `VIO`) |
-| **Total** | **≈ 204 µA** |
+| **TPS3823A-33 supervisor / watchdog** | **15 µA** typ — the price of the 125 °C grade; the 85 °C parts and the clone draw ~4 µA. Must be on the always-on rail, since an unpowered supervisor holds `NRST` low — [`output-drivers.md`](output-drivers.md#decided-tps3823a-33dbvr-reset-to-nrst-bss138-inverter-to-oe2) |
+| **Total** | **≈ 219 µA** |
 
 > ⚠ **This table omits bulk capacitor leakage.** Because KAPWR joins the
 > **protected rail**, `C3`/`C4` (and the v3 third cap) sit **energised with the key
@@ -188,15 +189,16 @@ draws before ours.
 > [`power-supply.md`](power-supply.md#decided-keep-the-max25239--but-sync-is-a-gpio-not-a-strap).
 
 ```
-184 µA × 720 h  =  0.13 Ah/month
-group 65 battery ≈ 70 Ah  →  0.19 %/month,  ~1.1 % over six months
+219 µA × 720 h  =  0.16 Ah/month
+group 65 battery ≈ 70 Ah  →  0.23 %/month,  ~1.4 % over six months
 ```
 
 Comfortable, and it now survives a long lay-up rather than merely tolerating a
 short one. ~~**Note what dominates: the LTC4364, at 250× the MCU's draw.**~~
 **That was true of the 944 µA version. What dominates now is the MAX25239 at
-95 µA and the battery-sense divider at 77 µA — 89 % of the budget between
-them, and both are already at their practical floor.**
+95 µA and the battery-sense divider at 67 µA — 74 % of the budget between
+them, and both are already at their practical floor. The next item is the
+watchdog supervisor at 15 µA, accepted as the cost of its 125 °C rating.**
 
 ### Standby, not Stop
 
@@ -1390,8 +1392,15 @@ battery becomes a no-start that looks like a dead ECU.
   and its own transient protection — it is a harness-facing input.
 - **Whether the SD card stays on the switched rail.** It probably should; it is
   a large sleep load otherwise, and nothing needs it while parked.
-- **Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
-  hundreds of milliamps in a parked truck.
+- ~~**Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
+  hundreds of milliamps in a parked truck.~~ **Closed.** The TPS3823A-33
+  self-services when its WDI pin is high-impedance, and STM32 GPIOs go high-Z
+  in Standby, so the watchdog disables itself the moment the MCU sleeps and
+  never wakes it. This depends on **no pull resistor on the WDI net** — 1 kΩ
+  to ground is TI's method for defeating the detection. A hung MCU that is
+  *awake* still gets reset every ~1.6 s and re-enters Standby from its boot
+  path. Costs 15 µA on the always-on rail, in the table above —
+  [`output-drivers.md`](output-drivers.md#decided-tps3823a-33dbvr-reset-to-nrst-bss138-inverter-to-oe2).
 - ~~**[CONFIRM] A-44's number in the 1–104 scheme.**~~ **Closed, twice over.**
   A dedicated battery lead uses no EEC-V pin — and **there is no mapping to
   find**: the A-xx chart describes a **three-connector PCM**, and this truck has

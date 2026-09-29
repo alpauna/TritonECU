@@ -36,7 +36,7 @@ counted as handled when only a pin had been reserved.
 | Inputs — **TR ×4**, brake, A/C pressure, 4×4 low | 7 | conditioned; edge interrupts, not polled. ⚠ **TR3A (pin 64) must land on an ADC-capable pin** — the 4R100 codes it with an internal 270 Ω, so it has three states, not two. Count unchanged — [`4r100-deltas.md`](4r100-deltas.md) |
 | VREF — EN, IN1, IN2, DIAG_EN, SEL, FAULT | 6 | TPS2H160B-Q1 |
 | **O2 bias excitation** | **1** | **DAC out (PA4/PA5) → 1 kΩ → shared 455 mV bias node.** In-circuit cell-impedance measurement — [`o2-input-stage.md`](o2-input-stage.md) §7 |
-| Watchdog kick | 1 | — |
+| Watchdog kick | 1 | TPS3823A-33 `WDI`. **No pull resistor on the net** — a floating WDI is how the watchdog disables itself in Standby. Kick from the engine loop, not a timer ISR — [`output-drivers.md`](output-drivers.md) |
 | 74HCT541 #2 `OE` | 1 | software-releasable |
 | Supervisory — `SHDN#`, `FLT#`, `PGOOD`, `ALERT` | 4 | — |
 | **subtotal, formerly on the expander** | **40** | *(38 + the O2 excitation DAC + CCS)* |

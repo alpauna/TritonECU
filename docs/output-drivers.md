@@ -247,13 +247,87 @@ primary designed for a few milliseconds of dwell. The coil cooks, and quite
 possibly the IGBT with it. No amount of software care helps, because the
 software is what stopped.
 
-A supervisor IC with a watchdog input (TPS3823-class) driving `OE2` fixes it in
-hardware: firmware must kick it periodically, and if it stops, the buffer goes
+A supervisor IC with a watchdog input driving `OE2` fixes it in hardware:
+firmware must kick it periodically, and if it stops, the buffer goes
 high-impedance and every gate is pulled down by the IGBT's own internal
 resistor. It costs one part and one GPIO, and it is the difference between a
 hung ECU being an inconvenience and a hung ECU being a destroyed coil.
 
-If the watchdog is left for later, fit the footprint and strap `OE2` low.
+#### DECIDED: TPS3823A-33DBVR, `RESET` to `NRST`, BSS138 inverter to `OE2`
+
+**Part: TI TPS3823A-33DBVR.** SOT-23-5, 2.93 V threshold (2.83–3.00 V),
+1.6 s watchdog (0.9–2.5 s), 200 ms reset pulse, push-pull active-low `RESET`.
+The **A** is the only member of the TPS382x family rated **−40 to 125 °C**;
+every other grade, and the Tech Public `TPS3823-xxDBVR-TP` clone priced first,
+stops at 85 °C. The A also does not latch `RESET` low if WDI pulses arrive
+during a reset (datasheet §8.3.4) — not reachable in this wiring, but free.
+
+**Not the `-30`.** That suffix trips at 2.63 V, 20 % under the rail. The
+STM32F767 runs happily at 2.6 V while the AD7606's `VDRIVE` and everything else
+referenced to 3.3 V has already gone wrong. `-33` is the 3.3 V-rail part, and
+its 3.00 V maximum leaves 230 mV under a 2 % TLV62085.
+
+```
+ 3.3 V ── VDD  TPS3823A-33  RESET ──┬──────────────► STM32 NRST
+               WDI ◄── kick GPIO    │
+               MR  (open)           ├──[100k–1M]── GND        gate pulldown
+                                    │
+                                    └── G  BSS138
+                                        S ── GND
+                                        D ──┬──[10k]── +5 V     the existing OE2 pull-up
+                                            └──────────────► 74HCT541 #1 OE2  (and #3 OE)
+```
+
+**Why the FET.** `RESET`, `NRST` and `OE2` are all active-low. `RESET` goes to
+`NRST` directly, but wired straight to `OE2` it would *enable* the coil buffer
+on a fault. The BSS138 inverts it: alive → gate high → `OE2` pulled low →
+enabled, still gated by `OE1`; fault → FET off → the 10 k lifts `OE2` to 5 V →
+disabled within ~100 ns. **BSS138, not 2N7002:** `RESET` high is only
+guaranteed at 0.8 × V<sub>DD</sub> = 2.64 V, which a BSS138's 1.5 V maximum
+threshold clears and a 2N7002's 2.5 V does not. The pulldown only has to define
+the gate below the 1.1 V where TI guarantees `RESET` valid; 100 k sits exactly
+at the 30 µA V<sub>OH</sub> test current, 1 M gives margin.
+
+**Why `NRST` too — it is a pulse, not a latch.** After a timeout `RESET`
+asserts for ~200 ms and then *releases*, and the watchdog simply re-arms.
+Gating `OE2` alone would re-enable the buffer for most of every ~1.8 s cycle
+with the hung firmware still asserting a coil. Resetting the MCU is what makes
+it safe: GPIOs go high-Z, the 10 k pull-up lifts `OE1`, and the buffer stays
+off until firmware deliberately re-arms it. The `OE2` path then buys a
+fault-to-off time of nanoseconds rather than waiting on the reset to propagate.
+
+**What falls out for free.** Anything that pulls `NRST` low — the IWDG, a
+brown-out, the debugger — pulls the FET gate low with it, so `OE2` disables
+whenever the MCU is in reset for any reason. The supervisor's push-pull high
+side is a weak pull-up designed to be overpowered by a bidirectional reset pin
+(datasheet note 3, 400 µA short-circuit), so there is no contention, and its
+1.2 mA sink easily overcomes the STM32's ~40 kΩ internal `NRST` pull-up.
+
+**WDI: no pull resistor, and kick from the engine loop.** A high-impedance WDI
+makes the part service itself, which is exactly the Standby behaviour wanted —
+see [`always-on-domain.md`](always-on-domain.md). A 1 kΩ to ground is TI's
+prescribed way to *defeat* that, so nothing goes on the WDI net. The kick must
+come from the engine-control loop, not a timer interrupt, or a hung main loop
+with a live timer never trips it. The STM32's IWDG stays on as well; the
+external part adds supply supervision and a reset path that does not depend on
+the MCU's own clocks.
+
+**What it does not do.** A 0.9–2.5 s timeout is several hundred times the
+3.56 ms at which a stuck coil exceeds the IGBT's avalanche rating. The watchdog
+turns a hang from a fire into a dead driver; it is not a dwell limiter. If the
+IGBT is to survive a hang, that is a per-channel hardware dwell limit, which is
+not on this board.
+
+**v1 strap.** "Strap `OE2` low for v1" is a solder jumper across the BSS138's
+drain and source, or a 0 Ω in its place. Without the supervisor fitted the gate
+pulldown holds the FET off and the engine will not run.
+
+**Cost: 15 µA parked.** The A draws 15 µA typical against ~4 µA for the 85 °C
+grades and the clone, and it has to sit on the always-on rail — on the switched
+rail an unpowered supervisor holds `NRST` low and the MCU never reaches
+Standby. **Accepted: the 125 °C rating is worth 15 µA.** It is in the
+parked-drain table in
+[`always-on-domain.md`](always-on-domain.md#the-number-that-decides-it-parasitic-drain).
 
 #### Package current, and why it is fine
 

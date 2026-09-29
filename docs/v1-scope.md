@@ -90,7 +90,7 @@ was always the point of the split, and it does not require two chips.
 | ~~**J1850 / SCP**~~ | **Moved onto the board** — see below | n/a |
 
 | **Transmission *software*** | The hardware is on the v1 board. The control logic comes after the engine runs | n/a |
-| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Quantified on the measured 1.5 mH / 0.5 Ω:** a stuck-on coil stores **622 mJ, 2.07× the IGBT's rating**, reached after 3.56 ms — ~2.7× nominal dwell — [`output-drivers.md`](output-drivers.md) | **yes** |
+| **Watchdog on `OE2`** | Real protection, but strap `OE2` low for v1. **Quantified on the measured 1.5 mH / 0.5 Ω:** a stuck-on coil stores **622 mJ, 2.07× the IGBT's rating**, reached after 3.56 ms — ~2.7× nominal dwell. Part and wiring now decided: TPS3823A-33DBVR, `RESET` to `NRST`, BSS138 inverter to `OE2`; the v1 strap is a solder jumper across the FET — [`output-drivers.md`](output-drivers.md) | **yes** |
 | **Battery temperature** | Only matters for charging control | no |
 
 ### Why J1850 / SCP moved onto the board
