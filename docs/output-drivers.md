@@ -312,6 +312,18 @@ with a live timer never trips it. The STM32's IWDG stays on as well; the
 external part adds supply supervision and a reset path that does not depend on
 the MCU's own clocks.
 
+**The one exception is bounded.** Some calls block longer than the 0.9 s
+window and cannot kick from inside — SdFat's card-init timeout is 2 s, and
+with no card fitted the mount alone would reset-loop the board. Firmware wraps
+those in a `watchdog::BlockingGuard(maxMs)`: a timer kicks WDI every 20 ms
+*until the guard's deadline*, then stops, so a genuine hang inside the call is
+still caught, just later. `maxMs` is the longest the call can legitimately take
+plus margin, not a round number, and the guard is only appropriate where
+nothing armed depends on the engine loop — at boot, or on the bench. Shortening
+SdFat's timeout instead was rejected: it is a `const` in the library, not a
+build flag, and the SD spec allows a card up to 1 s to initialise, so a
+sub-window timeout would reject legitimate cards at cold start.
+
 **What it does not do.** A 0.9–2.5 s timeout is several hundred times the
 3.56 ms at which a stuck coil exceeds the IGBT's avalanche rating. The watchdog
 turns a hang from a fire into a dead driver; it is not a dwell limiter. If the

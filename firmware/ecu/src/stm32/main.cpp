@@ -17,6 +17,7 @@
 #include "Config.h"
 #include "StorageStm32.h"
 #include "Version.h"
+#include "Watchdog.h"
 
 namespace {
 
@@ -27,6 +28,13 @@ constexpr uint32_t kUidReg       = 0x1FF0F420;   // 96-bit unique device ID
 uint32_t g_heartbeats = 0;
 bool g_adcReady = false;
 uint32_t g_lastBeatMs = 0;
+uint32_t g_lastKickMs = 0;
+
+// Watchdog kick cadence. The TPS3823A-33 window is 0.9 s worst case, so 10 ms
+// is 90x margin. Kicked from loop() for now; it moves into the engine task
+// when that exists (M6), because the whole point is that the toggle proves the
+// engine loop is running, not that some timer is.
+constexpr uint32_t kKickIntervalMs = 10;
 
 const char* resetReasonName() {
     // RCC_CSR latches the cause of the last reset until explicitly cleared.
@@ -107,6 +115,10 @@ void reportIdentity() {
 }  // namespace
 
 void setup() {
+    // First, before anything that can block: the 0.9 s watchdog window opened
+    // when NRST was released.
+    watchdog::begin();
+
     console::begin();
 
     pinMode(board::kLedGreen, OUTPUT);
@@ -116,8 +128,16 @@ void setup() {
     digitalWrite(board::kLedBlue, LOW);
     digitalWrite(board::kLedRed, LOW);
 
-    if (!storage::begin()) {
-        console::println("[SD] mount failed — continuing on built-in defaults");
+    // SdFat's card-init timeout is 2 s (SD_INIT_TIMEOUT), longer than the
+    // watchdog's 0.9 s worst case, and nothing can kick from inside it -- with
+    // no card fitted the mount alone would be a reset loop. The guard kicks
+    // from a timer until its deadline, 2 s of SdFat timeout plus margin, and
+    // then stops, so a genuine hang in here is still caught.
+    {
+        watchdog::BlockingGuard guard(3000);
+        if (!storage::begin()) {
+            console::println("[SD] mount failed — continuing on built-in defaults");
+        }
     }
     config::load();
     config::data.bootCount++;
@@ -138,9 +158,22 @@ void setup() {
     reportIdentity();
     console::println("M0/M1: board, storage, config. Heartbeat every 5 s. Send 'i' for identity, 's' to remount the card.");
     g_lastBeatMs = millis();
+    g_lastKickMs = g_lastBeatMs;
 }
 
 void loop() {
+    // Hardware watchdog. Rate-limited so the pin is a clean 50 Hz square wave
+    // on a scope rather than a MHz toggle radiating off the header. If SysTick
+    // dies, millis() stops, the kicks stop, and the supervisor resets us --
+    // which is the right direction for that failure.
+    {
+        const uint32_t now = millis();
+        if (now - g_lastKickMs >= kKickIntervalMs) {
+            g_lastKickMs = now;
+            watchdog::kick();
+        }
+    }
+
     // The ST-Link's VCP and SWD share one USB device, so resetting the target
     // over SWD disconnects the serial port -- which makes the boot banner
     // awkward to catch. Reprinting on demand sidesteps that entirely, and is
@@ -166,7 +199,11 @@ void loop() {
             // which quietly inflated it every time the command ran.
             console::println("[SD] remounting...");
             console::settle();
-            if (storage::begin()) config::load();
+            {
+                // Same 2 s SdFat timeout as at boot. Bench command only.
+                watchdog::BlockingGuard guard(3000);
+                if (storage::begin()) config::load();
+            }
             storage::report();
             console::settle();
             config::report();

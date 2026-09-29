@@ -95,6 +95,15 @@ constexpr uint8_t kOs2      = PB5;
 constexpr uint8_t kRange    = PB6;
 }  // namespace adc
 
+// --- Hardware watchdog kick, TPS3823A-33 WDI --------------------------------
+// D7 on the Arduino header. The supervisor wants an edge at least every 0.9 s
+// worst case; the kick is a toggle, so the level never matters. NO pull
+// resistor on this net -- a floating WDI is how the part disables itself when
+// the MCU is in Standby. See docs/output-drivers.md, "DECIDED: TPS3823A-33DBVR".
+namespace watchdog {
+constexpr uint8_t kKick = PF13;
+}  // namespace watchdog
+
 // --- Pins committed by the Nucleo-144 itself --------------------------------
 // Do not assign these. [CONFIRM] against UM1974 before finalising a carrier;
 // this list is from the board family rather than the document.
