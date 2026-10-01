@@ -683,8 +683,8 @@ or the next tidy-up "corrects" one to match the other.
 with a 220 Ω gate resistor and a 10 k gate resistor, look like a copy-paste —
 and the one difference that matters is which rail the 10 k goes to. Label it
 on both: *`Q1` pull-UP — fan on if PA7 floats*, *`Q2` pull-DOWN — fan full
-speed if PB2 floats*. The V2 sheet carries the first note on `R2`; **`R11`
-still needs its own.**
+speed if PB2 floats*. The V2 sheet carries both: *pull up not pull down* on
+`R2`, *pull down, typical low side switch configuration* on `R11`.
 
 #### The tach input is built for a fan ground that floats
 
