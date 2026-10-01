@@ -558,12 +558,50 @@ fail-to-cooling as the sensor fault. Ignored for the 300 ms kick and the first
   revolution.
 - **Display line 2** gains the duty: `FAN 60%` replaces `FAN ON`.
 
-### Still to decide
+### The board detects its fan from the tach, at boot
 
-- **How the board knows its fan.** A jumper on `PA1`/`PB3` (`PB2` is now the
-  PWM output, above) is the simple answer. Auto-detection is possible — tach present means 3 or
-  4-wire, and RPM responding to duty separates 4 from 3 — but it is a lot of
-  behaviour to get wrong for a setting that changes once.
+**Decided 2026-10-01: auto-detect, no jumper.** Nothing to fit, nothing to set,
+and the fan can be swapped without touching the board. It folds into the
+self-test that already runs at boot:
+
+```
+ 1. Q1 on, PWM 100 %, 3 s      (v1's self-test, unchanged)
+    count tach pulses over the last 1 s
+      none         ->  2-WIRE   done: v1's on/off law
+      pulses       ->  record RPM_full, go to 2
+ 2. PWM 30 %, 2 s
+    count pulses over the last 1 s
+      RPM < 70 % of RPM_full  ->  4-WIRE   speed steps
+      otherwise               ->  3-WIRE   on/off law + stall detection
+```
+
+Self-test grows from 3 s to about 5 s, and the OLED shows the result —
+`FAN 4W 2400` — so a wrong guess is visible at the first power-up.
+
+**Every misdetection fails toward more cooling**, which is why this is safe to
+automate:
+
+| actual | detected as | effect |
+|---|---|---|
+| 4-wire | 3-wire | on/off at full speed — louder, never hotter |
+| 3-wire | 4-wire | PWM line goes nowhere, fan runs full whenever on — same |
+| 3/4-wire, **stalled or unplugged at boot** | 2-wire | on/off as v1, **no stall detection** — v1's behaviour, not worse |
+
+The last row is the one real limit: a fan that is dead at power-up cannot be
+told from a 2-wire fan. The 2-wire result is the safe default, so it costs the
+stall alarm and nothing else.
+
+**Detection runs once per boot and is not stored.** A fan swapped while powered
+is picked up at the next power cycle — and with no EEPROM involved there is no
+stale setting to clear.
+
+**Hardware: none beyond the tach line.** `PA5` with its internal pull-up reads
+an open-collector tach directly; a 2-wire fan leaves it pulled high and pulse-
+free, which *is* the 2-wire signature. A footprint for an external 10 k
+pull-up is cheap insurance if a fan's tach edges look slow on the scope.
+`PA1` and `PB3` stay free.
+
+### Still to decide
 - **Connector.** Standard keyed 4-pin, 2.54 mm: 1 GND, 2 +12 V, 3 TACH, 4 PWM.
   `H1` grows from 3 to 4 and gains a key.
 
