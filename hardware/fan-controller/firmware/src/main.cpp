@@ -30,7 +30,7 @@
 
 static const uint8_t PIN_NTC  = PIN_PA3;   // AIN3, divider midpoint
 static const uint8_t PIN_FAN  = PIN_PA7;   // -> R1 220R -> Q1 AO3400A gate
-static const uint8_t PIN_LED  = PIN_PA6;   // status, flashed once a second
+static const uint8_t PIN_LED  = PIN_PA6;   // status, ACTIVE LOW: +5V -> R -> LED -> PA6
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
 static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
 #ifdef FAN_HW_V2
@@ -202,6 +202,35 @@ static void fanSet(bool on) {
 #endif
 }
 
+/* IS THE OLED THERE? oled.begin() on a bus with no display HANGS: the pull-ups
+ * live on the OLED module, so without it SDA and SCL float, the TWI sees a bus
+ * that never goes idle, and waits forever. That froze a board in setup() with
+ * the fan on and the watchdog not yet armed.
+ *
+ * So check the lines first: pull each low for a moment, release it, and see
+ * whether something pulls it back up. Floating, it stays where it was put. Only
+ * then ask the bus whether 0x3C answers. No display means run headless - the
+ * staging README's second board, which was always meant to have none. */
+static const uint8_t PIN_SCL = PIN_PB0;
+static const uint8_t PIN_SDA = PIN_PB1;
+static bool hasOled = false;
+
+static bool lineHasPullup(uint8_t pin) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+    delayMicroseconds(10);
+    pinMode(pin, INPUT);              // no internal pull-up - we want the module's
+    delayMicroseconds(100);           // 10k x ~100 pF is 1 us; this is plenty
+    return digitalRead(pin) == HIGH;
+}
+
+static bool oledPresent() {
+    if (!lineHasPullup(PIN_SCL) || !lineHasPullup(PIN_SDA)) return false;
+    Wire.begin();
+    Wire.beginTransmission(SSD1306);
+    return Wire.endTransmission() == 0;
+}
+
 /* Speed step for a reading `above` counts over the setpoint. */
 static uint8_t levelFor(int16_t above) {
     if (above <= 0) return 0;
@@ -225,8 +254,8 @@ static uint16_t readAvg(uint8_t pin) {
 
 static void flash(uint8_t n) {
     for (uint8_t i = 0; i < n; i++) {
-        digitalWrite(PIN_LED, HIGH); delay(10);
-        digitalWrite(PIN_LED, LOW);
+        digitalWrite(PIN_LED, LOW); delay(10);    // active low - lit
+        digitalWrite(PIN_LED, HIGH);
         if (i + 1 < n) delay(120);
     }
 }
@@ -238,6 +267,23 @@ void setup() {
     digitalWrite(PIN_FAN, HIGH);
     fanOn = true;
 
+    /* WATCHDOG NEXT, before anything else that can block. It used to be armed
+     * at the end of setup(), so a hang inside setup() was permanent - fan on,
+     * board dead, no reset coming. Armed here, any hang resets within 8 s.
+     * The self-test is 3 s (5 s on v2), well inside it.
+     *
+     * tinyAVR 0/1-series has the NEW watchdog, not the classic AVR one, so
+     * wdt_enable(WDTO_8S) does not exist here - the period goes straight into
+     * WDT.CTRLA behind the configuration-change protection. 8K cycles of the
+     * 1.024 kHz OSCULP32K divider is 8 s, which is long against a 1 s loop and
+     * short against a box heating up.
+     *
+     * The reset it causes IS part of the fail-safe: a reset floats PA7, and
+     * R2 is a pull-up (see README, As built), so a floating PA7 runs the fan.
+     * wdt_reset() is just the WDR instruction and works on any AVR. */
+    _PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);
+
+    digitalWrite(PIN_LED, HIGH);   // dark before the pin becomes an output
     pinMode(PIN_LED, OUTPUT);
     pinMode(PIN_WAKE, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_WAKE), onWake, FALLING);
@@ -250,12 +296,15 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(PIN_TACH), onTach, FALLING);
 #endif
 
-    oled.begin();
-    oled.setFont(FONT8X16);
-    oled.clear();
-    oled.on();
-    oled.setCursor(0, 0);
-    oled.print(F("FAN SELFTEST"));
+    hasOled = oledPresent();
+    if (hasOled) {
+        oled.begin();
+        oled.setFont(FONT8X16);
+        oled.clear();
+        oled.on();
+        oled.setCursor(0, 0);
+        oled.print(F("FAN SELFTEST"));
+    }
 
 #ifdef FAN_HW_V2
     /* Detect the fan inside the self-test. Full speed, count the last second:
@@ -281,23 +330,15 @@ void setup() {
     }
     lastTachMs = lastPassMs = millis();
     (void)takePulses();
-    oled.setCursor(0, 2);
-    oled.print(fanType == FAN_4W ? F("4W ") : fanType == FAN_3W ? F("3W ") : F("2W "));
-    if (fanType != FAN_2W) { oled.print(rpm); oled.print(F(" rpm")); }
+    if (hasOled) {
+        oled.setCursor(0, 2);
+        oled.print(fanType == FAN_4W ? F("4W ") : fanType == FAN_3W ? F("3W ") : F("2W "));
+        if (fanType != FAN_2W) { oled.print(rpm); oled.print(F(" rpm")); }
+    }
 #else
     delay(SELFTEST_MS);        // exercise the fan; a controller that has never
                                // proven the fan turns has not been tested
 #endif
-    /* tinyAVR 0/1-series has the NEW watchdog, not the classic AVR one, so
-     * wdt_enable(WDTO_8S) does not exist here - the period goes straight into
-     * WDT.CTRLA behind the configuration-change protection. 8K cycles of the
-     * 1.024 kHz OSCULP32K divider is 8 s, which is long against a 1 s loop and
-     * short against a box heating up.
-     *
-     * The reset it causes IS part of the fail-safe: a reset floats PA7, and
-     * R2 is a pull-up (see README, As built), so a floating PA7 runs the fan.
-     * wdt_reset() is just the WDR instruction and works on any AVR. */
-    _PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);
 }
 
 void loop() {
@@ -346,6 +387,7 @@ void loop() {
         wakeTapped = false;
         displayOn = true; displayOnSince = millis();
     }
+    if (!hasOled) displayOn = false;              // headless: nothing to draw
     if (displayOn && (millis() - displayOnSince > DISPLAY_TIMEOUT_MS)) {
         displayOn = false;
         oled.off();     // an OLED left on a static number burns it in

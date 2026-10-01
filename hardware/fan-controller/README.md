@@ -120,6 +120,10 @@ same problem.
 kills the pin or the LED. Put it in the tail or the LED module, and note it on
 the silkscreen.
 
+**The LED is active-low: +5 V → resistor → LED → `Status`.** That is how both
+built boards are wired, and the firmware sinks it. Through reset the pin floats,
+so the LED is dark rather than lit.
+
 ### ✅ No LDO — and that is better
 
 The board takes 5 V in rather than regulating 12 V down. The LDO would have been
@@ -720,10 +724,14 @@ the direction you want.
 
 ### A second board probably wants no display
 
-Pot and LED are enough on stage 2 — you set it once. But `setup()` calls
-`oled.begin()` unconditionally, so **check a headless board does not hang on the
-missing I2C device** before building one. Nothing else differs: same firmware,
-same BOM minus the display and its tail.
+Pot and LED are enough on stage 2 — you set it once. **It did hang, and is
+fixed.** `oled.begin()` on a bus with no display waits forever — the pull-ups
+live on the OLED module, so SDA and SCL float — and the watchdog was armed only
+at the end of `setup()`. The second v1 board sat with its fan on and the loop
+never running. The firmware now checks both lines for a pull-up and probes
+0x3C before touching the display, runs headless if it is absent, and arms the
+watchdog straight after turning the fan on. Verified on that board 2026-10-01.
+Nothing else differs: same firmware, same BOM minus the display and its tail.
 
 Electrically there is room. `Q1` is rated 5.7 A; stage 2 driving two 100 mA fans
 is 200 mA.
@@ -742,7 +750,9 @@ enough to *tune*.
 ## Status LED
 
 Flashed briefly once a second, so it is a heartbeat rather than a load — always
-low duty, negligible dissipation next to the sensor.
+low duty, negligible dissipation next to the sensor. Wired active-low, from +5 V
+into `Status` (see As built); a firmware older than this note drove it
+active-high, and the LED then sat lit with brief dark blinks.
 
 | pattern | meaning |
 |---|---|
