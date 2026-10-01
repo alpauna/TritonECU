@@ -21,7 +21,6 @@
  */
 
 #include <Arduino.h>
-#include <avr/sleep.h>
 #include <avr/wdt.h>
 #include <Tiny4kOLED.h>
 
@@ -113,6 +112,13 @@ static int16_t countsToCentiC(uint16_t adc) {
 
 static void fanSet(bool on) { fanOn = on; digitalWrite(PIN_FAN, on ? HIGH : LOW); }
 
+/* The wake button is LATCHED, not polled. Polling it once per pass only saw a
+ * press held at that instant, so a tap during the 1 s wait was lost. A falling
+ * edge sets this flag and cuts the wait short. Contact bounce can set it again
+ * and cost one extra pass, which is harmless. */
+static volatile bool wakeTapped = false;
+static void onWake() { wakeTapped = true; }
+
 static uint16_t readAvg(uint8_t pin) {
     (void)analogRead(pin);                // discard the first, settles the mux
     uint32_t sum = 0;
@@ -137,6 +143,7 @@ void setup() {
 
     pinMode(PIN_LED, OUTPUT);
     pinMode(PIN_WAKE, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(PIN_WAKE), onWake, FALLING);
 
     oled.begin();
     oled.setFont(FONT8X16);
@@ -178,7 +185,10 @@ void loop() {
     else if (!fanOn && lastAdc >= setpoint)        fanSet(true);
     else if ( fanOn && lastAdc <= setpoint - HYST) fanSet(false);
 
-    if (digitalRead(PIN_WAKE) == LOW) { displayOn = true; displayOnSince = millis(); }
+    if (wakeTapped || digitalRead(PIN_WAKE) == LOW) {
+        wakeTapped = false;
+        displayOn = true; displayOnSince = millis();
+    }
     if (displayOn && (millis() - displayOnSince > DISPLAY_TIMEOUT_MS)) {
         displayOn = false;
         oled.off();     // an OLED left on a static number burns it in
@@ -204,5 +214,7 @@ void loop() {
     }
 
     flash(fault || potFault ? 3 : (fanOn ? 2 : 1));
-    delay(1000);
+    /* The MCU does not sleep - it waits awake. Self-heating at this duty is
+     * well inside what an on/off enclosure fan cares about (README). */
+    for (uint8_t i = 0; i < 100 && !wakeTapped; i++) delay(10);
 }

@@ -118,8 +118,7 @@ the silkscreen.
 
 The board takes 5 V in rather than regulating 12 V down. The LDO would have been
 the largest heat source on a board whose entire problem is self-heating beside
-its own sensor, so removing it makes the sleep argument stronger rather than
-weaker. The enclosure already has a fixed 5 V rail.
+its own sensor, so removing it helps rather than hurts. The enclosure already has a fixed 5 V rail.
 
 ### ✅ AO3400A rather than the SS8050
 
@@ -159,11 +158,15 @@ second matters more than the first:
 - **A routed thermal slot**, most of the way around `R1`, leaving a narrow neck.
   Free at fab, and it cuts the conduction path so the sensor sees air rather
   than copper. Put `U1` and `Q1` at the far end of the board from it.
-- **Sleep.** Not for power — for *measurement*. The MCU wakes on the watchdog,
-  converts, decides, and goes back down, awake maybe 1 ms in 1000. A board that
-  does not dissipate has no self-heating to isolate. The as-built board goes
-  further and drops the regulator entirely, taking 5 V in, which removes what
-  would have been the largest standing heat source of the lot.
+- **No regulator.** The as-built board takes 5 V in, which removes what would
+  have been the largest standing heat source of the lot.
+
+> **The MCU does not sleep.** Sleeping between readings was the original plan,
+> to cut self-heating further. The firmware waits awake instead (~10–15 mW at
+> 5 MHz), at the far end of the board from the tongue. For an on/off enclosure
+> fan with 6 °C of hysteresis that error does not matter, and in use it has not
+> been a problem. Revisit only if this board ever has to measure rather than
+> switch.
 
 ## Why an NTC and not a DHT22 or a DS18B20
 
@@ -200,7 +203,7 @@ screen. 200 mm at 100 kHz is untroubled.
 
 That split is not just ergonomics. At ~15 mA the OLED dissipates more than
 everything else on this board combined, and sat next to the thermistor it would
-undo the entire sleep argument. On a tail, its heat goes to the panel.
+undo the thermal tongue. On a tail, its heat goes to the panel.
 
 **2 KB is not enough for a display.** An ATtiny202 has 2 KB of flash and any
 SSD1306 driver with a font spends most of it before your code exists. So the
@@ -562,7 +565,7 @@ enough to *tune*.
 
 ## Status LED
 
-Flashed briefly at each wake, so it is a heartbeat rather than a load — always
+Flashed briefly once a second, so it is a heartbeat rather than a load — always
 low duty, negligible dissipation next to the sensor.
 
 | pattern | meaning |
