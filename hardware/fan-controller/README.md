@@ -4,7 +4,7 @@ A thermostat for the [PSU enclosure](../psu-enclosure) fan. Sensor on the board
 on a thermally isolated tongue, setpoint on a pot, and an OLED on a tail showing
 the exhaust temperature.
 
-**v1 closed out 2026-10-01** — built, flashed, fused (BOD 4.3 V) and verified
+**v1 closed out 2026-10-01** — built, flashed, fused (BOD level 7, 4.2 V typ.) and verified
 on the bench: OLED, wake button, setpoint pot, fan switching, and the one- and
 two-flash heartbeats all behave as specified. Two items stand before any
 re-order: open the M2 holes, and the `Status` LED needs its series resistor
@@ -355,8 +355,12 @@ way to be wrong.
   leg and the divider reads ~0 counts, which looks like *very cold* and would
   switch the fan off forever. A short reads ~1023, which looks like very hot and
   fails safe by luck. Only the first one needs catching, and it is.
-- Brown-out fuse at 4.3 V, so a sagging rail stops the part rather than letting
-  it run the comparison on a bad conversion
+- Brown-out at **BODLEVEL7: 4.2 V typical, 3.9–4.5 V across parts** (datasheet
+  Table 36-10; PlatformIO calls the setting `4.3v`). A sagging rail stops the
+  part rather than letting it run the comparison on a bad conversion. The
+  4.5 V worst case still leaves 0.25 V under a 5 V rail at −5 %. Fuse byte
+  `BODCFG = 0xF4`: level 7, enabled in active mode, **disabled in sleep** —
+  which costs nothing, since the firmware never sleeps
 
 What this still **cannot** cover is losing 12 V while the supply runs hot. That
 wants a **KSD9700 60 °C normally-open** across `Q1`, which closes when hot
@@ -475,9 +479,9 @@ usable `PER` range each time:
 steps — far more resolution than a thermostat can use, and no clock change.
 
 **And no crystal.** The 21–28 kHz window is **±14 % wide**; the ATtiny's
-factory-calibrated internal oscillator is ±2 % at 5 V/25 °C and a few percent
-across temperature and voltage. Even at ±5 % that is 23.75–26.25 kHz, still
-comfortably inside. Worth writing down before someone adds a crystal footprint
+internal oscillator is **±4 % worst case** over 0–70 °C (±2 % relative to its
+factory-stored value; datasheet Table 36-12). That puts 25 kHz at
+24.0–26.0 kHz, comfortably inside. Worth writing down before someone adds a crystal footprint
 "to be safe" to a board with no room for one.
 
 ### The spec's fail-safe is already this project's
@@ -549,8 +553,10 @@ fail-to-cooling as the sensor fault. Ignored for the 300 ms kick and the first
 #### Pin and timer
 
 - **PWM: `PB2`, TCA0 WO2** (default PORTMUX), single-slope, `PER = 199` at
-  5 MHz for 25.000 kHz — see the table above. **[CONFIRM]** WO2 on PB2 against
-  the ATtiny1614 datasheet's I/O multiplexing table.
+  5 MHz for 25.000 kHz — see the table above. **Confirmed** against the
+  ATtiny1614 datasheet, Table 5-1: WO2 is on PB2 (SOIC-14 pin 7) at its
+  default position, no PORTMUX setting. PB2 is also USART0's default TxD,
+  which this firmware does not use.
 - **TCA0 is free.** This build runs `millis()` on TCD0 (`MILLIS_USE_TIMERD0` in
   the compile flags), so taking TCA0 over does not touch timekeeping. Call
   `takeOverTCA0()` first so `analogWrite()` cannot reconfigure it.
@@ -595,7 +601,8 @@ stall alarm and nothing else.
 is picked up at the next power cycle — and with no EEPROM involved there is no
 stale setting to clear.
 
-**Hardware: none beyond the tach line.** `PA5` with its internal pull-up reads
+**Hardware: none beyond the tach line.** `PA5` with its internal pull-up
+(20–50 kΩ, datasheet Table 36-16 — ample for a tach of a few hundred Hz) reads
 an open-collector tach directly; a 2-wire fan leaves it pulled high and pulse-
 free, which *is* the 2-wire signature. A footprint for an external 10 k
 pull-up is cheap insurance if a fan's tach edges look slow on the scope.
