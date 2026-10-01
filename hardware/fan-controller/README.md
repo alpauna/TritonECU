@@ -4,7 +4,13 @@ A thermostat for the [PSU enclosure](../psu-enclosure) fan. Sensor on the board
 on a thermally isolated tongue, setpoint on a pot, and an OLED on a tail showing
 the exhaust temperature.
 
-**Built and ready to order.** `Schematic/` carries the EasyEDA schematic,
+**v1 closed out 2026-10-01** — built, flashed, fused (BOD 4.3 V) and verified
+on the bench: OLED, wake button, setpoint pot, fan switching, and the one- and
+two-flash heartbeats all behave as specified. Two items stand before any
+re-order: open the M2 holes, and the `Status` LED needs its series resistor
+off-board (both under [As built](#as-built)). Next is [v2](#v2--3--and-4-wire-intel-fans).
+
+`Schematic/` carries the EasyEDA schematic,
 gerbers and BOM as fabricated: **54.86 × 16.13 mm**, 3 × M2. See
 [As built](#as-built) for what differs from the sketch and why. Replaces the ESP32 bench rig in
 [`../psu-enclosure/fan-controller`](../psu-enclosure/fan-controller), which
@@ -493,13 +499,69 @@ event it was installed to prevent."* Tach makes that check continuous: commanded
 to run and reporting 0 RPM **is** a seized bearing, and the controller can say so
 rather than waiting for the temperature to climb.
 
+### Control law: one step per degree, from setpoint to full speed
+
+**Decided 2026-10-01.** v1 is on/off around the setpoint. v2 keeps the same
+on and off points and fills the band above the setpoint with speed:
+
+```
+  counts  <= setpoint - HYST          Q1 off            fan stopped
+  setpoint - HYST .. setpoint         hold last state   (v1's hysteresis, unchanged)
+  >= setpoint                         Q1 on, 30 % duty  floor
+  each STEP counts above setpoint     +10 % duty
+  >= setpoint + 7 x STEP              100 %
+```
+
+Eight levels, 30 % to 100 % in 10 % steps. With `STEP = 10` counts that is
+**about one step per °C, reaching full speed ~7 °C above the setpoint**.
+
+| | value | why |
+|---|---|---|
+| `STEP` | 10 counts | ~1.0 °C at 38 °C, ~1.2 °C at 50 °C — the NTC's counts per degree fall as it warms |
+| floor | 30 % (`CMP = 60` of `PER = 199`) | most fans will not start below 20–30 %; below it behaviour is undefined |
+| per-step hysteresis | 4 counts (~0.4 °C) | step **up** at a boundary, step **down** only 4 counts below it |
+| off point | `setpoint - HYST`, 61 counts | v1's band, unchanged — below the floor the fan stops via `Q1`, not 0 % duty |
+| kick | 100 % for 300 ms | on every stopped → running transition, then drop to the computed step |
+
+**Still counts, not degrees.** "A degree" is ~10 counts across the pot's
+range rather than an exact °C, which keeps the rule that the control law never
+touches the display's LUT. A step of 1.0–1.2 °C is well inside what an
+enclosure fan cares about.
+
+**Why per-step hysteresis.** ADC noise is a count or two. Without a dead band,
+a temperature sitting on a step boundary toggles between two speeds every pass —
+audible as the fan hunting. 4 counts is twice the noise and under half a step.
+
+**Why stop on `Q1`, not 0 % duty.** Intel leaves duty below the floor
+undefined: some fans stop, some hold minimum speed. Opening `Q1` stops every fan
+the same way, and `Q1` was already demoted to the hard off in v2.
+
+**3-wire fans get the on/off half only.** No PWM input, so they run v1's law on
+`Q1` and keep the tach monitoring below.
+
+#### Stall detection
+
+Commanded running for 2 s with **zero tach pulses** is a seized or unplugged
+fan. Response: force 100 %, show `FAN STALL`, three-flash LED — the same
+fail-to-cooling as the sensor fault. Ignored for the 300 ms kick and the first
+2 s after it, while the fan spins up.
+
+#### Pin and timer
+
+- **PWM: `PB2`, TCA0 WO2** (default PORTMUX), single-slope, `PER = 199` at
+  5 MHz for 25.000 kHz — see the table above. **[CONFIRM]** WO2 on PB2 against
+  the ATtiny1614 datasheet's I/O multiplexing table.
+- **TCA0 is free.** This build runs `millis()` on TCD0 (`MILLIS_USE_TIMERD0` in
+  the compile flags), so taking TCA0 over does not touch timekeeping. Call
+  `takeOverTCA0()` first so `analogWrite()` cannot reconfigure it.
+- **Tach: `PA5`**, as reserved, counted by pin interrupt; 2 pulses per
+  revolution.
+- **Display line 2** gains the duty: `FAN 60%` replaces `FAN ON`.
+
 ### Still to decide
 
-- **Minimum duty and kick-start.** Most fans will not start below 20–30 %, and
-  below that behaviour is undefined — some stop, some hold minimum. Needs a duty
-  floor and a ~300 ms 100 % kick on any stopped→running transition.
-- **How the board knows its fan.** A jumper on `PA1`/`PB2`/`PB3` (all free) is
-  the simple answer. Auto-detection is possible — tach present means 3 or
+- **How the board knows its fan.** A jumper on `PA1`/`PB3` (`PB2` is now the
+  PWM output, above) is the simple answer. Auto-detection is possible — tach present means 3 or
   4-wire, and RPM responding to duty separates 4 from 3 — but it is a lot of
   behaviour to get wrong for a setting that changes once.
 - **Connector.** Standard keyed 4-pin, 2.54 mm: 1 GND, 2 +12 V, 3 TACH, 4 PWM.
