@@ -1,6 +1,6 @@
 /* PSU enclosure fan controller — ATtiny1614.
  *
- * NTC on the board in the END B exhaust, fan through an SS8050 low-side switch,
+ * NTC on the board in the END B exhaust, fan through an AO3400A low-side switch,
  * OLED on a tail to the front panel. See ../README.md for why the sensor and
  * the display live in different places.
  *
@@ -14,7 +14,7 @@
  * rail droop moves both ends and cancels. Do NOT switch this to the internal
  * bandgap: against a fixed reference every millivolt of droop becomes degrees.
  *
- * EVERY FAILURE PATH ENDS WITH THE FAN RUNNING. R4 pulls the base high so a
+ * EVERY FAILURE PATH ENDS WITH THE FAN RUNNING. R2 pulls the gate high so a
  * floating pin runs it; boot drives it on before anything else; the watchdog
  * resets on a hang, and reset floats the pin. The one fault that needs catching
  * in software is an OPEN NTC — see readSensor().
@@ -26,7 +26,7 @@
 #include <Tiny4kOLED.h>
 
 static const uint8_t PIN_NTC  = PIN_PA3;   // AIN3, divider midpoint
-static const uint8_t PIN_FAN  = PIN_PA7;   // -> R3 -> SS8050 base
+static const uint8_t PIN_FAN  = PIN_PA7;   // -> R1 220R -> Q1 AO3400A gate
 static const uint8_t PIN_LED  = PIN_PA6;   // status, flashed at each wake
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
 static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
@@ -154,7 +154,7 @@ void setup() {
      * short against a box heating up.
      *
      * The reset it causes IS part of the fail-safe: a reset floats PA7, and
-     * once R2 is a pull-up (see README, As built) a floating PA7 runs the fan.
+     * R2 is a pull-up (see README, As built), so a floating PA7 runs the fan.
      * wdt_reset() is just the WDR instruction and works on any AVR. */
     _PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);
 }

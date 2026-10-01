@@ -339,7 +339,7 @@ Same reasoning as the ESP32 version: this box's airflow depends entirely on this
 fan and it holds a warm supply and a mains connection, so *off* is the expensive
 way to be wrong.
 
-- `R4` pulls the base high, so a floating pin runs the fan — covering reset,
+- `R2` pulls the gate high, so a floating pin runs the fan — covering reset,
   boot, and a watchdog trip
 - Boot drives the fan on before anything else, and exercises it for 3 s
 - **An open NTC is the dangerous fault and is caught explicitly.** Open the top
