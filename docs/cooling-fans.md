@@ -257,7 +257,8 @@ Sized for an **aftermarket dual 12–13″ setup, ~30–40 A total**.
 | Feed | **10 AWG** | fuse → relay → fan |
 | Ground | **10 AWG to the block or battery**, not a body screw | |
 | Relay coil | **TBD62083AFNG**, direct from the expander | §5.2 |
-| Coil suppression | **built into the driver** | TBD62083AFNG clamps every channel to COMMON — no external diodes |
+| Coil suppression | **built into the driver** | TBD62083AFNG clamps every channel to COMMON — no external diodes. Add a relay coil diode if the §5.4 backup switch is fitted |
+| Backup | **N.O. coolant thermoswitch per fan**, parallel to the driver | §5.4 |
 
 ### 5.1 Feed and the run-on requirement
 
@@ -309,6 +310,83 @@ under real thermal load.
 > **[CONFIRM ON TRUCK]** the alternator's rating and its actual idle output.
 > Idle output is typically a fraction of the rated figure, and the rated figure
 > is what gets quoted.
+
+### 5.4 Backup thermoswitch — fans run without the ECU's say-so
+
+Every fail-safe above lives in firmware, reads CHT, and drives one driver
+channel. A coolant thermoswitch wired **in parallel with that channel** gives
+the fans a second path that shares none of it.
+
+**Not the dead-ECU case.** A dead ECU stops the engine — it is the ignition and
+the fuel — so there is no running engine left to overheat. What this covers is
+the engine running while the fan path does not:
+
+| Failure | Engine | Fans without backup |
+|---|---|---|
+| CHT reading **low but plausible** — drifted sensor, high-resistance connector | runs | late or never; no range check catches a believable number |
+| TBD62083 channel failed open | runs | never |
+| Coil wire broken between ECU and relay | runs | never |
+| Fan logic bug, bad config, `highwayCutoff` misjudged | runs | wrong |
+| Heat soak after key-off with run-on failed (§4.6) | off | never |
+
+The first row is the one firmware cannot reach. The switch reads **coolant**
+through its own element, so it is independent of CHT in a way that a second
+threshold on the same sensor would not be.
+
+#### Wiring: a second sink on the coil's low side
+
+```
+ permanent B+ ── fuse ── relay coil ──┬── ECU: TBD62083 channel ── GND
+                                      │
+                                      └── thermoswitch (N.O.) ──── GND
+                                          at the relay, short leads
+```
+
+**No diode is needed.** Both are low-side sinks to ground, so they wire-OR by
+being in parallel: either one closing pulls the coil in. The TBD62083 output
+is open-drain and is not harmed by its node being held at ground.
+
+- **Mount the switch at the relay end**, not near the ECU, so a broken
+  ECU-to-relay wire is inside what it covers.
+- **Coil suppression with the ECU unplugged.** The TBD62083's clamp diode sits
+  on the same node and still catches the switch's turn-off spike — while the
+  ECU is connected. Unplugged, nothing does. Use relays with a **built-in coil
+  diode** (or a 1N4004 across the coil at the relay); it is harmless alongside
+  the driver's own clamp, at the cost of a slightly slower release.
+- **Coils already sit on permanent B+** (§5.1, forced by the driver's
+  `COMMON`), so the switch works key-off. After shutdown it runs the fans until
+  coolant falls below its release point, then stops — self-limiting, the same
+  as OEM electric-fan systems.
+
+#### One switch per fan, staggered
+
+Putting one switch across both coils starts both fans into one inrush — the
+~160 A event §4.1 exists to avoid. **Two switches at different temperatures
+stagger the inrush mechanically**, with no logic involved:
+
+| | Closes | Opens | |
+|---|--:|--:|---|
+| Fan 1 backup | ~99 °C | ~93 °C | 210 / 200 °F, a common off-the-shelf rating |
+| Fan 2 backup | ~104 °C | ~98 °C | 220 / 208 °F |
+
+These are **coolant** temperatures and the ECU's thresholds are **CHT** (§3).
+Head metal runs hotter than coolant, so in normal operation the ECU starts each
+fan well before its switch would. The switch should **never close on a healthy
+system** — if it does, either its rating or the ECU thresholds are wrong, and
+that is worth knowing.
+
+> **[CONFIRM ON TRUCK]** where the switches go. This engine has no coolant
+> temperature sensor (§3), so there may be no spare threaded boss. An inline
+> upper-hose adapter with a switch port is the fallback. Then check the ratings
+> against measured coolant temperature at hot idle — the switch must sit above
+> it with margin.
+
+#### Optional: let the ECU see it
+
+The ECU cannot tell from the TBD62083 whether the switch has the coil pulled
+in. Sensing the coil's low side on a spare input, through a divider, would
+show *"fan running, not commanded"* — a direct sign that CHT is reading low.
+Not needed for the backup to work; worth a footprint if the pin is free.
 
 ---
 
@@ -413,3 +491,4 @@ been proven on hardware.
 | **[CONFIRM]** whether OSS or the transfer case sensor feeds the speedo | §4.4 |
 | ~~Choose the relay coil driver~~ — **resolved: TBD62083AFNG** | §5.2 |
 | **[CONFIRM ON TRUCK]** alternator rating and idle output | §5.3 |
+| **[CONFIRM ON TRUCK]** backup thermoswitch location and ratings vs. hot-idle coolant temp | §5.4 |
