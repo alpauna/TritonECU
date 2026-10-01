@@ -34,7 +34,7 @@ static const uint8_t PIN_LED  = PIN_PA6;   // status, ACTIVE LOW: +5V -> R -> LE
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
 static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
 #ifdef FAN_HW_V2
-static const uint8_t PIN_PWM  = PIN_PB2;   // TCA0 WO2 -> Q2 2N7002 gate, INVERTED
+static const uint8_t PIN_PWM  = PIN_PB2;   // TCA0 WO2 -> 220R -> Q2 AO3400A, INVERTED
 static const uint8_t PIN_TACH = PIN_PA5;   // 10k series + 5V1 zener, NO pull-up
 #endif
 

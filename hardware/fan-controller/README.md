@@ -120,6 +120,8 @@ same problem.
 kills the pin or the LED. Put it in the tail or the LED module, and note it on
 the silkscreen.
 
+**v2 fixes this: `R12` 1 k sits between `PA6` and `H2` pin 3.**
+
 **The LED is active-low: +5 V → resistor → LED → `Status`.** That is how both
 built boards are wired, and the firmware sinks it. Through reset the pin floats,
 so the LED is dark rather than lit.
@@ -447,18 +449,30 @@ from *the* control to a **hard off**, held on whenever a 3/4-wire fan is fitted.
 
 That is a topology change, not an addition, and it is why this is v2.
 
-### The PWM output must be OPEN DRAIN, and the 2N7002 is finally right
+### The PWM output must be OPEN DRAIN — a second AO3400A
 
 The fan pulls its PWM line up internally, to **3.3 V or 5 V depending on the
-fan**. Drive it push-pull from a 5 V part and a 3.3 V-pull-up fan gets back-fed.
-The spec says open drain, so the MCU sinks the line through a small N-FET and
-never sources it.
+fan**, and Intel caps it at **5.25 V**. Drive it push-pull from a 5 V part and a
+3.3 V-pull-up fan gets back-fed. The spec says open drain, so the MCU sinks the
+line through a small N-FET and never sources it — the high level is always the
+fan's own pull-up, inside its own rating by definition. **No pull-up on this
+board's side**, ever.
 
-This is the one job on this board the **2N7002** is the right part for. It sinks
-a few milliamps, and at a 5 V gate it has 3 V of overdrive against its 2.0 V
-worst-case `Vgs(th)` — comfortably inside the region its datasheet actually
-characterises, which was the whole objection to it as a
-[fan switch](../2N7002%20Driver/README.md). Same part, correct application.
+**`Q2` is an AO3400A, the same part as `Q1`** — decided 2026-10-01, one part on
+the BOM instead of two. A 2N7002 would have done this job (it sinks a few
+milliamps, well inside the region its datasheet characterises), but nothing
+about the job needs it:
+
+| | need | AO3400A |
+|---|---|---|
+| `Vds` | ~13 V when the fan ground floats | 30 V |
+| `Vgs(th)` | on from a 5 V pin | 0.65–1.45 V |
+| gate charge at 25 kHz | edges ≪ 40 µs period | ~630 pF `Ciss`; 0.14 µs behind 220 Ω |
+
+**It wants a 220 Ω gate resistor (`R10`), like `R1`.** `Ciss` is ~12× a 2N7002's, and
+charging it straight from the pin is a current spike every edge, 50 000 times a
+second. 220 Ω holds the peak to ~23 mA and still switches in a fraction of a
+microsecond.
 
 ### `analogWrite()` cannot produce 25 kHz
 
@@ -615,21 +629,35 @@ pull-up is cheap insurance if a fan's tach edges look slow on the scope.
 ### Connector and the parts behind it
 
 **Decided 2026-10-01.** The fan plugs straight into the board on the standard
-PC fan header, and 12 V comes onto the board to feed it.
+PC fan header, and 12 V comes onto the board to feed it. Designators follow
+[`Schematic/FanTempController-Schematic-V2.png`](Schematic/FanTempController-Schematic-V2.png).
 
 ```
- J1  fan, Molex 47053-1000 (4-pin PC fan header, 2.54 mm, keyed ramp)
-     1 GND   switched - Q1 drain
-     2 +12V  from H3
-     3 TACH  -> 10k pull-up to +5V -> 10k series -> PA5
-                                                    + D2 BZT52C5V1 5.1V zener to GND
-                                                    + 1 nF to GND
-     4 PWM   <- Q2 2N7002 drain (open drain); gate <- PB2, 10k gate PULL-DOWN
+ CN2 fan, Molex 47053-1000 (4-pin PC fan header, 2.54 mm, fan-keyed ramp)
+     1 Load   switched GND - Q1 drain
+     2 FAN+   +12V from H1
+     3 SENSE  tach: R8 10k pull-up to +5V -> R9 10k series -> PA5 (TACH)
+                    at PA5: D2 BZT52C5V1 5.1V zener to GND, C3 1 nF to GND
+     4 PWM    Q2 AO3400A drain (open drain); gate <- R10 220R <- PB2,
+              R11 10k gate PULL-DOWN
 
- H3  12 V in   1 +12V   2 GND
- H2  unchanged GND 5V STATUS WAKE UPDI SCL SDA
- D1  1N4148W, Q1 drain -> +12V, now permanently in circuit
+ H1  12 V in, PZ254V-11-02P     1 GND   2 FAN+
+ H2  8-pin, LAIL-PZ2.54-8P-L    1 GND  2 +5V  3 Status  4 Wake  5 UPDI
+                                6 SCL  7 SDA  8 GND
+ D1  1N4148W, Q1 drain -> FAN+, now permanently across the fan
+ R12 1k, PA6 -> Status          the LED's series resistor, on board at last
 ```
+
+**CN2 is the Molex 47053-1000, not a generic 2510 header.** The first draft
+used an M2510V-04P-N3: same 2.54 mm pitch and 0.64 mm pins, but its datasheet
+([`Schematic/M2510V-04P-N3-Datasheet.pdf`](Schematic/M2510V-04P-N3-Datasheet.pdf))
+shows one 5.08 mm locking ramp centred on **pin 3**. A 3-pin fan plug sits on
+pins 1–3 with its latch over pin 2, so it lands on the ramp instead of over
+it. The 47053's ramp is shaped for PC fan plugs, 3- and 4-pin both.
+
+**Pin 1 is the switched ground and pin 2 is +12 V — the fan standard.** The
+first draft had them the other way round, which reverse-powers every fan
+plugged in. Check this on the footprint as well as the symbol before ordering.
 
 **It takes every fan this board supports.** A 3-pin plug fits pins 1–3 of the
 same header, which is what the ramp is shaped for, and a 2-wire fan uses pins
@@ -639,8 +667,8 @@ no second footprint.
 **12 V now crosses the board**, which v1 deliberately avoided. It has to: the fan
 needs +12 V on pin 2 of a standard header, and running it through the board is
 what lets `D1` sit permanently across the fan instead of being opt-in. The fan
-current returns through `Q1`, so `H3`'s ground and the 5 V ground are one ground
-on this board — tie the 12 V supply's ground to it. Route the 12 V, `J1` pin 1
+current returns through `Q1`, so `H1`'s ground and the 5 V ground are one ground
+on this board — tie the 12 V supply's ground to it. Route `FAN+`, `CN2` pin 1
 and `Q1` for 2 A; `Q1` is rated 5.7 A.
 
 #### Q2's gate is pulled DOWN — the opposite of Q1, for the same reason
@@ -651,6 +679,13 @@ speed** — which is a gate pull-down. `Q1` gets a pull-up and `Q2` a pull-down,
 and both fail to the fan running. Put that on the schematic next to both parts,
 or the next tidy-up "corrects" one to match the other.
 
+**That risk is higher now that both are AO3400As.** Two identical FETs, each
+with a 220 Ω gate resistor and a 10 k gate resistor, look like a copy-paste —
+and the one difference that matters is which rail the 10 k goes to. Label it
+on both: *`Q1` pull-UP — fan on if PA7 floats*, *`Q2` pull-DOWN — fan full
+speed if PB2 floats*. The V2 sheet carries the first note on `R2`; **`R11`
+still needs its own.**
+
 #### The tach input is built for a fan ground that floats
 
 **When `Q1` is off, the fan's ground is disconnected and floats up toward
@@ -659,15 +694,16 @@ ground. A tach wired straight to `PA5` would then drive the pin above the rail,
 and the ATtiny allows only **1 mA** of injection above 5.5 V (datasheet
 Table 36-1).
 
-- **10 k pull-up at the connector** holds the line at 5 V in normal running.
-- **10 k in series into `PA5`** limits whatever the fan drives in.
+- **`R8`, 10 k pull-up at the connector**, holds the line at 5 V in normal
+  running.
+- **`R9`, 10 k in series into `PA5`**, limits whatever the fan drives in.
 - **`D2`, a 5.1 V zener at the pin**, clamps it below the 5.5 V where injection
   starts, so the ATtiny's own clamp diodes never conduct. The series 10 k
   limits the zener to (12.6 − 5.1) / 10 k = **0.75 mA** — trivial for a
   SOD-123 part. At the bottom of its tolerance (4.8 V) it holds a high at
   4.8 V, well above the 3.5 V input-high threshold, and leaks ~10 µA through
   the 20 k path, which costs nothing.
-- **1 nF at the pin** filters edges; with 10 k that is 10 µs, against a tach
+- **`C3`, 1 nF at the pin**, filters edges; with 10 k that is 10 µs, against a tach
   period of milliseconds.
 - **`PA5`'s internal pull-up stays off.** With it on, the series 10 k and the
   internal 20–50 k form a divider when the tach pulls low, and the pin can sit
