@@ -282,14 +282,17 @@ port enumerated a Teensy without trouble, which isolates it to the ST-Link.
 
 To drive the on-board MCU from an external ST-Link:
 
-1. **Remove both CN2 jumpers** — these connect the on-board ST-Link to the
+1. **Remove both CN4 jumpers** — these connect the on-board ST-Link to the
    target MCU. Leaving them in puts two debuggers on one SWD bus.
-2. Connect the external probe to **SWDIO (PA13)**, **SWCLK (PA14)**, **GND**,
-   and **NRST**.
-3. `upload_protocol = stlink` is unchanged — PlatformIO does not care which
-   ST-Link it finds.
+2. Connect the external probe to morpho **CN11 pin 13 = SWDIO (PA13)**,
+   **pin 15 = SWCLK (PA14)**, **pin 14 = NRST**, plus **GND**, and VTREF to a
+   real 3V3 pin (UM1974 §7.2).
+3. An STLINK-V3 needs the `upload_protocol = custom` OpenOCD command — the
+   board file's hla transport rejects it. See `docs/nucleo-setup.md` §3b.
 
-**[CONFIRM]** the CN2 designation against UM1974 for your board revision.
+Confirmed against UM1974 Rev 11 (MB1137): the jumper block is **CN4**, not CN2.
+The bench currently uses the other working route — V3 on CN6 with CN4
+*fitted* — documented in `docs/nucleo-setup.md` §3b.
 
 **Bring SWD out to a header on the carrier.** Four pins, and it means a failed
 on-board debugger never blocks the project again. This session is the argument

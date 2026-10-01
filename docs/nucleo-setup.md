@@ -108,18 +108,19 @@ The on-board ST-Link on this board degraded during bring-up: dropping console
 characters first, then refusing to enumerate. An external **STLINK-V3** works,
 but three things have to be right and none are obvious.
 
-### Wiring: CN6, with the CN2 jumpers **fitted**
+### Wiring: CN6, with the CN4 jumpers **fitted**
 
 Counter-intuitive, and the thing that cost the most time. **CN6 sits on the
-ST-Link side of the CN2 jumpers.** Removing them isolates the MCU from the
+ST-Link side of the CN4 jumpers.** Removing them isolates the MCU from the
 on-board ST-Link *and* from CN6 — the opposite of what "disconnect the broken
-debugger" suggests.
+debugger" suggests. (UM1974 Table 4: CN4 OFF is the mode where the *on-board*
+ST-Link drives an *external* target through CN6.)
 
 | STLINK-V3 | Nucleo |
 |---|---|
 | **VTREF / VDD_TARGET** | **a real 3V3 pin** (Arduino or morpho header) |
-| SWDIO | CN6 pin 2 |
-| SWCLK | CN6 pin 4 |
+| SWCLK | CN6 pin 2 |
+| SWDIO | CN6 pin 4 |
 | GND | GND |
 
 **VTREF must come from an actual 3.3 V rail.** CN6 pin 1 is labelled
@@ -127,8 +128,18 @@ debugger" suggests.
 external target's voltage — it reads 0 V with nothing attached, which is
 correct, not a fault.
 
-PA13/PA14 are **not** on the morpho headers of a Nucleo-144, so they are not an
-alternative. CN2's target-side pins are, if the jumpers are pulled.
+CN6 pinout per UM1974 Table 5: 1 VDD_TARGET, 2 SWCLK, 3 GND, 4 SWDIO,
+5 NRST, 6 SWO (reserved).
+
+UM1974 §7.3.3 says CN6 "must not be used" with CN4 fitted, because the on-board
+ST-Link's F103 still sits on the same SWD lines. Here that F103 is dead, so it
+works — but if running-core reads ever turn flaky again, suspect contention
+from a half-alive F103 before the probe.
+
+**The cleaner alternative** is UM1974 §7.2's own route: pull the CN4 jumpers
+and wire straight to the target on morpho **CN11 — pin 13 = PA13 (SWDIO),
+pin 15 = PA14 (SWCLK), pin 14 = NRST**. That takes the on-board ST-Link off
+the bus entirely.
 
 **What a bad VTREF actually looks like** — because it is *not* an upload
 failure, which is why it went unnoticed for a while. With VTREF unconnected the
@@ -296,7 +307,7 @@ which is what you want when the debugger is the thing misbehaving.*
 | `target voltage may be too low` | VTREF not on a real 3.3 V rail | CN6 pin 1 is a *sense input*, not a supply |
 | Upload verifies, but live reads fail (`Fail reading CTRL/STAT`) | same — VTREF at 0 V; only running-core access suffers | wire VTREF to 3V3; expect `Target voltage: 3.28` |
 | `mdw` prints nothing in a `-c` batch | command output is a Tcl return value here | `echo "[read_memory 0x40021414 32 1]"` |
-| `unable to connect to the target` | wrong connector or jumper state | CN6 **with** CN2 jumpers fitted |
+| `unable to connect to the target` | wrong connector or jumper state | CN6 **with** CN4 jumpers fitted, or CN11 13/15 with CN4 pulled |
 | `error executing cortex_m crc algorithm` | usually: nothing was written | program the **ELF**, not the `.bin` |
 | Upload succeeds, old firmware runs | `.bin` has no load address | program the **ELF**; keep `verify` on |
 | `%f` prints nothing | newlib-nano printf | `-Wl,-u,_printf_float` |
