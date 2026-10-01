@@ -608,9 +608,78 @@ free, which *is* the 2-wire signature. A footprint for an external 10 k
 pull-up is cheap insurance if a fan's tach edges look slow on the scope.
 `PA1` and `PB3` stay free.
 
-### Still to decide
-- **Connector.** Standard keyed 4-pin, 2.54 mm: 1 GND, 2 +12 V, 3 TACH, 4 PWM.
-  `H1` grows from 3 to 4 and gains a key.
+### Connector and the parts behind it
+
+**Decided 2026-10-01.** The fan plugs straight into the board on the standard
+PC fan header, and 12 V comes onto the board to feed it.
+
+```
+ J1  fan, Molex 47053-1000 (4-pin PC fan header, 2.54 mm, keyed ramp)
+     1 GND   switched - Q1 drain
+     2 +12V  from H3
+     3 TACH  -> 10k pull-up to +5V -> 10k series -> PA5
+                                                    + D2 BZT52C5V1 5.1V zener to GND
+                                                    + 1 nF to GND
+     4 PWM   <- Q2 2N7002 drain (open drain); gate <- PB2, 10k gate PULL-DOWN
+
+ H3  12 V in   1 +12V   2 GND
+ H2  unchanged GND 5V STATUS WAKE UPDI SCL SDA
+ D1  1N4148W, Q1 drain -> +12V, now permanently in circuit
+```
+
+**It takes every fan this board supports.** A 3-pin plug fits pins 1–3 of the
+same header, which is what the ramp is shaped for, and a 2-wire fan uses pins
+1–2. Detection (above) works out which one is fitted, so there is no jumper and
+no second footprint.
+
+**12 V now crosses the board**, which v1 deliberately avoided. It has to: the fan
+needs +12 V on pin 2 of a standard header, and running it through the board is
+what lets `D1` sit permanently across the fan instead of being opt-in. The fan
+current returns through `Q1`, so `H3`'s ground and the 5 V ground are one ground
+on this board — tie the 12 V supply's ground to it. Route the 12 V, `J1` pin 1
+and `Q1` for 2 A; `Q1` is rated 5.7 A.
+
+#### Q2's gate is pulled DOWN — the opposite of Q1, for the same reason
+
+The PWM line is inverted by `Q2`: PB2 high pulls the fan's PWM input low. So a
+floating PB2 must leave `Q2` **off**, the line released, and the fan at **full
+speed** — which is a gate pull-down. `Q1` gets a pull-up and `Q2` a pull-down,
+and both fail to the fan running. Put that on the schematic next to both parts,
+or the next tidy-up "corrects" one to match the other.
+
+#### The tach input is built for a fan ground that floats
+
+**When `Q1` is off, the fan's ground is disconnected and floats up toward
++12 V**, and the tach line becomes the fan electronics' only path back to
+ground. A tach wired straight to `PA5` would then drive the pin above the rail,
+and the ATtiny allows only **1 mA** of injection above 5.5 V (datasheet
+Table 36-1).
+
+- **10 k pull-up at the connector** holds the line at 5 V in normal running.
+- **10 k in series into `PA5`** limits whatever the fan drives in.
+- **`D2`, a 5.1 V zener at the pin**, clamps it below the 5.5 V where injection
+  starts, so the ATtiny's own clamp diodes never conduct. The series 10 k
+  limits the zener to (12.6 − 5.1) / 10 k = **0.75 mA** — trivial for a
+  SOD-123 part. At the bottom of its tolerance (4.8 V) it holds a high at
+  4.8 V, well above the 3.5 V input-high threshold, and leaks ~10 µA through
+  the 20 k path, which costs nothing.
+- **1 nF at the pin** filters edges; with 10 k that is 10 µs, against a tach
+  period of milliseconds.
+- **`PA5`'s internal pull-up stays off.** With it on, the series 10 k and the
+  internal 20–50 k form a divider when the tach pulls low, and the pin can sit
+  at 1.7 V — above the 1.5 V low threshold. The external pull-up is on the
+  fan's side of the series resistor, so it does not have that problem.
+
+The same floating ground is why **the PWM line is released whenever the fan is
+stopped**: with `Q2` on and `Q1` off, `Q2` would offer the fan a ground path
+through its PWM input. The firmware releases PWM before it opens `Q1`.
+
+#### Bench path on a v1 board
+
+v1's `H1` already switches the fan's ground through `Q1` — the same topology. A
+v1 board with wires bodged to **PB2 (SOIC-14 pin 7)** and **PA5 (pin 3)**, the
+tach network and `Q2` on a scrap of protoboard, and a 4-wire fan on a bench
+12 V, runs the v2 firmware before any v2 board exists.
 
 ## Staging: fit two boards, turn the knobs
 

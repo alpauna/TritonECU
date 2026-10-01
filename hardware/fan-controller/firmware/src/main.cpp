@@ -4,11 +4,11 @@
  * OLED on a tail to the front panel. See ../README.md for why the sensor and
  * the display live in different places.
  *
- * THE CONTROL LAW NEVER LEAVES ADC COUNTS. A bang-bang thermostat only has to
- * know which side of a line it is on, so the Beta equation was solved once at
- * design time and the thresholds are two integers. No float, no log(), no
- * lookup on the path that decides anything. Only the DISPLAY converts to
- * degrees, which means a presentation bug cannot reach the fan.
+ * THE CONTROL LAW NEVER LEAVES ADC COUNTS. A thermostat only has to know which
+ * side of a line it is on, so the Beta equation was solved once at design time
+ * and the thresholds are integers. No float, no log(), no lookup on the path
+ * that decides anything. Only the DISPLAY converts to degrees, which means a
+ * presentation bug cannot reach the fan. v2's speed steps are counts too.
  *
  * IT IS RATIOMETRIC. The divider is fed from VCC and the ADC references VCC, so
  * rail droop moves both ends and cancels. Do NOT switch this to the internal
@@ -17,7 +17,11 @@
  * EVERY FAILURE PATH ENDS WITH THE FAN RUNNING. R2 pulls the gate high so a
  * floating pin runs it; boot drives it on before anything else; the watchdog
  * resets on a hang, and reset floats the pin. The one fault that needs catching
- * in software is an OPEN NTC — see readSensor().
+ * in software is an OPEN NTC — see ADC_OPEN.
+ *
+ * FAN_HW_V2 adds the 3/4-wire fan: 25 kHz PWM on PB2 through Q2, tach on PA5,
+ * fan type detected at boot. Without it this builds the v1 board exactly - v1
+ * has no pads on PB2 or PA5. See README, v2.
  */
 
 #include <Arduino.h>
@@ -26,10 +30,13 @@
 
 static const uint8_t PIN_NTC  = PIN_PA3;   // AIN3, divider midpoint
 static const uint8_t PIN_FAN  = PIN_PA7;   // -> R1 220R -> Q1 AO3400A gate
-static const uint8_t PIN_LED  = PIN_PA6;   // status, flashed at each wake
+static const uint8_t PIN_LED  = PIN_PA6;   // status, flashed once a second
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
 static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
-                                           // PA5 deliberately free - fan tach
+#ifdef FAN_HW_V2
+static const uint8_t PIN_PWM  = PIN_PB2;   // TCA0 WO2 -> Q2 2N7002 gate, INVERTED
+static const uint8_t PIN_TACH = PIN_PA5;   // 10k series + 5V1 zener, NO pull-up
+#endif
 
 /* Thresholds in ADC counts, 10-bit, VCC reference. 10k NTC B=3950 as the top
  * leg, 10k 1% to ground. 10.1 counts per degree near 35 C, so the 61 counts
@@ -82,6 +89,24 @@ static const uint16_t ADC_SHORT = 1000;
 static const uint32_t DISPLAY_TIMEOUT_MS = 180000UL;   // blank after 3 min
 static const uint16_t SELFTEST_MS        = 3000;
 
+/* v2 speed steps, ABOVE the setpoint. 30 % at the setpoint, +10 % per STEP
+ * counts, 100 % at setpoint + 7 steps. STEP = 10 counts is ~1.0 C at 38 C and
+ * ~1.2 C at 50 C. Each step goes UP at its boundary and DOWN only STEP_HYST
+ * below it: ADC noise is a count or two, and without the dead band a reading on
+ * a boundary flips the fan between two speeds every pass. */
+static const uint8_t  STEP        = 10;    // counts per speed step
+static const uint8_t  STEP_HYST   = 4;     // counts
+static const uint8_t  TOP_LEVEL   = 7;     // 30 % + 7 x 10 % = 100 %
+static const uint8_t  DUTY_FLOOR  = 30;    // %; most fans do not start below
+static const uint8_t  DUTY_STEP   = 10;    // %
+
+/* 5 MHz / (PER + 1) = 25.000 kHz, Intel's 21-28 kHz window. analogWrite()'s
+ * PER = 255 misses it at every clock - see README. */
+static const uint8_t  PWM_PER     = 199;
+static const uint16_t KICK_MS     = 300;   // 100 % on every stopped -> running
+static const uint16_t STALL_MS    = 2000;  // running, no tach pulse this long
+static const uint8_t  TACH_MIN    = 3;     // pulses/s; below this, no tach
+
 /* Counts -> centi-degrees, display only. 16 knots at 5 C, linear between.
  * 32 bytes of flash for 0.09 C worst-case error, which is an order of magnitude
  * under what the thermistor is accurate to. */
@@ -90,7 +115,13 @@ static const uint16_t LUT[16] PROGMEM = {
     669, 713, 753, 788, 819, 846, 870, 890
 };
 
-static bool     fanOn    = false;
+enum FanType : uint8_t { FAN_2W, FAN_3W, FAN_4W };
+
+static bool     fanOn    = false;   // Q1 on
+static FanType  fanType  = FAN_2W;  // detected at boot on v2; always 2W on v1
+static uint8_t  level    = 0;       // speed step, 4-wire only
+static bool     stall    = false;   // commanded running, tach silent
+static uint16_t rpm      = 0;
 static bool     fault    = false;   // NTC open or shorted
 static bool     potFault = false;   // wiper open or lead broken
 static uint16_t lastAdc  = 0;
@@ -110,7 +141,73 @@ static int16_t countsToCentiC(uint16_t adc) {
     return 7500;
 }
 
-static void fanSet(bool on) { fanOn = on; digitalWrite(PIN_FAN, on ? HIGH : LOW); }
+#ifdef FAN_HW_V2
+static volatile uint16_t tachPulses = 0;
+static void onTach() { tachPulses++; }
+static uint32_t lastTachMs = 0;
+static uint32_t lastPassMs = 0;   // RPM window, one loop pass
+
+static uint16_t takePulses() {
+    noInterrupts();
+    uint16_t n = tachPulses;
+    tachPulses = 0;
+    interrupts();
+    return n;
+}
+
+/* Q2 INVERTS: PB2 high pulls the fan's PWM line low. So the fan's duty is the
+ * time PB2 is LOW, and 100 % is the compare output switched off with PB2 held
+ * low - Q2 off, the line released. That is also the reset state (Q2's gate
+ * pull-down), and the state whenever the fan is stopped: with Q1 off the fan's
+ * ground floats, and Q2 on would hand it a ground path through its PWM pin. */
+static void pwmDuty(uint8_t pct) {
+    if (pct >= 100) {
+        TCA0.SINGLE.CTRLB &= ~TCA_SINGLE_CMP2EN_bm;
+        digitalWrite(PIN_PWM, LOW);
+    } else {
+        TCA0.SINGLE.CMP2BUF = (uint16_t)(PWM_PER + 1) * (100 - pct) / 100;
+        TCA0.SINGLE.CTRLB |= TCA_SINGLE_CMP2EN_bm;
+    }
+}
+
+static void pwmBegin() {
+    pinMode(PIN_PWM, OUTPUT);
+    digitalWrite(PIN_PWM, LOW);               // released: fan full speed
+    takeOverTCA0();                           // stops and hard-resets TCA0;
+                                              // millis() is on TCD0, untouched
+    TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
+    TCA0.SINGLE.PER   = PWM_PER;
+    TCA0.SINGLE.CMP2  = 0;
+    TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1_gc | TCA_SINGLE_ENABLE_bm;
+}
+#else
+static void pwmDuty(uint8_t) {}
+#endif
+
+/* Starting releases PWM first, so the fan comes up at 100 % - which IS the
+ * kick a 4-wire fan needs to start from below its floor. Stopping releases
+ * PWM before Q1 opens, for the floating-ground reason above. */
+static void fanSet(bool on) {
+    if (on == fanOn) return;
+    pwmDuty(100);
+    digitalWrite(PIN_FAN, on ? HIGH : LOW);
+    fanOn = on;
+    level = 0;
+#ifdef FAN_HW_V2
+    if (on) {
+        if (fanType == FAN_4W) delay(KICK_MS);
+        lastTachMs = millis();                // the stall clock starts now
+        (void)takePulses();
+    }
+#endif
+}
+
+/* Speed step for a reading `above` counts over the setpoint. */
+static uint8_t levelFor(int16_t above) {
+    if (above <= 0) return 0;
+    uint16_t l = (uint16_t)above / STEP;
+    return l > TOP_LEVEL ? TOP_LEVEL : (uint8_t)l;
+}
 
 /* The wake button is LATCHED, not polled. Polling it once per pass only saw a
  * press held at that instant, so a tap during the 1 s wait was lost. A falling
@@ -144,6 +241,14 @@ void setup() {
     pinMode(PIN_LED, OUTPUT);
     pinMode(PIN_WAKE, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_WAKE), onWake, FALLING);
+#ifdef FAN_HW_V2
+    pwmBegin();
+    /* NO internal pull-up: with the 10k series resistor it would form a divider
+     * that holds a tach LOW at up to 1.7 V, above the 1.5 V threshold. The
+     * pull-up is external, on the fan's side of the series resistor. */
+    pinMode(PIN_TACH, INPUT);
+    attachInterrupt(digitalPinToInterrupt(PIN_TACH), onTach, FALLING);
+#endif
 
     oled.begin();
     oled.setFont(FONT8X16);
@@ -152,8 +257,37 @@ void setup() {
     oled.setCursor(0, 0);
     oled.print(F("FAN SELFTEST"));
 
+#ifdef FAN_HW_V2
+    /* Detect the fan inside the self-test. Full speed, count the last second:
+     * no tach is a 2-wire fan. Then 30 %: a 4-wire fan slows, a 3-wire fan
+     * ignores the PWM line. Every misdetection fails toward MORE cooling - see
+     * README. A 3/4-wire fan dead at boot reads as 2-wire and loses only the
+     * stall alarm. */
+    delay(SELFTEST_MS - 1000);
+    (void)takePulses();
+    delay(1000);
+    uint16_t full = takePulses();
+    if (full < TACH_MIN) {
+        fanType = FAN_2W;
+    } else {
+        rpm = full * 30;                      // 2 pulses per revolution
+        pwmDuty(DUTY_FLOOR);
+        delay(1000);
+        (void)takePulses();
+        delay(1000);
+        uint16_t slow = takePulses();
+        pwmDuty(100);
+        fanType = ((uint32_t)slow * 10 < (uint32_t)full * 7) ? FAN_4W : FAN_3W;
+    }
+    lastTachMs = lastPassMs = millis();
+    (void)takePulses();
+    oled.setCursor(0, 2);
+    oled.print(fanType == FAN_4W ? F("4W ") : fanType == FAN_3W ? F("3W ") : F("2W "));
+    if (fanType != FAN_2W) { oled.print(rpm); oled.print(F(" rpm")); }
+#else
     delay(SELFTEST_MS);        // exercise the fan; a controller that has never
                                // proven the fan turns has not been tested
+#endif
     /* tinyAVR 0/1-series has the NEW watchdog, not the classic AVR one, so
      * wdt_enable(WDTO_8S) does not exist here - the period goes straight into
      * WDT.CTRLA behind the configuration-change protection. 8K cycles of the
@@ -185,6 +319,29 @@ void loop() {
     else if (!fanOn && lastAdc >= setpoint)        fanSet(true);
     else if ( fanOn && lastAdc <= setpoint - HYST) fanSet(false);
 
+#ifdef FAN_HW_V2
+    /* Tach: RPM for the display, and a stall is running with no pulse for
+     * STALL_MS. fanSet() restarts the clock, so spin-up is not a stall. */
+    uint32_t now = millis();
+    uint16_t pulses = takePulses();
+    if (pulses) lastTachMs = now;
+    if (now > lastPassMs) rpm = (uint32_t)pulses * 30000UL / (now - lastPassMs);
+    lastPassMs = now;
+    stall = fanOn && fanType != FAN_2W && (now - lastTachMs > STALL_MS);
+#endif
+
+    /* Speed, 4-wire only. Step up at a boundary, down STEP_HYST below it. In
+     * the hysteresis band under the setpoint, level 0 holds the floor until
+     * the off point. A sensor fault or a stall overrides to full. */
+    if (fanOn && fanType == FAN_4W) {
+        int16_t above = (int16_t)lastAdc - (int16_t)setpoint;
+        uint8_t up    = levelFor(above);
+        uint8_t down  = levelFor(above + STEP_HYST);
+        if (up > level)        level = up;
+        else if (down < level) level = down;
+        pwmDuty((fault || stall) ? 100 : DUTY_FLOOR + DUTY_STEP * level);
+    }
+
     if (wakeTapped || digitalRead(PIN_WAKE) == LOW) {
         wakeTapped = false;
         displayOn = true; displayOnSince = millis();
@@ -202,10 +359,21 @@ void loop() {
             oled.print(F("SENSOR FAULT"));
         } else {
             oled.print(c / 100); oled.print('.'); oled.print((c % 100) / 10);
-            oled.print(F(" C   "));
+            oled.print(F(" C  "));
+            if (fanOn && fanType != FAN_2W) { oled.print(rpm); oled.print(F("rpm")); }
+            oled.print(F("      "));      // clear a longer previous line
         }
         oled.setCursor(0, 2);
-        oled.print(fanOn ? F("FAN ON  ") : F("fan off "));
+        if (stall)                  oled.print(F("STALL   "));
+        else if (!fanOn)            oled.print(fanType == FAN_2W ? F("fan off ")
+                                             : fanType == FAN_3W ? F("3W off  ")
+                                                                 : F("4W off  "));
+        else if (fanType == FAN_2W) oled.print(F("FAN ON  "));
+        else if (fanType == FAN_3W) oled.print(F("3W ON   "));
+        else {
+            uint8_t d = fault ? 100 : DUTY_FLOOR + DUTY_STEP * level;
+            oled.print(F("4W ")); oled.print(d); oled.print(d < 100 ? F("%  ") : F("% "));
+        }
         /* Setpoint through the SAME LUT as the reading, so both carry identical
          * calibration and any error in the table cancels between them. */
         int16_t sp = countsToCentiC(setpoint);
@@ -213,7 +381,7 @@ void loop() {
         oled.print(potFault ? F("! ") : F("  "));
     }
 
-    flash(fault || potFault ? 3 : (fanOn ? 2 : 1));
+    flash(fault || potFault || stall ? 3 : (fanOn ? 2 : 1));
     /* The MCU does not sleep - it waits awake. Self-heating at this duty is
      * well inside what an on/off enclosure fan cares about (README). */
     for (uint8_t i = 0; i < 100 && !wakeTapped; i++) delay(10);
