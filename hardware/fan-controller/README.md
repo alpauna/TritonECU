@@ -438,7 +438,17 @@ reaches.
 
 ## v2 — 3- and 4-wire Intel fans
 
-Planned, not built. The changes are larger than "add a PWM pin".
+**Laid out and reviewed 2026-10-01, ready to order — not yet built.**
+`Schematic/` carries the V2 schematic, gerbers
+(`FanTempController-Gerber-V2.zip`) and BOM (`FanTempController-BOM-V2.csv`):
+**56.26 × 20.45 mm**, 3 × M2 at **2.20 mm** (the v1 hole fixed). Checked on
+the copper, not just the symbol: `CN2` pad 1 reaches `Q1`'s drain (Load), pad 2
+reaches `H1` pin 2 (FAN+), pad 3 `R8`/`R9`, pad 4 `Q2`'s drain. Both fan-current
+paths — `H1`→`CN2` FAN+ and `CN2`→`Q1` Load — are **1.0 mm**, ~2.5 A at a
+10 °C rise on 1 oz; the return is the ground pour. The v2 firmware has still
+never run on hardware.
+
+The changes are larger than "add a PWM pin".
 
 ### Q1 stops being the control element
 
