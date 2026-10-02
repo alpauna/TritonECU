@@ -438,7 +438,12 @@ reaches.
 
 ## v2 — 3- and 4-wire Intel fans
 
-**Laid out and reviewed 2026-10-01, ready to order — not yet built.**
+**Re-laid out and reviewed 2026-10-02 with the ATtiny1616-MNR and serial —
+ready to order, not yet built.** Schematic checked pin for pin (`U2`, exposed
+pad to GND with four vias into the pour); `H3` pins 8/9 reach `R13`/`R14`. See
+[The MCU is an ATtiny1616](#the-mcu-is-an-attiny1616-vqfn-20) and
+[`Schematic/ATTINY1616-MNR-Datasheet.pdf`](Schematic/ATTINY1616-MNR-Datasheet.pdf).
+
 `Schematic/` carries the V2 schematic, gerbers
 (`FanTempController-Gerber-V2.zip`) and BOM (`FanTempController-BOM-V2.csv`):
 **56.26 × 20.45 mm**, 3 × M2 at **2.20 mm** (the v1 hole fixed). Checked on
@@ -449,6 +454,52 @@ paths — `H1`→`CN2` FAN+ and `CN2`→`Q1` Load — are **1.0 mm**, ~2.5 A at 
 never run on hardware.
 
 The changes are larger than "add a PWM pin".
+
+### The MCU is an ATtiny1616, VQFN-20
+
+**Decided 2026-10-02:** cheaper and smaller than the 1614 in SOIC-14, and the
+same part as far as anything here can tell. Same 16 KB / 2 KB, same
+peripherals, and the datasheet's Table 5-1 gives **every pin the same
+functions** and TCD0 still runs `millis()`. The `attiny1614_v2` environment
+builds for `board = ATtiny1616`.
+
+**Its spare pins bought a serial port (2026-10-02).** The PWM moves from PB2
+to **PB5**, TCA0 WO2's *alternate* pin (`PORTMUX.CTRLC` bit `TCA02`; the
+datasheet confirms it works in the normal 16-bit mode — only `TCA03`–`05` are
+split-mode only). That hands USART0 its default pins, **TX on PB2 and RX on
+PB3**, with no remapping. See [Serial status](#serial-status).
+
+Pin numbers, v1 against v2:
+
+| signal | port | SOIC-14 (v1) | **VQFN-20** |
+|---|---|--:|--:|
+| VDD | — | 1 | **4** |
+| GND | — | 14 | **3** + exposed pad |
+| Wake | PA2 | 12 | **1** |
+| NTC | PA3 | 13 | **2** |
+| Setpoint | PA4 | 2 | **5** |
+| Tach | PA5 | 3 | **6** |
+| Status | PA6 | 4 | **7** |
+| Fan gate | PA7 | 5 | **8** |
+| PWM | PB2 → **PB5** | 7 | **9** |
+| Serial TX | PB2 | — | **12** |
+| Serial RX | PB3 | — | **11** |
+| SDA | PB1 | 8 | **13** |
+| SCL | PB0 | 9 | **14** |
+| UPDI | PA0 | 10 | **19** |
+
+Unused on VQFN-20: PA1 (20), PB4 (10), PC0–PC3 (15–18).
+
+**The exposed pad goes to GND.** The datasheet's package drawing shows a
+1.7 mm pad but does not say where to connect it; ground is the standard
+practice for these Microchip QFNs, and it is also the pad that anchors a 3 mm
+part mechanically. Give it vias into the pour. The V2 sheet ties it (`U2`
+pin 21) to GND.
+
+**Hand assembly is the cost.** 0.4 mm pitch with no visible leads wants a
+stencil and hot air, or fab assembly — the SOIC-14 could be done with an iron.
+The thermal tongue is unaffected: the MCU sits at the far end of the board
+either way.
 
 ### Q1 stops being the control element
 
@@ -580,17 +631,45 @@ fail-to-cooling as the sensor fault. Ignored for the 300 ms kick and the first
 
 #### Pin and timer
 
-- **PWM: `PB2`, TCA0 WO2** (default PORTMUX), single-slope, `PER = 199` at
-  5 MHz for 25.000 kHz — see the table above. **Confirmed** against the
-  ATtiny1614 datasheet, Table 5-1: WO2 is on PB2 (SOIC-14 pin 7) at its
-  default position, no PORTMUX setting. PB2 is also USART0's default TxD,
-  which this firmware does not use.
+- **PWM: TCA0 WO2**, single-slope, `PER = 199` at 5 MHz for 25.000 kHz — see
+  the table above. On the v2 board's 1616 it is routed to its alternate pin,
+  **PB5**, to leave PB2 for serial TX. On the bench 1614, which has no PB5, it
+  stays on **PB2** at its default position (Table 5-1, SOIC-14 pin 7). The
+  firmware picks by MCU; the compiled 1616 image carries the `TCA02` write and
+  the 1614 image does not.
 - **TCA0 is free.** This build runs `millis()` on TCD0 (`MILLIS_USE_TIMERD0` in
   the compile flags), so taking TCA0 over does not touch timekeeping. Call
   `takeOverTCA0()` first so `analogWrite()` cannot reconfigure it.
 - **Tach: `PA5`**, as reserved, counted by pin interrupt; 2 pulses per
   revolution.
 - **Display line 2** gains the duty: `FAN 60%` replaces `FAN ON`.
+
+### Serial status
+
+**v2 prints one line per loop pass, 115200 8N1, on `H3` pin 8 (TX).** Counts
+*and* degrees, because the control law runs on counts and tuning wants them:
+
+```
+boot fan=4W full_rpm=2400 slow_rpm=900 oled=1
+adc=652 t=38.2 set=640 fan=1 duty=40 rpm=1380 stall=0 fault=0 pot=0
+```
+
+The boot line carries the detection *evidence* — both RPM readings, not just
+the verdict — so a misread fan shows by how much.
+
+- **Transmit only.** RX is wired (`H3` pin 9) but this firmware never reads it.
+  Its **internal pull-up** is on, so an unplugged header idles high rather than
+  floating noise into the receiver.
+- **No external pull-ups.** TX is driven high by the USART between bytes; it
+  floats only through reset, costing at most one junk character at power-up.
+- **`R13`/`R14`, 1 k in series at the chip.** An adapter plugged into an
+  unpowered board would otherwise drive 5 V through PB3's protection diode
+  and half-power the MCU; 1 k holds that to ~4 mA, inside the datasheet's
+  15 mA for pins at or below 5.5 V. It also turns a TX-to-TX miswire into a
+  few milliamps. At 115200 baud the RC is nanoseconds against an 8.7 µs bit.
+- **5 V logic**, straight into the FT232 used for UPDI — move one wire.
+- **Bench 1614:** TX moves to **PA1** (USART0's alternate pin); its alternate
+  RX would be PA2, the wake button, so the receiver is switched off there.
 
 ### The board detects its fan from the tach, at boot
 
@@ -648,14 +727,17 @@ PC fan header, and 12 V comes onto the board to feed it. Designators follow
      2 FAN+   +12V from H1
      3 SENSE  tach: R8 10k pull-up to +5V -> R9 10k series -> PA5 (TACH)
                     at PA5: D2 BZT52C5V1 5.1V zener to GND, C3 1 nF to GND
-     4 PWM    Q2 AO3400A drain (open drain); gate <- R10 220R <- PB2,
+     4 PWM    Q2 AO3400A drain (open drain); gate <- R10 220R <- PB5,
               R11 10k gate PULL-DOWN
 
  H1  12 V in, PZ254V-11-02P     1 GND   2 FAN+
- H2  8-pin, LAIL-PZ2.54-8P-L    1 GND  2 +5V  3 Status  4 Wake  5 UPDI
-                                6 SCL  7 SDA  8 GND
+ H3  10-pin, PH2.54-1X10P-H25   1 GND  2 +5V  3 Status  4 Wake  5 UPDI
+                                6 SCL  7 SDA  8 TX  9 RX  10 GND
+ R13 1k, PB2 -> TX              series: limits back-powering and a TX-TX miswire
+ R14 1k, PB3 -> RX              same; no pull-ups on either line - see Serial
  D1  1N4148W, Q1 drain -> FAN+, now permanently across the fan
  R12 1k, PA6 -> Status          the LED's series resistor, on board at last
+                                (v1's H2 is v2's H3; Status is still pin 3)
 ```
 
 **CN2 is the Molex 47053-1000, not a generic 2510 header.** The first draft
@@ -683,8 +765,8 @@ and `Q1` for 2 A; `Q1` is rated 5.7 A.
 
 #### Q2's gate is pulled DOWN — the opposite of Q1, for the same reason
 
-The PWM line is inverted by `Q2`: PB2 high pulls the fan's PWM input low. So a
-floating PB2 must leave `Q2` **off**, the line released, and the fan at **full
+The PWM line is inverted by `Q2`: PB5 high pulls the fan's PWM input low. So a
+floating PB5 must leave `Q2` **off**, the line released, and the fan at **full
 speed** — which is a gate pull-down. `Q1` gets a pull-up and `Q2` a pull-down,
 and both fail to the fan running. Put that on the schematic next to both parts,
 or the next tidy-up "corrects" one to match the other.
@@ -693,7 +775,7 @@ or the next tidy-up "corrects" one to match the other.
 with a 220 Ω gate resistor and a 10 k gate resistor, look like a copy-paste —
 and the one difference that matters is which rail the 10 k goes to. Label it
 on both: *`Q1` pull-UP — fan on if PA7 floats*, *`Q2` pull-DOWN — fan full
-speed if PB2 floats*. The V2 sheet carries both: *pull up not pull down* on
+speed if PB5 floats*. The V2 sheet carries both: *pull up not pull down* on
 `R2`, *pull down, typical low side switch configuration* on `R11`.
 
 #### The tach input is built for a fan ground that floats
@@ -727,9 +809,13 @@ through its PWM input. The firmware releases PWM before it opens `Q1`.
 #### Bench path on a v1 board
 
 v1's `H1` already switches the fan's ground through `Q1` — the same topology. A
-v1 board with wires bodged to **PB2 (SOIC-14 pin 7)** and **PA5 (pin 3)**, the
+v1 board with wires bodged to **PB2 (SOIC-14 pin 7)**, **PA5 (pin 3)** and,
+for serial, **PA1 (pin 11)**, the
 tach network and `Q2` on a scrap of protoboard, and a 4-wire fan on a bench
-12 V, runs the v2 firmware before any v2 board exists.
+12 V, runs the v2 firmware before any v2 board exists. That board still has a
+1614, so it uses its own environment: `pio run -e attiny1614_v2_bench -t upload`.
+Flashing `attiny1614_v2` onto it fails at avrdude's signature check rather than
+writing the wrong image.
 
 ## Staging: fit two boards, turn the knobs
 
@@ -789,9 +875,10 @@ assembled enclosure first, watch what the exhaust actually idles at under load,
 and set these from that. If idle sits at 35 °C the fan will never stop, and the
 thresholds should move rather than the box run hot.
 
-That is the trade for the small board: no serial, no telemetry. `LED1` gives
-heartbeat, fan state and sensor fault, which is enough to *diagnose* but not
-enough to *tune*.
+On v1 that was the trade for the small board: no serial, no telemetry. `LED1`
+gives heartbeat, fan state and sensor fault, which is enough to *diagnose* but
+not enough to *tune*. **v2 has [serial status](#serial-status)** — tune from
+that.
 
 ## Status LED
 

@@ -19,9 +19,14 @@
  * resets on a hang, and reset floats the pin. The one fault that needs catching
  * in software is an OPEN NTC — see ADC_OPEN.
  *
- * FAN_HW_V2 adds the 3/4-wire fan: 25 kHz PWM on PB2 through Q2, tach on PA5,
- * fan type detected at boot. Without it this builds the v1 board exactly - v1
- * has no pads on PB2 or PA5. See README, v2.
+ * FAN_HW_V2 adds the 3/4-wire fan: 25 kHz PWM through Q2, tach on PA5, fan
+ * type detected at boot, and a status line on serial once a pass. Without it
+ * this builds the v1 board exactly - v1 has no pads for any of that.
+ *
+ * The v2 board is an ATtiny1616 (VQFN-20): PWM on PB5, USART0 on its default
+ * PB2 (TX) / PB3 (RX). The bench build is a v1 board's ATtiny1614, which has
+ * no PB5, so there PWM stays on PB2 and TX moves to PA1. The MCU decides which;
+ * nothing else differs. See README, v2.
  */
 
 #include <Arduino.h>
@@ -34,8 +39,18 @@ static const uint8_t PIN_LED  = PIN_PA6;   // status, ACTIVE LOW: +5V -> R -> LE
 static const uint8_t PIN_WAKE = PIN_PA2;   // SW1 to GND, wakes the display
 static const uint8_t PIN_SET  = PIN_PA4;   // RV1 wiper, setpoint
 #ifdef FAN_HW_V2
-static const uint8_t PIN_PWM  = PIN_PB2;   // TCA0 WO2 -> 220R -> Q2 AO3400A, INVERTED
+#if defined(__AVR_ATtiny1616__)
+/* WO2's ALTERNATE pin (PORTMUX.CTRLC TCA02), which frees PB2/PB3 for USART0 at
+ * its default pins. The datasheet: TCA02 works in normal mode, unlike TCA03-05
+ * which are split-mode only. */
+static const uint8_t PIN_PWM  = PIN_PB5;   // TCA0 WO2 alt -> R10 220R -> Q2, INVERTED
+#define PWM_ALT_PIN 1
+#else
+static const uint8_t PIN_PWM  = PIN_PB2;   // bench 1614: TCA0 WO2 default
+#define PWM_ALT_PIN 0
+#endif
 static const uint8_t PIN_TACH = PIN_PA5;   // 10k series + 5V1 zener, NO pull-up
+static const uint32_t BAUD    = 115200;
 #endif
 
 /* Thresholds in ADC counts, 10-bit, VCC reference. 10k NTC B=3950 as the top
@@ -175,10 +190,31 @@ static void pwmBegin() {
     digitalWrite(PIN_PWM, LOW);               // released: fan full speed
     takeOverTCA0();                           // stops and hard-resets TCA0;
                                               // millis() is on TCD0, untouched
+#if PWM_ALT_PIN
+    PORTMUX.CTRLC |= PORTMUX_TCA02_bm;        // WO2 -> PB5
+#endif
     TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
     TCA0.SINGLE.PER   = PWM_PER;
     TCA0.SINGLE.CMP2  = 0;
     TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1_gc | TCA_SINGLE_ENABLE_bm;
+}
+/* Serial is OUT only in this firmware: one status line per pass, for tuning
+ * and bring-up. RX is wired on the v2 board but unread. Its internal pull-up
+ * holds the line idle when nothing is plugged into H3, rather than letting it
+ * float and clock noise into the receiver. R13/R14 (1k) on the board limit
+ * back-powering from a connected adapter while the board is off.
+ *
+ * Bench 1614: TX on PA1 (USART0 alternate). Its RX would be PA2 - the wake
+ * button - so the receiver is switched off and PA2 handed back. */
+static void serialBegin() {
+#if PWM_ALT_PIN
+    Serial.begin(BAUD);
+    PORTB.PIN3CTRL |= PORT_PULLUPEN_bm;       // RX idle-high when unplugged
+#else
+    Serial.swap(1);                           // TX PA1, RX PA2
+    Serial.begin(BAUD);
+    USART0.CTRLB &= ~USART_RXEN_bm;           // PA2 is the wake button
+#endif
 }
 #else
 static void pwmDuty(uint8_t) {}
@@ -285,6 +321,10 @@ void setup() {
 
     digitalWrite(PIN_LED, HIGH);   // dark before the pin becomes an output
     pinMode(PIN_LED, OUTPUT);
+#ifdef FAN_HW_V2
+    serialBegin();                 // before the wake pin: the bench build's
+                                   // USART would otherwise claim PA2 after it
+#endif
     pinMode(PIN_WAKE, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_WAKE), onWake, FALLING);
 #ifdef FAN_HW_V2
@@ -316,6 +356,7 @@ void setup() {
     (void)takePulses();
     delay(1000);
     uint16_t full = takePulses();
+    uint16_t slow = 0;
     if (full < TACH_MIN) {
         fanType = FAN_2W;
     } else {
@@ -324,12 +365,19 @@ void setup() {
         delay(1000);
         (void)takePulses();
         delay(1000);
-        uint16_t slow = takePulses();
+        slow = takePulses();
         pwmDuty(100);
         fanType = ((uint32_t)slow * 10 < (uint32_t)full * 7) ? FAN_4W : FAN_3W;
     }
     lastTachMs = lastPassMs = millis();
     (void)takePulses();
+    /* The detection evidence, not just the verdict: if a fan is misread, this
+     * line shows by how much. */
+    Serial.print(F("boot fan="));
+    Serial.print(fanType == FAN_4W ? F("4W") : fanType == FAN_3W ? F("3W") : F("2W"));
+    Serial.print(F(" full_rpm=")); Serial.print((uint32_t)full * 30);
+    Serial.print(F(" slow_rpm=")); Serial.print((uint32_t)slow * 30);
+    Serial.print(F(" oled=")); Serial.println(hasOled ? 1 : 0);
     if (hasOled) {
         oled.setCursor(0, 2);
         oled.print(fanType == FAN_4W ? F("4W ") : fanType == FAN_3W ? F("3W ") : F("2W "));
@@ -423,6 +471,23 @@ void loop() {
         oled.print(potFault ? F("! ") : F("  "));
     }
 
+#ifdef FAN_HW_V2
+    /* One line per pass. Counts AND degrees: the control law runs on counts,
+     * so tuning wants them; degrees are for reading. */
+    Serial.print(F("adc="));    Serial.print(lastAdc);
+    Serial.print(F(" t="));     { int16_t c = countsToCentiC(lastAdc);
+                                  Serial.print(c / 100); Serial.print('.');
+                                  Serial.print((c % 100) / 10); }
+    Serial.print(F(" set="));   Serial.print(setpoint);
+    Serial.print(F(" fan="));   Serial.print(fanOn ? 1 : 0);
+    Serial.print(F(" duty="));  Serial.print(fanType == FAN_4W && fanOn
+                                    ? ((fault || stall) ? 100 : DUTY_FLOOR + DUTY_STEP * level)
+                                    : (fanOn ? 100 : 0));
+    Serial.print(F(" rpm="));   Serial.print(rpm);
+    Serial.print(F(" stall=")); Serial.print(stall ? 1 : 0);
+    Serial.print(F(" fault=")); Serial.print(fault ? 1 : 0);
+    Serial.print(F(" pot="));   Serial.println(potFault ? 1 : 0);
+#endif
     flash(fault || potFault || stall ? 3 : (fanOn ? 2 : 1));
     /* The MCU does not sleep - it waits awake. Self-heating at this duty is
      * well inside what an on/off enclosure fan cares about (README). */
