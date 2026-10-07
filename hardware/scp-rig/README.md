@@ -462,7 +462,11 @@ signal you are trying to capture.
 
    *On the truck none of this arises:* the bus idles with Bus− high and Bus+
    low, a large negative differential, so the output falls cleanly.
-3. **Remove R7. Set GP3 to input.** Then plug into the 2003.
+3. **Remove R7, the `H3` strap and the 220 k. Flash the vehicle image** —
+   `pio run -t upload`, the default, which leaves GP3 an input. **Read the rig
+   before the DLC:** every report must say `mode=VEHICLE   GP3 input`. The
+   loopback image (`-e pico_loopback`) says `mode=LOOPBACK  GP3 DRIVING` and must
+   never reach a vehicle. Then plug into the 2003.
 4. Capture per [`phase0-capture-protocol.md`](../../docs/phase0-capture-protocol.md).
 
 ## BOM

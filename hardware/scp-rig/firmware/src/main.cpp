@@ -54,7 +54,15 @@ static const uint32_t CAL_LOW_NS  = (uint32_t)(CAL_CYCLES_LOW  * 1e9f / PIO_HZ +
 // has, which makes a wrong answer obvious rather than plausible.
 static const uint32_t GEN_HIGH_US = 8;
 static const uint32_t GEN_LOW_US  = 16;
-#define LOOPBACK 1
+
+// VEHICLE-SAFE BY DEFAULT. LOOPBACK drives GP3, and on the board GP3 reaches
+// Bus+ through R7 - on a truck, that is a test pattern injected onto a live bus
+// the PCM is talking on. So the default build leaves GP3 an input, and only the
+// pico_loopback environment turns the generator on. Forgetting a flag gets the
+// safe image, not the dangerous one.
+#ifndef LOOPBACK
+#define LOOPBACK 0
+#endif
 
 static PIO      pio = pio0;
 static uint     sm;
@@ -122,6 +130,10 @@ void loop() {
         Serial.printf("\n--- %lu edges, %lu overruns, %lu over-range ---\n",
                       (unsigned long)edges, (unsigned long)dropped,
                       (unsigned long)hist.overRange());
+        // Every report says which image is running, so it can be checked on the
+        // bench BEFORE the rig is plugged into the DLC.
+        Serial.println(LOOPBACK ? "  mode=LOOPBACK  GP3 DRIVING - bench only, never on a vehicle"
+                                : "  mode=VEHICLE   GP3 input");
         if (!n) { Serial.println("  no clusters — is anything connected to GP2?"); return; }
         for (uint32_t i = 0; i < n; i++)
             Serial.printf("  %u.%03u us  x%-8lu  span %u.%03u-%u.%03u us\n",
