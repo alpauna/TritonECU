@@ -59,7 +59,7 @@ Building the rig with the shipping values means Phase 0 validates the board.
 
   BENCH LOOPBACK ONLY — remove before connecting to a vehicle:
         Pico GP3 ──[ R7 1k ]──► the SCP+ node, ahead of R1
-        and strap SCP− to GND
+        and SCP− ──[ 220k ]──► 3V3     (NOT to GND - see Build order, 2)
 ```
 
 ## Where to connect — DLC, not the 104-pin
@@ -420,9 +420,48 @@ signal you are trying to capture.
 
 1. **Assemble RX only.** Confirm with a meter: 2.5 V at IN+ when SCP+ is held at
    5 V on the bench, and that both clamps are the right way round.
-2. **Loopback.** Fit R7, strap SCP− to GND, generate PWM patterns on GP3, decode
-   on GP2. *If the decoder cannot read a frame it just generated, it will not
-   read the truck.*
+2. **Loopback.** Fit R7, tie **SCP− to 3V3 through 220 k**, generate PWM
+   patterns on GP3, decode on GP2. *If the decoder cannot read a frame it just
+   generated, it will not read the truck.*
+
+   **Not SCP− to GND — that latches the comparator.** Found on the bench
+   2026-10-07: one edge, then GP2 stuck at 3.3 V. With the Bus− divider grounded
+   IN− is 0 V, and `R5`'s ±35 mV of hysteresis puts the *falling* threshold at
+   IN+ < −35 mV — which GP3, swinging IN+ from 0 to 1.64 V, can never reach. The
+   first pulse switches the output high and it stays there. The earlier
+   8.000/16.000 µs validation jumpered GP3 straight to GP2, so it never went
+   through the comparator and could not have caught this.
+
+   220 k sets IN− = 3.3 × 100k / 420k = **0.79 V**, near the middle of the
+   0–1.64 V swing: both thresholds clear by ~0.75 V. **The middle matters, not
+   just "above zero":** the 1.15 µs front-end RC delays every edge, and only a
+   crossing near 50 % delays rising and falling edges equally (RC·ln 2 each) so
+   the delays cancel out of a pulse width. An off-centre reference would read
+   the 8 µs pulses long or short.
+
+   **Measured with 220 k, 2026-10-07 — PASS.** 2.9 M edges through the
+   comparator, clusters balanced to 0.06 %:
+
+   | | expected | measured | error | span |
+   |---|---|---|---|---|
+   | high | 8.000 µs | **8.058 µs** | +58 ns | 7.625–8.375 µs |
+   | low | 16.000 µs | **15.877 µs** | −123 ns | 15.500–16.250 µs |
+
+   8 FIFO overruns in 2.9 M edges (~3 ppm) under the loopback's continuous
+   83 k edges/s — far denser than a real bus.
+
+   **The ~90 ns bias is the reference sitting 34 mV under mid-swing**, and the
+   model predicts it: with ±35 mV of hysteresis, 0.786 V puts the rising
+   crossing at 50.0 % of the swing and the falling one at 45.8 %, which
+   through the 1.15 µs RC delays the falling edge ~100 ns more — highs read
+   long. Irrelevant to decoding (an 8-vs-16 µs decision with ~4 µs of margin);
+   **a known offset for Phase 0 measurements**, so subtract it or use the
+   alternative: **200 k sets IN− = 0.825 V, on the midpoint**, predicted within
+   a count of 8.000/16.000. Kept at 220 k for the bench as good enough; 200 k
+   is the value for the next board revision's `H1` reference.
+
+   *On the truck none of this arises:* the bus idles with Bus− high and Bus+
+   low, a large negative differential, so the output falls cleanly.
 3. **Remove R7. Set GP3 to input.** Then plug into the 2003.
 4. Capture per [`phase0-capture-protocol.md`](../../docs/phase0-capture-protocol.md).
 

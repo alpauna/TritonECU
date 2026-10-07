@@ -28,6 +28,17 @@ divider, `H3` injects `LOOP` into Bus+ through 1 kΩ. Driving `LOOP` high puts
 `+` above `−` and the output goes high — non-inverting, so the firmware's
 8.000/16.000 µs calibration carries over unchanged.
 
+> **⚠ Correction 2026-10-07 — `H1` to GND latches the comparator.** The sense
+> is right but the threshold is not: with IN− at 0 V, `R5`'s ±35 mV hysteresis
+> puts the falling threshold below 0 V, out of `LOOP`'s reach. On the bench the
+> output went high on the first pulse and stayed (GP2 a steady 3.3 V). This
+> review checked polarity and missed the threshold. Bench fix: leave `H1` open
+> and tie SCP− to 3V3 through **220 k** (IN− = 0.79 V). **Verified: loopback
+> passes at 8.058 / 15.877 µs**, the ~90 ns bias from 0.79 V sitting 34 mV under
+> mid-swing. Next revision: make `H1` select a **200 k** reference to 3V3
+> (IN− = 0.825 V, centred) instead of ground. See the README, Build order
+> step 2.
+
 **And it says so on the drawing:**
 
 > *Strapped on Bench but must be removed when connected to vehicle. Both H1 and
