@@ -32,6 +32,8 @@ PROBES=(
   "303a:1001|Espressif USB-Serial-JTAG"
   "16c0:0483|Teensy serial"
   "16c0:0478|Teensy HalfKay bootloader"
+  "2e8a:0003|Raspberry Pi Pico BOOTSEL (RP2040 bootrom - picotool upload)"
+  "2e8a:000a|Raspberry Pi Pico running arduino-pico (SCP and VR rigs)"
 )
 
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
