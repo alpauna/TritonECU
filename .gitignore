@@ -13,3 +13,10 @@ secrets.ini
 # Service manual archive — 95 MB, and a Ford copyright
 docs/**/*.zip
 
+
+# KiCad per-user and recovery files - local history, autosave restores, locks, UI state
+**/.history/
+**/_restore_backup_*/
+**/*-backups/
+*.lck
+*.kicad_prl
