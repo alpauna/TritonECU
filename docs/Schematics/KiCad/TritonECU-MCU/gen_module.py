@@ -77,14 +77,14 @@ class Sheet:
             self.libs[lib_id] = lib_symbol(lib_id)
         return self.libs[lib_id][1]
 
-    def symbol(self, lib_id, ref, value, x, y, footprint='', rot=0, fields=None, hide_ref=False):
+    def symbol(self, lib_id, ref, value, x, y, footprint='', rot=0, fields=None, hide_ref=False, bom=True):
         pins = self.lib(lib_id)
         f = fields or {}
         props = [('Reference', ref, x, y - 3.81, hide_ref), ('Value', value, x, y + 3.81, False),
                  ('Footprint', footprint, x, y, True), ('Datasheet', '', x, y, True)]
         props += [(k, v, x, y, True) for k, v in f.items()]
         t = (f'\t(symbol (lib_id "{lib_id}") (at {x:.2f} {y:.2f} {rot}) (unit 1)\n'
-             f'\t\t(exclude_from_sim no) (in_bom {"no" if ref.startswith("#") else "yes"}) (on_board yes) (dnp no)\n'
+             f'\t\t(exclude_from_sim no) (in_bom {"yes" if bom and not ref.startswith("#") else "no"}) (on_board yes) (dnp no)\n'
              f'\t\t(uuid "{U()}")\n')
         for k, v, px, py, hide in props:
             h = ' (hide yes)' if hide else ''
@@ -144,9 +144,12 @@ MCU_NET = {'VSS': 'GND', 'VSSA': 'GND', 'VDD': '+3.3V', 'VDDUSB': '+3.3V', 'VDDS
            'PDR_ON': '+3.3V', 'VDDA': 'VDDA', 'VREF+': 'VDDA', 'VCAP_1': 'VCAP1', 'VCAP_2': 'VCAP2',
            'PH0': 'OSC_IN', 'PH1': 'OSC_OUT', 'PC14': 'OSC32_IN', 'PC15': 'OSC32_OUT'}
 
-FP = {'0402': 'Capacitor_SMD:C_0402_1005Metric', '0603': 'Capacitor_SMD:C_0603_1608Metric',
-      '0805': 'Capacitor_SMD:C_0805_2012Metric', 'R0402': 'Resistor_SMD:R_0402_1005Metric',
-      'FB0603': 'Inductor_SMD:L_0603_1608Metric'}
+# hand-solder pad variants, as on the power board
+FP = {'0402': 'Capacitor_SMD:C_0402_1005Metric_Pad0.74x0.62mm_HandSolder',
+      '0603': 'Capacitor_SMD:C_0603_1608Metric_Pad1.08x0.95mm_HandSolder',
+      '0805': 'Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder',
+      'R0402': 'Resistor_SMD:R_0402_1005Metric_Pad0.72x0.64mm_HandSolder',
+      'FB0603': 'Inductor_SMD:L_0603_1608Metric_Pad1.05x0.95mm_HandSolder'}
 
 def build():
     sh = Sheet()
@@ -167,7 +170,7 @@ def build():
     for i, side in enumerate(mp.SIDES):
         hx, hy = (100 + 32 * i) * G, 30 * G
         ends = sh.symbol('Connector_Generic:Conn_02x18_Odd_Even', f'J{i + 1}', f'Header {side}', hx, hy,
-                         'Connector_PinHeader_1.27mm:PinHeader_2x18_P1.27mm_Vertical',
+                         f'{PROJ}:{HDR_FP}',
                          fields={'MPN': mp.HEADER_MPN, 'Manufacturer': 'Samtec', 'Mate': mp.SOCKET_MPN + ' on the carrier, ' + mp.STACK_NOTE,
                                  'Side': f'{side} - see mcu_pinout.py'})
         for pad, _, _, net in pins:
@@ -205,27 +208,36 @@ def build():
     # row 3: crystals
     y = 110 * G
     sh.text('HSE 8 MHz (CL 8 pF) and LSE 32.768 kHz (CL 7 pF). Load caps = 2 x (CL - stray); confirm with the chosen part', 100 * G, y - 10 * G)
-    e = sh.symbol('Device:Crystal_GND24', 'Y1', '8MHz', 106 * G, y, 'Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm',
+    e = sh.symbol('Device:Crystal_GND24', 'Y1', '8MHz', 106 * G, y, 'Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm_HandSoldering',
                   fields={'Spec': '8 MHz, CL 8 pF, ESR <= 80 ohm, 3225 - part TBD'})
     sh.net('OSC_IN', *e['1'][0]); sh.net('OSC_OUT', *e['3'][0]); sh.net('GND', *e['2'][0])
     n += 1; two(f'C{n}', '10p', FP['0402'], 100 * G, y + 6 * G, 'OSC_IN', 'GND', fields={'Note': 'C0G'})
     n += 1; two(f'C{n}', '10p', FP['0402'], 112 * G, y + 6 * G, 'OSC_OUT', 'GND', fields={'Note': 'C0G'})
-    e = sh.symbol('Device:Crystal', 'Y2', '32.768kHz', 130 * G, y, 'Crystal:Crystal_SMD_2012-2Pin_2.0x1.2mm',
+    e = sh.symbol('Device:Crystal', 'Y2', '32.768kHz', 130 * G, y, 'Crystal:Crystal_SMD_2012-2Pin_2.0x1.2mm_HandSoldering',
                   fields={'Spec': '32.768 kHz, CL 7 pF, ESR <= 70 kohm, 2012 - part TBD'})
     sh.net('OSC32_IN', *e['1'][0]); sh.net('OSC32_OUT', *e['2'][0])
     n += 1; two(f'C{n}', '10p', FP['0402'], 124 * G, y + 6 * G, 'OSC32_IN', 'GND', fields={'Note': 'C0G'})
     n += 1; two(f'C{n}', '10p', FP['0402'], 136 * G, y + 6 * G, 'OSC32_OUT', 'GND', fields={'Note': 'C0G'})
 
-    # SWD: Tag-Connect TC2030 on the module (PA13 SWDIO, PA14 SWCLK, PB3 SWO)
-    e = sh.symbol('Connector:Conn_ARM_SWD_TagConnect_TC2030', 'J5', 'SWD TC2030', 152 * G, y,
-                  'Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical')
-    for num, net in {'1': '+3.3V', '2': 'PA13', '3': 'NRST', '4': 'PA14', '5': 'GND', '6': 'PB3'}.items():
+    # Programming: ST STDC14 (STLINK-V3 native, Samtec FTSH-107) on the module TOP, SMT so it
+    # needs no holes through to the bottom headers. SWD + SWO + NRST, plus the ST-Link VCP on
+    # USART3 PD8 (TX) / PD9 (RX), the same console the Nucleo uses. Pin 13 is the target's RX,
+    # pin 14 the target's TX (UM2448). The same SWD pins also reach the carrier through the headers.
+    e = sh.symbol('Connector:Conn_ST_STDC14', 'J5', 'STDC14 SWD+VCP', 152 * G, y,
+                  'Connector_PinHeader_1.27mm:PinHeader_2x07_P1.27mm_Vertical_SMD',
+                  fields={'MPN': 'FTSH-107-01-L-DV-K', 'Manufacturer': 'Samtec',
+                          'Note': 'ST-Link V3 STDC14; footprint generic 2x07 1.27 SMD - check vs Samtec'})
+    for num, net in {'3': '+3.3V', '4': 'PA13', '5': 'GND', '6': 'PA14', '7': 'GND', '8': 'PB3',
+                     '11': 'GND', '12': 'NRST', '13': 'PD9', '14': 'PD8'}.items():
         sh.net(net, *e[num][0])
+    for num in ('1', '2', '9', '10'):
+        x, yy, _ = e[num][0]
+        sh.items.append(f'\t(no_connect (at {x:.2f} {yy:.2f}) (uuid "{U()}"))\n')
 
     # mounting holes on GND, as the carrier footprint expects
     for i in range(4):
         e = sh.symbol('Mechanical:MountingHole_Pad', f'H{i + 1}', 'M3 standoff', (170 + 6 * i) * G, y,
-                      'MountingHole:MountingHole_3.2mm_M3_Pad_Via')
+                      'MountingHole:MountingHole_3.2mm_M3_Pad_Via', bom=False)
         sh.net('GND', *e['1'][0])
 
     # power flags: +3.3V, GND and VBAT arrive through passive header pins; VDDA comes through the ferrite
@@ -238,6 +250,41 @@ def build():
             100 * G, 140 * G)
     return sh
 
+# ---------------------------------------------------------------- header footprint
+HDR_FP = 'Samtec_TFM-118-22-L-D-A'
+
+def header_footprint():
+    """Samtec TFM-118-22-L-D-A, SMT, for BOTTOM mounting. Pad size, pad offset and
+    the -A alignment holes come from the vendor footprint (mcu_pinout.TFM). Odd
+    pins sit on the y < 0 row, and pins 1/2 are at the RIGHT end of this library
+    view. Flipping the part to the bottom mirrors it, so the numbering then follows
+    mcu_pinout.py, which the carrier footprint also uses. Pin numbers are this
+    project's, by position, not Samtec's: the pins mate by position."""
+    T = mp.TFM
+    w, l = T['pad']
+    t = (f'(footprint "{HDR_FP}"\n\t(version 20260206)\n\t(generator "{MARK}")\n\t(layer "F.Cu")\n'
+         f'\t(descr "Samtec TFM-118-22-L-D-A 2x18 1.27 mm SMT header, 9.91 mm stack with SFM-118-02. '
+         f'Geometry from the Samacsys TFM-118-ZZ-XXX-D-A footprint; numbered for bottom mounting per mcu_pinout.py")\n'
+         f'\t(property "Reference" "REF**" (at 0 -6 0) (layer "F.SilkS") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
+         f'\t(property "Value" "{HDR_FP}" (at 0 6 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
+         f'\t(attr smd)\n')
+    for k in range(36):
+        x = -(k // 2 - 8.5) * mp.PITCH
+        y = -T['off'] if k % 2 == 0 else T['off']
+        t += (f'\t(pad "{k + 1}" smd rect (at {x:.3f} {y:.3f}) (size {w} {l}) '
+              f'(layers "F.Cu" "F.Paste" "F.Mask") (uuid "{U()}"))\n')
+    for x in (-T['align_x'], T['align_x']):
+        t += (f'\t(pad "" np_thru_hole circle (at {x} 0) (size {T["align"]} {T["align"]}) (drill {T["align"]}) '
+              f'(layers "*.Cu" "*.Mask") (uuid "{U()}"))\n')
+    bx, by = T['body']
+    cy = max(by, T['off'] + l / 2) + 0.25
+    for layer, (cw, ch), wd in (('F.CrtYd', (bx + 0.25, cy), 0.05), ('F.Fab', (bx, by), 0.1)):
+        t += (f'\t(fp_rect (start {-cw} {-ch}) (end {cw} {ch}) (stroke (width {wd}) (type solid)) (fill no) '
+              f'(layer "{layer}") (uuid "{U()}"))\n')
+    t += (f'\t(fp_line (start 10.4 -3.6) (end 11.2 -3.6) (stroke (width 0.12) (type solid)) (layer "F.SilkS") (uuid "{U()}"))\n'
+          f'\t(fp_text user "pin 1" (at 10.8 -4.4 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 0.6 0.6) (thickness 0.1))))\n)\n')
+    return t
+
 # ---------------------------------------------------------------- project
 def main():
     os.chdir(HERE)
@@ -248,6 +295,10 @@ def main():
         sys.exit('project is open in KiCad - close it first')
     sh = build()
     sh.write(sch)
+    os.makedirs(f'{PROJ}.pretty', exist_ok=True)
+    open(f'{PROJ}.pretty/{HDR_FP}.kicad_mod', 'w').write(header_footprint())
+    open('fp-lib-table', 'w').write(f'(fp_lib_table\n\t(version 7)\n\t(lib (name "{PROJ}")(type "KiCad")'
+                                    f'(uri "${{KIPRJMOD}}/{PROJ}.pretty")(options "")(descr "TritonECU MCU module parts"))\n)\n')
     pro_path = f'{PROJ}.kicad_pro'
     if not os.path.exists(pro_path):
         pro = json.load(open(os.path.join(HERE, '..', 'TritonECU-Main', 'TritonECU-Main.kicad_pro')))
@@ -255,6 +306,15 @@ def main():
     else:
         pro = json.load(open(pro_path))
     pro['sheets'] = [[sh.root, 'Root']]
+    # 0.5 mm-pitch QFP fan-out: 0.15 mm signals; rails 0.3 mm
+    ns = pro['net_settings']
+    d = next(c for c in ns['classes'] if c['name'] == 'Default')
+    d.update(track_width=0.15, clearance=0.15, via_diameter=0.5, via_drill=0.25)
+    pw = dict(d, name='Power', priority=0, track_width=0.3, via_diameter=0.6, via_drill=0.3)
+    ns['classes'] = [d, pw]
+    # 1.27 mm header pads between plane-connected neighbours only fit one thermal spoke
+    pro['board']['design_settings']['rules']['min_resolved_spokes'] = 1
+    ns['netclass_patterns'] = [{'netclass': 'Power', 'pattern': n} for n in ('+3.3V', 'GND', '/VDDA', '/VCAP1', '/VCAP2')]
     json.dump(pro, open(pro_path, 'w'), indent=2)
     print('schematic written')
 

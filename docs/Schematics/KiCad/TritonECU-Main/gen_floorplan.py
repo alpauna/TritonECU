@@ -233,8 +233,19 @@ def build_footprints():
     def mcu(nets, r=0):
         m = mcu_pinout
         b = ''
-        for num, x, y, _ in m.module_pins():
-            b += pad(num, x, y, m.PIN_PAD, m.PIN_DRILL, 'rect' if num == 'A1' else 'circle', nets.get(num), r)
+        # Samtec SFM-118-02 sockets, SMT: vendor pad geometry (mcu_pinout.SFM), positions from mcu_pinout
+        for num, x, y, sx, sy, _ in m.smt_pads(m.SFM):
+            n = f' (net "{nets[num]}")' if nets.get(num) else ''
+            b += (f'\t\t(pad "{num}" smd rect (at {x:.4f} {y:.4f} {r}) (size {sx} {sy}) '
+                  f'(layers "F.Cu" "F.Paste" "F.Mask"){n} (pintype "passive") (uuid "{U()}"))\n')
+        for x, y, d in m.align_holes(m.SFM):
+            b += (f'\t\t(pad "" np_thru_hole circle (at {x:.4f} {y:.4f} {r}) (size {d} {d}) (drill {d}) '
+                  f'(layers "*.Cu" "*.Mask") (uuid "{U()}"))\n')
+        bx, by = m.SFM['body']
+        for s in m.SIDES:
+            (cx, cy), (ax, ay), _ = m.header_frame(s)
+            hx, hy = (bx, by) if ax else (by, bx)
+            b += fp_rect(cx - hx, cy - hy, cx + hx, cy + hy, 'F.Fab', 0.1)
         for i, (x, y) in enumerate(m.HOLES, 1):
             b += pad(f'MH{i}', x, y, m.HOLE_PAD, m.HOLE_DRILL, net=nets.get(f'MH{i}'), rot_=r)
         h = m.BOARD / 2
@@ -244,8 +255,9 @@ def build_footprints():
         b += fp_txt(f'MCU F767 ({m.BOARD:g} x {m.BOARD:g}, {m.STANDOFF:g} mm standoffs)', 0, 0, 'F.Fab', 1.2)
         b += fp_txt('QFP pin 1', -8, -9, 'F.Fab', 0.8)
         return b
-    fps['MCUModule_F767_Mate'] = ('Carrier side of the TritonECU STM32F767ZIT6 module: four 2x18 1.27 mm headers '
-                                  '(A-D, one per QFP side) and four M3 standoffs (MH1-MH4), from TritonECU-MCU/mcu_pinout.py.', mcu)
+    fps['MCUModule_F767_Mate'] = ('Carrier side of the TritonECU STM32F767ZIT6 module: four Samtec SFM-118-02 2x18 1.27 mm '
+                                  'SMT sockets (A-D, one per QFP side) with -A alignment holes, and four M3 standoffs (MH1-MH4). '
+                                  'From TritonECU-MCU/mcu_pinout.py.', mcu)
     return fps, pg
 
 def kicad_mod(name, descr, body):

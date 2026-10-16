@@ -24,28 +24,49 @@ and USB is the tuning path, so the module needs **no PHY, magnetics or RJ45**.
 | PDR_ON | tied to VDD (internal supervisor on) |
 | BOOT0 | 10 k pull-down, also on header D |
 | NRST | 100 nF on the module; the carrier's TPS3823 drives it via header A |
-| SWD | a Tag-Connect TC2030 footprint on the module, and PA13/PA14 + NRST on the headers so the carrier can have its own SWD header too |
+| Programming | **ST STDC14** (Samtec FTSH-107-01-L-DV-K, 2×7 1.27 mm SMT) on the module **top**, beside the QFP. It is reachable with the module mounted and plugs straight into an STLINK-V3. It carries SWD (PA13/PA14), SWO (PB3), NRST, and the ST-Link VCP on **USART3 PD8 TX / PD9 RX**, the Nucleo's console UART, so the firmware is unchanged. The same pins also reach the carrier through the headers. There is no Tag-Connect: its alignment holes would land under the QFP or a TFM shroud |
 | Regulator | **none.** +3.3 V comes from the power board's TLV62085 through the carrier |
 
 ## Interconnect
 
-Four **2×18, 1.27 mm** headers form a square around the module edge, one on
-each side of the QFP, between the corner standoffs:
+Four **2×18, 1.27 mm surface-mount** headers form a square around the module
+edge, one on each side of the QFP, between the corner standoffs:
 
 | Side | Part | Notes |
 |---|---|---|
-| module | **Samtec TFM-118-22-L-D-A** | shrouded header, through-hole, `-A` alignment pins |
-| carrier | **Samtec SFM-118-02-L-D-A** | Tiger Eye socket |
+| module, bottom | **Samtec TFM-118-22-L-D-A** | SMT shrouded header, body ±13.12 × ±2.96 mm, `-A` alignment pins |
+| carrier, top | **Samtec SFM-118-02-S-D-A-N-K-TR** | SMT socket; `-S` 30 µin gold, `-K` pick-up pad, `-TR` reel |
 | mated | **9.91 mm** | Samtec's listed TFM-xx-22 + SFM-xx-02 stack, which fits the 10 mm standoffs |
+
+> **`-N` (no notch) is fine.** The TFM's polarization feature is a notch, a
+> recess in its shroud, so a socket without the matching key leaves a small
+> gap there and still mates. *(User, 2026-10-16.)*
+>
+> **Polarization comes from the standoffs instead.** The four headers are
+> identical, and with the M3 holes on a square the module would also fit
+> rotated 90°, 180° or 270°, which puts +3.3V and GND on signal pins. **H1, the
+> QFP pin-1 corner, is offset 0.7 mm per axis** (−18.2, −18.2 instead of
+> −17.5, −17.5) on both boards. A check of both finished boards confirms the
+> holes coincide and that no rotated fit exists.
+
+Pad size, pad offset and the Ø1.4 mm alignment holes come from the vendor
+footprints the user imported via Component Search Engine and impart
+(Samacsys `TFM-118-ZZ-XXX-D-A`, Snapeda `SAMTEC-SFM-118-02-X-D-A`). Positions
+come from `mcu_pinout.py`. The two vendor footprints place their alignment
+holes 0.003 mm apart, which is negligible.
+
+The contact rows sit **16.5 / 17.77 mm** from the module centre. That spacing
+leaves about 1 mm between neighbouring TFM bodies at the corners. Because the
+headers are SMT, they use no through-holes, so all four inner layers route
+freely under them.
 
 At 2.54 mm pitch, an 8.5 mm socket plus the 1.5 mm plastic of a male header
 makes 10 mm; the VR board uses that arrangement. At 1.27 mm, generic female
 headers are 4.3 mm tall (some are about 7 mm), and no 8.5 mm part turned up. The
 Samtec pair is the 1.27 mm way to reach about 10 mm. If a different pair is
 chosen, the standoff height can change to suit; the user confirmed that is fine.
-**Before layout:** check the pad and drill sizes, and the `-A` alignment-pin
-holes, against Samtec's TFM/SFM footprints. The current footprint uses the
-generic 1.27 mm pattern, 0.65 mm drill and 1.0 mm pad. Each header carries the pins of
+
+Each header carries the pins of
 the QFP side it faces, in package order, so the module escape is a straight
 fan-out with no crossings. **All 110 port pins are broken out**, everything
 except the four crystal pins. The carrier's pin assignment
@@ -82,7 +103,17 @@ back to HSI, or fail to start HSE, until that change is made.
   and the netlist matches `mcu_pinout.py` pin for pin, both the headers and all
   144 MCU pins.
 - **PCB: 6 layers**, at the user's call: 144 pins fan out to four headers in
-  44 mm. Not started.
+  44 mm. **Placed, not routed.** `gen_module_pcb.py` builds it in KiCad's Python.
+  - **Stack:** F sig / In1 GND / In2 sig / In3 sig / In4 +3.3V / B sig.
+  - **Top:** the QFP.
+  - **Bottom:** decoupling, crystals, and the four SMT headers.
+  - **Checks:** DRC 0 violations and 0 parity errors. Every header pad is checked
+    against `mcu_pinout.py` when the board is built.
+  - **Mating check:** reading both finished boards, all 144 module pads line up
+    with the carrier's SFM pads: same position along the header, same contact
+    row, same net. The M3 and alignment holes coincide too.
+  - **Pin numbers** are by position, from `mcu_pinout.py`, not Samtec's. Male
+    pins mate by position, and a bottom-mounted header is mirrored.
 - Crystal part numbers are still to be chosen (spec is in the schematic fields).
   The 10 pF load caps assume about 3 pF of stray capacitance.
 - USB: PA11/PA12 come out on header C. The connector, ESD protection and VBUS

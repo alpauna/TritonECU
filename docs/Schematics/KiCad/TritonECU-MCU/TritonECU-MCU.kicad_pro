@@ -154,7 +154,7 @@
         "min_hole_to_hole": 0.25,
         "min_microvia_diameter": 0.2,
         "min_microvia_drill": 0.1,
-        "min_resolved_spokes": 2,
+        "min_resolved_spokes": 1,
         "min_silk_clearance": 0.0,
         "min_text_height": 0.8,
         "min_text_thickness": 0.08,
@@ -508,7 +508,7 @@
     "classes": [
       {
         "bus_width": 12,
-        "clearance": 0.2,
+        "clearance": 0.15,
         "diff_pair_gap": 0.25,
         "diff_pair_via_gap": 0.25,
         "diff_pair_width": 0.2,
@@ -519,7 +519,26 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.2,
+        "track_width": 0.15,
+        "tuning_profile": "",
+        "via_diameter": 0.5,
+        "via_drill": 0.25,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.3,
         "tuning_profile": "",
         "via_diameter": 0.6,
         "via_drill": 0.3,
@@ -531,7 +550,28 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Power",
+        "pattern": "+3.3V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/VDDA"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/VCAP1"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/VCAP2"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
@@ -723,8 +763,8 @@
     "subpart_id_separator": 0,
     "top_level_sheets": [
       {
-        "filename": "TritonECU-Main.kicad_sch",
-        "name": "TritonECU-Main",
+        "filename": "TritonECU-MCU.kicad_sch",
+        "name": "TritonECU-MCU",
         "uuid": "6415d7cc-f88c-411d-b71d-6233e8c6ab9d"
       }
     ],
@@ -733,7 +773,7 @@
   },
   "sheets": [
     [
-      "ffa1a7f5-fa95-431a-b4e6-02937572e034",
+      "a34b19db-24ee-4a34-9eb5-5c862c6c5059",
       "Root"
     ]
   ],

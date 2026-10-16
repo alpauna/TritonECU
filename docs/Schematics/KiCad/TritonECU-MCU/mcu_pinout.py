@@ -4,11 +4,13 @@ replaces the Nucleo-144 on the carrier. Single source of truth for the module's
 four edge headers; the carrier footprint (TritonECU-Main/gen_floorplan.py) and
 the module's own PCB both read it.
 
-Headers: four 2x18, 1.27 mm pitch, one per side of the QFP. Samtec TFM-118-22
-on the module mates with SFM-118-02 on the carrier at 9.91 mm, matching the
-10 mm M3 standoffs. Pad geometry below is the generic 1.27 mm through-hole
-pattern; check it, and the -A alignment-pin holes, against Samtec's footprint
-before layout. Each header carries the pins of the QFP side it
+Headers: four 2x18, 1.27 mm pitch, one per side of the QFP, both SURFACE
+MOUNT. Samtec TFM-118-22 on the module bottom mates with SFM-118-02 on the
+carrier top at 9.91 mm, which matches the 10 mm M3 standoffs. Pad geometry is
+from the vendor footprints the user imported via Component Search Engine and
+impart on 2026-10-16 (Samacsys TFM-118-ZZ-XXX-D-A, Snapeda SAMTEC-SFM-118-02-X-D-A).
+module_pins() gives the CONTACT positions, which is where the pins mate.
+smt_pads() gives the solder pads, splayed outward from each contact row. Each header carries the pins of the QFP side it
 faces, in package order, so the module escape is a straight fan-out:
 
   A  left    package 1-36,    top -> bottom
@@ -55,16 +57,24 @@ TO_NET = {'VSS': 'GND', 'VSSA': 'GND', 'VDD': '+3.3V', 'VDDUSB': '+3.3V', 'VDDSD
 
 BOARD = 44.0          # module outline, square, centred on the QFP
 STANDOFF = 10.0       # board-to-board, M3, same as the power board V3
-HEADER_MPN = 'TFM-118-22-L-D-A'   # module side: Samtec 2x18 1.27 mm shrouded header, through-hole, alignment pins
-SOCKET_MPN = 'SFM-118-02-L-D-A'   # carrier side: Samtec 2x18 1.27 mm socket
+HEADER_MPN = 'TFM-118-22-L-D-A'   # module side: Samtec 2x18 1.27 mm shrouded header, SMT, alignment pins
+SOCKET_MPN = 'SFM-118-02-S-D-A-N-K-TR'   # carrier side: Samtec 2x18 1.27 mm socket (-N no notch: confirm it mates TFM)
 STACK_NOTE = '9.91 mm mated (Samtec TFM-xx-22 + SFM-xx-02)'
 SLOTS = 36            # 2 x 18
 PITCH = 1.27
-ROW_IN = 15.5         # inner-row distance from the module centre
+ROW_IN = 16.5         # inner-row contact distance from the module centre; TFM bodies (+-13.12 x +-2.96) clear by ~1 mm at the corners
 ROW_OUT = ROW_IN + PITCH
-HOLES = [(-17.5, -17.5), (17.5, -17.5), (17.5, 17.5), (-17.5, 17.5)]  # M3 standoffs
+# M3 standoffs. H1 (the QFP pin-1 corner) sits 0.7 mm further out on each axis so
+# the module only fits one way round: the four headers are identical and the
+# no-notch SFM socket gives no polarization, and any 90/180/270 rotation would put
+# +3.3V and GND on signal pins.
+HOLES = [(-18.2, -18.2), (17.5, -17.5), (17.5, 17.5), (-17.5, 17.5)]
 HOLE_DRILL, HOLE_PAD = 3.2, 6.0  # as the power board V3 mounting holes
-PIN_DRILL, PIN_PAD = 0.65, 1.0   # through-hole 1.27 mm header, as KiCad PinHeader_2x18_P1.27mm
+# vendor SMT geometry, per header, relative to the header centre:
+#   pad = (width along the header, length across), off = pad-centre distance from the
+#   header centreline, align = Ø of the two -A alignment holes (NPTH) at +-align_x
+TFM = dict(pad=(0.74, 2.92), off=1.715, align=1.42, align_x=12.385, body=(13.12, 2.96))   # module, bottom
+SFM = dict(pad=(0.74, 2.22), off=1.365, align=1.40, align_x=12.382, body=(13.131, 2.209))   # carrier, top
 
 SIDES = 'ABCD'
 
@@ -94,6 +104,39 @@ def slot_xy(side, k):
     if side == 'B': return (along, d)
     if side == 'C': return (d, -along)
     return (-along, -d)
+
+
+def header_frame(side):
+    """(centre, along unit vector, outward unit vector) of a header, module coords."""
+    c = ROW_IN + PITCH / 2
+    return {'A': ((-c, 0), (0, 1), (-1, 0)), 'B': ((0, c), (1, 0), (0, 1)),
+            'C': ((c, 0), (0, -1), (1, 0)), 'D': ((0, -c), (-1, 0), (0, -1))}[side]
+
+
+def smt_pads(spec):
+    """[(pad, x, y, size_x, size_y, net)]: solder pads for TFM or SFM, module coords."""
+    out = []
+    for pad, x, y, net in module_pins():
+        (cx, cy), _, (ox, oy) = header_frame(pad[0])
+        k = int(pad[1:]) - 1
+        sgn = -1 if k % 2 == 0 else 1          # odd pads = inner row
+        across = (cx + ox * sgn * spec['off'], cy + oy * sgn * spec['off'])
+        px = across[0] if ox else x            # keep the along position of the contact
+        py = across[1] if oy else y
+        w, l = spec['pad']
+        sx, sy = (l, w) if ox else (w, l)
+        out.append((pad, round(px, 4), round(py, 4), sx, sy, net))
+    return out
+
+
+def align_holes(spec):
+    """[(x, y, dia)]: two -A alignment holes per header."""
+    out = []
+    for s in SIDES:
+        (cx, cy), (ax, ay), _ = header_frame(s)
+        for t in (-1, 1):
+            out.append((round(cx + ax * t * spec['align_x'], 4), round(cy + ay * t * spec['align_x'], 4), spec['align']))
+    return out
 
 
 def module_pins():

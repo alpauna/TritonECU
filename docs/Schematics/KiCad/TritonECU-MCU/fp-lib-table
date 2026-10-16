@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "TritonECU-MCU")(type "KiCad")(uri "${KIPRJMOD}/TritonECU-MCU.pretty")(options "")(descr "TritonECU MCU module parts"))
+)
