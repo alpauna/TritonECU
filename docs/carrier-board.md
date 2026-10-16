@@ -172,6 +172,12 @@ point of the platform change.
 
 ## DECIDED: no Ethernet, and the Nucleo-144 stays
 
+> ⚠ **Superseded 2026-10-16 for the carrier:** the Nucleo-144 was too large for the
+> 158 × 174 envelope, so the carrier takes a compact **STM32F767ZIT6 module**
+> instead, on 10 mm standoffs like the power board. See [`mcu-module.md`](mcu-module.md).
+> The Nucleo remains the bench board. The no-Ethernet decision stands, and it is
+> what lets the module be small.
+
 Ethernet is dropped — USB is sufficient for tuning. That prompted the reasonable
 question of whether a smaller STM32 board would now do. **It will not.**
 

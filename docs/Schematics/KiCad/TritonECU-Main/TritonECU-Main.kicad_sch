@@ -1,0 +1,66 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "eec527cb-b372-4ed4-ac2b-16ccf6980056")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 71.12 30.48)
+		(size 24.13 27.94)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "7c4f14a9-e7f2-4a1d-9861-e288eec9c4a2")
+		(property "Sheetname" "ADC"
+			(at 71.12 29.7684 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "ADC.kicad_sch"
+			(at 71.12 59.0046 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "TritonECU"
+				(path "/eec527cb-b372-4ed4-ac2b-16ccf6980056"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet (at 26.67 30.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "d0cc8fe2-4df1-4f92-ac3b-882d18d497a4")
+		(property "Sheetname" "Interconnect" (at 26.67 29.77 0) (effects (font (size 1.27 1.27))))
+		(property "Sheetfile" "Interconnect.kicad_sch" (at 26.67 59.0 0) (effects (font (size 1.27 1.27))))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "3"))))
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

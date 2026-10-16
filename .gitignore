@@ -20,3 +20,4 @@ docs/**/*.zip
 **/*-backups/
 *.lck
 *.kicad_prl
+__pycache__/

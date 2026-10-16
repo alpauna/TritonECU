@@ -51,52 +51,6 @@
 			)
 		)
 	)
-	(sheet
-		(at 71.12 30.48)
-		(size 24.13 27.94)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0)
-		)
-		(uuid "7c4f14a9-e7f2-4a1d-9861-e288eec9c4a2")
-		(property "Sheetname" "ADC"
-			(at 71.12 29.7684 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "ADC.kicad_sch"
-			(at 71.12 59.0046 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "TritonECU"
-				(path "/6415d7cc-f88c-411d-b71d-6233e8c6ab9d"
-					(page "3")
-				)
-			)
-		)
-	)
 	(sheet_instances
 		(path "/"
 			(page "1")
