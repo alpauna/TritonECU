@@ -4,8 +4,11 @@ replaces the Nucleo-144 on the carrier. Single source of truth for the module's
 four edge headers; the carrier footprint (TritonECU-Main/gen_floorplan.py) and
 the module's own PCB both read it.
 
-Headers: four 2x18, 1.27 mm pitch, one per side of the QFP, mated height 10 mm
-to match the M3 standoffs (parts TBD). Each header carries the pins of the QFP side it
+Headers: four 2x18, 1.27 mm pitch, one per side of the QFP. Samtec TFM-118-22
+on the module mates with SFM-118-02 on the carrier at 9.91 mm, matching the
+10 mm M3 standoffs. Pad geometry below is the generic 1.27 mm through-hole
+pattern; check it, and the -A alignment-pin holes, against Samtec's footprint
+before layout. Each header carries the pins of the QFP side it
 faces, in package order, so the module escape is a straight fan-out:
 
   A  left    package 1-36,    top -> bottom
@@ -52,6 +55,9 @@ TO_NET = {'VSS': 'GND', 'VSSA': 'GND', 'VDD': '+3.3V', 'VDDUSB': '+3.3V', 'VDDSD
 
 BOARD = 44.0          # module outline, square, centred on the QFP
 STANDOFF = 10.0       # board-to-board, M3, same as the power board V3
+HEADER_MPN = 'TFM-118-22-L-D-A'   # module side: Samtec 2x18 1.27 mm shrouded header, through-hole, alignment pins
+SOCKET_MPN = 'SFM-118-02-L-D-A'   # carrier side: Samtec 2x18 1.27 mm socket
+STACK_NOTE = '9.91 mm mated (Samtec TFM-xx-22 + SFM-xx-02)'
 SLOTS = 36            # 2 x 18
 PITCH = 1.27
 ROW_IN = 15.5         # inner-row distance from the module centre

@@ -29,8 +29,23 @@ and USB is the tuning path, so the module needs **no PHY, magnetics or RJ45**.
 
 ## Interconnect
 
-Four **2×18, 1.27 mm** through-hole headers, one on each side of the QFP, give
-a **10 mm mated height** to match the standoffs. Each header carries the pins of
+Four **2×18, 1.27 mm** headers form a square around the module edge, one on
+each side of the QFP, between the corner standoffs:
+
+| Side | Part | Notes |
+|---|---|---|
+| module | **Samtec TFM-118-22-L-D-A** | shrouded header, through-hole, `-A` alignment pins |
+| carrier | **Samtec SFM-118-02-L-D-A** | Tiger Eye socket |
+| mated | **9.91 mm** | Samtec's listed TFM-xx-22 + SFM-xx-02 stack, which fits the 10 mm standoffs |
+
+At 2.54 mm pitch, an 8.5 mm socket plus the 1.5 mm plastic of a male header
+makes 10 mm; the VR board uses that arrangement. At 1.27 mm, generic female
+headers are 4.3 mm tall (some are about 7 mm), and no 8.5 mm part turned up. The
+Samtec pair is the 1.27 mm way to reach about 10 mm. If a different pair is
+chosen, the standoff height can change to suit; the user confirmed that is fine.
+**Before layout:** check the pad and drill sizes, and the `-A` alignment-pin
+holes, against Samtec's TFM/SFM footprints. The current footprint uses the
+generic 1.27 mm pattern, 0.65 mm drill and 1.0 mm pad. Each header carries the pins of
 the QFP side it faces, in package order, so the module escape is a straight
 fan-out with no crossings. **All 110 port pins are broken out**, everything
 except the four crystal pins. The carrier's pin assignment
@@ -63,10 +78,13 @@ back to HSI, or fail to start HSE, until that change is made.
 
 ## Open
 
-- **Header parts:** a 1.27 mm header/socket pair with 10 mm mated height
-  (Samtec FTSH/SFM-family or equivalent) — **TBD**. The footprint uses the
-  standard 0.65 mm drill / 1.0 mm pad.
-- Module schematic and PCB (4-layer): `TritonECU-MCU/` project, not started.
+- **Schematic: done.** `TritonECU-MCU/gen_module.py` generates it. ERC is clean,
+  and the netlist matches `mcu_pinout.py` pin for pin, both the headers and all
+  144 MCU pins.
+- **PCB: 6 layers**, at the user's call: 144 pins fan out to four headers in
+  44 mm. Not started.
+- Crystal part numbers are still to be chosen (spec is in the schematic fields).
+  The 10 pF load caps assume about 3 pF of stray capacitance.
 - USB: PA11/PA12 come out on header C. The connector, ESD protection and VBUS
   sense live on the carrier.
 
