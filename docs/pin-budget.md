@@ -1,5 +1,11 @@
 # Pin budget
 
+> ⚠ **Superseded 2026-10-17 by [`carrier-pinmap.md`](carrier-pinmap.md).** The
+> STM32 total below (83 of ~114, 29 spare) undercounted: the full carrier needs
+> 115 signals against 105 usable module pins. Trimmed with no loss of function to
+> **99, with 6 spare**, and every signal now has a real port pin, checked by
+> `carrier_pinmap.py`.
+
 Two questions, different answers: does the **Waveshare board** fit a full ECU
 (no), and does the **ESP32-P4 chip** (yes, comfortably).
 

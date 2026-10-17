@@ -98,12 +98,18 @@ Identical to the TJA1051T/3 in all eight positions; only pin 8's meaning differs
 **~50× less parked current for no operational penalty** — 20 µA is ~11 % of the
 184 µA budget rather than 27× it.
 
-### `RXD` must land on an EXTI-capable pin
+### `RXD` must also reach a WKUP pin
 
 Wake-up is signalled **on `RXD`**, not on a dedicated pin, and §*Standby mode* is
 explicit that a transition to Normal "will not be triggered until `STB` is" driven
 low by the host. So the sequence is: the MCU sleeps, `RXD` asserts on bus activity,
-an interrupt wakes it, **then** firmware releases `STB`.
+the MCU wakes, **then** firmware releases `STB`.
+
+> **Correction (2026-10-17):** this said "an EXTI-capable pin". The ECU parks in
+> **Standby** ([`always-on-domain.md`](always-on-domain.md)), and Standby wakes only
+> on a **WKUP pin**, not on an ordinary EXTI interrupt. `RXD` therefore lands on
+> **CAN1_RX (PD0) and on PA0 / WKUP1**, one net on two pins.
+> [`carrier-pinmap.md`](carrier-pinmap.md).
 
 A **bus-dominant time-out** in Standby stops a stuck-dominant bus generating a
 permanent wake request — worth knowing, because without it a shorted bus would hold

@@ -1,0 +1,567 @@
+{
+ "source": "STM32duino STM32F7xx/F765Z(G-I)T_F767Z(G-I)T_F777ZIT/PeripheralPins.c",
+ "pins": {
+  "PA0": [
+   "ADC1_IN0",
+   "ADC2_IN0",
+   "ADC3_IN0",
+   "TIM2_CH1",
+   "TIM5_CH1",
+   "UART4_TX",
+   "USART2_CTS",
+   "ETH_Ethernet"
+  ],
+  "PA1": [
+   "ADC1_IN1",
+   "ADC2_IN1",
+   "ADC3_IN1",
+   "TIM2_CH2",
+   "TIM5_CH2",
+   "UART4_RX",
+   "USART2_RTS",
+   "ETH_Ethernet",
+   "QUADSPI_QUADDATA3"
+  ],
+  "PA2": [
+   "ADC1_IN2",
+   "ADC2_IN2",
+   "ADC3_IN2",
+   "TIM2_CH3",
+   "TIM5_CH3",
+   "TIM9_CH1",
+   "USART2_TX",
+   "ETH_Ethernet"
+  ],
+  "PA3": [
+   "ADC1_IN3",
+   "ADC2_IN3",
+   "ADC3_IN3",
+   "TIM2_CH4",
+   "TIM5_CH4",
+   "TIM9_CH2",
+   "USART2_RX",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PA4": [
+   "ADC1_IN4",
+   "ADC2_IN4",
+   "DAC_OUT1",
+   "SPI1_SSEL",
+   "SPI3_SSEL",
+   "SPI6_SSEL",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PA5": [
+   "ADC1_IN5",
+   "ADC2_IN5",
+   "DAC_OUT2",
+   "TIM2_CH1",
+   "TIM8_CH1N",
+   "SPI1_SCLK",
+   "SPI6_SCLK",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PA6": [
+   "ADC1_IN6",
+   "ADC2_IN6",
+   "TIM3_CH1",
+   "TIM13_CH1",
+   "SPI1_MISO",
+   "SPI6_MISO"
+  ],
+  "PA7": [
+   "ADC1_IN7",
+   "ADC2_IN7",
+   "TIM1_CH1N",
+   "TIM3_CH2",
+   "TIM8_CH1N",
+   "TIM14_CH1",
+   "SPI1_MOSI",
+   "SPI6_MOSI",
+   "ETH_Ethernet"
+  ],
+  "PA8": [
+   "I2C3_SCL",
+   "TIM1_CH1",
+   "UART7_RX",
+   "CAN3_CAN_RD",
+   "USB_OTG_FS_USB_OTG_FS"
+  ],
+  "PA9": [
+   "TIM1_CH2",
+   "USART1_TX",
+   "SPI2_SCLK",
+   "USB_OTG_FS_USB_OTG_FS"
+  ],
+  "PA10": [
+   "TIM1_CH3",
+   "USART1_RX",
+   "USB_OTG_FS_USB_OTG_FS"
+  ],
+  "PA11": [
+   "TIM1_CH4",
+   "UART4_RX",
+   "USART1_CTS",
+   "SPI2_SSEL",
+   "CAN1_CAN_RD",
+   "USB_OTG_FS_USB_OTG_FS"
+  ],
+  "PA12": [
+   "UART4_TX",
+   "USART1_RTS",
+   "SPI2_SCLK",
+   "CAN1_CAN_TD",
+   "USB_OTG_FS_USB_OTG_FS"
+  ],
+  "PA15": [
+   "TIM2_CH1",
+   "UART7_TX",
+   "UART4_RTS",
+   "SPI1_SSEL",
+   "SPI3_SSEL",
+   "SPI6_SSEL",
+   "CAN3_CAN_TD"
+  ],
+  "PB0": [
+   "ADC1_IN8",
+   "ADC2_IN8",
+   "TIM1_CH2N",
+   "TIM3_CH3",
+   "TIM8_CH2N",
+   "UART4_CTS",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB1": [
+   "ADC1_IN9",
+   "ADC2_IN9",
+   "TIM1_CH3N",
+   "TIM3_CH4",
+   "TIM8_CH3N",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB2": [
+   "SPI3_MOSI",
+   "QUADSPI_QUADSCLK"
+  ],
+  "PB3": [
+   "TIM2_CH2",
+   "UART7_RX",
+   "SPI1_SCLK",
+   "SPI3_SCLK",
+   "SPI6_SCLK",
+   "CAN3_CAN_RD",
+   "SDMMC2_SD_DATA2"
+  ],
+  "PB4": [
+   "TIM3_CH1",
+   "UART7_TX",
+   "SPI1_MISO",
+   "SPI3_MISO",
+   "SPI6_MISO",
+   "SPI2_SSEL",
+   "CAN3_CAN_TD",
+   "SDMMC2_SD_DATA3"
+  ],
+  "PB5": [
+   "TIM3_CH2",
+   "UART5_RX",
+   "SPI1_MOSI",
+   "SPI3_MOSI",
+   "SPI6_MOSI",
+   "CAN2_CAN_RD",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB6": [
+   "I2C1_SCL",
+   "I2C4_SCL",
+   "TIM4_CH1",
+   "UART5_TX",
+   "USART1_TX",
+   "CAN2_CAN_TD",
+   "QUADSPI_QUADSSEL"
+  ],
+  "PB7": [
+   "I2C1_SDA",
+   "I2C4_SDA",
+   "TIM4_CH2",
+   "USART1_RX"
+  ],
+  "PB8": [
+   "I2C1_SCL",
+   "I2C4_SCL",
+   "TIM4_CH3",
+   "TIM10_CH1",
+   "UART5_RX",
+   "CAN1_CAN_RD",
+   "ETH_Ethernet",
+   "SDMMC1_SD_DATA4",
+   "SDMMC2_SD_DATA4"
+  ],
+  "PB9": [
+   "I2C1_SDA",
+   "I2C4_SDA",
+   "TIM4_CH4",
+   "TIM11_CH1",
+   "UART5_TX",
+   "SPI2_SSEL",
+   "CAN1_CAN_TD",
+   "SDMMC1_SD_DATA5",
+   "SDMMC2_SD_DATA5"
+  ],
+  "PB10": [
+   "I2C2_SCL",
+   "TIM2_CH3",
+   "USART3_TX",
+   "SPI2_SCLK",
+   "ETH_Ethernet",
+   "QUADSPI_QUADSSEL",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB11": [
+   "I2C2_SDA",
+   "TIM2_CH4",
+   "USART3_RX",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB12": [
+   "UART5_RX",
+   "SPI2_SSEL",
+   "CAN2_CAN_RD",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB13": [
+   "TIM1_CH1N",
+   "UART5_TX",
+   "USART3_CTS",
+   "SPI2_SCLK",
+   "CAN2_CAN_TD",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PB14": [
+   "TIM1_CH2N",
+   "TIM8_CH2N",
+   "TIM12_CH1",
+   "USART1_TX",
+   "UART4_RTS",
+   "USART3_RTS",
+   "SPI2_MISO",
+   "USB_OTG_HS_USB_OTG_HS",
+   "SDMMC2_SD_DATA0"
+  ],
+  "PB15": [
+   "TIM1_CH3N",
+   "TIM8_CH3N",
+   "TIM12_CH2",
+   "USART1_RX",
+   "UART4_CTS",
+   "SPI2_MOSI",
+   "USB_OTG_HS_USB_OTG_HS",
+   "SDMMC2_SD_DATA1"
+  ],
+  "PC0": [
+   "ADC1_IN10",
+   "ADC2_IN10",
+   "ADC3_IN10",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PC1": [
+   "ADC1_IN11",
+   "ADC2_IN11",
+   "ADC3_IN11",
+   "SPI2_MOSI",
+   "ETH_Ethernet"
+  ],
+  "PC2": [
+   "ADC1_IN12",
+   "ADC2_IN12",
+   "ADC3_IN12",
+   "SPI2_MISO",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PC3": [
+   "ADC1_IN13",
+   "ADC2_IN13",
+   "ADC3_IN13",
+   "SPI2_MOSI",
+   "ETH_Ethernet",
+   "USB_OTG_HS_USB_OTG_HS"
+  ],
+  "PC4": [
+   "ADC1_IN14",
+   "ADC2_IN14",
+   "ETH_Ethernet"
+  ],
+  "PC5": [
+   "ADC1_IN15",
+   "ADC2_IN15",
+   "ETH_Ethernet"
+  ],
+  "PC6": [
+   "TIM3_CH1",
+   "TIM8_CH1",
+   "USART6_TX",
+   "SDMMC1_SD_DATA6",
+   "SDMMC2_SD_DATA6"
+  ],
+  "PC7": [
+   "TIM3_CH2",
+   "TIM8_CH2",
+   "USART6_RX",
+   "SDMMC1_SD_DATA7",
+   "SDMMC2_SD_DATA7"
+  ],
+  "PC8": [
+   "TIM3_CH3",
+   "TIM8_CH3",
+   "UART5_RTS",
+   "SDMMC1_SD_DATA0"
+  ],
+  "PC9": [
+   "I2C3_SDA",
+   "TIM3_CH4",
+   "TIM8_CH4",
+   "UART5_CTS",
+   "QUADSPI_QUADDATA0",
+   "SDMMC1_SD_DATA1"
+  ],
+  "PC10": [
+   "UART4_TX",
+   "USART3_TX",
+   "SPI3_SCLK",
+   "QUADSPI_QUADDATA1",
+   "SDMMC1_SD_DATA2"
+  ],
+  "PC11": [
+   "UART4_RX",
+   "USART3_RX",
+   "SPI3_MISO",
+   "QUADSPI_QUADSSEL",
+   "SDMMC1_SD_DATA3"
+  ],
+  "PC12": [
+   "UART5_TX",
+   "SPI3_MOSI",
+   "SDMMC1_SD_CK"
+  ],
+  "PD0": [
+   "UART4_RX",
+   "CAN1_CAN_RD"
+  ],
+  "PD1": [
+   "UART4_TX",
+   "CAN1_CAN_TD"
+  ],
+  "PD2": [
+   "UART5_RX",
+   "SDMMC1_SD_CMD"
+  ],
+  "PD3": [
+   "USART2_CTS",
+   "SPI2_SCLK"
+  ],
+  "PD4": [
+   "USART2_RTS"
+  ],
+  "PD5": [
+   "USART2_TX"
+  ],
+  "PD6": [
+   "USART2_RX",
+   "SPI3_MOSI",
+   "SDMMC2_SD_CK"
+  ],
+  "PD7": [
+   "SPI1_MOSI",
+   "SDMMC2_SD_CMD"
+  ],
+  "PD8": [
+   "USART3_TX"
+  ],
+  "PD9": [
+   "USART3_RX"
+  ],
+  "PD11": [
+   "USART3_CTS",
+   "QUADSPI_QUADDATA0"
+  ],
+  "PD12": [
+   "I2C4_SCL",
+   "TIM4_CH1",
+   "USART3_RTS",
+   "QUADSPI_QUADDATA1"
+  ],
+  "PD13": [
+   "I2C4_SDA",
+   "TIM4_CH2",
+   "QUADSPI_QUADDATA3"
+  ],
+  "PD14": [
+   "TIM4_CH3",
+   "UART8_CTS"
+  ],
+  "PD15": [
+   "TIM4_CH4",
+   "UART8_RTS"
+  ],
+  "PE0": [
+   "UART8_RX"
+  ],
+  "PE1": [
+   "UART8_TX"
+  ],
+  "PE2": [
+   "SPI4_SCLK",
+   "ETH_Ethernet",
+   "QUADSPI_QUADDATA2"
+  ],
+  "PE4": [
+   "SPI4_SSEL"
+  ],
+  "PE5": [
+   "TIM9_CH1",
+   "SPI4_MISO"
+  ],
+  "PE6": [
+   "TIM9_CH2",
+   "SPI4_MOSI"
+  ],
+  "PE7": [
+   "UART7_RX",
+   "QUADSPI_QUADDATA0"
+  ],
+  "PE8": [
+   "TIM1_CH1N",
+   "UART7_TX",
+   "QUADSPI_QUADDATA1"
+  ],
+  "PE9": [
+   "TIM1_CH1",
+   "UART7_RTS",
+   "QUADSPI_QUADDATA2"
+  ],
+  "PE10": [
+   "TIM1_CH2N",
+   "UART7_CTS",
+   "QUADSPI_QUADDATA3"
+  ],
+  "PE11": [
+   "TIM1_CH2",
+   "SPI4_SSEL"
+  ],
+  "PE12": [
+   "TIM1_CH3N",
+   "SPI4_SCLK"
+  ],
+  "PE13": [
+   "TIM1_CH3",
+   "SPI4_MISO"
+  ],
+  "PE14": [
+   "TIM1_CH4",
+   "SPI4_MOSI"
+  ],
+  "PF0": [
+   "I2C2_SDA"
+  ],
+  "PF1": [
+   "I2C2_SCL"
+  ],
+  "PF3": [
+   "ADC3_IN9"
+  ],
+  "PF4": [
+   "ADC3_IN14"
+  ],
+  "PF5": [
+   "ADC3_IN15"
+  ],
+  "PF6": [
+   "ADC3_IN4",
+   "TIM10_CH1",
+   "UART7_RX",
+   "SPI5_SSEL",
+   "QUADSPI_QUADDATA3"
+  ],
+  "PF7": [
+   "ADC3_IN5",
+   "TIM11_CH1",
+   "UART7_TX",
+   "SPI5_SCLK",
+   "QUADSPI_QUADDATA2"
+  ],
+  "PF8": [
+   "ADC3_IN6",
+   "TIM13_CH1",
+   "UART7_RTS",
+   "SPI5_MISO",
+   "QUADSPI_QUADDATA0"
+  ],
+  "PF9": [
+   "ADC3_IN7",
+   "TIM14_CH1",
+   "UART7_CTS",
+   "SPI5_MOSI",
+   "QUADSPI_QUADDATA1"
+  ],
+  "PF10": [
+   "ADC3_IN8",
+   "QUADSPI_QUADSCLK"
+  ],
+  "PF11": [
+   "SPI5_MOSI"
+  ],
+  "PF14": [
+   "I2C4_SCL"
+  ],
+  "PF15": [
+   "I2C4_SDA"
+  ],
+  "PG8": [
+   "USART6_RTS",
+   "SPI6_SSEL",
+   "ETH_Ethernet"
+  ],
+  "PG9": [
+   "USART6_RX",
+   "SPI1_MISO",
+   "QUADSPI_QUADDATA2",
+   "SDMMC2_SD_DATA0"
+  ],
+  "PG10": [
+   "SPI1_SSEL",
+   "SDMMC2_SD_DATA1"
+  ],
+  "PG11": [
+   "SPI1_SCLK",
+   "ETH_Ethernet",
+   "SDMMC2_SD_DATA2"
+  ],
+  "PG12": [
+   "USART6_RTS",
+   "SPI6_MISO",
+   "SDMMC2_SD_DATA3"
+  ],
+  "PG13": [
+   "USART6_CTS",
+   "SPI6_SCLK",
+   "ETH_Ethernet"
+  ],
+  "PG14": [
+   "USART6_TX",
+   "SPI6_MOSI",
+   "ETH_Ethernet",
+   "QUADSPI_QUADDATA3"
+  ],
+  "PG15": [
+   "USART6_CTS"
+  ]
+ }
+}
