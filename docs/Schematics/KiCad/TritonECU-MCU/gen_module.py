@@ -16,6 +16,7 @@ Values follow DS11532 (STM32F765xx/767xx) section 6.1.6 and AN4661:
   PDR_ON to VDD, BOOT0 10 k to GND, NRST 100 nF
 
 Usage:  python3 gen_module.py   (needs kicad-cli via flatpak for the library copy)
+        python3 gen_module.py footprint   rewrites only the header and spacer footprints
 """
 import json, os, re, subprocess, sys, uuid
 
@@ -236,7 +237,7 @@ def build():
 
     # mounting holes on GND, as the carrier footprint expects
     for i in range(4):
-        e = sh.symbol('Mechanical:MountingHole_Pad', f'H{i + 1}', 'M3 standoff', (170 + 6 * i) * G, y,
+        e = sh.symbol('Mechanical:MountingHole_Pad', f'H{i + 1}', 'Spacer 5mm', (170 + 6 * i) * G, y,
                       'MountingHole:MountingHole_3.2mm_M3_Pad_Via', bom=False)
         sh.net('GND', *e['1'][0])
 
@@ -251,20 +252,20 @@ def build():
     return sh
 
 # ---------------------------------------------------------------- header footprint
-HDR_FP = 'Samtec_TFM-118-22-L-D-A'
+HDR_FP = 'Samtec_FTSH-118-02-L-DV-A'
 
 def header_footprint():
-    """Samtec TFM-118-22-L-D-A, SMT, for BOTTOM mounting. Pad size, pad offset and
-    the -A alignment holes come from the vendor footprint (mcu_pinout.TFM). Odd
+    """Samtec FTSH-118-02-L-DV-A, SMT, for BOTTOM mounting. Pad size, pad offset and
+    the -A alignment holes come from the vendor footprint (mcu_pinout.FTSH). Odd
     pins sit on the y < 0 row, and pins 1/2 are at the RIGHT end of this library
     view. Flipping the part to the bottom mirrors it, so the numbering then follows
     mcu_pinout.py, which the carrier footprint also uses. Pin numbers are this
     project's, by position, not Samtec's: the pins mate by position."""
-    T = mp.TFM
+    T = mp.FTSH
     w, l = T['pad']
     t = (f'(footprint "{HDR_FP}"\n\t(version 20260206)\n\t(generator "{MARK}")\n\t(layer "F.Cu")\n'
-         f'\t(descr "Samtec TFM-118-22-L-D-A 2x18 1.27 mm SMT header, 9.91 mm stack with SFM-118-02. '
-         f'Geometry from the Samacsys TFM-118-ZZ-XXX-D-A footprint; numbered for bottom mounting per mcu_pinout.py")\n'
+         f'\t(descr "Samtec {mp.HEADER_MPN} 2x18 1.27 mm SMT header, {mp.STACK_NOTE} with {mp.SOCKET_MPN}. '
+         f'Geometry from the Samacsys FTSH-118-XX-YYY-DV-A footprint; numbered for bottom mounting per mcu_pinout.py")\n'
          f'\t(property "Reference" "REF**" (at 0 -6 0) (layer "F.SilkS") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
          f'\t(property "Value" "{HDR_FP}" (at 0 6 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
          f'\t(attr smd)\n')
@@ -285,9 +286,65 @@ def header_footprint():
           f'\t(fp_text user "pin 1" (at 10.8 -4.4 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 0.6 0.6) (thickness 0.1))))\n)\n')
     return t
 
+# ---------------------------------------------------------------- spacer footprint
+SPACER_FP = 'Wurth_WA-SMST_9774050982R'
+
+def spacer_footprint():
+    """Wurth WA-SMST 9774050982R SMT steel spacer, 5 mm, Ø4.5 bore for an M3
+    screw, soldered to the module BOTTOM (the library view is the soldered side).
+    Land pattern from the datasheet (rev 001.003): Ø5.4 non-plated hole for the
+    Ø5.2 x 1.4 mm spigot, Ø9.4 copper ring; stencil Ø5.5-9.3 in four segments
+    with 0.8 mm gaps. Changed here: the ring starts at Ø5.9, not at the hole
+    edge, for the board's 0.25 mm hole-to-copper rule (and so drilling the NPTH
+    does not tear copper); the stencil starts at Ø6.0 to stay on copper. The
+    Ø8.2 flange still lands fully on the ring. The ring is pad 1, so it can carry GND; the hole stays
+    non-plated as Wurth specifies. The 3D
+    model is Wurth's STEP (via Samacsys), origin on the axis at the board face."""
+    import math
+    hole, ring, p_in, p_out, gap = 5.4, 9.4, 6.0, 9.3, 0.8
+    ring_in = hole + 2 * 0.25        # 0.25 mm hole clearance (Wurth draws copper to the hole edge)
+    t = (f'(footprint "{SPACER_FP}"\n\t(version 20260206)\n\t(generator "{MARK}")\n\t(layer "F.Cu")\n'
+         f'\t(descr "Wurth WA-SMST 9774050982R SMT steel spacer, L 5 mm, bore 4.5 mm (M3 clearance). '
+         f'Land pattern per the Wurth datasheet: NPTH 5.4 mm, copper ring 5.9-9.4 mm (0.25 mm hole clearance), stencil in four segments")\n'
+         f'\t(property "Reference" "REF**" (at 0 -6 0) (layer "F.SilkS") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
+         f'\t(property "Value" "9774050982R" (at 0 6 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))\n'
+         f'\t(attr smd)\n'
+         f'\t(pad "" np_thru_hole circle (at 0 0) (size {hole} {hole}) (drill {hole}) '
+         f'(layers "*.Cu" "*.Mask") (uuid "{U()}"))\n')
+    # the copper ring is pad 1 (GND via the MountingHole_Pad symbol): a custom pad
+    # anchored inside the ring band, its shape a Ø{ring_in}-{ring} ring
+    rm, wd = (ring + ring_in) / 4, (ring - ring_in) / 2
+    t += (f'\t(pad "1" smd custom (at {rm} 0) (size {wd * 0.8:.3f} {wd * 0.8:.3f}) (layers "F.Cu" "F.Mask") '
+          f'(options (clearance outline) (anchor circle)) (primitives (gr_circle (center {-rm} 0) (end {-rm + rm} 0) '
+          f'(width {wd}) (fill no))) (uuid "{U()}"))\n')
+    # stencil: annulus p_in..p_out cut by four radial 0.8 mm gaps at 0/90/180/270 deg
+    ri, ro = p_in / 2, p_out / 2
+    for q in range(4):
+        base = q * 90
+        a0 = base + math.degrees(math.asin(gap / 2 / ri)); a1 = base + 90 - math.degrees(math.asin(gap / 2 / ri))
+        b0 = base + math.degrees(math.asin(gap / 2 / ro)); b1 = base + 90 - math.degrees(math.asin(gap / 2 / ro))
+        n = 12
+        pts = [(ro * math.cos(math.radians(b0 + (b1 - b0) * i / n)), ro * math.sin(math.radians(b0 + (b1 - b0) * i / n))) for i in range(n + 1)]
+        pts += [(ri * math.cos(math.radians(a1 - (a1 - a0) * i / n)), ri * math.sin(math.radians(a1 - (a1 - a0) * i / n))) for i in range(n + 1)]
+        xy = ' '.join(f'(xy {x:.4f} {y:.4f})' for x, y in pts)
+        t += f'\t(fp_poly (pts {xy}) (stroke (width 0) (type solid)) (fill yes) (layer "F.Paste") (uuid "{U()}"))\n'
+    for layer, r, w in (('F.Fab', 4.1, 0.1), ('F.Fab', 2.25, 0.1), ('F.CrtYd', ring / 2 + 0.25, 0.05)):
+        t += (f'\t(fp_circle (center 0 0) (end {r} 0) (stroke (width {w}) (type solid)) (fill no) '
+              f'(layer "{layer}") (uuid "{U()}"))\n')
+    t += (f'\t(model "${{KIPRJMOD}}/3d/9774050982R.stp"\n\t\t(offset (xyz 0 0 0))\n\t\t(scale (xyz 1 1 1))\n'
+          f'\t\t(rotate (xyz 0 0 0))\n\t)\n)\n')
+    return t
+
 # ---------------------------------------------------------------- project
+def write_footprint():
+    os.makedirs(f'{PROJ}.pretty', exist_ok=True)
+    open(f'{PROJ}.pretty/{HDR_FP}.kicad_mod', 'w').write(header_footprint())
+    open(f'{PROJ}.pretty/{SPACER_FP}.kicad_mod', 'w').write(spacer_footprint())
+
 def main():
     os.chdir(HERE)
+    if sys.argv[1:] == ['footprint']:      # header footprint only; the schematic is left alone
+        write_footprint(); return
     sch = f'{PROJ}.kicad_sch'
     if os.path.exists(sch) and MARK not in open(sch).read():
         sys.exit(f'{sch} was edited outside {MARK}; refusing to overwrite')
@@ -295,8 +352,7 @@ def main():
         sys.exit('project is open in KiCad - close it first')
     sh = build()
     sh.write(sch)
-    os.makedirs(f'{PROJ}.pretty', exist_ok=True)
-    open(f'{PROJ}.pretty/{HDR_FP}.kicad_mod', 'w').write(header_footprint())
+    write_footprint()
     open('fp-lib-table', 'w').write(f'(fp_lib_table\n\t(version 7)\n\t(lib (name "{PROJ}")(type "KiCad")'
                                     f'(uri "${{KIPRJMOD}}/{PROJ}.pretty")(options "")(descr "TritonECU MCU module parts"))\n)\n')
     pro_path = f'{PROJ}.kicad_pro'
@@ -310,10 +366,14 @@ def main():
     ns = pro['net_settings']
     d = next(c for c in ns['classes'] if c['name'] == 'Default')
     d.update(track_width=0.15, clearance=0.15, via_diameter=0.5, via_drill=0.25)
-    pw = dict(d, name='Power', priority=0, track_width=0.3, via_diameter=0.6, via_drill=0.3)
+    pw = dict(d, name='Power', priority=0, track_width=0.25, via_diameter=0.5, via_drill=0.25)
     ns['classes'] = [d, pw]
     # 1.27 mm header pads between plane-connected neighbours only fit one thermal spoke
-    pro['board']['design_settings']['rules']['min_resolved_spokes'] = 1
+    rules = pro['board']['design_settings']['rules']
+    rules['min_resolved_spokes'] = 1
+    # 6-layer fab limits, not the 2-layer power board's: 0.25 mm via drill, 0.1 mm track
+    rules['min_through_hole_diameter'] = 0.25
+    rules['min_track_width'] = 0.1
     ns['netclass_patterns'] = [{'netclass': 'Power', 'pattern': n} for n in ('+3.3V', 'GND', '/VDDA', '/VCAP1', '/VCAP2')]
     json.dump(pro, open(pro_path, 'w'), indent=2)
     print('schematic written')

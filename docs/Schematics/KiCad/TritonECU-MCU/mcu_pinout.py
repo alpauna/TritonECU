@@ -5,10 +5,11 @@ four edge headers; the carrier footprint (TritonECU-Main/gen_floorplan.py) and
 the module's own PCB both read it.
 
 Headers: four 2x18, 1.27 mm pitch, one per side of the QFP, both SURFACE
-MOUNT. Samtec TFM-118-22 on the module bottom mates with SFM-118-02 on the
-carrier top at 9.91 mm, which matches the 10 mm M3 standoffs. Pad geometry is
-from the vendor footprints the user imported via Component Search Engine and
-impart on 2026-10-16 (Samacsys TFM-118-ZZ-XXX-D-A, Snapeda SAMTEC-SFM-118-02-X-D-A).
+MOUNT. Samtec FTSH-118-02-L-DV-A on the module bottom mates with
+FLE-118-01-G-DV-K-TR on the carrier top at 7.47 mm (Samtec's FTSH-02 / FLE-01
+mated set), so the M3 standoffs are 7.47 mm too. Pad geometry is from the
+vendor footprints the user imported via Component Search Engine and impart on
+2026-10-17 (Samacsys FTSH-118-XX-YYY-DV-A and FLE11801GDVKTR).
 module_pins() gives the CONTACT positions, which is where the pins mate.
 smt_pads() gives the solder pads, splayed outward from each contact row. Each header carries the pins of the QFP side it
 faces, in package order, so the module escape is a straight fan-out:
@@ -55,26 +56,37 @@ assert len(LQFP144) == 144
 ON_MODULE = {'PC14', 'PC15', 'PH0', 'PH1', 'VDDA', 'VREF+', 'VCAP_1', 'VCAP_2', 'PDR_ON'}
 TO_NET = {'VSS': 'GND', 'VSSA': 'GND', 'VDD': '+3.3V', 'VDDUSB': '+3.3V', 'VDDSDMMC': '+3.3V'}
 
-BOARD = 44.0          # module outline, square, centred on the QFP
-STANDOFF = 10.0       # board-to-board, M3, same as the power board V3
-HEADER_MPN = 'TFM-118-22-L-D-A'   # module side: Samtec 2x18 1.27 mm shrouded header, SMT, alignment pins
-SOCKET_MPN = 'SFM-118-02-S-D-A-N-K-TR'   # carrier side: Samtec 2x18 1.27 mm socket (-N no notch: confirm it mates TFM)
-STACK_NOTE = '9.91 mm mated (Samtec TFM-xx-22 + SFM-xx-02)'
+BOARD = 46.0          # module outline, square, centred on the QFP (44 -> 46 for the Ø9.4 spacer pads)
+STANDOFF = 7.47       # board-to-board = the FTSH-02 / FLE-01 mated height:
+                      #   module: Wurth 9774050982R 5.0 mm SMT spacer on its bottom (Ø4.5 bore)
+                      #   carrier: PEM SMTSO-M3-2ET 2.0 mm SMT M3 standoff on its top
+                      #   + one 0.5 mm M3 washer (DIN 433) between them = 7.5 mm
+                      #   (no 2.5 mm SMTSO exists; 7.0 would over-press the connectors)
+SPACER_MPN = '9774050982R'
+STANDOFF_MPN = 'SMTSO-M3-2ET'
+HEADER_MPN = 'FTSH-118-02-L-DV-A'   # module side: Samtec 2x18 1.27 mm header, SMT, -A board alignment pins
+SOCKET_MPN = 'FLE-118-01-G-DV-K-TR'   # carrier side: Samtec 2x18 1.27 mm socket strip, SMT, no alignment pins
+STACK_NOTE = '7.47 mm mated (Samtec FTSH-xx-02 + FLE-xx-01)'
 SLOTS = 36            # 2 x 18
 PITCH = 1.27
-ROW_IN = 16.5         # inner-row contact distance from the module centre; TFM bodies (+-13.12 x +-2.96) clear by ~1 mm at the corners
+ROW_IN = 16.5         # inner-row contact distance from the module centre; FTSH courtyards (+-12.63 along) clear at the corners
 ROW_OUT = ROW_IN + PITCH
-# M3 standoffs. H1 (the QFP pin-1 corner) sits 0.7 mm further out on each axis so
-# the module only fits one way round: the four headers are identical and the
-# no-notch SFM socket gives no polarization, and any 90/180/270 rotation would put
+# M3 standoffs. H1 (the QFP pin-1 corner) sits 0.7 mm further IN on each axis so
+# the module only fits one way round (inward: the spacer's Ø9.4 pad would reach
+# the board edge if it moved out): the four headers are identical and the
+# FLE socket gives no polarization, and any 90/180/270 rotation would put
 # +3.3V and GND on signal pins.
-HOLES = [(-18.2, -18.2), (17.5, -17.5), (17.5, 17.5), (-17.5, 17.5)]
-HOLE_DRILL, HOLE_PAD = 3.2, 6.0  # as the power board V3 mounting holes
+HOLES = [(-16.8, -16.8), (17.5, -17.5), (17.5, 17.5), (-17.5, 17.5)]
+HOLE_DRILL, HOLE_PAD = 4.3, 6.45  # carrier: PEM SMTSO-M3-2ET land (Samacsys SMTSOM32ET; PEM: hole 4.22, pad >= 6.2)
 # vendor SMT geometry, per header, relative to the header centre:
 #   pad = (width along the header, length across), off = pad-centre distance from the
-#   header centreline, align = Ø of the two -A alignment holes (NPTH) at +-align_x
-TFM = dict(pad=(0.74, 2.92), off=1.715, align=1.42, align_x=12.385, body=(13.12, 2.96))   # module, bottom
-SFM = dict(pad=(0.74, 2.22), off=1.365, align=1.40, align_x=12.382, body=(13.131, 2.209))   # carrier, top
+#   header centreline, align = Ø of the two -A alignment holes (NPTH) at +-align_x on
+#   the centreline (None: no alignment pins), body = half length, half width
+# FTSH: Samacsys has 0.74 x 2.79 at 2.035, which leaves 0.18 mm from the -A holes to
+# the neighbouring pads. The inner 0.1 mm is trimmed (outer end unchanged, still
+# ~1 mm under the body) to meet the 0.25 mm hole clearance rule.
+FTSH = dict(pad=(0.74, 2.69), off=2.085, align=1.02, align_x=10.16, body=(11.43, 1.715))   # module, bottom
+FLE = dict(pad=(0.74, 1.675), off=1.843, align=None, body=(11.43, 2.127))   # carrier, top
 
 SIDES = 'ABCD'
 
@@ -130,8 +142,10 @@ def smt_pads(spec):
 
 
 def align_holes(spec):
-    """[(x, y, dia)]: two -A alignment holes per header."""
+    """[(x, y, dia)]: two -A alignment holes per header (none if the part has no -A)."""
     out = []
+    if not spec.get('align'):
+        return out
     for s in SIDES:
         (cx, cy), (ax, ay), _ = header_frame(s)
         for t in (-1, 1):

@@ -1,0 +1,2 @@
+"Reference","Qty","Value","DNP","Exclude from BOM","Exclude from Board","Exclude from Simulation","Exclude from Position Files","Footprint","Datasheet","Manufacturer_Name","Manufacturer_Part_Number","MPN","Manufacturer","Note","Digikey Part Number","Digikey Price/Stock"
+"U1","1","STM32F767ZIT6","","","","","${EXCLUDE_FROM_POS_FILES}","Package_QFP:LQFP-144_20x20mm_P0.5mm","","","","STM32F767ZIT6","STMicroelectronics","","",""

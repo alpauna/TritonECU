@@ -1,11 +1,11 @@
-# MCU module — STM32F767ZIT6 on a 44 × 44 mm daughterboard
+# MCU module — STM32F767ZIT6 on a 46 × 46 mm daughterboard
 
 **Decided 2026-10-16.** The Nucleo-144 takes about 70 × 133 mm of the
 158 × 174 carrier, roughly a third of the usable area. It is replaced by a
 small module carrying only the MCU and its essential parts. That leaves room on
 the carrier for the drivers, the analog front end and the CAN/J1850
-interfaces. The module stacks the same way as the power board, on **10 mm M3
-standoffs**.
+interfaces. The module stacks on M3 standoffs like the power board, but at
+**7.47 mm**, the height of its connector pair (see Interconnect).
 
 This keeps what the Nucleo stage was for ([`carrier-board.md`](carrier-board.md)):
 the MCU section is a separate, swappable board, so a carrier respin never
@@ -24,7 +24,7 @@ and USB is the tuning path, so the module needs **no PHY, magnetics or RJ45**.
 | PDR_ON | tied to VDD (internal supervisor on) |
 | BOOT0 | 10 k pull-down, also on header D |
 | NRST | 100 nF on the module; the carrier's TPS3823 drives it via header A |
-| Programming | **ST STDC14** (Samtec FTSH-107-01-L-DV-K, 2×7 1.27 mm SMT) on the module **top**, beside the QFP. It is reachable with the module mounted and plugs straight into an STLINK-V3. It carries SWD (PA13/PA14), SWO (PB3), NRST, and the ST-Link VCP on **USART3 PD8 TX / PD9 RX**, the Nucleo's console UART, so the firmware is unchanged. The same pins also reach the carrier through the headers. There is no Tag-Connect: its alignment holes would land under the QFP or a TFM shroud |
+| Programming | **ST STDC14** (Samtec FTSH-107-01-L-DV-K, 2×7 1.27 mm SMT) on the module **top**, beside the QFP. It is reachable with the module mounted and plugs straight into an STLINK-V3. It carries SWD (PA13/PA14), SWO (PB3), NRST, and the ST-Link VCP on **USART3 PD8 TX / PD9 RX**, the Nucleo's console UART, so the firmware is unchanged. The same pins also reach the carrier through the headers. There is no Tag-Connect: its alignment holes would land under the QFP or a header |
 | Regulator | **none.** +3.3 V comes from the power board's TLV62085 through the carrier |
 
 ## Interconnect
@@ -34,37 +34,70 @@ edge, one on each side of the QFP, between the corner standoffs:
 
 | Side | Part | Notes |
 |---|---|---|
-| module, bottom | **Samtec TFM-118-22-L-D-A** | SMT shrouded header, body ±13.12 × ±2.96 mm, `-A` alignment pins |
-| carrier, top | **Samtec SFM-118-02-S-D-A-N-K-TR** | SMT socket; `-S` 30 µin gold, `-K` pick-up pad, `-TR` reel |
-| mated | **9.91 mm** | Samtec's listed TFM-xx-22 + SFM-xx-02 stack, which fits the 10 mm standoffs |
+| module, bottom | **Samtec FTSH-118-02-L-DV-A** | SMT header; `-02` 1.91 mm post (the FLE mate), `-L` gold on the post, `-A` alignment pins into the module |
+| carrier, top | **Samtec FLE-118-01-G-DV-K-TR** | SMT socket strip; `-G` gold, `-K` pick-up pad, `-TR` reel; no alignment pins |
+| mated | **7.47 mm** | Samtec's listed FTSH-xx-02 + FLE-xx-01 set; the M3 standoffs are 7.47 mm too |
 
-> **`-N` (no notch) is fine.** The TFM's polarization feature is a notch, a
-> recess in its shroud, so a socket without the matching key leaves a small
-> gap there and still mates. *(User, 2026-10-16.)*
+> **Chosen 2026-10-17 by the user,** replacing the first pick (TFM-118-22 /
+> SFM-118-02, 9.91 mm). FTSH lead style **-02** is the one Samtec lists as the FLE
+> mate; -01 (3.05 mm post) is for the FFSD cable socket, with no FLE stack height
+> published.
 >
-> **Polarization comes from the standoffs instead.** The four headers are
+> **Standoffs: 7.47 mm in two parts** (user, 2026-10-17):
+>
+> | Where | Part | Height |
+> |---|---|---|
+> | module bottom, soldered | **Würth 9774050982R** WA-SMST SMT steel spacer, Ø4.5 bore | 5.0 mm ±0.1 |
+> | carrier top, soldered | **PEM SMTSO-M3-2ET** ReelFast SMT standoff, M3 thread through (Mouser 153-SMTSO-M3-2ET) | 2.0 mm ±0.13 |
+> | between them | **M3 washer, 0.5 mm** (DIN 433 / ISO 7092) | 0.5 mm |
+> | **total** | | **7.5 mm** against 7.47 mated |
+>
+> The washer is needed: PEM makes no 2.5 mm SMTSO (M3 lengths are 2, 3, 4, 6,
+> 8, 10 mm). Without it the stack is 7.0 mm and the screw would press the
+> connectors 0.47 mm past full mating; the 3 mm part would leave them 0.53 mm
+> short. 7.5 mm is 0.03 mm over, well inside the contact wipe.
+>
+> An M3 screw goes down from the module top through the spacer and washer into
+> the SMTSO thread: **M3 × 10**. The head sits 7.1 mm above the standoff
+> (1.6 board + 5.0 spacer + 0.5 washer), so 10 mm engages the whole 2 mm
+> thread and the tip ends 0.9 mm into the carrier's Ø4.3 hole, inside the
+> board. An M3 × 8 would catch under two threads. Put a washer under the head
+> too, since the module hole is Ø5.4. The carrier land is the Samacsys
+> `SMTSOM32ET` footprint the user imported: plated Ø4.3 hole, Ø6.45 pad (PEM:
+> hole 4.22 +0.08, pad ≥ 6.2). Carrier parts under the module must stay below the module's
+> bottom-side parts, with about 7.5 mm instead of 10 mm.
+>
+> The spacer footprint (`TritonECU-MCU:Wurth_WA-SMST_9774050982R`, made in
+> `gen_module.py` from Würth's land pattern; the zip from Samacsys/DigiKey has
+> only the STEP) is a Ø5.4 non-plated hole with a Ø9.4 copper ring on GND. The
+> ring starts at Ø5.9 rather than at the hole edge, for the 0.25 mm
+> hole-to-copper rule, and the stencil ring at Ø6.0; the Ø8.2 flange still
+> lands fully on copper. That pad is why the module grew from 44 to **46 mm**:
+> at 44 mm it would have reached the board edge.
+>
+> **Polarization comes from the standoffs.** The four headers are
 > identical, and with the M3 holes on a square the module would also fit
 > rotated 90°, 180° or 270°, which puts +3.3V and GND on signal pins. **H1, the
-> QFP pin-1 corner, is offset 0.7 mm per axis** (−18.2, −18.2 instead of
-> −17.5, −17.5) on both boards. A check of both finished boards confirms the
-> holes coincide and that no rotated fit exists.
+> QFP pin-1 corner, is offset 0.7 mm inward per axis** (−16.8, −16.8 instead
+> of −17.5, −17.5) on both boards. It first moved outward, but the spacer's
+> Ø9.4 pad would then reach the edge. A check of both finished boards confirms
+> the holes coincide and that no rotated fit exists.
 
-Pad size, pad offset and the Ø1.4 mm alignment holes come from the vendor
-footprints the user imported via Component Search Engine and impart
-(Samacsys `TFM-118-ZZ-XXX-D-A`, Snapeda `SAMTEC-SFM-118-02-X-D-A`). Positions
-come from `mcu_pinout.py`. The two vendor footprints place their alignment
-holes 0.003 mm apart, which is negligible.
+Pad size, pad offset and the FTSH's Ø1.02 mm alignment holes (on the header
+centreline, ±10.16 mm) come from the vendor footprints the user imported via
+Component Search Engine and impart (Samacsys `FTSH-118-XX-YYY-DV-A` and
+`FLE11801GDVKTR`). Positions come from `mcu_pinout.py`. One change from the
+vendor data: the FTSH pads are 0.1 mm shorter at their inner end (2.69 mm, not
+2.79), because Samacsys leaves only 0.18 mm between the alignment holes and the
+neighbouring pads, under the 0.25 mm hole-clearance rule. The outer, soldered
+end is unchanged and the pads still reach about 1 mm under the body.
 
-The contact rows sit **16.5 / 17.77 mm** from the module centre. That spacing
-leaves about 1 mm between neighbouring TFM bodies at the corners. Because the
-headers are SMT, they use no through-holes, so all four inner layers route
-freely under them.
-
-At 2.54 mm pitch, an 8.5 mm socket plus the 1.5 mm plastic of a male header
-makes 10 mm; the VR board uses that arrangement. At 1.27 mm, generic female
-headers are 4.3 mm tall (some are about 7 mm), and no 8.5 mm part turned up. The
-Samtec pair is the 1.27 mm way to reach about 10 mm. If a different pair is
-chosen, the standoff height can change to suit; the user confirmed that is fine.
+The contact rows sit **16.5 / 17.77 mm** from the module centre, the same as
+with the first connector choice, so the pinout and the carrier footprint
+positions did not move. Both new bodies are ±11.43 mm long, shorter than the
+TFM, so the corners have more room. Because the headers are SMT, they use no
+through-holes, apart from the small alignment holes in the module, so the
+inner layers route freely under them.
 
 Each header carries the pins of
 the QFP side it faces, in package order, so the module escape is a straight
@@ -103,19 +136,27 @@ back to HSI, or fail to start HSE, until that change is made.
   and the netlist matches `mcu_pinout.py` pin for pin, both the headers and all
   144 MCU pins.
 - **PCB: 6 layers**, at the user's call: 144 pins fan out to four headers in
-  44 mm. **Placed, not routed.** `gen_module_pcb.py` builds it in KiCad's Python.
+  46 mm. `gen_module_pcb.py` places it in KiCad's Python, with a via at every
+  power pad; Freerouting does the signals (see below).
   - **Stack:** F sig / In1 GND / In2 sig / In3 sig / In4 +3.3V / B sig.
   - **Top:** the QFP.
-  - **Bottom:** decoupling, crystals, and the four SMT headers.
-  - **Checks:** DRC 0 violations and 0 parity errors. Every header pad is checked
-    against `mcu_pinout.py` when the board is built.
+  - **Bottom:** decoupling, crystals, the four SMT headers and the four spacers.
+  - **Routed** (2026-10-17, 46 mm, FTSH/FLE, Würth spacers): Freerouting 2.4.1
+    on the placed board, the 104 power-fanout vias locked. 969 track segments
+    (F 352, B 443, In2 96, In3 78) and 276 vias. Four 0.09 mm neck-downs were
+    widened to 0.1 mm.
+  - **Checks:** KiCad DRC 0 violations, 0 unconnected, schematic parity clean
+    apart from the Exclude-from-BOM flags left by the per-supplier BOM exports.
+    Every header pad is checked against `mcu_pinout.py` when the board is built.
   - **Mating check:** reading both finished boards, all 144 module pads line up
-    with the carrier's SFM pads: same position along the header, same contact
-    row, same net. The M3 and alignment holes coincide too.
+    with the carrier's FLE pads: same position along the header, same contact
+    row, same net. The M3 holes coincide too.
   - **Pin numbers** are by position, from `mcu_pinout.py`, not Samtec's. Male
     pins mate by position, and a bottom-mounted header is mirrored.
-- Crystal part numbers are still to be chosen (spec is in the schematic fields).
-  The 10 pF load caps assume about 3 pF of stray capacitance.
+- Crystals (user, 2026-10-17): **Y1 ABRACON ABM8AIG-8.000MHZ-1Z-T** with 27 pF
+  load caps, **Y2 ECS ECS-.327-12.5-12QS-TR** (12.5 pF) with 18 pF. The BOM is
+  split by supplier: `TritonECU-MCU-Mouser.csv`, `-Digikey.csv` and
+  `-Future.csv`.
 - USB: PA11/PA12 come out on header C. The connector, ESD protection and VBUS
   sense live on the carrier.
 

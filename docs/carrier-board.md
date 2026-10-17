@@ -174,7 +174,7 @@ point of the platform change.
 
 > ⚠ **Superseded 2026-10-16 for the carrier:** the Nucleo-144 was too large for the
 > 158 × 174 envelope, so the carrier takes a compact **STM32F767ZIT6 module**
-> instead, on 10 mm standoffs like the power board. See [`mcu-module.md`](mcu-module.md).
+> instead, at 7.47 mm (Samtec FTSH/FLE stack): a 5 mm Würth SMT spacer on the module, a PEM SMTSO-M3-2ET 2 mm SMT standoff on the carrier, and a 0.5 mm M3 washer between them. See [`mcu-module.md`](mcu-module.md).
 > The Nucleo remains the bench board. The no-Ethernet decision stands, and it is
 > what lets the module be small.
 

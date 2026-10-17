@@ -233,15 +233,15 @@ def build_footprints():
     def mcu(nets, r=0):
         m = mcu_pinout
         b = ''
-        # Samtec SFM-118-02 sockets, SMT: vendor pad geometry (mcu_pinout.SFM), positions from mcu_pinout
-        for num, x, y, sx, sy, _ in m.smt_pads(m.SFM):
+        # Samtec FLE-118-01 sockets, SMT: vendor pad geometry (mcu_pinout.FLE), positions from mcu_pinout
+        for num, x, y, sx, sy, _ in m.smt_pads(m.FLE):
             n = f' (net "{nets[num]}")' if nets.get(num) else ''
             b += (f'\t\t(pad "{num}" smd rect (at {x:.4f} {y:.4f} {r}) (size {sx} {sy}) '
                   f'(layers "F.Cu" "F.Paste" "F.Mask"){n} (pintype "passive") (uuid "{U()}"))\n')
-        for x, y, d in m.align_holes(m.SFM):
+        for x, y, d in m.align_holes(m.FLE):
             b += (f'\t\t(pad "" np_thru_hole circle (at {x:.4f} {y:.4f} {r}) (size {d} {d}) (drill {d}) '
                   f'(layers "*.Cu" "*.Mask") (uuid "{U()}"))\n')
-        bx, by = m.SFM['body']
+        bx, by = m.FLE['body']
         for s in m.SIDES:
             (cx, cy), (ax, ay), _ = m.header_frame(s)
             hx, hy = (bx, by) if ax else (by, bx)
@@ -255,8 +255,9 @@ def build_footprints():
         b += fp_txt(f'MCU F767 ({m.BOARD:g} x {m.BOARD:g}, {m.STANDOFF:g} mm standoffs)', 0, 0, 'F.Fab', 1.2)
         b += fp_txt('QFP pin 1', -8, -9, 'F.Fab', 0.8)
         return b
-    fps['MCUModule_F767_Mate'] = ('Carrier side of the TritonECU STM32F767ZIT6 module: four Samtec SFM-118-02 2x18 1.27 mm '
-                                  'SMT sockets (A-D, one per QFP side) with -A alignment holes, and four M3 standoffs (MH1-MH4). '
+    fps['MCUModule_F767_Mate'] = (f'Carrier side of the TritonECU STM32F767ZIT6 module: four Samtec {mcu_pinout.SOCKET_MPN} 2x18 1.27 mm '
+                                  f'SMT sockets (A-D, one per QFP side), and four PEM {mcu_pinout.STANDOFF_MPN} SMT M3 standoffs (MH1-MH4), {mcu_pinout.STANDOFF:g} mm stack. '
+                                  f'Module {mcu_pinout.BOARD:g} x {mcu_pinout.BOARD:g} mm, MH1 (keying) at {mcu_pinout.HOLES[0]}. '
                                   'From TritonECU-MCU/mcu_pinout.py.', mcu)
     return fps, pg
 
@@ -447,6 +448,19 @@ def main():
                 'DB2': ('VRBoard_V1_Mate', ox + VR_AT[0], oy + VR_AT[1], VR_AT[2]),
                 'DB3': ('MCUModule_F767_Mate', ox + MCU_AT[0], oy + MCU_AT[1], MCU_AT[2])}
     value = {v[0]: v[1] for v in place.values()}
+    # a placed mate footprint whose library version changed (e.g. a new connector)
+    # is swapped for the new one, at the position and rotation it has on the board
+    for ref, (n, x, y, r) in list(fp_place.items()):
+        descr = fps[n][0]
+        def stale(blk, ref=ref, descr=descr):
+            return has_ref(blk, ref) and f'(descr "{descr}")' not in blk
+        old = [pcb[a:span(pcb, a)] for a in (m.start() + 2 for m in re.finditer(r'\n\t\(footprint[\s(]', pcb))
+               if stale(pcb[a:span(pcb, a)])]
+        if old:
+            at = re.search(r'\(at ([-\d.]+) ([-\d.]+)(?: ([-\d.]+))?\)', old[0])
+            fp_place[ref] = (n, float(at.group(1)), float(at.group(2)), float(at.group(3) or 0))
+            pcb = drop_blocks(pcb, 'footprint', stale)
+            print('refreshing', ref)
     add = ''; new_refs = []
     for ref, (n, x, y, r) in fp_place.items():
         if has_ref(pcb, ref): continue
