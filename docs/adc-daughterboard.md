@@ -1,5 +1,13 @@
 # ADC daughterboard
 
+> ⚠ **Superseded 2026-10-17: the ADC goes back on the carrier** (user decision).
+> The ADS8588H, the MAX6070 reference and the analog front end are placed on the
+> main board, in their own ground region away from the coil and injector
+> drivers. The two arguments below still decide the layout, not the board count:
+> keep the analog return currents out of the driver section, and do not route
+> analog signals through it. The board-to-board connector this doc sized is not
+> needed.
+
 **Decided 2026-09-09.** The AD7606B, its reference and the analog front end
 move to a separate board, joined to the carrier by a board-to-board connector.
 

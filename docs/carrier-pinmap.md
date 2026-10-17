@@ -7,7 +7,7 @@ header pad. The source of truth is
 table is its output (`python3 carrier_pinmap.py --md`). Firmware's `Board.h`
 and the carrier schematic follow it.
 
-**99 signals on 105 usable pins, 6 spare** (PA10, PC12, PE1, PG10–PG12).
+**100 signals on 105 usable pins, 5 spare** (PA10, PC12, PG10–PG12).
 
 ## The budget was short, not long
 
@@ -124,7 +124,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | B21 | PG0 | **ACC** | GPIO | relay | A/C clutch |
 | B22 | PG1 | **5_GOOD** | GPIO | power |  |
 | B23 | PE7 | **FPUMP** | GPIO | relay |  |
-| B24 | PE8 | **4X4L** | GPIO | input | 4x4 low |
+| B24 | PE8 | **4X4L** | GPIO | input | 4x4 low. [CONFIRM] no PCM pin found for it in either pinout source |
 | B25 | PE9 | **INJ1** | TIM1_CH1 | injection |  |
 | B28 | PE10 | **ACP** | GPIO | input | A/C pressure |
 | B29 | PE11 | **INJ2** | TIM1_CH2 | injection |  |
@@ -134,7 +134,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | B33 | PE15 | **FAN2** | GPIO | relay |  |
 | B34 | PB10 | **CMP** | TIM2_CH3 | vr | cam; capture on TIM2 |
 | B35 | PB11 | **ADC_CONVST** | TIM2_CH4 | adc | CONVSTA+B; compare output on the crank timebase |
-| C2 | PB12 | **SSB** | GPIO | solenoid | pin 1 |
+| C2 | PB12 | **SSB** | GPIO | solenoid | pin 11 (5.4L; 1 is the 4.6L pin) |
 | C3 | PB13 | **CCS** | GPIO | pwm | coast clutch, pin 20, #2 ch7 |
 | C4 | PB14 | **INJ7** | TIM12_CH1 | injection |  |
 | C5 | PB15 | **INJ8** | TIM12_CH2 | injection |  |
@@ -152,7 +152,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | C19 | PG5 | **HTR22** | GPIO | solenoid | HO2S #22 heater |
 | C20 | PG6 | **VENT** | GPIO | solenoid | canister vent, pin 67 |
 | C21 | PG7 | **IMCC** | GPIO | solenoid | pin 46 |
-| C22 | PG8 | **SSA** | GPIO | solenoid | pin 27 |
+| C22 | PG8 | **SSA** | GPIO | solenoid | pin 6 (5.4L; 27 is the 4.6L pin) |
 | C25 | PC6 | **COIL5** | TIM8_CH1 | ignition |  |
 | C26 | PC7 | **COIL6** | TIM8_CH2 | ignition |  |
 | C27 | PC8 | **COIL7** | TIM8_CH3 | ignition |  |
@@ -191,4 +191,4 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | D32 | PB8 | **EPC** | TIM10_CH1 | pwm | NCV8408B, pin 81, >= 200 Hz, own timer |
 | D33 | PB9 | **TCC** | TIM11_CH1 | pwm | pin 54, own timer |
 | D34 | PE0 | **TC_SPEED** | GPIO | vr | transfer case, pin 7; EXTI + timestamp |
-| D35 | PE1 | *spare* | | | |
+| D35 | PE1 | **TCS** | GPIO | input | O/D cancel switch, pin 29; polled, all EXTI lines are taken |

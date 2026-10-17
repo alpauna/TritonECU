@@ -51,7 +51,7 @@ EEC_POST_TO_EDGE = 5.20     # TE 770750-1: board edge 5.20 from the post centrel
 # (KiCad sense). Power and VR as the user arranged them in KiCad on 2026-10-16.
 POWER_AT = (115.55, 133.35, -90)
 VR_AT = (102.3675, 47.9158, 90)
-MCU_AT = (45.0, 55.0, 0)    # the 44 x 44 module that replaces the Nucleo-144
+MCU_AT = (45.0, 60.0, 0)    # the 46 x 46 MCU module; 5 mm below the connector courtyard to leave the injector row
 
 def U(): return str(uuid.uuid4())
 
@@ -335,6 +335,33 @@ def glabel(name, x, y, side):
             f'(effects (font (size 1.27 1.27)) (justify {just})) (uuid "{U()}"))\n')
 
 # ---------------------------------------------------------------- main
+POWER_BOARD_NET = {'SDA': 'I2C_SDA', 'SCL': 'I2C_SCL', '3.3_ENOUT': 'ENOUT',
+                   '+VIN': 'VPWR',     # the power board's input is EEC-V VPWR (pins 71/97)
+                   '3_GOOD': None}     # 3_GOOD is not wired: carrier_pinmap.py
+
+def interconnect_nets(pg):
+    """{ref: {pin: net}} for the Interconnect sheet's global labels."""
+    import carrier_pinmap, eecv_pins
+    out = {'J1': {str(p): net for p, (net, *_) in eecv_pins.PINS.items()}}
+    db1 = {}
+    for (conn, num), v in pg.items():
+        pin = ('A' if conn == 'J2' else 'B') + num
+        name = v[2]
+        db1[pin] = POWER_BOARD_NET.get(name, name)
+    db1.update({f'MH{i}': 'GND' for i in range(1, 5)})      # the V3 standoffs are on its GND net
+    out['DB1'] = db1
+    out['DB2'] = {}           # VR board: its pin names are still placeholders
+    port_net = {pin: net for net, pin, *_ in carrier_pinmap.SIGNALS}
+    db3 = {}
+    for pad, _, _, net in mcu_pinout.module_pins():
+        if re.fullmatch(r'P[A-K]\d+', net):
+            db3[pad] = port_net.get(net)          # spare and reserved port pins stay unlabelled
+        else:
+            db3[pad] = net                        # GND, +3.3V, NRST, VBAT, BOOT0
+    db3.update({f'MH{i}': 'GND' for i in range(1, 5)})
+    out['DB3'] = db3
+    return out
+
 def has_ref(text, ref):
     return re.search(r'\(property\s+"Reference"\s+"%s"' % re.escape(ref), text) is not None
 
@@ -362,7 +389,8 @@ def main():
                                        + ''.join(s.replace('\n\t\t', '\n\t').replace('\t\t(symbol', '\t(symbol', 1)
                                                  for s, _ in syms.values()) + ')\n')
     open('fp-lib-table', 'w').write(f'(fp_lib_table\n\t(version 7)\n\t(lib (name "{LIB}")(type "KiCad")(uri "${{KIPRJMOD}}/{LIB}.pretty")(options "")(descr "TritonECU carrier parts"))\n)\n')
-    open('sym-lib-table', 'w').write(f'(sym_lib_table\n\t(version 7)\n\t(lib (name "{LIB}")(type "KiCad")(uri "${{KIPRJMOD}}/{LIB}.kicad_sym")(options "")(descr "TritonECU carrier parts"))\n)\n')
+    open('sym-lib-table', 'w').write(f'(sym_lib_table\n\t(version 7)\n\t(lib (name "{LIB}")(type "KiCad")(uri "${{KIPRJMOD}}/{LIB}.kicad_sym")(options "")(descr "TritonECU carrier parts"))\n'
+                                     f'\t(lib (name "TritonECU-Carrier")(type "KiCad")(uri "${{KIPRJMOD}}/TritonECU-Carrier.kicad_sym")(options "")(descr "carrier symbols drawn by gen_carrier.py"))\n)\n')
 
     lock = [f for f in os.listdir('.') if f.startswith('~') and f.endswith('.lck')]
     if lock:
@@ -386,36 +414,35 @@ def main():
         json.dump(pro, open(f'{PROJ}.kicad_pro', 'w'), indent=2)
     sheet_uuid = re.search(r'\(uuid "([^"]+)"\)\s*\(property "Sheetname" "Interconnect"', root_s).group(1)
 
-    # Interconnect sheet: add any part whose reference is missing
+    # Interconnect sheet: rebuilt on every run, so its labels always follow
+    # carrier_pinmap.py and eecv_pins.py. Each symbol keeps the UUID it already
+    # has, which is what keeps the PCB footprints linked to it.
     place = {'EECV_104': ('J1', 'EEC-V 104', 80.01, 110.49),
              'PowerBoard_V3_Mate': ('DB1', 'Power board V3', 200.66, 74.93),
              'VRBoard_V1_Mate': ('DB2', 'VR board V1', 200.66, 160.02),
              'MCUModule_F767_Mate': ('DB3', 'MCU module F767', 320.04, 149.86)}
-    if os.path.exists('Interconnect.kicad_sch'):
-        sch = open('Interconnect.kicad_sch').read()
-    else:
-        sch = (f'(kicad_sch\n\t(version 20260306)\n\t(generator "eeschema")\n\t(generator_version "10.0")\n'
-               f'\t(uuid "{U()}")\n\t(paper "A3")\n\t(lib_symbols\n\t)\n\t(embedded_fonts no)\n)\n')
-    added = {}
+    old = open('Interconnect.kicad_sch').read() if os.path.exists('Interconnect.kicad_sch') else ''
+    def old_uuid(ref):
+        m = re.search(r'\(uuid "([^"]+)"\)\n\t\t\(property "Reference" "%s"' % re.escape(ref), old)
+        return m.group(1) if m else U()
+    file_uuid = re.search(r'\(uuid "([^"]+)"\)', old).group(1) if old else U()
+    nets = interconnect_nets(pg)
+    libs, body = '', ''
     for n, (ref, val, x, y) in place.items():
-        if has_ref(sch, ref): continue
-        su = added[n] = U()
-        if f'(symbol "{LIB}:{n}"' not in sch:
-            sch = sch.replace('\t(lib_symbols\n', '\t(lib_symbols\n' + syms[n][0].replace(f'(symbol "{n}"', f'(symbol "{LIB}:{n}"', 1), 1)
-        body = placed_symbol(n, ref, val, x, y, syms[n][1].keys(), root, sheet_uuid, su)
+        libs += syms[n][0].replace(f'(symbol "{n}"', f'(symbol "{LIB}:{n}"', 1)
+        body += placed_symbol(n, ref, val, x, y, syms[n][1].keys(), root, sheet_uuid, old_uuid(ref))
         for num, (lx, ly, side) in syms[n][1].items():
-            if n == 'PowerBoard_V3_Mate':
-                if num.startswith('MH'): name = 'GND'      # the V3 standoffs are on its GND net
-                else: name = pg[('J2', num[1:]) if num[0] == 'A' else ('J3', num[1:])][2]
-            elif n == 'MCUModule_F767_Mate':
-                # rails only; port pins are assigned on the carrier schematic
-                name = 'GND' if num.startswith('MH') else dict((p, net) for p, _, _, net in mcu_pinout.module_pins()).get(num)
-                if name not in ('GND', '+3.3V'): continue
-            else:
-                continue
-            body += glabel(name, round(x + lx, 3), round(y - ly, 3), side)
-        sch = sch.replace('\t(embedded_fonts', body + '\t(embedded_fonts', 1)
+            name = nets[ref].get(num)
+            if name:
+                body += glabel(name, round(x + lx, 3), round(y - ly, 3), side)
+            elif ref in ('J1', 'DB3') or (ref == 'DB1' and num in nets['DB1']):
+                # deliberately unused: free connector pins, spare and reserved
+                # module pins (SWD/VCP are on the module's STDC14)
+                body += f'\t(no_connect (at {round(x + lx, 3)} {round(y - ly, 3)}) (uuid "{U()}"))\n'
+    sch = (f'(kicad_sch\n\t(version 20260306)\n\t(generator "eeschema")\n\t(generator_version "10.0")\n'
+           f'\t(uuid "{file_uuid}")\n\t(paper "A3")\n\t(lib_symbols\n{libs}\t)\n{body}\t(embedded_fonts no)\n)\n')
     open('Interconnect.kicad_sch', 'w').write(sch)
+    added = {}
 
     # netlist -> pad nets
     tmp = os.path.join(HERE, '.gen-netlist.net')

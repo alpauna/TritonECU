@@ -108,8 +108,8 @@ SIGNALS = [
     ('HTR22', 'PG5', 'GPIO', False, 'solenoid', 'HO2S #22 heater'),
     ('VENT', 'PG6', 'GPIO', False, 'solenoid', 'canister vent, pin 67'),
     ('IMCC', 'PG7', 'GPIO', False, 'solenoid', 'pin 46'),
-    ('SSA', 'PG8', 'GPIO', False, 'solenoid', 'pin 27'),
-    ('SSB', 'PB12', 'GPIO', False, 'solenoid', 'pin 1'),
+    ('SSA', 'PG8', 'GPIO', False, 'solenoid', 'pin 6 (5.4L; 27 is the 4.6L pin)'),
+    ('SSB', 'PB12', 'GPIO', False, 'solenoid', 'pin 11 (5.4L; 1 is the 4.6L pin)'),
     # --- PWM loads: 74HCT541 #2 @ 5 V
     ('EVAP', 'PE5', 'TIM9_CH1', False, 'pwm', 'purge, pin 56; shares TIM9 period with EGR'),
     ('EGR', 'PE6', 'TIM9_CH2', False, 'pwm', 'EVR, pin 47'),
@@ -130,7 +130,8 @@ SIGNALS = [
     ('TR4', 'PF14', 'GPIO', True, 'input', 'pin 50'),
     ('BRAKE', 'PF15', 'GPIO', True, 'input', ''),
     ('ACP', 'PE10', 'GPIO', True, 'input', 'A/C pressure'),
-    ('4X4L', 'PE8', 'GPIO', True, 'input', '4x4 low'),
+    ('4X4L', 'PE8', 'GPIO', True, 'input', '4x4 low. [CONFIRM] no PCM pin found for it in either pinout source'),
+    ('TCS', 'PE1', 'GPIO', False, 'input', 'O/D cancel switch, pin 29; polled, all EXTI lines are taken'),
     # --- VREF: TPS2H160B-Q1, DIAG_EN tied high
     ('VREF_EN', 'PB2', 'GPIO', False, 'vref', ''),
     ('VREF_IN1', 'PF13', 'GPIO', False, 'vref', ''),

@@ -22,8 +22,8 @@ settles all of it**: at 13.5 V, current is just `13.5 / R`.
 | **EGR vacuum regulator (EVR)** | C121 | 47 | PWM driver current and freewheel sizing |
 | **EVAP canister purge** | C164 | 56 | same |
 | **IMCC** | C118 | — | **and [CONFIRM] whether it is on/off or PWM** — a PWM part will usually be lower resistance |
-| ~~**SSA**~~ | — | 27 | ✅ **CLOSED — Ford spec 20–30 Ω**, 0.72 A worst case |
-| ~~**SSB**~~ | — | 1 | ✅ **CLOSED — Ford spec 20–30 Ω** |
+| ~~**SSA**~~ | — | 6 *(27 on the 4.6L)* | ✅ **CLOSED — Ford spec 20–30 Ω**, 0.72 A worst case |
+| ~~**SSB**~~ | — | 11 *(1 on the 4.6L)* | ✅ **CLOSED — Ford spec 20–30 Ω** |
 | ~~**CSS — coast clutch**~~ | — | 20 | ✅ **CLOSED — it does not exist on a 4R70W.** It is a **4R100** part, and the MegaSquirt sheet was developed on a 4R100. Pin 20 is free |
 | ~~**TCC**~~ | — | 54 | ✅ **CLOSED — Ford spec 10–16 Ω → 1.44 A worst case.** Higher than assumed; **give it a pour** |
 | ~~**EPC**~~ | — | 81 | ✅ **4.12 Ω measured, 13.7 mH.** Ford specs **2.48–5.66 Ω**, so ours is mid-range and healthy. **Still open: operating current** |

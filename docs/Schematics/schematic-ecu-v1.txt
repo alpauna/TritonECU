@@ -432,7 +432,10 @@ CONTENTS
      HO2S heater x4   pins 93, 94, 95, 96   - PWM them, see below
      canister vent    pin 67   - found reading Ford's diagrams; in no earlier list
      IMCC             pin 46   [CONFIRM] leans on/off
-     SSA, SSB         pins 27, 1
+     SSA, SSB         pins 6, 11   ** NOT 27 and 1 - those are the 4.6L pins.
+                      Ford's diagram reads "PCM 27 (*6)" and "PCM 1 (*11)", and
+                      its legend is * = 5.4L. On this truck 27 and 1 are coils
+                      5 and 6. eecv_pins.py checks it. **
 
   [CONFIRM] ** CSS may not exist. ** The coast-clutch solenoid came from the
   MegaSquirt sheet and is not on Ford's 4R70W diagram, which shows only SSA and
