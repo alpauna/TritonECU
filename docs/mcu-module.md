@@ -155,8 +155,7 @@ back to HSI, or fail to start HSE, until that change is made.
     pins mate by position, and a bottom-mounted header is mirrored.
 - Crystals (user, 2026-10-17): **Y1 ABRACON ABM8AIG-8.000MHZ-1Z-T** with 27 pF
   load caps, **Y2 ECS ECS-.327-12.5-12QS-TR** (12.5 pF) with 18 pF. The BOM is
-  split by supplier: `TritonECU-MCU-Mouser.csv`, `-Digikey.csv` and
-  `-Future.csv`.
+  split by supplier: `TritonECU-MCU-Mouser.csv` and `TritonECU-MCU-Future.csv`.
 - USB: PA11/PA12 come out on header C. The connector, ESD protection and VBUS
   sense live on the carrier.
 

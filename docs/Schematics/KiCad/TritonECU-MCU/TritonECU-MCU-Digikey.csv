@@ -1,2 +1,0 @@
-"Reference","Qty","Value","DNP","Exclude from BOM","Exclude from Board","Exclude from Simulation","Exclude from Position Files","Footprint","Datasheet","Manufacturer_Name","Manufacturer_Part_Number","MPN","Manufacturer","Note","Digikey Part Number","Digikey Price/Stock"
-"J1,J2,J3,J4","4","","","","","","${EXCLUDE_FROM_POS_FILES}","TritonECU-MCU:Samtec_TFM-118-22-L-D-A",""," Samtec Inc.","TFM-118-02-L-D-A","TFM-118-22-L-D-A","Samtec","Header A,Header B,Header C,Header D","",""
