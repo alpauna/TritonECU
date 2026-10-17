@@ -75,6 +75,12 @@
 		(property "Sheetfile" "Injection.kicad_sch" (at 150 58.980000000000004 0) (effects (font (size 1.27 1.27)) (justify left top)))
 		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "6"))))
 	)
+	(sheet (at 190 30.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "6fdc44dc-775b-57d2-a62b-7034cefeff65")
+		(property "Sheetname" "VR" (at 190 29.77 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Sheetfile" "Vr.kicad_sch" (at 190 58.980000000000004 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "7"))))
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")

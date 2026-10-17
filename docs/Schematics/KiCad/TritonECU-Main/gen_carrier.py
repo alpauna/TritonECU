@@ -36,6 +36,10 @@ FP = {'R': 'Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder',
       'SOT23': 'Package_TO_SOT_SMD:SOT-23',
       'SOT23-5': 'Package_TO_SOT_SMD:SOT-23-5',
       'SOT223': 'Package_TO_SOT_SMD:SOT-223-3_TabPin2',
+      'R0805': 'Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder',
+      'C0805': 'Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder',
+      'QSOP16': 'Package_SO:QSOP-16_3.9x4.9mm_P0.635mm',
+      'HDR4': 'Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical',
       'DPAK5': 'Package_TO_SOT_SMD:TO-252-5_TabPin3',
       'JP': 'Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm'}
 
@@ -65,6 +69,18 @@ OWN = {
     'IntelliFET': own_symbol('IntelliFET', 'Q', [('1', 'IN', 'L', 'input'), ('2', 'D', 'R', 'passive'),
                                                  ('3', 'S', 'R', 'passive')],
                              'Self-protected low-side switch, logic input (ZXMS6005DGQ)'),
+    # Analog Devices MAX9926UAEE+T, QSOP-16, dual VR interface (datasheet pin table).
+    # Pins 15/16: the datasheet's descriptions look swapped against the names; the
+    # names are used (vr-conditioning.md).
+    'MAX9926': own_symbol('MAX9926', 'U', [('16', 'IN1+', 'L', 'input'), ('15', 'IN1-', 'L', 'input'),
+                                           ('9', 'IN2+', 'L', 'input'), ('10', 'IN2-', 'L', 'input'),
+                                           ('1', 'INT_THRS1', 'L', 'input'), ('8', 'INT_THRS2', 'L', 'input'),
+                                           ('13', 'ZERO_EN', 'L', 'input'), ('11', 'GND', 'L', 'power_in'),
+                                           ('14', 'VCC', 'R', 'power_in'), ('4', 'COUT1', 'R', 'open_collector'),
+                                           ('5', 'COUT2', 'R', 'open_collector'), ('12', 'DIRN', 'R', 'open_collector'),
+                                           ('3', 'BIAS1', 'R', 'passive'), ('6', 'BIAS2', 'R', 'passive'),
+                                           ('2', 'EXT1', 'R', 'input'), ('7', 'EXT2', 'R', 'input')],
+                          'Dual VR sensor interface, differential input, adaptive threshold', w=15.24),
     # onsemi NCV8772C, DPAK-5 centre lead crop (case 175AA): 1 Vin, 2 RO, 3 GND (tab), 4 EN, 5 Vout
     'NCV8772': own_symbol('NCV8772', 'U', [('1', 'VIN', 'L', 'power_in'), ('4', 'EN', 'L', 'input'),
                                            ('3', 'GND', 'L', 'power_in'), ('5', 'VOUT', 'R', 'power_out'),
@@ -287,9 +303,54 @@ def rails(sh):
     sh.text('VBAT: the module RTC/backup domain, from the always-on 3.3 V. R001 can become a coin cell.', 20, 80)
     sh.two('Device:R', 'R001', '0', FP['R'], 50, 100, '+3.3V', 'VBAT')
 
+def vr(sh):
+    """3 x MAX9926, Mode A2, on the carrier (VR board V1 stays a bench board).
+    vr-conditioning.md, review-vr-v1.md, review-vr-chain.md, review-vr-channel-count.md."""
+    sh.text('VR inputs: 3 x MAX9926, Mode A2 (INT_THRS = ZERO_EN = GND, EXT open). 2 x 5k 0805 per leg = 300 V headroom', 20, 20)
+    sh.text('(V1 had one; add-on per vr-conditioning.md). 470 pF C0G 200 V across the inputs: 2x10k -> 17 kHz, 0.34 deg at 6000 rpm.', 20, 24)
+    sh.text('BIAS: 100 nF to GND (review-vr-v1 #3). VCC: 10 nF closest + 100 nF + 1 uF. COUT open drain, 10k to 3.3 V.', 20, 28)
+    sh.text('Single-ended sensors (CMP, OSS, TSS, transfer case) return their - leg on SIGRTN, pin 91.', 20, 32)
+    chans = [  # (chip, channel, P net, N net, output net)
+        (1, 1, 'CKP_P', 'CKP_N', 'CKP'), (1, 2, 'VR_SPARE_P', 'VR_SPARE_N', 'VR_SPARE'),
+        (2, 1, 'CMP_IN', 'SIGRTN', 'CMP'), (2, 2, 'OSS_IN', 'SIGRTN', 'OSS'),
+        (3, 1, 'TSS_IN', 'SIGRTN', 'TSS'), (3, 2, 'TC_SPEED_IN', 'SIGRTN', 'TC_SPEED')]
+    pin = {1: ('16', '15', '4', '3'), 2: ('9', '10', '5', '6')}     # IN+, IN-, COUT, BIAS
+    r = 301; c = 301
+    for chip in (1, 2, 3):
+        x0 = 30 + (chip - 1) * 125
+        u = sh.symbol(f'{CLIB}:MAX9926', f'U30{chip}', 'MAX9926UAEE+T', x0 + 70, 90, FP['QSOP16'])
+        sh.wire(u, {'1': 'GND', '8': 'GND', '13': 'GND', '11': 'GND', '14': '+5V', '2': None, '7': None, '12': None})
+        for k, val in enumerate(('10n', '100n', '1u')):
+            sh.two('Device:C', f'C{c}', val, FP['C'], x0 + 95 + 8 * k, 125, '+5V', 'GND'); c += 1
+        for (cc, ch, pnet, nnet, out) in [q for q in chans if q[0] == chip]:
+            ip, im, co, bi = pin[ch]
+            tag = f'U30{chip}_{ch}'
+            y = 55 if ch == 1 else 115
+            for leg, src, dst in (('P', pnet, f'{tag}_INP'), ('N', nnet, f'{tag}_INM')):
+                mid = f'{tag}_{leg}M'
+                yy = y + (0 if leg == 'P' else 10)
+                a1 = sh.symbol('Device:R', f'R{r}', '5k', x0 + 10, yy, FP['R0805'], rot=90,
+                               fields={'Note': 'VR input leg, 0805 for 150 V each'}); r += 1
+                sh.wire(a1, {'1': src, '2': mid})
+                a2 = sh.symbol('Device:R', f'R{r}', '5k', x0 + 25, yy, FP['R0805'], rot=90); r += 1
+                sh.wire(a2, {'1': mid, '2': dst})
+            sh.two('Device:C', f'C{c}', '470p', FP['C0805'], x0 + 40, y + 5, f'{tag}_INP', f'{tag}_INM',
+                   fields={'Note': 'C0G, 200 V'}); c += 1
+            sh.net(f'{tag}_INP', u[ip]); sh.net(f'{tag}_INM', u[im])
+            sh.net(out, u[co])
+            sh.two('Device:R', f'R{r}', '10k', FP['R'], x0 + 100, y - 10, '+3.3V', out); r += 1
+            sh.net(f'{tag}_BIAS', u[bi])
+            sh.two('Device:C', f'C{c}', '100n', FP['C'], x0 + 110, y - 10, f'{tag}_BIAS', 'GND'); c += 1
+    j = sh.symbol('Connector_Generic:Conn_01x04', 'J301', 'VR spare', 60, 175, FP['HDR4'])
+    sh.wire(j, {'1': 'VR_SPARE_P', '2': 'VR_SPARE_N', '3': 'GND', '4': 'VR_SPARE'})
+    sh.text('J301: the sixth channel, brought out. No MCU pin: all EXTI lines are taken (carrier-pinmap.md).', 20, 190)
+    sh.text('CMP shield (EEC-V 25, 567 LB/YE): single-point to the star through R399. Not SIGRTN. review-vr-chain.md sec.3', 20, 200)
+    sh.two('Device:R', 'R399', '0', FP['R'], 200, 200, 'CMP_SHIELD', 'GND')
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
-          ('Injection', 'Injection.kicad_sch', injection)]
+          ('Injection', 'Injection.kicad_sch', injection),
+          ('VR', 'Vr.kicad_sch', vr)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):
@@ -310,7 +371,7 @@ def add_sheet_blocks(root_s, pro):
 
 def main():
     os.chdir(HERE)
-    if any(f.startswith('~') and f.endswith('.lck') for f in os.listdir('.')):
+    if any(f.startswith('~') and f.endswith(('.kicad_sch.lck', '.kicad_pcb.lck')) for f in os.listdir('.')):   # the project window alone holds nothing
         sys.exit('project is open in KiCad - close it first')
     GLOBAL.update(net for net, *_ in cp.SIGNALS)
     GLOBAL.update(net for net, *_ in ep.PINS.values())

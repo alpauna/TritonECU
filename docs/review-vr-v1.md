@@ -1,5 +1,14 @@
 # VR board V1 review — 2026-09-13
 
+> **2026-10-17: the VR front end moves onto the carrier** (user decision). Three
+> MAX9926 on `TritonECU-Main/Vr.kicad_sch` (U301–U303): CKP + spare, CMP + OSS,
+> TSS + transfer case. Every finding below is applied there: 2 × 5 kΩ 0805 per
+> input leg (300 V), 470 pF C0G 200 V across the inputs, 100 nF on BIAS, and
+> 10 nF + 100 nF + 1 µF per VCC with the 10 nF closest. The single-ended sensors
+> return on SIGRTN; the CMP shield goes single-point to the star through R399.
+> The spare channel is on header J301. **V1 stays as the bench board** for the
+> Nucleo; it is no longer a carrier daughterboard.
+
 `TritonECU_VR_Schematic_V_1` + `TritonECU_VR_V_1_Greber.zip`.
 **35.43 × 33.91 mm, 2 layer.** Four VR channels from two MAX9926UAEE+T.
 

@@ -50,7 +50,7 @@ EEC_POST_TO_EDGE = 5.20     # TE 770750-1: board edge 5.20 from the post centrel
 # Daughterboard placements: centre of each board outline, rotation in degrees
 # (KiCad sense). Power and VR as the user arranged them in KiCad on 2026-10-16.
 POWER_AT = (115.55, 133.35, -90)
-VR_AT = (102.3675, 47.9158, 90)
+VR_AT = (102.3675, 47.9158, 90)   # VR board V1: no longer placed - the VR front end is on the carrier (Vr.kicad_sch)
 MCU_AT = (45.0, 60.0, 0)    # the 46 x 46 MCU module; 5 mm below the connector courtyard to leave the injector row
 
 def U(): return str(uuid.uuid4())
@@ -350,7 +350,6 @@ def interconnect_nets(pg):
         db1[pin] = POWER_BOARD_NET.get(name, name)
     db1.update({f'MH{i}': 'GND' for i in range(1, 5)})      # the V3 standoffs are on its GND net
     out['DB1'] = db1
-    out['DB2'] = {}           # VR board: its pin names are still placeholders
     port_net = {pin: net for net, pin, *_ in carrier_pinmap.SIGNALS}
     db3 = {}
     for pad, _, _, net in mcu_pinout.module_pins():
@@ -392,7 +391,7 @@ def main():
     open('sym-lib-table', 'w').write(f'(sym_lib_table\n\t(version 7)\n\t(lib (name "{LIB}")(type "KiCad")(uri "${{KIPRJMOD}}/{LIB}.kicad_sym")(options "")(descr "TritonECU carrier parts"))\n'
                                      f'\t(lib (name "TritonECU-Carrier")(type "KiCad")(uri "${{KIPRJMOD}}/TritonECU-Carrier.kicad_sym")(options "")(descr "carrier symbols drawn by gen_carrier.py"))\n)\n')
 
-    lock = [f for f in os.listdir('.') if f.startswith('~') and f.endswith('.lck')]
+    lock = [f for f in os.listdir('.') if f.startswith('~') and f.endswith(('.kicad_sch.lck', '.kicad_pcb.lck'))]
     if lock:
         print('libraries regenerated; project is open in KiCad (%s) - close it, then re-run' % ', '.join(lock))
         return
@@ -419,7 +418,6 @@ def main():
     # has, which is what keeps the PCB footprints linked to it.
     place = {'EECV_104': ('J1', 'EEC-V 104', 80.01, 110.49),
              'PowerBoard_V3_Mate': ('DB1', 'Power board V3', 200.66, 74.93),
-             'VRBoard_V1_Mate': ('DB2', 'VR board V1', 200.66, 160.02),
              'MCUModule_F767_Mate': ('DB3', 'MCU module F767', 320.04, 149.86)}
     old = open('Interconnect.kicad_sch').read() if os.path.exists('Interconnect.kicad_sch') else ''
     def old_uuid(ref):
@@ -472,7 +470,6 @@ def main():
     ox, oy = O
     fp_place = {'J1': ('EECV_104', ox + EEC_X, oy + EEC_POST_TO_EDGE, 0),
                 'DB1': ('PowerBoard_V3_Mate', ox + POWER_AT[0], oy + POWER_AT[1], POWER_AT[2]),
-                'DB2': ('VRBoard_V1_Mate', ox + VR_AT[0], oy + VR_AT[1], VR_AT[2]),
                 'DB3': ('MCUModule_F767_Mate', ox + MCU_AT[0], oy + MCU_AT[1], MCU_AT[2])}
     value = {v[0]: v[1] for v in place.values()}
     # a placed mate footprint whose library version changed (e.g. a new connector)

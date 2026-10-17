@@ -46,6 +46,22 @@ def place():
     for k, n in enumerate(order):
         P[f'Q20{n}'] = (44.0 + 7.4 * k, 52.5, 90)     # drain tab towards the connector
         P[f'R20{n}'] = (44.0 + 7.4 * k, 59.0, 0)
+    # VR: 3 x MAX9926 where the VR daughterboard was, right of centre under the
+    # connector, near CMP 85, OSS 84, TSS 59, TC 7. Refs follow gen_carrier.vr()'s order.
+    r, c = 301, 301
+    for chip in range(3):
+        xc = 117.0 + 17.0 * chip
+        P[f'U30{chip + 1}'] = (xc, 62.0, 0)
+        for k in range(3):                                   # 10n closest, then 100n, 1u
+            P[f'C{c}'] = (xc - 4.0 + 4.0 * k, 56.0, 0); c += 1
+        for ch in range(2):
+            y = 70.0 + 7.0 * ch
+            for k in range(4):                               # P leg a, b, N leg a, b
+                P[f'R{r}'] = (xc - 6.0 + 4.0 * k, y, 90); r += 1
+            P[f'C{c}'] = (xc - 3.0 + 6.0 * ch, 85.0, 90); c += 1      # 470 pF across the inputs
+            P[f'R{r}'] = (xc - 6.0 + 8.0 * ch, 90.0, 90); r += 1      # COUT pull-up
+            P[f'C{c}'] = (xc - 2.0 + 8.0 * ch, 90.0, 90); c += 1      # BIAS
+    P['J301'] = (160.0, 98.0, 0); P['R399'] = (100.0, 62.0, 90)
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
@@ -83,14 +99,17 @@ def load(fpid):
         path = os.path.join(HERE, f'{PROJ}.pretty')
     else:
         path = f'{STOCK}/{lib}.pretty'
-    fp = pcbnew.FootprintLoad(path, name)
+    try:
+        fp = pcbnew.FootprintLoad(path, name)
+    except AttributeError:
+        sys.exit(f'cannot load {fpid} from {path}')
     assert fp, fpid
     fp.SetFPID(pcbnew.LIB_ID(lib, name))
     return fp
 
 def main():
     os.chdir(HERE)
-    if any(f.startswith('~') and f.endswith('.lck') for f in os.listdir('.')):
+    if any(f.startswith('~') and f.endswith(('.kicad_sch.lck', '.kicad_pcb.lck')) for f in os.listdir('.')):   # the project window alone holds nothing
         sys.exit('project is open in KiCad - close it first')
     comps, pins = netlist()
     board = pcbnew.LoadBoard(f'{PROJ}.kicad_pcb')
@@ -104,6 +123,7 @@ def main():
             nets[name] = n
         return nets[name]
     P = place()
+    stale = [ref for ref in have if ref not in comps]      # no longer in the schematic
     added = []
     for ref, c in sorted(comps.items()):
         if ref in have or not c['fp']:
@@ -132,9 +152,12 @@ def main():
                 p.SetNet(net(n))
             elif p.GetNetCode():
                 p.SetNetCode(0)          # the schematic no longer gives this pad a net
+    removed = []
+    for ref in stale:                 # removed last: a Remove before FootprintLoad breaks the IO plugin
+        board.Remove(have.pop(ref)); removed.append(ref)
     board.Save(f'{PROJ}.kicad_pcb')
     unplanned = [r for r in added if r not in P]
-    print(f'added {len(added)} footprints' + (f'; parked off-board, no position yet: {unplanned}' if unplanned else ''))
+    print(f'added {len(added)} footprints, removed {removed}' + (f'; parked off-board, no position yet: {unplanned}' if unplanned else ''))
 
 if __name__ == '__main__':
     main()
