@@ -361,6 +361,10 @@ PWM = [('EVAP', 'EVAP_OUT', 'FW_391', 'DS_EVAP'), ('EGR', 'EGR_OUT', 'FW_391', N
        ('IAC', 'IAC_OUT', 'VPWR', None), ('VSS_OUT', 'VSS_OUT_PIN', None, None),
        ('CCS', 'CCS_OUT', None, None)]
 MUX = ['DS_HTR11', 'DS_HTR21', 'DS_HTR12', 'DS_HTR22', 'DS_EVAP', 'DS_VENT', 'SUP_1138', 'SUP_391']
+# Relay channels (TBD62083AFNG): (MCU net, connector net)
+RELAY = [('FPUMP', 'FPUMP_OUT'), ('FAN1', 'FAN1_OUT'), ('FAN2', 'FAN2_OUT'), ('ACC', 'ACC_OUT')]
+PTC = dict(value='MF-MSMF030/60-2', fp='Fuse:Fuse_1812_4532Metric',
+           fields={'Note': 'PTC 0.30 A hold / 0.60 A trip, 60 V, 1812 [CONFIRM vs coil current]'})
 FW_DIODE = dict(value='STPS3H100UY', fields={'Note': 'Schottky >= 60 V 3 A AEC-Q101 [CONFIRM part]'})
 
 def low_side_bank(sh, base, buf_ref, chans, oe_nets, title):
@@ -431,12 +435,40 @@ def pwm_loads(sh):
                   dnp=True)
     sh.wire(r, {'1': '+5V', '2': 'VSS_OUT_PIN'})
 
+def relays(sh):
+    """output-drivers.md, cooling-fans.md sec.5.2: TBD62083AFNG straight from 3.3 V GPIO
+    (VIN(ON) 2.5 V at 0.1 mA). Clamp diodes are built in, all to COMMON, which goes to
+    permanent B+ so the run-on fan coils (on B+) are clamped above their own feed.
+    No current limit in the part: the PTC is the only over-current protection
+    (harness-protection.md, review-protection-sweep.md B1)."""
+    sh.text('Relays: TBD62083AFNG, direct from GPIO. 100k pulldown holds every relay off through reset.', 20, 20)
+    sh.text('COMMON = permanent B+ (EEC-V 55, 729 RD/WH, CJB 5 A): every coil feed is at or below it, so no channel', 20, 24)
+    sh.text('back-feeds. [CONFIRM] sharing pin 55 with the battery-sense divider: clamp current is only the coil decay.', 20, 28)
+    sh.text('PTC in series: the array has no current limit, so a shorted coil is stopped by F60x. Coil currents [CONFIRM] on the truck.', 20, 32)
+    u = sh.symbol('Samacsys:TBD62083AFNG', 'U601', 'TBD62083AFNG', 110, 90)
+    sh.wire(u, {'9': 'GND', '10': 'VBAT_SENSE'})
+    for k in range(8):
+        if k < len(RELAY):
+            mcu, out = RELAY[k]
+            n = k + 1
+            sh.net(mcu, u[str(1 + k)])
+            sh.net(f'{mcu}_SINK', u[str(18 - k)])
+            sh.two('Device:R', f'R{600 + n}', '100k', FP['R'], 70 + 8 * k, 130, mcu, 'GND')
+            f = sh.symbol('Device:Polyfuse', f'F{600 + n}', PTC['value'], 170, 60 + 15 * k, PTC['fp'], rot=90,
+                          fields=PTC['fields'])
+            sh.wire(f, {'1': f'{mcu}_SINK', '2': out})
+        else:
+            sh.wire(u, {str(1 + k): 'GND', str(18 - k): None})
+    sh.two('Device:C', 'C601', '100n', FP['C0805'], 140, 130, 'VBAT_SENSE', 'GND', fields={'Note': '100 V X7R'})
+    sh.text('Channels 5-8 spare: inputs to GND, outputs open. No MCU pins left for them (carrier-pinmap.md).', 20, 160)
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
           ('VR', 'Vr.kicad_sch', vr),
           ('Solenoids', 'Solenoids.kicad_sch', solenoids),
-          ('PWM', 'Pwm.kicad_sch', pwm_loads)]
+          ('PWM', 'Pwm.kicad_sch', pwm_loads),
+          ('Relays', 'Relays.kicad_sch', relays)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):

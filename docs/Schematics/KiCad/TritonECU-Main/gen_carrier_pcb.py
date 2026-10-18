@@ -94,6 +94,12 @@ def place():
     P['U501'] = (92.0, 176.0, 0); P['C501'] = (92.0, 185.0, 0); P['R509'] = (86.0, 185.0, 90)
     for k, ref in enumerate(('R561', 'R562', 'R563', 'R564')):        # supply sense 1138, 391
         P[ref] = (101.0 + 4.0 * (k // 2), 164.0 + 4.0 * (k % 2), 0)
+    # relays (TBD62083AFNG): below the VR group, right of the coil buffer; slow
+    # outputs, so distance to EEC-V 80/19/18/69 costs nothing. PTCs in a row below.
+    P['U601'] = (125.0, 100.0, 0); P['C601'] = (133.0, 100.0, 90)
+    for k in range(4):
+        P[f'R60{k + 1}'] = (117.0, 96.0 + 3.0 * k, 0)
+        P[f'F60{k + 1}'] = (118.0 + 5.0 * k, 109.0, 90)
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P

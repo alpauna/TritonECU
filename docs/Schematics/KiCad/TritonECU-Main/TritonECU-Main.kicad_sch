@@ -93,6 +93,12 @@
 		(property "Sheetfile" "Pwm.kicad_sch" (at 110 98.98 0) (effects (font (size 1.27 1.27)) (justify left top)))
 		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "9"))))
 	)
+	(sheet (at 150 70.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "14eada34-99c9-54a2-99b9-40b797577cd9")
+		(property "Sheetname" "Relays" (at 150 69.77000000000001 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Sheetfile" "Relays.kicad_sch" (at 150 98.98 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "10"))))
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")
