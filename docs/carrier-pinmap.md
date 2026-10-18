@@ -7,7 +7,7 @@ header pad. The source of truth is
 table is its output (`python3 carrier_pinmap.py --md`). Firmware's `Board.h`
 and the carrier schematic follow it.
 
-**101 signals on 105 usable pins, 4 spare** (PA10, PC12, PG11, PG12). PG10 became `ADC_REF_EN` with the ADC sheet.
+**102 signals on 105 usable pins, 3 spare** (PA10, PC12, PG12). PG10 became `ADC_REF_EN` with the ADC sheet, PG11 `SD_PWR_EN` with comms.
 
 ## The budget was short, not long
 
@@ -178,7 +178,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | D16 | PD7 | **SD_CMD** | SDMMC2_SD_CMD | storage |  |
 | D17 | PG9 | **SD_D0** | SDMMC2_SD_DATA0 | storage |  |
 | D18 | PG10 | **ADC_REF_EN** | GPIO | adc | MAX6070AAUT25 EN, 10k pulldown: gated off in Standby, always-on-domain.md |
-| D19 | PG11 | *spare* | | | |
+| D19 | PG11 | **SD_PWR_EN** | GPIO | storage | TPS22917 ON, 100k pulldown: the card is off when parked (3.3 V is always on) |
 | D20 | PG12 | *spare* | | | |
 | D21 | PG13 | **J1850_TXP** | GPIO | j1850 | same port as TXN: one BSRR write |
 | D22 | PG14 | **J1850_TXN** | GPIO | j1850 |  |

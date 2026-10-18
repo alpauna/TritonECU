@@ -116,6 +116,9 @@ def place():
     P['U702'] = (162.0, 114.0, 0); P['C705'] = (162.0, 118.5, 0); P['D703'] = (170.5, 112.0, 90)
     for k, ref in enumerate(('R702', 'R703', 'R704', 'R705', 'R706', 'R707')):
         P[ref] = (167.6, 109.8 + 1.8 * k, 0)
+    # USB-C on the right board edge (x 183): rotated 90 so the opening faces +x, the
+    # footprint's 'PCB Edge' line (local y 3.675) on the edge
+    P['J901'] = (183.0 - 3.675, 141.5, 90)
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
@@ -135,11 +138,18 @@ PACK = [
     # HO2S x4 buffers: the bottom band. Far from pins 35/60/61/87 - first draft only
     (['U803', 'U804', 'C815', 'C820'] + _refs('R', 818, 836) + _refs('C', 816, 825) + _refs('D', 802, 807),
      (26.5, 187.0, 110.2, 198.0)),         # below R509, left of the power board
+    # comms: USB-C and microSD need a board edge; the only free one is the strip right
+    # of the power board. SCP/CAN then run ~100 mm to EEC-V 15/16/42/43 - first draft
+    (['U903', 'U901', 'U902', 'U904', 'U905'] + _refs('R', 901, 930) + _refs('C', 901, 920)
+     + _refs('D', 901, 906) + ['J902'], (170.8, 147.2, 182.6, 198.4)),
 ]
 
-def pack(have, refs, rect, gap=0.3):
+PARK = (190.0, 30.0, 240.0, 230.0)       # off the right edge: what did not fit, for you to place
+
+def pack(have, refs, rect, gap=0.3, park=True):
+    """Shelf-pack refs into rect by courtyard; parts that do not fit go to PARK."""
     x0, y0, x1, y1 = rect
-    x, y, row = x0, y0, 0.0
+    x, y, row, left = x0, y0, 0.0, []
     for ref in refs:
         fp = have.get(ref)
         if fp is None:
@@ -148,12 +158,16 @@ def pack(have, refs, rect, gap=0.3):
         fp.SetPosition(pcbnew.VECTOR2I(0, 0))
         c = fp.GetCourtyard(pcbnew.F_CrtYd).BBox()
         l, t, w, h = (pcbnew.ToMM(v) for v in (c.GetLeft(), c.GetTop(), c.GetWidth(), c.GetHeight()))
-        if x + w > x1:
-            x, y, row = x0, y + row + gap, 0.0
-        fp.SetPosition(pcbnew.VECTOR2I(MM(x - l), MM(y - t)))
-        x += w + gap; row = max(row, h)
-    if y + row > y1:
-        print(f'  pack: {refs[0]}.. overflows its region by {y + row - y1:.1f} mm')
+        nx, ny, nrow = x, y, row
+        if nx + w > x1:
+            nx, ny, nrow = x0, y + row + gap, 0.0
+        if w > x1 - x0 or ny + h > y1:
+            left.append(ref); continue
+        fp.SetPosition(pcbnew.VECTOR2I(MM(nx - l), MM(ny - t)))
+        x, y, row = nx + w + gap, ny, max(nrow, h)
+    if left and park:
+        print(f'  pack: {len(left)} did not fit, parked off-board: {left}')
+        pack(have, left, PARK, gap, park=False)
 
 # ---------------------------------------------------------------- netlist
 def netlist():

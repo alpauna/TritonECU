@@ -700,6 +700,94 @@ def adc(sh):
     r('100k', 345, 260, 'FP_MON_IN', 'FP_MON'); r('10.5k', 345, 275, 'FP_MON', 'GND')
     c('100n', 353, 275, 'FP_MON', 'GND')
 
+def comms(sh):
+    """f150-1999-target.md sec.5.3 + review-scp-chain.md (SCP), can-bus.md (CAN),
+    USB-C device port, microSD on SDMMC2 1-bit behind a load switch."""
+    R = iter(range(901, 1000)); C = iter(range(901, 1000)); D = iter(range(901, 1000))
+    def r(val, x, y, a, b, fp=None, **kw):
+        sh.two('Device:R', f'R{next(R)}', val, fp or FP['R'], x, y, a, b, **kw)
+    def c(val, x, y, a, b, fp=None, **kw):
+        sh.two('Device:C', f'C{next(C)}', val, fp or FP['C'], x, y, a, b, **kw)
+    def ser(val, x, y, a, b, **kw):
+        k = sh.symbol('Device:R', f'R{next(R)}', val, x, y, FP['R'], rot=90, **kw)
+        sh.wire(k, {'1': a, '2': b})
+    # --- SCP / J1850 PWM
+    sh.text('SCP (J1850 PWM, EEC-V 16 = SCP+, 15 = SCP-): DRV8837 drives, TLV7031 receives. Passive state is IN1 = IN2 = LOW (coast,', 20, 16)
+    sh.text('Hi-Z) so another node can win arbitration; nSLEEP 10k low releases the whole bus at power-on. 100R per TX line.', 20, 20)
+    sh.text('RX divider 100k:100k BOTH to GND (not 10k:100k, not to 3.3 V: the two OpenJ1850 traps), MM3Z3V3 clamps, 4.7M hysteresis.', 20, 24)
+    u = sh.symbol('Driver_Motor:DRV8837', 'U901', 'DRV8837DSGR', 60, 60)
+    sh.wire(u, {'1': '+5V', '8': '+3.3V', '4': 'GND', '9': 'GND', '6': 'J1850_TXP', '5': 'J1850_TXN',
+                '7': 'J1850_NSLEEP', '2': 'SCP_TXP', '3': 'SCP_TXN'})
+    r('10k', 35, 80, 'J1850_NSLEEP', 'GND', fields={'Note': 'bus released until firmware runs'})
+    c('100n', 45, 80, '+5V', 'GND'); c('1u', 52, 80, '+5V', 'GND'); c('100n', 75, 80, '+3.3V', 'GND')
+    ser('100', 95, 55, 'SCP_TXP', 'SCP_P', fields={'Note': 'harness fault limit, 83 mA into VM'})
+    ser('100', 95, 65, 'SCP_TXN', 'SCP_N')
+    t = sh.symbol('Power_Protection:NUP2105L', f'D{next(D)}', 'NUP2105L', 115, 60,
+                  fields={'Note': '24 V standoff, ~30 pF: transients only [CONFIRM]'})
+    sh.wire(t, {'1': 'SCP_P', '2': 'SCP_N', '3': 'GND'})
+    for k, (bus, node) in enumerate((('SCP_P', 'SCP_RXP'), ('SCP_N', 'SCP_RXN'))):
+        y = 100 + 20 * k
+        ser('100k', 40, y, bus, node)
+        r('100k', 55, y + 8, node, 'GND')
+        z = sh.symbol('Diode:MM3Zxx', f'D{next(D)}', 'MM3Z3V3BW', 65, y + 8, rot=90)
+        sh.wire(z, {'1': node, '2': 'GND'})
+    cmp_ = sh.symbol('Comparator:TLV7031DBV', 'U902', 'TLV7031DBVR', 95, 110)
+    sh.wire(cmp_, {'5': '+3.3V', '2': 'GND', '3': 'SCP_RXP', '4': 'SCP_RXN', '1': 'SCP_CMP'})
+    c('100n', 110, 125, '+3.3V', 'GND')
+    r('4.7M', 85, 135, 'SCP_CMP', 'SCP_RXP', fields={'Note': 'hysteresis, about +-35 mV'})
+    ser('100', 120, 110, 'SCP_CMP', 'J1850_RX')
+    z = sh.symbol('Device:D_Zener', f'D{next(D)}', 'SMF3.3A', 135, 120, 'Diode_SMD:D_SMF', rot=90,
+                  fields={'Note': 'unidirectional TVS: OUT has the same VCC + 0.3 V limit as the inputs'})
+    sh.wire(z, {'1': 'J1850_RX', '2': 'GND'})
+    # --- CAN
+    sh.text('CAN (private, to the dash display; EEC-V 42 = CAN_H, 43 = CAN_L, terminals added): TJA1042T/3, 10 uA standby.', 170, 16)
+    sh.text('RXD goes to CAN1_RX (PD0) AND to PA0/WKUP1 through R9xx: Standby wakes only on a WKUP pin. STB has an internal pull-up.', 170, 20)
+    x = sh.symbol('Interface_CAN_LIN:TJA1042T-3', 'U903', 'TJA1042T/3', 210, 60)
+    sh.wire(x, {'1': 'CAN_TX', '4': 'CAN_RX', '8': 'CAN_STB', '3': '+5V', '5': '+3.3V', '2': 'GND',
+                '7': 'CAN_H', '6': 'CAN_L'})
+    r('0', 185, 80, 'CAN_RX', 'CAN_RX_WAKE', fields={'Note': 'RXD to WKUP1 too: one net on two pins'})
+    c('100n', 230, 80, '+5V', 'GND'); c('4.7u', 237, 80, '+5V', 'GND', FP['C0805']); c('100n', 244, 80, '+3.3V', 'GND')
+    sh.text('TERMINATION - this ECU is a bus END. Split, matched 1 %: 2 x 60.4R + 4.7n. A THIRD node must NOT terminate.', 170, 100)
+    r('60.4', 260, 110, 'CAN_H', 'CAN_SPLIT', 'Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder', fields={'Note': '1 %, matched'})
+    r('60.4', 260, 125, 'CAN_SPLIT', 'CAN_L', 'Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder', fields={'Note': '1 %, matched'})
+    c('4.7n', 272, 125, 'CAN_SPLIT', 'GND')
+    t = sh.symbol('Power_Protection:NUP2105L', f'D{next(D)}', 'NUP2105L', 290, 115,
+                  fields={'Note': 'the CAN bus TVS, 24 V standoff'})
+    sh.wire(t, {'1': 'CAN_H', '2': 'CAN_L', '3': 'GND'})
+    # --- USB-C device
+    sh.text('USB-C, device only (tuning, flashing): 5.1k on CC1/CC2, USBLC6-2SC6, VBUS sensed only (never powers the ECU).', 20, 165)
+    j = sh.symbol('Connector:USB_C_Receptacle_USB2.0_16P', 'J901', 'USB4105-GF-A', 50, 210,
+                  'Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal')
+    vb = 'USB_VBUS_C'
+    sh.wire(j, {'A4': vb, 'A9': vb, 'B4': vb, 'B9': vb, 'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND',
+                'A6': 'USB_DP', 'B6': 'USB_DP', 'A7': 'USB_DM', 'B7': 'USB_DM', 'A5': 'USB_CC1', 'B5': 'USB_CC2',
+                'A8': None, 'B8': None, 'SH': 'USB_SHIELD'})
+    r('5.1k', 90, 230, 'USB_CC1', 'GND'); r('5.1k', 97, 230, 'USB_CC2', 'GND')
+    e = sh.symbol('Power_Protection:USBLC6-2SC6', 'U904', 'USBLC6-2SC6', 120, 200)
+    sh.wire(e, {'1': 'USB_DP', '6': 'USB_DP', '3': 'USB_DM', '4': 'USB_DM', '5': vb, '2': 'GND'})
+    r('15k', 140, 195, vb, 'USB_VBUS', fields={'Note': '5 V -> 3.2 V at PA9'})
+    r('27k', 140, 210, 'USB_VBUS', 'GND')
+    c('1u', 150, 195, vb, 'GND')
+    r('1M', 105, 245, 'USB_SHIELD', 'GND'); c('4.7n', 113, 245, 'USB_SHIELD', 'GND', fields={'Note': '50 V'})
+    # --- microSD
+    sh.text('microSD, SDMMC2 1-bit. Card power through TPS22917 on SD_PWR_EN (100k down): 3.3 V is always on and an idle', 170, 165)
+    sh.text('card alone is ~100 uA against the 184 uA parked budget. Pull-ups go to the CARD rail so nothing back-powers it. No CD pin.', 170, 169)
+    w = sh.symbol('Power_Management:TPS22917DBV', 'U905', 'TPS22917DBVR', 200, 200)
+    sh.wire(w, {'1': '+3.3V', '2': 'GND', '3': 'SD_PWR_EN', '4': 'SD_CT', '5': 'SD_QOD', '6': 'SD_3V3'})
+    r('100', 215, 210, 'SD_QOD', 'SD_3V3', fields={'Note': 'quick output discharge, rate-limited'})
+    r('100k', 180, 220, 'SD_PWR_EN', 'GND')
+    c('1u', 180, 190, '+3.3V', 'GND')
+    c('1n', 205, 225, 'SD_CT', 'GND', fields={'Note': 'slew: no inrush dip on the MCU rail'})
+    c('4.7u', 225, 225, 'SD_3V3', 'GND', FP['C0805']); c('100n', 232, 225, 'SD_3V3', 'GND')
+    sd = sh.symbol('Connector:Micro_SD_Card_Det2', 'J902', '104031-0811', 300, 210,
+                   'Connector_Card:microSD_HC_Molex_104031-0811')
+    sh.wire(sd, {'4': 'SD_3V3', '6': 'GND', '5': 'SD_CLK', '3': 'SD_CMD', '7': 'SD_D0', '8': 'SD_D1',
+                 '1': 'SD_D2', '2': 'SD_D3', '9': None, '10': None, 'SH': 'GND'})
+    ser('22', 260, 190, 'SD_CK', 'SD_CLK', fields={'Note': 'clock edge damping'})
+    for k, n in enumerate(('SD_CMD', 'SD_D0', 'SD_D1', 'SD_D2', 'SD_D3')):
+        r('47k', 250 + 7 * k, 240, 'SD_3V3', n)
+    sh.text('DAT3 pulled up keeps the card in SD mode (low at CMD0 selects SPI). DAT1/DAT2 unused in 1-bit, pulled up.', 170, 270)
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
@@ -708,7 +796,8 @@ SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('PWM', 'Pwm.kicad_sch', pwm_loads),
           ('Relays', 'Relays.kicad_sch', relays),
           ('VREF', 'Vref.kicad_sch', vref),
-          ('ADC', 'ADC.kicad_sch', adc)]
+          ('ADC', 'ADC.kicad_sch', adc),
+          ('Comms', 'Comms.kicad_sch', comms)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):

@@ -105,6 +105,12 @@
 		(property "Sheetfile" "Vref.kicad_sch" (at 190 98.98 0) (effects (font (size 1.27 1.27)) (justify left top)))
 		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "11"))))
 	)
+	(sheet (at 110 110.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "2afdc965-bef7-5177-881e-7aef0a9e6026")
+		(property "Sheetname" "Comms" (at 110 109.77000000000001 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Sheetfile" "Comms.kicad_sch" (at 110 138.98000000000002 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "13"))))
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")

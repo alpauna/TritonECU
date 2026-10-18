@@ -163,6 +163,7 @@ SIGNALS = [
     ('SD_CK', 'PD6', 'SDMMC2_SD_CK', False, 'storage', '1-bit'),
     ('SD_CMD', 'PD7', 'SDMMC2_SD_CMD', False, 'storage', ''),
     ('SD_D0', 'PG9', 'SDMMC2_SD_DATA0', False, 'storage', ''),
+    ('SD_PWR_EN', 'PG11', 'GPIO', False, 'storage', 'TPS22917 ON, 100k pulldown: the card is off when parked (3.3 V is always on)'),
     ('USB_DM', 'PA11', 'USB_OTG_FS_USB_OTG_FS', False, 'usb', 'tuning path'),
     ('USB_DP', 'PA12', 'USB_OTG_FS_USB_OTG_FS', False, 'usb', ''),
     ('USB_VBUS', 'PA9', 'USB_OTG_FS_USB_OTG_FS', False, 'usb', 'via divider'),

@@ -775,6 +775,10 @@
     [
       "44f565ca-e0df-536b-a9cc-bf9e2411bc1a",
       "VREF"
+    ],
+    [
+      "2afdc965-bef7-5177-881e-7aef0a9e6026",
+      "Comms"
     ]
   ],
   "text_variables": {},

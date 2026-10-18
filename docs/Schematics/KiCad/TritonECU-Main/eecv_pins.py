@@ -93,6 +93,9 @@ PINS = {
     29: ('TCS_IN', 'O/D cancel switch', 'pinout'),
     # --- bus
     15: ('SCP_N', 'SCP- 915 PNK/LT BLU', 'pinout'), 16: ('SCP_P', 'SCP+ 914 TAN/ORG', 'pinout'),
+    # private CAN to the dash display: terminals ADDED in two empty cavities beside SCP
+    42: ('CAN_H', 'CAN high, added terminal (unused cavity)', 'can-bus.md'),
+    43: ('CAN_L', 'CAN low, added terminal (unused cavity)', 'can-bus.md'),
 }
 
 # Deliberately unconnected, with the reason

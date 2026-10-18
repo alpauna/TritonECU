@@ -262,6 +262,13 @@ compatibility, not signal integrity:
 So **design around 500 kbit/s**: it costs nothing in margin on a bus this short, and
 it avoids buying a device that cannot go slow enough to meet us.
 
+## Where the bus leaves the box — DECIDED
+
+**EEC-V pins 42 (CAN_H) and 43 (CAN_L)**, two of the connector's unused cavities,
+adjacent and in the row beside SCP (15/16). Terminals are **added** to the
+truck's connector; the display harness joins the loom there. No extra enclosure
+opening. `eecv_pins.py`, Comms sheet.
+
 ## Open
 
 - [ ] Confirm the transceiver's ground treatment against

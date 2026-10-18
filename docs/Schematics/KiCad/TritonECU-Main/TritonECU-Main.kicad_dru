@@ -1,0 +1,6 @@
+(version 1)
+# GCT's USB4105 land pattern puts its GND pads 0.19 mm from its own locating
+# holes, under the board's 0.25 mm hole clearance. Scoped to that footprint only.
+(rule "USB4105 land pattern"
+	(condition "A.memberOfFootprint('J901') && B.memberOfFootprint('J901')")
+	(constraint hole_clearance (min 0.15mm)))
