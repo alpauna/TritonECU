@@ -46,6 +46,8 @@ FP = {'R': 'Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder',
       'DPAK5': 'Package_TO_SOT_SMD:TO-252-5_TabPin3',
       'SMA': 'Diode_SMD:D_SMA',
       'SOD323': 'Diode_SMD:D_SOD-323F',
+      'SOIC8': 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
+      'TSSOP14': 'Package_SO:TSSOP-14_4.4x5mm_P0.65mm',
       'JP': 'Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm'}
 
 # ---------------------------------------------------------------- own symbols
@@ -91,6 +93,21 @@ OWN = {
                                            ('3', 'GND', 'L', 'power_in'), ('5', 'VOUT', 'R', 'power_out'),
                                            ('2', 'RO', 'R', 'output')],
                           '350 mA LDO with reset, NCV8772C', w=12.7),
+    # Standard dual / quad op-amp pinouts, one unit each so every pin is placed:
+    # OPA2376AQDRQ1 SOIC-8 and TLV9064-Q1 SOIC/TSSOP-14 (both datasheets' pin tables).
+    'OPAMP2': own_symbol('OPAMP2', 'U', [('3', '+INA', 'L', 'input'), ('2', '-INA', 'L', 'input'),
+                                         ('5', '+INB', 'L', 'input'), ('6', '-INB', 'L', 'input'),
+                                         ('4', 'V-', 'L', 'power_in'), ('8', 'V+', 'R', 'power_in'),
+                                         ('1', 'OUTA', 'R', 'output'), ('7', 'OUTB', 'R', 'output')],
+                         'Dual op-amp, standard SOIC-8 pinout (OPA2376)'),
+    'OPAMP4': own_symbol('OPAMP4', 'U', [('3', '+IN1', 'L', 'input'), ('2', '-IN1', 'L', 'input'),
+                                         ('5', '+IN2', 'L', 'input'), ('6', '-IN2', 'L', 'input'),
+                                         ('10', '+IN3', 'L', 'input'), ('9', '-IN3', 'L', 'input'),
+                                         ('12', '+IN4', 'L', 'input'), ('13', '-IN4', 'L', 'input'),
+                                         ('11', 'V-', 'L', 'power_in'), ('4', 'V+', 'R', 'power_in'),
+                                         ('1', 'OUT1', 'R', 'output'), ('7', 'OUT2', 'R', 'output'),
+                                         ('8', 'OUT3', 'R', 'output'), ('14', 'OUT4', 'R', 'output')],
+                         'Quad op-amp, standard 14-pin pinout (TLV9064)'),
 }
 
 def write_own_lib():
@@ -529,6 +546,160 @@ def vref(sh):
     d = sh.symbol('Device:D_Schottky', 'D704', 'BAT54J', 320, 70, FP['SOD323'], rot=90)
     sh.wire(d, {'1': '+3.3V', '2': 'VREF_STB'})
 
+def adc(sh):
+    """adc-front-end.md (channels, straps, battery divider), always-on-domain.md
+    (MAX6070 reference), o2-input-stage.md, knock-front-end-schematic.md, tft-sensor.md.
+    ADS8588H, serial on DOUTA, +-10 V, external 2.5 V reference."""
+    R = iter(range(801, 900)); C = iter(range(801, 900)); D = iter(range(801, 900))
+    def r(val, x, y, a, b, fp=None, **kw):
+        sh.two('Device:R', f'R{next(R)}', val, fp or FP['R'], x, y, a, b, **kw)
+    def c(val, x, y, a, b, fp=None, **kw):
+        sh.two('Device:C', f'C{next(C)}', val, fp or FP['C'], x, y, a, b, **kw)
+    def clamp(x, y, node):                          # Schottky from node up to +3.3V
+        d = sh.symbol('Device:D_Schottky', f'D{next(D)}', 'BAT54J', x, y, FP['SOD323'], rot=90)
+        sh.wire(d, {'1': '+3.3V', '2': node})
+
+    sh.text('ADC: ADS8588H, serial on DOUTA, RANGE high = +-10 V (forced: ch 8 is VREF at 5.00 V), OS0-2 low, external 2.5 V reference.', 20, 16)
+    sh.text('Ch: 1 MAF diff (968 return on AIN1GND), 2 TPS, 3 HO2S 21, 4 HO2S 11 (buffered), 5 CHT, 6 IAT, 7 battery 180k/30k, 8 VREF_5V.', 20, 20)
+    sh.text('Single GND net: AGND/PGND is a layout split at the star, not a schematic one.', 20, 24)
+    # --- the converter
+    u = sh.symbol('Samacsys:ADS8588HIPM', 'U801', 'ADS8588HIPM', 40, 60)
+    nets = {'1': '+5V', '37': '+5V', '38': '+5V', '48': '+5V', '23': '+3.3V',
+            '2': 'GND', '26': 'GND', '35': 'GND', '40': 'GND', '41': 'GND', '47': 'GND', '43': 'GND', '46': 'GND',
+            '3': 'GND', '4': 'GND', '5': 'GND', '6': '+3.3V', '7': '+3.3V', '8': '+3.3V', '34': 'GND',
+            '9': 'ADC_CONVST', '10': 'ADC_CONVSTB', '11': 'ADC_RESET', '12': 'ADC_SCK', '13': 'ADC_CS',
+            '14': 'ADC_BUSY', '15': None, '24': 'ADC_MISO', '25': None,
+            '36': 'ADC_REGCAP1', '39': 'ADC_REGCAP2', '42': 'ADC_REF', '44': 'ADC_REFCAP', '45': 'ADC_REFCAP',
+            '16': 'ADC_DB0', '17': 'ADC_DB1', '18': 'ADC_DB2', '29': 'ADC_DB11', '32': 'ADC_DB14', '33': 'ADC_DB15'}
+    for k in ('19', '20', '21', '22', '27', '28', '30', '31'):
+        nets[k] = None
+    ain = [('MAF_A', 'MAF_RTN'), ('TPS_A', 'GND'), ('O2_21_A', 'GND'), ('O2_11_A', 'GND'),
+           ('CHT_A', 'GND'), ('IAT_A', 'GND'), ('VBAT_A', 'GND'), ('VREF_5V', 'GND')]
+    for i, (pnet, gnet) in enumerate(ain):
+        nets[str(49 + 2 * i)] = pnet; nets[str(50 + 2 * i)] = gnet
+    sh.wire(u, nets)
+    # REFCAPA/B are shorted by the datasheet's own instruction; the import types them
+    # as outputs, so the embedded copy makes them passive (ERC pin_to_pin otherwise)
+    emb, pins, fp0 = sh.libs['Samacsys:ADS8588HIPM']
+    emb = re.sub(r'\(pin output(\s+line\s+\(at [^)]*\)\s+\(length [^)]*\)\s+\(name "REFCAP[AB]")', r'(pin passive\1', emb)
+    sh.libs['Samacsys:ADS8588HIPM'] = (emb, pins, fp0)
+    r('0', 30, 140, 'ADC_CONVST', 'ADC_CONVSTB', fields={'Note': 'CONVSTA-B link: a 0R, not a trace (AD7606C WR)'})
+    for k, n in enumerate(('ADC_DB0', 'ADC_DB1', 'ADC_DB2', 'ADC_DB11', 'ADC_DB14', 'ADC_DB15')):
+        r('10k', 40 + 7 * k, 140, n, 'GND')
+    sh.text('10k pull-downs: DB0-2 per the AD7606C serial rule, DB15/BYTE SEL low = serial not byte mode, DB11/DB14 parked.', 20, 152)
+    for k in range(4):
+        c('100n', 90 + 7 * k, 140, '+5V', 'GND')
+    c('10u', 118, 140, '+5V', 'GND', FP['C0805'])
+    c('100n', 125, 140, '+3.3V', 'GND')
+    c('1u', 90, 160, 'ADC_REGCAP1', 'GND'); c('1u', 97, 160, 'ADC_REGCAP2', 'GND')
+    c('10u', 104, 160, 'ADC_REFCAP', 'GND', FP['C0805'], fields={'Note': 'REFCAPA+B shorted, low ESR'})
+    # --- the 2.5 V reference, gated, on 3.3 V (EN is 0.7 x VIN)
+    sh.text('Reference: MAX6070AAUT25 on 3.3 V (EN threshold is 0.7 x VIN). 220R + 10u in, 0.1u FILTER, 4.7u + 100n at REFIN.', 150, 40)
+    sh.text('EN gated by ADC_REF_EN, 10k pull-down holds it off in Standby. 25 ms wait after enable. REFSEL low = external.', 150, 44)
+    rf = sh.symbol('Reference_Voltage:MAX6070AAUT25+T', 'U802', 'MAX6070AAUT25+T', 190, 70)
+    sh.wire(rf, {'4': 'ADC_REF_IN', '3': 'ADC_REF_EN', '2': 'GND', '1': 'ADC_REF_FLT', '5': 'ADC_REF', '6': 'ADC_REF'})
+    a = sh.symbol('Device:R', f'R{next(R)}', '220', 160, 60, FP['R'], rot=90)
+    sh.wire(a, {'1': '+3.3V', '2': 'ADC_REF_IN'})
+    f = sh.symbol('power:PWR_FLAG', '#FLG801', 'PWR_FLAG', 152.4, 66.04)    # the RC-filtered 3.3 V
+    sh.net('ADC_REF_IN', f['1'])
+    c('10u', 160, 75, 'ADC_REF_IN', 'GND', FP['C0805']); c('100n', 168, 75, 'ADC_REF_IN', 'GND')
+    r('10k', 175, 90, 'ADC_REF_EN', 'GND')
+    c('100n', 215, 90, 'ADC_REF_FLT', 'GND', fields={'Note': 'CFILTER'})
+    c('4.7u', 225, 70, 'ADC_REF', 'GND', FP['C0805'], fields={'Note': 'X7R 16 V, at REFIN'})
+    c('100n', 233, 70, 'ADC_REF', 'GND')
+    # --- unbuffered inputs: series footprint fitted as 0R until review-analog-chain #4 is decided
+    sh.text('Unbuffered channels: series resistor footprints fitted 0R - review-analog-chain.md #4 is [DECIDE]. Thermistor', 150, 110)
+    sh.text('pull-ups from VREF_5V (ratiometric with ch 8); value [CONFIRM] against Ford tables. Battery: no filter cap.', 150, 114)
+    for k, (src, dst) in enumerate((('MAF_IN', 'MAF_A'), ('TPS_IN', 'TPS_A'), ('CHT_IN', 'CHT_A'), ('IAT_IN', 'IAT_A'))):
+        a = sh.symbol('Device:R', f'R{next(R)}', '0', 165, 125 + 10 * k, FP['R'], rot=90,
+                      fields={'Note': 'series R [DECIDE]'})
+        sh.wire(a, {'1': src, '2': dst})
+    r('2.49k', 190, 145, 'VREF_5V', 'CHT_IN', fields={'Note': 'CHT pull-up [CONFIRM]'})
+    r('2.49k', 198, 145, 'VREF_5V', 'IAT_IN', fields={'Note': 'IAT pull-up [CONFIRM]'})
+    t = sh.symbol('Device:D_TVS', f'D{next(D)}', 'SMBJ30A', 215, 130, FP['SMB'], rot=90,
+                  fields={'Note': 'unidirectional; pin 55 transient, same as the lead TVS3'})
+    sh.wire(t, {'1': 'VBAT_SENSE', '2': 'GND'})
+    r('180k', 225, 125, 'VBAT_SENSE', 'VBAT_A', fields={'Note': '1 %, ratio 7.000'})
+    r('30k', 225, 140, 'VBAT_A', 'GND', fields={'Note': '1 %'})
+    # --- O2: four buffered channels on +5V
+    sh.text('HO2S x4: 10k + 1n + BAT54S to +5V, 22M to the 455 mV bias node, OPA2376 follower, 1k + 1u after it. JP = 0R not fitted.', 250, 40)
+    sh.text('Guard each 22M node with a ring driven from the buffer output. Downstream pair: BAT54J to 3.3 V, the MCU ADC is 3.3 V.', 250, 44)
+    o2 = [('O2_21_IN', 'O2_21_A'), ('O2_11_IN', 'O2_11_A'), ('O2_12_IN', 'O2_DN1'), ('O2_22_IN', 'O2_DN2')]
+    for pk in range(2):
+        op = sh.symbol(f'{CLIB}:OPAMP2', f'U{803 + pk}', 'OPA2376AQDRQ1', 330, 70 + 70 * pk, FP['SOIC8'])
+        sh.wire(op, {'8': '+5V', '4': 'GND'})
+        c('100n', 345, 90 + 70 * pk, '+5V', 'GND')
+        for half in range(2):
+            ch = 2 * pk + half
+            src, dst = o2[ch]
+            tag = f'O2_{ch + 1}'
+            y = 55 + 35 * ch
+            ip, im, out = (('3', '2', '1'), ('5', '6', '7'))[half]
+            a = sh.symbol('Device:R', f'R{next(R)}', '10k', 262, y, FP['R0805'], rot=90, fields={'Note': '1 %, fault limit'})
+            sh.wire(a, {'1': src, '2': f'{tag}_HZ'})
+            c('1n', 275, y + 10, f'{tag}_HZ', 'GND', fields={'Note': 'C0G 50 V'})
+            dd = sh.symbol('Diode:BAT54S', f'D{next(D)}', 'BAT54S', 285, y + 10)
+            sh.wire(dd, {'1': 'GND', '2': '+5V', '3': f'{tag}_HZ'})
+            r('22M', 297, y + 10, f'{tag}_HZ', 'O2_BIASNODE', FP['R0805'], fields={'Note': '1 %, guard the node'})
+            sh.net(f'{tag}_HZ', op[ip]); sh.net(f'{tag}_BUF', op[im]); sh.net(f'{tag}_BUF', op[out])
+            a = sh.symbol('Device:R', f'R{next(R)}', '1k', 360, y, FP['R'], rot=90)
+            sh.wire(a, {'1': f'{tag}_BUF', '2': dst})
+            c('1u', 372, y + 10, dst, 'GND', fields={'Note': 'X7R 16 V'})
+            j = sh.symbol('Device:R', f'R{next(R)}', '0', 385, y + 10, FP['R'], dnp=True,
+                          fields={'Note': 'JP: bypass the buffer for a 0-5 V wideband module'})
+            sh.wire(j, {'1': f'{tag}_HZ', '2': dst})
+            if dst.startswith('O2_DN'):
+                clamp(395, y + 10, dst)
+    r('91k', 300, 205, '+5V', 'O2_BIASNODE', fields={'Note': '1 %'})
+    r('9.1k', 300, 220, 'O2_BIASNODE', 'GND', fields={'Note': '1 %'})
+    c('100n', 310, 220, 'O2_BIASNODE', 'GND')
+    a = sh.symbol('Device:R', f'R{next(R)}', '1k', 285, 212, FP['R'], rot=90, fields={'Note': 'DAC excitation, o2-input-stage.md sec.7'})
+    sh.wire(a, {'1': 'O2_BIAS', '2': 'O2_BIASNODE'})
+    # --- knock: differential charge amp, on 3.3 V
+    sh.text('Knock: TLV9064 differential charge amp. ON 3.3 V with VMID 1.8 V (MAX6070AAUT18), NOT 5 V / 2.5 V as drawn in', 20, 175)
+    sh.text('knock-front-end-schematic.md: KNOCK lands on PC3, a 3.3 V ADC. Cf 220p C0G, Rf 1M, R5-R8 0.1 % matched. Guard KP/KN_IN.', 20, 179)
+    k4 = sh.symbol(f'{CLIB}:OPAMP4', 'U805', 'TLV9064QPWRQ1', 120, 225, FP['TSSOP14'])
+    sh.wire(k4, {'4': '+3.3V', '11': 'GND', '2': 'KP_IN', '3': 'VMID', '1': 'KA_OUT', '6': 'KN_IN', '5': 'VMID', '7': 'KB_OUT',
+                 '9': 'KC_N', '10': 'KC_P', '8': 'KNOCK_DIFF', '12': 'VMID_F', '13': 'VMID', '14': 'VMID'})
+    c('100n', 140, 255, '+3.3V', 'GND')
+    for leg, (src, node, outn) in enumerate((('KNOCK_IN', 'KP_IN', 'KA_OUT'), ('KNOCK_RTN', 'KN_IN', 'KB_OUT'))):
+        y = 200 + 30 * leg
+        a = sh.symbol('Device:R', f'R{next(R)}', '1k', 40, y, FP['R'], rot=90, fields={'Note': '1 %'})
+        sh.wire(a, {'1': src, '2': node})
+        dd = sh.symbol('Diode:BAT54S', f'D{next(D)}', 'BAV199', 30, y + 12, fields={'Note': 'low-leakage, not BAV99'})
+        sh.wire(dd, {'1': 'GND', '2': '+3.3V', '3': src})
+        c('220p', 60, y + 8, node, outn, fields={'Note': 'C0G 5 %: the knock calibration'})
+        r('1M', 70, y + 8, node, outn, fields={'Note': '1 %'})
+    a = sh.symbol('Device:R', f'R{next(R)}', '10k', 85, 260, FP['R'], rot=90, fields={'Note': '0.1 % matched'})
+    sh.wire(a, {'1': 'KA_OUT', '2': 'KC_N'})
+    a = sh.symbol('Device:R', f'R{next(R)}', '10k', 85, 270, FP['R'], rot=90, fields={'Note': '0.1 % matched'})
+    sh.wire(a, {'1': 'KB_OUT', '2': 'KC_P'})
+    r('10k', 100, 265, 'KC_N', 'KNOCK_DIFF', fields={'Note': '0.1 % matched'})
+    r('10k', 108, 265, 'KC_P', 'VMID', fields={'Note': '0.1 % matched'})
+    c('620p', 116, 265, 'KC_N', 'KNOCK_DIFF', fields={'Note': 'C0G'})
+    c('620p', 124, 265, 'KC_P', 'VMID', fields={'Note': 'C0G'})
+    a = sh.symbol('Device:R', f'R{next(R)}', '470', 160, 215, FP['R'], rot=90)
+    sh.wire(a, {'1': 'KNOCK_DIFF', '2': 'KNOCK'})
+    c('15n', 172, 225, 'KNOCK', 'GND')
+    kr = sh.symbol('Reference_Voltage:MAX6070AAUT18+T', 'U806', 'MAX6070AAUT18+T', 190, 250)
+    sh.wire(kr, {'4': '+3.3V', '3': '+3.3V', '2': 'GND', '1': 'KNK_FLT', '5': 'VREF_KNK', '6': 'VREF_KNK'})
+    c('100n', 175, 265, '+3.3V', 'GND'); c('100n', 210, 265, 'KNK_FLT', 'GND')
+    c('1u', 218, 245, 'VREF_KNK', 'GND')
+    a = sh.symbol('Device:R', f'R{next(R)}', '100', 230, 240, FP['R'], rot=90)
+    sh.wire(a, {'1': 'VREF_KNK', '2': 'VMID_F'})
+    c('1u', 240, 250, 'VMID_F', 'GND')
+    # --- slow channels on the MCU's own ADC
+    sh.text('MCU ADC (3.3 V): DPFE 0-5 V via 10k/18k, TFT 2.2k pull-up from 3.3 V (tft-sensor.md), FP monitor 100k/10.5k', 250, 245)
+    sh.text('like the solenoid supply sense. 1k into each pin + BAT54J to 3.3 V where the harness can reach the pin.', 250, 249)
+    r('10k', 260, 260, 'DPFE_IN', 'DPFE', fields={'Note': '1 %'}); r('18k', 260, 275, 'DPFE', 'GND', fields={'Note': '1 %'})
+    c('10n', 268, 275, 'DPFE', 'GND'); clamp(276, 270, 'DPFE')
+    r('2.2k', 295, 255, '+3.3V', 'TFT_IN', fields={'Note': '1 %, TFT pull-up'})
+    a = sh.symbol('Device:R', f'R{next(R)}', '1k', 305, 265, FP['R'], rot=90)
+    sh.wire(a, {'1': 'TFT_IN', '2': 'TFT'})
+    c('100n', 318, 275, 'TFT', 'GND'); clamp(326, 270, 'TFT')
+    r('100k', 345, 260, 'FP_MON_IN', 'FP_MON'); r('10.5k', 345, 275, 'FP_MON', 'GND')
+    c('100n', 353, 275, 'FP_MON', 'GND')
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
@@ -536,7 +707,8 @@ SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Solenoids', 'Solenoids.kicad_sch', solenoids),
           ('PWM', 'Pwm.kicad_sch', pwm_loads),
           ('Relays', 'Relays.kicad_sch', relays),
-          ('VREF', 'Vref.kicad_sch', vref)]
+          ('VREF', 'Vref.kicad_sch', vref),
+          ('ADC', 'ADC.kicad_sch', adc)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):
@@ -555,6 +727,15 @@ def add_sheet_blocks(root_s, pro):
         pro['sheets'].append([bu, name])
     return root_s, root
 
+def block_uuid(root_s, fname):
+    """The uuid of the root sheet block already pointing at fname (a placeholder
+    drawn in KiCad keeps its own), or None."""
+    for m in re.finditer(r'\n\t\(sheet\b', root_s):
+        b = root_s[m.start() + 1:span(root_s, m.start() + 2)]
+        if f'"Sheetfile" "{fname}"' in b:
+            return re.search(r'\(uuid "([^"]+)"\)', b).group(1)
+    return None
+
 def main():
     os.chdir(HERE)
     if any(f.startswith('~') and f.endswith(('.kicad_sch.lck', '.kicad_pcb.lck')) for f in os.listdir('.')):   # the project window alone holds nothing
@@ -568,10 +749,12 @@ def main():
     pro = json.load(open(f'{PROJ}.kicad_pro'))
     root_s, root = add_sheet_blocks(root_s, pro)
     for name, fname, fn in SHEETS:
-        if os.path.exists(fname) and f'(generator "{MARK}")' not in open(fname).read():
-            print(f'{fname}: edited in KiCad - left alone')
-            continue
-        sh = Sheet(name, name, root, UID(name, 'block'))
+        if os.path.exists(fname):
+            t = open(fname).read()
+            if f'(generator "{MARK}")' not in t and '(symbol' in t:     # an empty placeholder is ours to fill
+                print(f'{fname}: edited in KiCad - left alone')
+                continue
+        sh = Sheet(name, name, root, block_uuid(root_s, fname) or UID(name, 'block'))
         fn(sh)
         sh.write(fname)
         print(f'{fname}: {len(sh.refs)} parts')

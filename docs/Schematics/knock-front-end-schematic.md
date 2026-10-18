@@ -7,6 +7,14 @@ sizing in [`../knock-front-end.md`](../knock-front-end.md).
 Built around **one TLV9064-Q1 quad** and its **own 2.5 V reference**, kept
 separate from the ADC's.
 
+> ⚠ **Changed on the carrier (gen_carrier.py, ADC sheet): the block runs from
+> +3.3 V with VMID = 1.8 V from a MAX6070AAUT18**, not +5VA with 2.5 V as drawn
+> below. `KNOCK_ADC` lands on **PC3, an STM32 ADC input with a 3.3 V full scale**.
+> Centred on 2.5 V, the 0.9 V signal this page sizes for reaches 3.4 V, and an
+> overload drives a 5 V rail into the pin. At 3.3 V the op-amp cannot exceed the
+> pin's rail, and 1.8 V leaves 1.5 V of swing up and 1.8 V down. The BAV199
+> clamps go to +3.3 V with it. Topology and every other value are unchanged.
+
 ---
 
 ## Schematic

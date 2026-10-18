@@ -86,6 +86,7 @@ SIGNALS = [
     ('ADC_CONVST', 'PB11', 'TIM2_CH4', False, 'adc', 'CONVSTA+B; compare output on the crank timebase'),
     ('ADC_BUSY', 'PD3', 'GPIO', True, 'adc', 'falling edge = data ready'),
     ('ADC_RESET', 'PD4', 'GPIO', False, 'adc', 'active high; OS0-2, RANGE strapped, FRSTDATA not wired'),
+    ('ADC_REF_EN', 'PG10', 'GPIO', False, 'adc', 'MAX6070AAUT25 EN, 10k pulldown: gated off in Standby, always-on-domain.md'),
     # --- internal ADC, analog (3.3 V full scale)
     ('KNOCK', 'PC3', 'ADC1', False, 'analog', '200 kSPS on ADC1, adc-front-end.md'),
     ('DPFE', 'PF3', 'ADC', False, 'analog', ''),

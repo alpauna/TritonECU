@@ -120,6 +120,41 @@ def place():
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
 
+# Groups packed into a free rectangle by their real courtyards (shelf packing, in
+# the order given) instead of hand coordinates. (refs, (x0, y0, x1, y1))
+def _refs(prefix, a, b): return [f'{prefix}{n}' for n in range(a, b + 1)]
+PACK = [
+    # ADC core, reference, unbuffered inputs, slow MCU-ADC channels: the 15 mm column
+    # between the MCU module and the VR group, under the analog pins
+    (['U801'] + _refs('C', 801, 809) + _refs('R', 801, 807) + ['U802', 'R808'] + _refs('C', 810, 814) + ['R809']
+     + _refs('R', 810, 817) + ['D801'] + _refs('R', 847, 852) + _refs('C', 836, 838) + ['D810', 'D811'],
+     (94.4, 64.0, 109.6, 108.5)),          # below R201 / R399
+    # knock: right of the VR group, below the coil 5/6 IGBTs' inner edge, near pins 57/32
+    (['U805', 'U806', 'C826'] + _refs('R', 837, 846) + ['D808', 'D809'] + _refs('C', 827, 835),
+     (158.6, 56.0, 169.2, 92.0)),
+    # HO2S x4 buffers: the bottom band. Far from pins 35/60/61/87 - first draft only
+    (['U803', 'U804', 'C815', 'C820'] + _refs('R', 818, 836) + _refs('C', 816, 825) + _refs('D', 802, 807),
+     (26.5, 187.0, 110.2, 198.0)),         # below R509, left of the power board
+]
+
+def pack(have, refs, rect, gap=0.3):
+    x0, y0, x1, y1 = rect
+    x, y, row = x0, y0, 0.0
+    for ref in refs:
+        fp = have.get(ref)
+        if fp is None:
+            continue
+        fp.SetOrientationDegrees(0)
+        fp.SetPosition(pcbnew.VECTOR2I(0, 0))
+        c = fp.GetCourtyard(pcbnew.F_CrtYd).BBox()
+        l, t, w, h = (pcbnew.ToMM(v) for v in (c.GetLeft(), c.GetTop(), c.GetWidth(), c.GetHeight()))
+        if x + w > x1:
+            x, y, row = x0, y + row + gap, 0.0
+        fp.SetPosition(pcbnew.VECTOR2I(MM(x - l), MM(y - t)))
+        x += w + gap; row = max(row, h)
+    if y + row > y1:
+        print(f'  pack: {refs[0]}.. overflows its region by {y + row - y1:.1f} mm')
+
 # ---------------------------------------------------------------- netlist
 def netlist():
     tmp = os.path.join(HERE, '.gen-netlist.net')
@@ -194,12 +229,17 @@ def main():
         fp.SetPosition(pcbnew.VECTOR2I(MM(x), MM(y)))
         fp.SetOrientationDegrees(rot)
         have[ref] = fp; added.append(ref)
+    replaced = set(added)
     if '--replace-sheet' in sys.argv:              # re-place one sheet's parts at PLACE
         sheet = sys.argv[sys.argv.index('--replace-sheet') + 1]
         for ref, c in comps.items():
             if c['sheetname'].strip('/') == sheet and ref in P and ref in have:
                 x, y, rot = P[ref]
                 have[ref].SetPosition(pcbnew.VECTOR2I(MM(x), MM(y))); have[ref].SetOrientationDegrees(rot)
+        replaced |= {ref for ref, c in comps.items() if c['sheetname'].strip('/') == sheet}
+    for refs, rect in PACK:                    # packed groups: only parts just added or replaced
+        if any(r in replaced for r in refs):
+            pack(have, [r for r in refs if r in replaced], rect)
     # nets for every pad on the board
     for ref, fp in have.items():
         if ref not in comps:
@@ -218,7 +258,8 @@ def main():
     for ref in stale:                 # removed last: a Remove before FootprintLoad breaks the IO plugin
         board.Remove(have.pop(ref)); removed.append(ref)
     board.Save(f'{PROJ}.kicad_pcb')
-    unplanned = [r for r in added if r not in P]
+    packed = {r for refs, _ in PACK for r in refs}
+    unplanned = [r for r in added if r not in P and r not in packed]
     print(f'added {len(added)} footprints, removed {removed}' + (f'; parked off-board, no position yet: {unplanned}' if unplanned else ''))
 
 if __name__ == '__main__':
