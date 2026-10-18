@@ -336,7 +336,7 @@ def glabel(name, x, y, side):
 
 # ---------------------------------------------------------------- main
 POWER_BOARD_NET = {'SDA': 'I2C_SDA', 'SCL': 'I2C_SCL', '3.3_ENOUT': 'ENOUT',
-                   '+VIN': 'VPWR',     # the power board's input is EEC-V VPWR (pins 71/97)
+                   '+VIN': 'VPROT',    # J3 +VIN is the LTC4364 OUTPUT (IC1 pin 1, after R2), not its input
                    '3_GOOD': None}     # 3_GOOD is not wired: carrier_pinmap.py
 
 def interconnect_nets(pg):

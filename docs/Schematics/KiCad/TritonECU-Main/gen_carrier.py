@@ -44,6 +44,8 @@ FP = {'R': 'Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder',
       'SMB': 'Diode_SMD:D_SMB',
       'TSSOP16': 'Package_SO:TSSOP-16_4.4x5mm_P0.65mm',
       'DPAK5': 'Package_TO_SOT_SMD:TO-252-5_TabPin3',
+      'SMA': 'Diode_SMD:D_SMA',
+      'SOD323': 'Diode_SMD:D_SOD-323F',
       'JP': 'Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm'}
 
 # ---------------------------------------------------------------- own symbols
@@ -295,9 +297,10 @@ def injection(sh):
 
 def rails(sh):
     """The carrier makes no rails of its own: +5V, +3.3V and GND arrive from the
-    power board (DB1), VPWR from the connector. PWR_FLAGs say so to ERC."""
+    power board (DB1), VPWR from the connector. VPROT is the power board's LTC4364
+    output (its J3 +VIN), the source for VREF. PWR_FLAGs say so to ERC."""
     sh.text('Rails: +5V, +3.3V (always-on) and GND come from the power board, VPWR from EEC-V 71/97.', 20, 20)
-    for k, net in enumerate(['+5V', '+3.3V', 'GND', 'VPWR']):
+    for k, net in enumerate(['+5V', '+3.3V', 'GND', 'VPWR', 'VPROT']):
         f = sh.symbol('power:PWR_FLAG', f'#FLG{k + 1:02d}', 'PWR_FLAG', 40.64 + 25.4 * k, 50.8)
         sh.net(net, f['1'])
     sh.text('Bulk where the rails arrive from the power board connector.', 20, 120)
@@ -462,13 +465,78 @@ def relays(sh):
     sh.two('Device:C', 'C601', '100n', FP['C0805'], 140, 130, 'VBAT_SENSE', 'GND', fields={'Note': '100 V X7R'})
     sh.text('Channels 5-8 spare: inputs to GND, outputs open. No MCU pins left for them (carrier-pinmap.md).', 20, 160)
 
+def vref(sh):
+    """vref-supply.md, review-vref-chain.md: NCV8772C 5.00 V LDO on the protected rail
+    (VPROT, LTC4364 out), EN from the MCU -> TPS2H160B-Q1 dual high-side switch, 248 mA
+    limit per feed -> LM74700-Q1 + DMN6040 ideal diode -> feed, SMAJ24CA to GND.
+    One VREF pin on this truck (90): channel 2's chain is drawn and not fitted."""
+    sh.text('VREF: NCV8772C 5.00 V on VPROT (the LTC4364 output, not the 5 V buck-boost), EN under MCU control.', 20, 20)
+    sh.text('TPS2H160B-Q1: RCL 8.06k = 248 mA per feed; RCS 2.2k (2.5 V linear ceiling at VS = 5 V); THER high = latch.', 20, 24)
+    sh.text('LM74700-Q1 + DMN6040 (VGS +-20 V) blocks a short to battery; SMAJ24CA stands off 24 V, transients only. No PPTC.', 20, 28)
+    sh.text('Firmware sheds a faulted channel (t_CL deg 80-180 us), retries seconds apart. Hold IN1/IN2/SEL low while EN is low.', 20, 32)
+    # regulator
+    u = sh.symbol(f'{CLIB}:NCV8772', 'U701', 'NCV8772CDT504RKG', 60, 70, FP['DPAK5'])
+    sh.wire(u, {'1': 'VPROT', '4': 'VREF_EN', '3': 'GND', '5': 'VREF_5V', '2': None})
+    sh.two('Device:R', 'R701', '100k', FP['R'], 35, 90, 'VREF_EN', 'GND')
+    sh.two('Device:C', 'C701', '1u', FP['C0805'], 30, 60, 'VPROT', 'GND', fields={'Note': '50 V X7R'})
+    sh.two('Device:C', 'C702', '100n', FP['C'], 40, 60, 'VPROT', 'GND', fields={'Note': '50 V'})
+    sh.two('Device:C', 'C703', '22u', 'Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder', 85, 60,
+           'VREF_5V', 'GND', fields={'Note': 'X7R >= 16 V; sized for the 250 mA step'})
+    sh.two('Device:C', 'C704', '100n', FP['C'], 95, 60, 'VREF_5V', 'GND')
+    sh.text('VREF_5V is the ratiometric divisor: the ADS8588H senses it here, one channel for both feeds.', 20, 100)
+    # switch
+    w = sh.symbol('Samacsys:TPS2H160BQPWPRQ1', 'U702', 'TPS2H160BQPWPRQ1', 140, 120)
+    sh.wire(w, {'13': 'VREF_5V', '14': 'VREF_5V', '8': 'GND', '17': 'GND', '10': None,
+                '1': 'VREF_IN1', '2': 'VREF_IN2', '5': 'VREF_SEL', '4': 'VREF_FAULT',
+                '3': 'VREF_DIAG', '9': 'VREF_THER', '6': 'VREF_CS_RAW', '7': 'VREF_CL',
+                '15': 'VREF1_SW', '16': 'VREF1_SW', '11': 'VREF2_SW', '12': 'VREF2_SW'})
+    sh.two('Device:C', 'C705', '100n', FP['C'], 120, 150, 'VREF_5V', 'GND')
+    sh.two('Device:R', 'R702', '10k', FP['R'], 100, 130, 'VREF_5V', 'VREF_DIAG', fields={'Note': 'DIAG_EN high, from VS'})
+    sh.two('Device:R', 'R703', '10k', FP['R'], 108, 130, 'VREF_5V', 'VREF_THER', fields={'Note': 'THER high = latch, from VS'})
+    sh.two('Device:R', 'R704', '10k', FP['R'], 116, 165, '+3.3V', 'VREF_FAULT')
+    sh.two('Device:R', 'R705', '2.2k', FP['R'], 100, 175, 'VREF_CS_RAW', 'GND', fields={'Note': 'RCS, 1 %'})
+    r = sh.symbol('Device:R', 'R706', '4.7k', 85, 165, FP['R'], rot=90)
+    sh.wire(r, {'1': 'VREF_CS_RAW', '2': 'VREF_CS'})
+    d = sh.symbol('Device:D_Schottky', 'D703', 'BAT54J', 70, 155, FP['SOD323'], rot=90,
+                  fields={'Note': 'CS is driven to the rail in a fault'})
+    sh.wire(d, {'1': '+3.3V', '2': 'VREF_CS'})
+    sh.two('Device:R', 'R707', '8.06k', FP['R'], 92, 175, 'VREF_CL', 'GND', fields={'Note': 'RCL, 1 %: 248 mA'})
+    # per feed: ideal diode, TVS
+    for ch, feed in ((1, 'VREF'), (2, 'VREF2')):
+        dnp = ch == 2
+        y = 70 + (ch - 1) * 70
+        sw, g, vc = f'VREF{ch}_SW', f'VREF{ch}_G', f'VREF{ch}_VCAP'
+        c = sh.symbol('Power_Management:LM74700', f'U70{2 + ch}', 'LM74700QDBVRQ1', 220, y + 25, dnp=dnp)
+        sh.wire(c, {'6': sw, '3': sw, '4': feed, '5': g, '1': vc, '2': 'GND'})
+        f = sh.symbol('power:PWR_FLAG', f'#FLG7{ch:02d}', 'PWR_FLAG', 195.58, round((y + 22.86) / 2.54) * 2.54)     # OUTn is a supply
+        sh.net(sw, f['1'])
+        q = sh.symbol('Samacsys:DMN6040SVTQ-7', f'Q70{ch}', 'DMN6040SVTQ-7', 215, y, dnp=dnp)
+        sh.wire(q, {'4': sw, '3': g, '1': feed, '2': feed, '5': feed, '6': feed})
+        for ref, val, x, a, b in ((f'C{705 + ch}', '100n', 250, vc, sw), (f'C{707 + ch}', '22n', 258, sw, 'GND')):
+            k = sh.symbol('Device:C', ref, val, x, y + 20, FP['C'], dnp=dnp)
+            sh.net(a, k['1']); sh.net(b, k['2'])
+        t = sh.symbol('Device:D_TVS', f'D70{ch}', 'SMAJ24CA', 275, y + 10, FP['SMA'], rot=90,
+                      fields={'Note': 'bidirectional, 24 V standoff; buy AEC-Q101 [DECIDE] maker'}, dnp=dnp)
+        sh.wire(t, {'1': feed, '2': 'GND'})
+    tp = sh.symbol('Connector:TestPoint', 'TP701', 'VREF2', 290, 150, 'TestPoint:TestPoint_Pad_D1.5mm', dnp=True)
+    sh.wire(tp, {'1': 'VREF2'})
+    sh.text('Channel 2 (U704, Q702, D702, TP701) not fitted: this truck has one VREF pin, 90. Never enable IN2.', 180, 205)
+    # short-to-battery sense, feed 1
+    sh.text('Short to battery: 100k/12.4k from the feed. 5 V -> 0.55 V, 14 V -> 1.54 V, 27 V -> 2.98 V. Returns to the ADC ground.', 20, 205)
+    sh.two('Device:R', 'R708', '100k', FP['R'], 300, 70, 'VREF', 'VREF_STB')
+    sh.two('Device:R', 'R709', '12.4k', FP['R'], 300, 85, 'VREF_STB', 'GND', fields={'Note': '1 %'})
+    sh.two('Device:C', 'C710', '10n', FP['C'], 310, 85, 'VREF_STB', 'GND')
+    d = sh.symbol('Device:D_Schottky', 'D704', 'BAT54J', 320, 70, FP['SOD323'], rot=90)
+    sh.wire(d, {'1': '+3.3V', '2': 'VREF_STB'})
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
           ('VR', 'Vr.kicad_sch', vr),
           ('Solenoids', 'Solenoids.kicad_sch', solenoids),
           ('PWM', 'Pwm.kicad_sch', pwm_loads),
-          ('Relays', 'Relays.kicad_sch', relays)]
+          ('Relays', 'Relays.kicad_sch', relays),
+          ('VREF', 'Vref.kicad_sch', vref)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):
@@ -493,7 +561,7 @@ def main():
         sys.exit('project is open in KiCad - close it first')
     GLOBAL.update(net for net, *_ in cp.SIGNALS)
     GLOBAL.update(net for net, *_ in ep.PINS.values())
-    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0'})      # + the module's non-port pins
+    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0', 'VPROT', 'VREF_5V'})      # + the module's non-port pins
     GLOBAL.update(MUX)                                       # drain/supply senses cross to the mux
     write_own_lib()
     root_s = open(f'{PROJ}.kicad_sch').read()

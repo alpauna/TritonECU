@@ -5,7 +5,8 @@
     (path = sheet / symbol UUID), with its fields, at its PLACE position
   * every pad's net is set from the netlist, existing footprints included, so the
     connector and daughterboard pads follow carrier_pinmap.py and eecv_pins.py
-  * parts already on the board are never moved: placement is yours once made
+  * parts already on the board are never moved: placement is yours once made.
+    --replace-sheet NAME puts one sheet's parts back at their PLACE positions
 
   flatpak run --command=python3 --filesystem=$PWD --filesystem=$HOME/Documents/KiCad/Libraries \\
       org.kicad.KiCad gen_carrier_pcb.py
@@ -100,6 +101,21 @@ def place():
     for k in range(4):
         P[f'R60{k + 1}'] = (117.0, 96.0 + 3.0 * k, 0)
         P[f'F60{k + 1}'] = (118.0 + 5.0 * k, 109.0, 90)
+    # VREF: in the open block right of the relays, clear of the power board's top edge
+    # and its MH2 standoff (154, 125). Feed rows on top (channel 2 not fitted), the
+    # short-to-battery divider below them, LDO and switch along the bottom.
+    for ch in (1, 2):
+        y = 97.0 + 7.0 * (ch - 1)
+        P[f'U70{2 + ch}'] = (141.0, y, 0); P[f'Q70{ch}'] = (146.5, y, 0); P[f'D70{ch}'] = (153.0, y, 0)
+        P[f'C{705 + ch}'] = (140.0, y + 3.5, 0); P[f'C{707 + ch}'] = (143.5, y + 3.5, 0)
+    P['R708'] = (139.5, 110.0, 0); P['R709'] = (142.8, 110.0, 0); P['C710'] = (146.1, 110.0, 0)
+    P['D704'] = (149.6, 110.0, 0); P['TP701'] = (156.0, 110.0, 0)
+    P['U701'] = (147.0, 115.0, 0)                      # origin at the leads, tab to the right
+    P['C701'] = (136.3, 113.5, 90); P['C702'] = (138.5, 115.5, 90); P['R701'] = (135.0, 117.0, 0)
+    P['C703'] = (153.5, 114.5, 90); P['C704'] = (156.0, 114.5, 90)
+    P['U702'] = (162.0, 114.0, 0); P['C705'] = (162.0, 118.5, 0); P['D703'] = (170.5, 112.0, 90)
+    for k, ref in enumerate(('R702', 'R703', 'R704', 'R705', 'R706', 'R707')):
+        P[ref] = (167.6, 109.8 + 1.8 * k, 0)
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
@@ -125,9 +141,8 @@ def netlist():
     pins = {}
     for blk in nl.split('\n\t\t(net\n')[1:]:
         name = re.search(r'\(name "([^"]+)"\)', blk).group(1)
-        for r, p, typ in re.findall(r'\(ref "([^"]+)"\)\s*\(pin "([^"]+)"\)(?:\s*\(pinfunction "[^"]*"\))?\s*\(pintype "([^"]+)"\)', blk):
-            if typ != 'no_connect':      # a no-connect-flagged pin still gets its unconnected-(..) net
-                pins[(r, p)] = name
+        for r, p in re.findall(r'\(ref "([^"]+)"\)\s*\(pin "([^"]+)"\)', blk):
+            pins[(r, p)] = name          # no-connect pins too: KiCad gives them an unconnected-(..) net
     return comps, pins
 
 def load(fpid):
@@ -179,6 +194,12 @@ def main():
         fp.SetPosition(pcbnew.VECTOR2I(MM(x), MM(y)))
         fp.SetOrientationDegrees(rot)
         have[ref] = fp; added.append(ref)
+    if '--replace-sheet' in sys.argv:              # re-place one sheet's parts at PLACE
+        sheet = sys.argv[sys.argv.index('--replace-sheet') + 1]
+        for ref, c in comps.items():
+            if c['sheetname'].strip('/') == sheet and ref in P and ref in have:
+                x, y, rot = P[ref]
+                have[ref].SetPosition(pcbnew.VECTOR2I(MM(x), MM(y))); have[ref].SetOrientationDegrees(rot)
     # nets for every pad on the board
     for ref, fp in have.items():
         if ref not in comps:
