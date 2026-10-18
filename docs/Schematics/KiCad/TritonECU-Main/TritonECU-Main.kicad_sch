@@ -81,6 +81,18 @@
 		(property "Sheetfile" "Vr.kicad_sch" (at 190 58.980000000000004 0) (effects (font (size 1.27 1.27)) (justify left top)))
 		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "7"))))
 	)
+	(sheet (at 70 70.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "e2093145-02d5-54bc-90a3-fc228923a618")
+		(property "Sheetname" "Solenoids" (at 70 69.77000000000001 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Sheetfile" "Solenoids.kicad_sch" (at 70 98.98 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "8"))))
+	)
+	(sheet (at 110 70.48) (size 30.48 27.94) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(stroke (width 0.1524) (type solid)) (fill (color 0 0 0 0)) (uuid "a997db25-0ad4-5672-a52e-f6eb2dd7d6a7")
+		(property "Sheetname" "PWM" (at 110 69.77000000000001 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Sheetfile" "Pwm.kicad_sch" (at 110 98.98 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(instances (project "TritonECU-Main" (path "/eec527cb-b372-4ed4-ac2b-16ccf6980056" (page "9"))))
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")

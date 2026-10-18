@@ -62,6 +62,38 @@ def place():
             P[f'R{r}'] = (xc - 6.0 + 8.0 * ch, 90.0, 90); r += 1      # COUT pull-up
             P[f'C{c}'] = (xc - 2.0 + 8.0 * ch, 90.0, 90); c += 1      # BIAS
     P['J301'] = (160.0, 98.0, 0); P['R399'] = (100.0, 62.0, 90)
+    # solenoids and heaters (74HCT541 #3): heaters, vent, IMCC in the left cooling
+    # band below the coils; SSA/SSB (pins 6, 11, right of centre) in the right band.
+    # Gate / pulldown / divider-top resistors sit in the 12 mm gaps between FETs.
+    for k, n in enumerate(range(1, 7)):
+        y = 116.0 + 12.0 * k
+        P[f'Q40{n}'] = (31.0, y, 0)
+        P[f'R41{n}'] = (27.5, y + 6.0, 0); P[f'R42{n}'] = (31.0, y + 6.0, 0)
+        if n <= 5:                                      # drain sense: heaters x4, vent
+            P[f'R43{n}'] = (34.5, y + 6.0, 0); P[f'R44{n}'] = (40.0, y + 3.0, 90)
+    for k, n in enumerate((7, 8)):
+        y = 116.0 + 12.0 * k
+        P[f'Q40{n}'] = (177.0, y, 0)
+        P[f'R41{n}'] = (174.0, y + 6.0, 0); P[f'R42{n}'] = (179.0, y + 6.0, 0)
+    P['U401'] = (48.0, 134.0, 0); P['C401'] = (56.0, 128.0, 90)
+    # mux below the module, its eight input caps in a row
+    P['U402'] = (82.0, 116.0, 0); P['C402'] = (88.0, 116.0, 90)
+    for k in range(8):
+        P[f'C{411 + k}'] = (72.0 + 3.2 * k, 122.0, 90)
+    # PWM loads (74HCT541 #2): two rows in the open area lower left, freewheel
+    # Schottky beside each PWM FET
+    rows = [(1, 47.0, 152.0), (2, 62.0, 152.0), (3, 77.0, 152.0), (4, 95.0, 152.0),
+            (5, 47.0, 176.0), (6, 62.0, 176.0), (7, 77.0, 176.0)]
+    for n, x, y in rows:
+        P[f'Q50{n}'] = (x, y, 0)
+        P[f'R51{n}'] = (x - 2.0, y + 7.0, 0); P[f'R52{n}'] = (x + 2.0, y + 7.0, 0)
+        if n <= 5:
+            P[f'D50{n}'] = (x + 8.0, y, 90)
+    P['R531'] = (45.0, 144.0, 90); P['R541'] = (49.0, 144.0, 90)      # EVAP drain sense
+    P['R565'] = (70.0, 168.0, 90)                                      # VSS pull-up, DNP
+    P['U501'] = (92.0, 176.0, 0); P['C501'] = (92.0, 185.0, 0); P['R509'] = (86.0, 185.0, 90)
+    for k, ref in enumerate(('R561', 'R562', 'R563', 'R564')):        # supply sense 1138, 391
+        P[ref] = (101.0 + 4.0 * (k // 2), 164.0 + 4.0 * (k % 2), 0)
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
@@ -82,7 +114,8 @@ def netlist():
                           sheetname=sheet.group(1), sheetpath=sheet.group(2),
                           sheetfile=re.search(r'\(name "Sheetfile"\)\s*\(value "([^"]*)"\)', blk).group(1)
                           if 'Sheetfile' in blk else '',
-                          fields=dict(re.findall(r'\(field\s*\(name "([^"]+)"\)\s*"([^"]*)"\)', blk)))
+                          fields=dict(re.findall(r'\(field\s*\(name "([^"]+)"\)\s*"([^"]*)"\)', blk)),
+                          nobom='(name "exclude_from_bom")' in blk, dnp='(name "dnp")' in blk)
     pins = {}
     for blk in nl.split('\n\t\t(net\n')[1:]:
         name = re.search(r'\(name "([^"]+)"\)', blk).group(1)
@@ -144,6 +177,8 @@ def main():
     for ref, fp in have.items():
         if ref not in comps:
             continue
+        fp.SetExcludedFromBOM(comps[ref]['nobom']); fp.SetDNP(comps[ref]['dnp'])
+        fp.SetValue(comps[ref]['value'])
         for p in fp.Pads():
             if not p.GetNumber():
                 continue

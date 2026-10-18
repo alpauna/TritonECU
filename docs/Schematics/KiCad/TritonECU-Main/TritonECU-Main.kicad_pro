@@ -759,6 +759,14 @@
     [
       "6fdc44dc-775b-57d2-a62b-7034cefeff65",
       "VR"
+    ],
+    [
+      "e2093145-02d5-54bc-90a3-fc228923a618",
+      "Solenoids"
+    ],
+    [
+      "a997db25-0ad4-5672-a52e-f6eb2dd7d6a7",
+      "PWM"
     ]
   ],
   "text_variables": {},

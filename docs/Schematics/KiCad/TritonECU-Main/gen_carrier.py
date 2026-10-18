@@ -40,6 +40,9 @@ FP = {'R': 'Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder',
       'C0805': 'Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder',
       'QSOP16': 'Package_SO:QSOP-16_3.9x4.9mm_P0.635mm',
       'HDR4': 'Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical',
+      'DPAK': 'Package_TO_SOT_SMD:TO-252-2',
+      'SMB': 'Diode_SMD:D_SMB',
+      'TSSOP16': 'Package_SO:TSSOP-16_4.4x5mm_P0.65mm',
       'DPAK5': 'Package_TO_SOT_SMD:TO-252-5_TabPin3',
       'JP': 'Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm'}
 
@@ -161,7 +164,7 @@ class Sheet:
         self.libs, self.items, self.npwr = {}, [], 0
         self.refs = []
 
-    def symbol(self, lib_id, ref, value, x, y, footprint=None, rot=0, fields=None, hide_ref=False, bom=True):
+    def symbol(self, lib_id, ref, value, x, y, footprint=None, rot=0, fields=None, hide_ref=False, bom=True, dnp=False):
         if not ref.startswith('#'):       # power symbols sit exactly on a pin end
             x, y = round(x / 2.54) * 2.54, round(y / 2.54) * 2.54
         if lib_id not in self.libs:
@@ -173,7 +176,7 @@ class Sheet:
         props += [(k, v, x, y, True) for k, v in (fields or {}).items()]
         su = UID(self.name, ref) if not ref.startswith('#') else U()
         t = (f'\t(symbol (lib_id "{lib_id}") (at {x:.2f} {y:.2f} {rot}) (unit 1)\n'
-             f'\t\t(exclude_from_sim no) (in_bom {"yes" if bom and not ref.startswith("#") else "no"}) (on_board yes) (dnp no)\n'
+             f'\t\t(exclude_from_sim no) (in_bom {"yes" if bom and not ref.startswith("#") else "no"}) (on_board yes) (dnp {"yes" if dnp else "no"})\n'
              f'\t\t(uuid "{su}")\n')
         for k, v, px, py, hide in props:
             h = ' (hide yes)' if hide else ''
@@ -347,10 +350,93 @@ def vr(sh):
     sh.text('CMP shield (EEC-V 25, 567 LB/YE): single-point to the star through R399. Not SIGRTN. review-vr-chain.md sec.3', 20, 200)
     sh.two('Device:R', 'R399', '0', FP['R'], 200, 200, 'CMP_SHIELD', 'GND')
 
+# Solenoid / heater channels (74HCT541 #3) and PWM channels (74HCT541 #2).
+# (MCU net, connector net, freewheel return or None, drain-sense mux net or None)
+SOL = [('HTR11', 'HTR11_OUT', None, 'DS_HTR11'), ('HTR21', 'HTR21_OUT', None, 'DS_HTR21'),
+       ('HTR12', 'HTR12_OUT', None, 'DS_HTR12'), ('HTR22', 'HTR22_OUT', None, 'DS_HTR22'),
+       ('VENT', 'VENT_OUT', None, 'DS_VENT'), ('IMCC', 'IMCC_OUT', None, None),
+       ('SSA', 'SSA_OUT', None, None), ('SSB', 'SSB_OUT', None, None)]
+PWM = [('EVAP', 'EVAP_OUT', 'FW_391', 'DS_EVAP'), ('EGR', 'EGR_OUT', 'FW_391', None),
+       ('TCC', 'TCC_OUT', 'FW_1138', None), ('EPC', 'EPC_OUT', 'FW_1138', None),
+       ('IAC', 'IAC_OUT', 'VPWR', None), ('VSS_OUT', 'VSS_OUT_PIN', None, None),
+       ('CCS', 'CCS_OUT', None, None)]
+MUX = ['DS_HTR11', 'DS_HTR21', 'DS_HTR12', 'DS_HTR22', 'DS_EVAP', 'DS_VENT', 'SUP_1138', 'SUP_391']
+FW_DIODE = dict(value='STPS3H100UY', fields={'Note': 'Schottky >= 60 V 3 A AEC-Q101 [CONFIRM part]'})
+
+def low_side_bank(sh, base, buf_ref, chans, oe_nets, title):
+    """74HCT541 at 5 V -> 2.2k -> NCV8405A (or NCV8408B for EPC). Each 541 output
+    has a 100k pulldown so a high-Z buffer leaves the gate off."""
+    u = sh.symbol('74xx:74HCT541', buf_ref, '74HCT541', 50, 100, FP['SOIC20'])
+    sh.wire(u, {'1': oe_nets[0], '19': oe_nets[1], '10': 'GND', '20': '+5V'})
+    sh.two('Device:C', f'C{base + 1}', '100n', FP['C'], 35, 135, '+5V', 'GND')
+    for k in range(8):
+        if k < len(chans):
+            mcu, out, fw, ds = chans[k]
+            n = k + 1
+            sh.wire(u, {str(2 + k): mcu, str(18 - k): f'{mcu}_BUF'})
+            y = 40 + k * 21
+            sh.two('Device:R', f'R{base + 20 + n}', '100k', FP['R'], 95, y + 6, f'{mcu}_BUF', 'GND')
+            g = sh.symbol('Device:R', f'R{base + 10 + n}', '2.2k', 110, y, FP['R'], rot=90)
+            sh.wire(g, {'1': f'{mcu}_BUF', '2': f'{mcu}_G'})
+            if mcu == 'EPC':
+                q = sh.symbol('Transistor_FET:Q_NMOS_GDS', f'Q{base + n}', 'NCV8408BDTRKG', 135, y, FP['DPAK'],
+                              fields={'Note': 'self-protected, DPAK; latch reads as gate current'})
+                sh.wire(q, {'1': f'{mcu}_G', '2': out, '3': 'GND'})
+            else:
+                q = sh.symbol('Samacsys:NCV8405ASTT1G', f'Q{base + n}', 'NCV8405ASTT1G', 135, y)
+                sh.wire(q, {'1': f'{mcu}_G', '2': out, '4': out, '3': 'GND'})
+            if fw:
+                d = sh.symbol('Device:D_Schottky', f'D{base + n}', FW_DIODE['value'], 165, y, FP['SMB'],
+                              rot=90, fields=FW_DIODE['fields'])
+                sh.wire(d, {'1': fw, '2': out})          # cathode to the solenoid feed
+            if ds:
+                sh.two('Device:R', f'R{base + 30 + n}', '100k', FP['R'], 185, y, out, ds)
+                sh.two('Device:R', f'R{base + 40 + n}', '10.5k', FP['R'], 185, y + 10, ds, 'GND')
+        else:
+            sh.wire(u, {str(2 + k): 'GND', str(18 - k): None})
+    sh.text(title, 20, 20)
+
+def solenoids(sh):
+    """output-drivers.md: 74HCT541 #3 at 5 V (OE on the watchdog net) -> NCV8405A x8.
+    Heaters store nothing; SSA/SSB/IMCC/vent are on/off and use the 42 V clamp.
+    Drain sense 100k/10.5k on the heaters and the vent, into the 74HC4051."""
+    low_side_bank(sh, 400, 'U401', SOL, ('WD_OE', 'WD_OE'),
+                  'Solenoids and heaters: 74HCT541 #3 at 5 V, both OE on WD_OE (watchdog) -> 2.2k -> NCV8405A x8. '
+                  'No diodes: on/off loads use the 42 V clamp.')
+    sh.text('Drain sense 100k/10.5k: a load dump lands at full scale; open load / short to battery read in software.', 20, 26)
+    # the mux: 8 slow diagnostics -> MUX_OUT
+    m = sh.symbol('74xx:74HC4051', 'U402', '74HC4051', 250, 120, FP['TSSOP16'])
+    ins = {'13': MUX[0], '14': MUX[1], '15': MUX[2], '12': MUX[3], '1': MUX[4], '5': MUX[5], '2': MUX[6], '4': MUX[7]}
+    sh.wire(m, ins)
+    sh.wire(m, {'3': 'MUX_OUT', '6': 'GND', '7': 'GND', '8': 'GND', '16': '+3.3V',
+                '11': 'MUX_S0', '10': 'MUX_S1', '9': 'MUX_S2'})
+    sh.two('Device:C', 'C402', '100n', FP['C'], 230, 150, '+3.3V', 'GND')
+    for k, net in enumerate(MUX):           # 100 nF on the input side: settling in ns, analog-mux-scan.md
+        sh.two('Device:C', f'C{411 + k}', '100n', FP['C'], 280 + 8 * (k % 4), 80 + 30 * (k // 4), net, 'GND')
+    sh.text('74HC4051 at 3.3 V: 100 nF on each INPUT, not one after the mux - switching then settles in ns.', 20, 200)
+
+def pwm_loads(sh):
+    """output-drivers.md: 74HCT541 #2 at 5 V, OE = PWM_OE (software-releasable) ->
+    NCV8405A, EPC on NCV8408B. PWM loads freewheel to their own feed: TCC, EPC to
+    1138 (pin 82), EVAP, EGR to 391 (pin 48), IAC to VPWR at the connector side."""
+    low_side_bank(sh, 500, 'U501', PWM, ('PWM_OE', 'PWM_OE'),
+                  'PWM loads: 74HCT541 #2 at 5 V, OE = PWM_OE (10k up: off at power-on) -> 2.2k -> NCV8405A, EPC NCV8408B. '
+                  'Freewheel Schottky to the load feed.')
+    sh.two('Device:R', 'R509', '10k', FP['R'], 30, 60, '+5V', 'PWM_OE')
+    sh.text('Supply sense on the freewheel pins: 100k/10.5k each, into the mux. A blown fuse 24 is one DTC.', 20, 205)
+    for k, (pinnet, sup) in enumerate((('FW_1138', 'SUP_1138'), ('FW_391', 'SUP_391'))):
+        sh.two('Device:R', f'R{561 + 2 * k}', '100k', FP['R'], 230 + 20 * k, 215, pinnet, sup)
+        sh.two('Device:R', f'R{562 + 2 * k}', '10.5k', FP['R'], 230 + 20 * k, 228, sup, 'GND')
+    r = sh.symbol('Device:R', 'R565', '10k', 185, 150, FP['R'], fields={'Note': 'VSS pull-up, NOT POPULATED until circuit 679 level is known'},
+                  dnp=True)
+    sh.wire(r, {'1': '+5V', '2': 'VSS_OUT_PIN'})
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
-          ('VR', 'Vr.kicad_sch', vr)]
+          ('VR', 'Vr.kicad_sch', vr),
+          ('Solenoids', 'Solenoids.kicad_sch', solenoids),
+          ('PWM', 'Pwm.kicad_sch', pwm_loads)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):
@@ -376,6 +462,7 @@ def main():
     GLOBAL.update(net for net, *_ in cp.SIGNALS)
     GLOBAL.update(net for net, *_ in ep.PINS.values())
     GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0'})      # + the module's non-port pins
+    GLOBAL.update(MUX)                                       # drain/supply senses cross to the mux
     write_own_lib()
     root_s = open(f'{PROJ}.kicad_sch').read()
     pro = json.load(open(f'{PROJ}.kicad_pro'))
