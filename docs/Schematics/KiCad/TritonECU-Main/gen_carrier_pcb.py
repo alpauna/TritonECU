@@ -119,6 +119,11 @@ def place():
     # USB-C on the right board edge (x 183): rotated 90 so the opening faces +x, the
     # footprint's 'PCB Edge' line (local y 3.675) on the edge
     P['J901'] = (183.0 - 3.675, 141.5, 90)
+    # microSD in the bottom-left corner, card slot (footprint +y, body edge at local
+    # y 5.7) facing the bottom board edge at y 199
+    P['J902'] = (33.0, 199.0 - 1.5 - 5.7, 0)          # shield pads clear of the edge
+    # TACH/SPEED bench header: the gap between the EEC-V connector and coil 6
+    P['J1001'] = (165.5, 36.0, 0)                        # J1 ends at 161.5, Q106 starts at 169.4
     # rails: bulk caps beside the power board connector; VBAT 0R by module pad A9
     P['C001'] = (104.0, 132.0, 0); P['C002'] = (104.0, 137.0, 0); P['R001'] = (44.0, 108.0, 0)
     return P
@@ -137,16 +142,16 @@ PACK = [
      (158.6, 56.0, 169.2, 92.0)),
     # HO2S x4 buffers: the bottom band. Far from pins 35/60/61/87 - first draft only
     (['U803', 'U804', 'C815', 'C820'] + _refs('R', 818, 836) + _refs('C', 816, 825) + _refs('D', 802, 807),
-     (26.5, 187.0, 110.2, 198.0)),         # below R509, left of the power board
+     [(41.0, 187.0, 110.2, 198.0), (41.0, 179.0, 110.2, 186.9)]),   # between the microSD and the power board
     # comms: USB-C and microSD need a board edge; the only free one is the strip right
     # of the power board. SCP/CAN then run ~100 mm to EEC-V 15/16/42/43 - first draft
     (['U903', 'U901', 'U902', 'U904', 'U905'] + _refs('R', 901, 930) + _refs('C', 901, 920)
-     + _refs('D', 901, 906) + ['J902'], (170.8, 147.2, 182.6, 198.4)),
+     + _refs('D', 901, 906), (170.8, 147.2, 182.6, 198.4)),
     # switched-rail load switches: beside the power board's 5 V / 3.3 V pins
     (['U001', 'U002', 'R002', 'R003', 'R004', 'C003', 'C004', 'C005', 'C006', 'C007', 'C008'],
      (80.0, 125.0, 101.5, 134.5)),
     # switch inputs, TACH/SPEED header, BOOT0 jumper: the gaps left of the power board
-    ([f'{p}{n}' for n in range(1001, 1040) for p in ('R', 'D', 'C')] + ['J1001', 'JP1001'],
+    ([f'{p}{n}' for n in range(1001, 1040) for p in ('R', 'D', 'C')] + ['JP1001'],
      [(37.5, 161.0, 84.0, 171.0), (80.0, 135.5, 101.5, 147.5), (37.5, 108.6, 96.0, 113.0)]),
 ]
 
