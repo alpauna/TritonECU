@@ -131,7 +131,7 @@ SIGNALS = [
     ('TR4', 'PF14', 'GPIO', True, 'input', 'pin 50'),
     ('BRAKE', 'PF15', 'GPIO', True, 'input', ''),
     ('ACP', 'PE10', 'GPIO', True, 'input', 'A/C pressure'),
-    ('4X4L', 'PE8', 'GPIO', True, 'input', '4x4 low. [CONFIRM] no PCM pin found for it in either pinout source'),
+    ('4X4L', 'PE8', 'GPIO', True, 'input', '4x4 low indicator switch, pin 14 (findings sec.14)'),
     ('TCS', 'PE1', 'GPIO', False, 'input', 'O/D cancel switch, pin 29; polled, all EXTI lines are taken'),
     # --- VREF: TPS2H160B-Q1, DIAG_EN tied high
     ('VREF_EN', 'PB2', 'GPIO', False, 'vref', ''),
@@ -151,6 +151,7 @@ SIGNALS = [
     ('CAN_RX_WAKE', 'PA0', 'WKUP1', False, 'can', 'SAME NET as CAN_RX: Standby wakes only on a WKUP pin'),
     # --- wake, power board, I2C
     ('IGN_WAKE', 'PC13', 'WKUP4', True, 'power', 'key-on sense, conditioned; also key-off detect'),
+    ('SW_RAIL_EN', 'PG12', 'GPIO', False, 'power', 'TPS22917 x2: +5V_SW, +3.3V_SW for the running-only loads; 100k down'),
     ('I2C_SDA', 'PF0', 'I2C2_SDA', False, 'power', 'power board, INA238, baro'),
     ('I2C_SCL', 'PF1', 'I2C2_SCL', False, 'power', ''),
     ('M_SYNC', 'PE3', 'GPIO', False, 'power', 'MAX25239 SYNC; 10k pull-down on the power board'),

@@ -276,12 +276,12 @@ def ignition(sh):
     sh.text('Ignition: 8 x COP. 74HCT541 at 5 V (the IGBT plateau is 3.0 V), 470R gates (datasheet RG),', 20, 20)
     sh.text('no gate capacitor, no C-E snubber. OE1 = firmware armed, OE2 = watchdog alive. output-drivers.md', 20, 24)
     u = sh.symbol('74xx:74HCT541', 'U101', '74HCT541', 60, 90, FP['SOIC20'])
-    sh.wire(u, {'1': 'COIL_ARM', '19': 'WD_OE', '10': 'GND', '20': '+5V'})
+    sh.wire(u, {'1': 'COIL_ARM', '19': 'WD_OE', '10': 'GND', '20': '+5V_SW'})
     for i in range(8):
         sh.wire(u, {str(2 + i): f'COIL{i + 1}', str(18 - i): f'GATE{i + 1}'})
-    sh.two('Device:C', 'C101', '100n', FP['C'], 45, 125, '+5V', 'GND')
-    sh.two('Device:R', 'R109', '10k', FP['R'], 30, 70, '+5V', 'COIL_ARM')
-    sh.two('Device:R', 'R110', '10k', FP['R'], 40, 70, '+5V', 'WD_OE')
+    sh.two('Device:C', 'C101', '100n', FP['C'], 45, 125, '+5V_SW', 'GND')
+    sh.two('Device:R', 'R109', '10k', FP['R'], 30, 70, '+5V_SW', 'COIL_ARM')
+    sh.two('Device:R', 'R110', '10k', FP['R'], 40, 70, '+5V_SW', 'WD_OE')
     for i in range(8):
         y = 45 + i * 22
         r = sh.symbol('Device:R', f'R{101 + i}', '470', 120, y, FP['R'], rot=90)
@@ -323,6 +323,21 @@ def rails(sh):
     sh.text('Bulk where the rails arrive from the power board connector.', 20, 120)
     sh.two('Device:C', 'C001', '10u', 'Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder', 50, 140, '+5V', 'GND')
     sh.two('Device:C', 'C002', '10u', 'Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder', 75, 140, '+3.3V', 'GND')
+    sh.text('Switched rails: +5V and +3.3V stay up parked (3.3 V is made from 5 V), so everything that only matters while', 20, 170)
+    sh.text('running hangs off +5V_SW / +3.3V_SW: driver buffers, MAX9926, ADC, op-amps, mux, TFT and VR pull-ups. Always on:', 20, 174)
+    sh.text('MCU, watchdog, CAN transceiver (wake), SCP receiver, input clamps, SD switch. TPS22917: slew-limited, no inrush dip on the MCU rail.', 20, 178)
+    sh.text('SW_RAIL_EN 100k down: rails off until firmware runs, and every driver input is then held off by its own pull-down.', 20, 182)
+    for k, (src, dst) in enumerate((('+5V', '+5V_SW'), ('+3.3V', '+3.3V_SW'))):
+        x = 60 + 110 * k
+        w = sh.symbol('Power_Management:TPS22917DBV', f'U00{1 + k}', 'TPS22917DBVR', x, 210)
+        sh.wire(w, {'1': src, '2': 'GND', '3': 'SW_RAIL_EN', '4': f'SW{k + 1}_CT', '5': f'SW{k + 1}_QOD', '6': dst})
+        sh.two('Device:C', f'C00{3 + 3 * k}', '1u', FP['C0805'], x - 25, 210, src, 'GND')
+        sh.two('Device:C', f'C00{4 + 3 * k}', '1n', FP['C'], x - 5, 235, f'SW{k + 1}_CT', 'GND',
+               fields={'Note': 'slew: ~40 uF of decoupling downstream'})
+        sh.two('Device:C', f'C00{5 + 3 * k}', '10u', FP['C0805'], x + 30, 220, dst, 'GND')
+        sh.two('Device:R', f'R00{2 + k}', '100', FP['R'], x + 20, 235, f'SW{k + 1}_QOD', dst,
+               fields={'Note': 'quick output discharge, rate-limited'})
+    sh.two('Device:R', 'R004', '100k', FP['R'], 40, 240, 'SW_RAIL_EN', 'GND')
     sh.text('VBAT: the module RTC/backup domain, from the always-on 3.3 V. R001 can become a coin cell.', 20, 80)
     sh.two('Device:R', 'R001', '0', FP['R'], 50, 100, '+3.3V', 'VBAT')
 
@@ -342,9 +357,9 @@ def vr(sh):
     for chip in (1, 2, 3):
         x0 = 30 + (chip - 1) * 125
         u = sh.symbol(f'{CLIB}:MAX9926', f'U30{chip}', 'MAX9926UAEE+T', x0 + 70, 90, FP['QSOP16'])
-        sh.wire(u, {'1': 'GND', '8': 'GND', '13': 'GND', '11': 'GND', '14': '+5V', '2': None, '7': None, '12': None})
+        sh.wire(u, {'1': 'GND', '8': 'GND', '13': 'GND', '11': 'GND', '14': '+5V_SW', '2': None, '7': None, '12': None})
         for k, val in enumerate(('10n', '100n', '1u')):
-            sh.two('Device:C', f'C{c}', val, FP['C'], x0 + 95 + 8 * k, 125, '+5V', 'GND'); c += 1
+            sh.two('Device:C', f'C{c}', val, FP['C'], x0 + 95 + 8 * k, 125, '+5V_SW', 'GND'); c += 1
         for (cc, ch, pnet, nnet, out) in [q for q in chans if q[0] == chip]:
             ip, im, co, bi = pin[ch]
             tag = f'U30{chip}_{ch}'
@@ -361,7 +376,7 @@ def vr(sh):
                    fields={'Note': 'C0G, 200 V'}); c += 1
             sh.net(f'{tag}_INP', u[ip]); sh.net(f'{tag}_INM', u[im])
             sh.net(out, u[co])
-            sh.two('Device:R', f'R{r}', '10k', FP['R'], x0 + 100, y - 10, '+3.3V', out); r += 1
+            sh.two('Device:R', f'R{r}', '10k', FP['R'], x0 + 100, y - 10, '+3.3V_SW', out); r += 1
             sh.net(f'{tag}_BIAS', u[bi])
             sh.two('Device:C', f'C{c}', '100n', FP['C'], x0 + 110, y - 10, f'{tag}_BIAS', 'GND'); c += 1
     j = sh.symbol('Connector_Generic:Conn_01x04', 'J301', 'VR spare', 60, 175, FP['HDR4'])
@@ -391,8 +406,8 @@ def low_side_bank(sh, base, buf_ref, chans, oe_nets, title):
     """74HCT541 at 5 V -> 2.2k -> NCV8405A (or NCV8408B for EPC). Each 541 output
     has a 100k pulldown so a high-Z buffer leaves the gate off."""
     u = sh.symbol('74xx:74HCT541', buf_ref, '74HCT541', 50, 100, FP['SOIC20'])
-    sh.wire(u, {'1': oe_nets[0], '19': oe_nets[1], '10': 'GND', '20': '+5V'})
-    sh.two('Device:C', f'C{base + 1}', '100n', FP['C'], 35, 135, '+5V', 'GND')
+    sh.wire(u, {'1': oe_nets[0], '19': oe_nets[1], '10': 'GND', '20': '+5V_SW'})
+    sh.two('Device:C', f'C{base + 1}', '100n', FP['C'], 35, 135, '+5V_SW', 'GND')
     for k in range(8):
         if k < len(chans):
             mcu, out, fw, ds = chans[k]
@@ -432,9 +447,9 @@ def solenoids(sh):
     m = sh.symbol('74xx:74HC4051', 'U402', '74HC4051', 250, 120, FP['TSSOP16'])
     ins = {'13': MUX[0], '14': MUX[1], '15': MUX[2], '12': MUX[3], '1': MUX[4], '5': MUX[5], '2': MUX[6], '4': MUX[7]}
     sh.wire(m, ins)
-    sh.wire(m, {'3': 'MUX_OUT', '6': 'GND', '7': 'GND', '8': 'GND', '16': '+3.3V',
+    sh.wire(m, {'3': 'MUX_OUT', '6': 'GND', '7': 'GND', '8': 'GND', '16': '+3.3V_SW',
                 '11': 'MUX_S0', '10': 'MUX_S1', '9': 'MUX_S2'})
-    sh.two('Device:C', 'C402', '100n', FP['C'], 230, 150, '+3.3V', 'GND')
+    sh.two('Device:C', 'C402', '100n', FP['C'], 230, 150, '+3.3V_SW', 'GND')
     for k, net in enumerate(MUX):           # 100 nF on the input side: settling in ns, analog-mux-scan.md
         sh.two('Device:C', f'C{411 + k}', '100n', FP['C'], 280 + 8 * (k % 4), 80 + 30 * (k // 4), net, 'GND')
     sh.text('74HC4051 at 3.3 V: 100 nF on each INPUT, not one after the mux - switching then settles in ns.', 20, 200)
@@ -446,7 +461,7 @@ def pwm_loads(sh):
     low_side_bank(sh, 500, 'U501', PWM, ('PWM_OE', 'PWM_OE'),
                   'PWM loads: 74HCT541 #2 at 5 V, OE = PWM_OE (10k up: off at power-on) -> 2.2k -> NCV8405A, EPC NCV8408B. '
                   'Freewheel Schottky to the load feed.')
-    sh.two('Device:R', 'R509', '10k', FP['R'], 30, 60, '+5V', 'PWM_OE')
+    sh.two('Device:R', 'R509', '10k', FP['R'], 30, 60, '+5V_SW', 'PWM_OE')
     sh.text('Supply sense on the freewheel pins: 100k/10.5k each, into the mux. A blown fuse 24 is one DTC.', 20, 205)
     for k, (pinnet, sup) in enumerate((('FW_1138', 'SUP_1138'), ('FW_391', 'SUP_391'))):
         sh.two('Device:R', f'R{561 + 2 * k}', '100k', FP['R'], 230 + 20 * k, 215, pinnet, sup)
@@ -510,7 +525,7 @@ def vref(sh):
     sh.two('Device:C', 'C705', '100n', FP['C'], 120, 150, 'VREF_5V', 'GND')
     sh.two('Device:R', 'R702', '10k', FP['R'], 100, 130, 'VREF_5V', 'VREF_DIAG', fields={'Note': 'DIAG_EN high, from VS'})
     sh.two('Device:R', 'R703', '10k', FP['R'], 108, 130, 'VREF_5V', 'VREF_THER', fields={'Note': 'THER high = latch, from VS'})
-    sh.two('Device:R', 'R704', '10k', FP['R'], 116, 165, '+3.3V', 'VREF_FAULT')
+    sh.two('Device:R', 'R704', '10k', FP['R'], 116, 165, '+3.3V_SW', 'VREF_FAULT')
     sh.two('Device:R', 'R705', '2.2k', FP['R'], 100, 175, 'VREF_CS_RAW', 'GND', fields={'Note': 'RCS, 1 %'})
     r = sh.symbol('Device:R', 'R706', '4.7k', 85, 165, FP['R'], rot=90)
     sh.wire(r, {'1': 'VREF_CS_RAW', '2': 'VREF_CS'})
@@ -564,9 +579,9 @@ def adc(sh):
     sh.text('Single GND net: AGND/PGND is a layout split at the star, not a schematic one.', 20, 24)
     # --- the converter
     u = sh.symbol('Samacsys:ADS8588HIPM', 'U801', 'ADS8588HIPM', 40, 60)
-    nets = {'1': '+5V', '37': '+5V', '38': '+5V', '48': '+5V', '23': '+3.3V',
+    nets = {'1': '+5V_SW', '37': '+5V_SW', '38': '+5V_SW', '48': '+5V_SW', '23': '+3.3V_SW',
             '2': 'GND', '26': 'GND', '35': 'GND', '40': 'GND', '41': 'GND', '47': 'GND', '43': 'GND', '46': 'GND',
-            '3': 'GND', '4': 'GND', '5': 'GND', '6': '+3.3V', '7': '+3.3V', '8': '+3.3V', '34': 'GND',
+            '3': 'GND', '4': 'GND', '5': 'GND', '6': '+3.3V_SW', '7': '+3.3V_SW', '8': '+3.3V_SW', '34': 'GND',
             '9': 'ADC_CONVST', '10': 'ADC_CONVSTB', '11': 'ADC_RESET', '12': 'ADC_SCK', '13': 'ADC_CS',
             '14': 'ADC_BUSY', '15': None, '24': 'ADC_MISO', '25': None,
             '36': 'ADC_REGCAP1', '39': 'ADC_REGCAP2', '42': 'ADC_REF', '44': 'ADC_REFCAP', '45': 'ADC_REFCAP',
@@ -588,9 +603,9 @@ def adc(sh):
         r('10k', 40 + 7 * k, 140, n, 'GND')
     sh.text('10k pull-downs: DB0-2 per the AD7606C serial rule, DB15/BYTE SEL low = serial not byte mode, DB11/DB14 parked.', 20, 152)
     for k in range(4):
-        c('100n', 90 + 7 * k, 140, '+5V', 'GND')
-    c('10u', 118, 140, '+5V', 'GND', FP['C0805'])
-    c('100n', 125, 140, '+3.3V', 'GND')
+        c('100n', 90 + 7 * k, 140, '+5V_SW', 'GND')
+    c('10u', 118, 140, '+5V_SW', 'GND', FP['C0805'])
+    c('100n', 125, 140, '+3.3V_SW', 'GND')
     c('1u', 90, 160, 'ADC_REGCAP1', 'GND'); c('1u', 97, 160, 'ADC_REGCAP2', 'GND')
     c('10u', 104, 160, 'ADC_REFCAP', 'GND', FP['C0805'], fields={'Note': 'REFCAPA+B shorted, low ESR'})
     # --- the 2.5 V reference, gated, on 3.3 V (EN is 0.7 x VIN)
@@ -627,8 +642,8 @@ def adc(sh):
     o2 = [('O2_21_IN', 'O2_21_A'), ('O2_11_IN', 'O2_11_A'), ('O2_12_IN', 'O2_DN1'), ('O2_22_IN', 'O2_DN2')]
     for pk in range(2):
         op = sh.symbol(f'{CLIB}:OPAMP2', f'U{803 + pk}', 'OPA2376AQDRQ1', 330, 70 + 70 * pk, FP['SOIC8'])
-        sh.wire(op, {'8': '+5V', '4': 'GND'})
-        c('100n', 345, 90 + 70 * pk, '+5V', 'GND')
+        sh.wire(op, {'8': '+5V_SW', '4': 'GND'})
+        c('100n', 345, 90 + 70 * pk, '+5V_SW', 'GND')
         for half in range(2):
             ch = 2 * pk + half
             src, dst = o2[ch]
@@ -639,7 +654,7 @@ def adc(sh):
             sh.wire(a, {'1': src, '2': f'{tag}_HZ'})
             c('1n', 275, y + 10, f'{tag}_HZ', 'GND', fields={'Note': 'C0G 50 V'})
             dd = sh.symbol('Diode:BAT54S', f'D{next(D)}', 'BAT54S', 285, y + 10)
-            sh.wire(dd, {'1': 'GND', '2': '+5V', '3': f'{tag}_HZ'})
+            sh.wire(dd, {'1': 'GND', '2': '+5V_SW', '3': f'{tag}_HZ'})
             r('22M', 297, y + 10, f'{tag}_HZ', 'O2_BIASNODE', FP['R0805'], fields={'Note': '1 %, guard the node'})
             sh.net(f'{tag}_HZ', op[ip]); sh.net(f'{tag}_BUF', op[im]); sh.net(f'{tag}_BUF', op[out])
             a = sh.symbol('Device:R', f'R{next(R)}', '1k', 360, y, FP['R'], rot=90)
@@ -650,7 +665,7 @@ def adc(sh):
             sh.wire(j, {'1': f'{tag}_HZ', '2': dst})
             if dst.startswith('O2_DN'):
                 clamp(395, y + 10, dst)
-    r('91k', 300, 205, '+5V', 'O2_BIASNODE', fields={'Note': '1 %'})
+    r('91k', 300, 205, '+5V_SW', 'O2_BIASNODE', fields={'Note': '1 %'})
     r('9.1k', 300, 220, 'O2_BIASNODE', 'GND', fields={'Note': '1 %'})
     c('100n', 310, 220, 'O2_BIASNODE', 'GND')
     a = sh.symbol('Device:R', f'R{next(R)}', '1k', 285, 212, FP['R'], rot=90, fields={'Note': 'DAC excitation, o2-input-stage.md sec.7'})
@@ -659,15 +674,15 @@ def adc(sh):
     sh.text('Knock: TLV9064 differential charge amp. ON 3.3 V with VMID 1.8 V (MAX6070AAUT18), NOT 5 V / 2.5 V as drawn in', 20, 175)
     sh.text('knock-front-end-schematic.md: KNOCK lands on PC3, a 3.3 V ADC. Cf 220p C0G, Rf 1M, R5-R8 0.1 % matched. Guard KP/KN_IN.', 20, 179)
     k4 = sh.symbol(f'{CLIB}:OPAMP4', 'U805', 'TLV9064QPWRQ1', 120, 225, FP['TSSOP14'])
-    sh.wire(k4, {'4': '+3.3V', '11': 'GND', '2': 'KP_IN', '3': 'VMID', '1': 'KA_OUT', '6': 'KN_IN', '5': 'VMID', '7': 'KB_OUT',
+    sh.wire(k4, {'4': '+3.3V_SW', '11': 'GND', '2': 'KP_IN', '3': 'VMID', '1': 'KA_OUT', '6': 'KN_IN', '5': 'VMID', '7': 'KB_OUT',
                  '9': 'KC_N', '10': 'KC_P', '8': 'KNOCK_DIFF', '12': 'VMID_F', '13': 'VMID', '14': 'VMID'})
-    c('100n', 140, 255, '+3.3V', 'GND')
+    c('100n', 140, 255, '+3.3V_SW', 'GND')
     for leg, (src, node, outn) in enumerate((('KNOCK_IN', 'KP_IN', 'KA_OUT'), ('KNOCK_RTN', 'KN_IN', 'KB_OUT'))):
         y = 200 + 30 * leg
         a = sh.symbol('Device:R', f'R{next(R)}', '1k', 40, y, FP['R'], rot=90, fields={'Note': '1 %'})
         sh.wire(a, {'1': src, '2': node})
         dd = sh.symbol('Diode:BAT54S', f'D{next(D)}', 'BAV199', 30, y + 12, fields={'Note': 'low-leakage, not BAV99'})
-        sh.wire(dd, {'1': 'GND', '2': '+3.3V', '3': src})
+        sh.wire(dd, {'1': 'GND', '2': '+3.3V_SW', '3': src})
         c('220p', 60, y + 8, node, outn, fields={'Note': 'C0G 5 %: the knock calibration'})
         r('1M', 70, y + 8, node, outn, fields={'Note': '1 %'})
     a = sh.symbol('Device:R', f'R{next(R)}', '10k', 85, 260, FP['R'], rot=90, fields={'Note': '0.1 % matched'})
@@ -682,8 +697,8 @@ def adc(sh):
     sh.wire(a, {'1': 'KNOCK_DIFF', '2': 'KNOCK'})
     c('15n', 172, 225, 'KNOCK', 'GND')
     kr = sh.symbol('Reference_Voltage:MAX6070AAUT18+T', 'U806', 'MAX6070AAUT18+T', 190, 250)
-    sh.wire(kr, {'4': '+3.3V', '3': '+3.3V', '2': 'GND', '1': 'KNK_FLT', '5': 'VREF_KNK', '6': 'VREF_KNK'})
-    c('100n', 175, 265, '+3.3V', 'GND'); c('100n', 210, 265, 'KNK_FLT', 'GND')
+    sh.wire(kr, {'4': '+3.3V_SW', '3': '+3.3V_SW', '2': 'GND', '1': 'KNK_FLT', '5': 'VREF_KNK', '6': 'VREF_KNK'})
+    c('100n', 175, 265, '+3.3V_SW', 'GND'); c('100n', 210, 265, 'KNK_FLT', 'GND')
     c('1u', 218, 245, 'VREF_KNK', 'GND')
     a = sh.symbol('Device:R', f'R{next(R)}', '100', 230, 240, FP['R'], rot=90)
     sh.wire(a, {'1': 'VREF_KNK', '2': 'VMID_F'})
@@ -693,7 +708,7 @@ def adc(sh):
     sh.text('like the solenoid supply sense. 1k into each pin + BAT54J to 3.3 V where the harness can reach the pin.', 250, 249)
     r('10k', 260, 260, 'DPFE_IN', 'DPFE', fields={'Note': '1 %'}); r('18k', 260, 275, 'DPFE', 'GND', fields={'Note': '1 %'})
     c('10n', 268, 275, 'DPFE', 'GND'); clamp(276, 270, 'DPFE')
-    r('2.2k', 295, 255, '+3.3V', 'TFT_IN', fields={'Note': '1 %, TFT pull-up'})
+    r('2.2k', 295, 255, '+3.3V_SW', 'TFT_IN', fields={'Note': '1 %, TFT pull-up'})
     a = sh.symbol('Device:R', f'R{next(R)}', '1k', 305, 265, FP['R'], rot=90)
     sh.wire(a, {'1': 'TFT_IN', '2': 'TFT'})
     c('100n', 318, 275, 'TFT', 'GND'); clamp(326, 270, 'TFT')
@@ -788,6 +803,55 @@ def comms(sh):
         r('47k', 250 + 7 * k, 240, 'SD_3V3', n)
     sh.text('DAT3 pulled up keeps the card in SD mode (low at CMD0 selects SPI). DAT1/DAT2 unused in 1-bit, pulled up.', 170, 270)
 
+# Switch inputs: (MCU net, connector net, ground-switched?) - harness-protection.md
+SWITCHES = [('TR1', 'TR1_IN', True), ('TR2', 'TR2_IN', True), ('TR4', 'TR4_IN', True), ('4X4L', '4X4L_IN', True),
+            ('TR3A', 'TR3A_IN', False), ('BRAKE', 'BRAKE_IN', False), ('ACP', 'ACP_IN', False), ('TCS', 'TCS_IN', False)]
+
+def inputs(sh):
+    """harness-protection.md: series resistor + TVS + pull-up. One network for all:
+    pull-up to VPWR (fitted on ground-switched inputs only), SMF24A, 33k/15k, 10n,
+    BAT54J to 3.3 V. Key-on sense is the same divider on VPWR, into PC13 / WKUP4."""
+    sh.text('Switch inputs. One network: [4.7k pull-up to VPWR, ground-switched only] - SMF24A - 33k - node (15k, 10n, BAT54J to 3.3 V) - MCU.', 20, 16)
+    sh.text('Pull-ups go to VPWR, not 5 V / 3.3 V: those stay up parked, and a TR bit closed in Park would draw mA all night.', 20, 20)
+    sh.text('Levels: 14 V -> clamped; 9 V cranking -> 2.8 V (high-side) / 2.6 V (ground-switched) vs VIH 2.3 V. Open high-side reads 0.', 20, 24)
+    sh.text('TR3A (64): on this 4R70W it is 12 V cranking in P/N, so the high-side network. A 4R100 (270R coded) needs a 2.2k', 20, 28)
+    sh.text('pull-up to 3.3 V and 1k series instead - 4r100-deltas.md. Brake 92 is hot-at-all-times: 12 V when pressed.', 20, 32)
+    R = iter(range(1001, 1100)); C = iter(range(1001, 1100)); D = iter(range(1001, 1100))
+    for k, (mcu, pin, gsw) in enumerate(SWITCHES):
+        x, y = 30 + (k % 4) * 95, 55 + (k // 4) * 70
+        sh.text(f'{mcu} ({"ground-switched" if gsw else "12 V high-side"})', x, y - 8, 1.27)
+        pu = sh.symbol('Device:R', f'R{next(R)}', '4.7k', x, y + 5, FP['R0805'], dnp=not gsw,
+                       fields={'Note': 'wetting pull-up to VPWR' + ('' if gsw else ', not fitted: high-side input')})
+        sh.wire(pu, {'1': 'VPWR', '2': pin})
+        t = sh.symbol('Device:D_Zener', f'D{next(D)}', 'SMF24A', x + 12, y + 20, 'Diode_SMD:D_SMF', rot=90,
+                      fields={'Note': 'unidirectional TVS, stands off above battery'})
+        sh.wire(t, {'1': pin, '2': 'GND'})
+        a = sh.symbol('Device:R', f'R{next(R)}', '33k', x + 30, y + 10, FP['R0805'], rot=90)
+        sh.wire(a, {'1': pin, '2': mcu})
+        sh.two('Device:R', f'R{next(R)}', '15k', FP['R'], x + 45, y + 20, mcu, 'GND')
+        sh.two('Device:C', f'C{next(C)}', '10n', FP['C'], x + 53, y + 20, mcu, 'GND')
+        d = sh.symbol('Device:D_Schottky', f'D{next(D)}', 'BAT54J', x + 62, y + 20, FP['SOD323'], rot=90)
+        sh.wire(d, {'1': '+3.3V', '2': mcu})
+    # key-on sense
+    sh.text('Key-on: VPWR (EEC relay, 361 RD) through the same divider to PC13 / WKUP4 - Standby wakes only on a WKUP pin.', 20, 200)
+    sh.text('100 nF, not 10 nF: a wake input should ignore ms-scale harness spikes. Also key-off detect while running.', 20, 204)
+    a = sh.symbol('Device:R', f'R{next(R)}', '33k', 60, 220, FP['R0805'], rot=90)
+    sh.wire(a, {'1': 'VPWR', '2': 'IGN_WAKE'})
+    sh.two('Device:R', f'R{next(R)}', '15k', FP['R'], 75, 230, 'IGN_WAKE', 'GND')
+    sh.two('Device:C', f'C{next(C)}', '100n', FP['C'], 83, 230, 'IGN_WAKE', 'GND')
+    d = sh.symbol('Device:D_Schottky', f'D{next(D)}', 'BAT54J', 92, 230, FP['SOD323'], rot=90)
+    sh.wire(d, {'1': '+3.3V', '2': 'IGN_WAKE'})
+    # bench outputs and BOOT0
+    sh.text('TACH / SPEED: software square waves for the bench (gauge testing), header only - 220R each.', 150, 200)
+    j = sh.symbol('Connector_Generic:Conn_01x03', 'J1001', 'TACH/SPEED', 200, 225, 'Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical')
+    sh.wire(j, {'1': 'TACH_H', '2': 'SPEED_H', '3': 'GND'})
+    for n in ('TACH', 'SPEED'):
+        a = sh.symbol('Device:R', f'R{next(R)}', '220', 170, 220 + (10 if n == 'SPEED' else 0), FP['R'], rot=90)
+        sh.wire(a, {'1': n, '2': f'{n}_H'})
+    sh.text('BOOT0: 10k down on the module. Close JP1001 at power-up for USB DFU (system bootloader on PA11/PA12).', 150, 250)
+    jp = sh.symbol('Jumper:SolderJumper_2_Open', 'JP1001', 'BOOT0 DFU', 200, 265, FP['JP'], bom=False)
+    sh.wire(jp, {'1': '+3.3V', '2': 'BOOT0'})
+
 SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Ignition', 'Ignition.kicad_sch', ignition),
           ('Injection', 'Injection.kicad_sch', injection),
@@ -797,7 +861,8 @@ SHEETS = [('Rails', 'Rails.kicad_sch', rails),
           ('Relays', 'Relays.kicad_sch', relays),
           ('VREF', 'Vref.kicad_sch', vref),
           ('ADC', 'ADC.kicad_sch', adc),
-          ('Comms', 'Comms.kicad_sch', comms)]
+          ('Comms', 'Comms.kicad_sch', comms),
+          ('Inputs', 'Inputs.kicad_sch', inputs)]
 
 # ---------------------------------------------------------------- root sheet
 def add_sheet_blocks(root_s, pro):
@@ -831,7 +896,7 @@ def main():
         sys.exit('project is open in KiCad - close it first')
     GLOBAL.update(net for net, *_ in cp.SIGNALS)
     GLOBAL.update(net for net, *_ in ep.PINS.values())
-    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0', 'VPROT', 'VREF_5V'})      # + the module's non-port pins
+    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0', 'VPROT', 'VREF_5V', '+5V_SW', '+3.3V_SW'})      # + the module's non-port pins
     GLOBAL.update(MUX)                                       # drain/supply senses cross to the mux
     write_own_lib()
     root_s = open(f'{PROJ}.kicad_sch').read()

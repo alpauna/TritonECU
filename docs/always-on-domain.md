@@ -1388,10 +1388,22 @@ battery becomes a no-start that looks like a dead ECU.
 
 ## Open questions
 
-- **Wake source wiring.** Switched ignition into an MCU pin needs level shifting
-  and its own transient protection — it is a harness-facing input.
-- **Whether the SD card stays on the switched rail.** It probably should; it is
-  a large sleep load otherwise, and nothing needs it while parked.
+- ~~**Wake source wiring.**~~ **Closed** — VPWR through 33k/15k + 100 nF + BAT54J
+  to 3.3 V into PC13 / WKUP4. Carrier Inputs sheet.
+- ~~**Whether the SD card stays on the switched rail.**~~ **Closed** — there is no
+  switched rail to stay on: the 5 V rail stays up parked because it feeds the 3.3 V
+  buck. The carrier therefore makes its own:
+  - **SD card** behind a TPS22917 on `SD_PWR_EN` (PG11).
+  - **`+5V_SW` / `+3.3V_SW`**, two TPS22917 load switches on `SW_RAIL_EN` (PG12,
+    100k down), for everything that only matters while running: the three
+    74HCT541s and their OE pull-ups, 3 × MAX9926 and their output pull-ups, the
+    ADS8588H (AVDD, DVDD, straps), both OPA2376, the O2 bias divider, the knock
+    block, the 74HC4051, the TPS2H160B FAULT pull-up, and the **TFT pull-up —
+    2.2k into a thermistor, up to 1.5 mA by itself**.
+  - **Left always-on:** MCU, watchdog, CAN transceiver (bus wake), SCP receiver,
+    the input clamps, both load switches' inputs.
+  - Off at reset by the pulldown; every driver input then has its own pulldown,
+    so an unpowered buffer leaves every output off.
 - ~~**Watchdog behaviour in Standby**, so a hung MCU cannot sit awake drawing
   hundreds of milliamps in a parked truck.~~ **Closed.** The TPS3823A-33
   self-services when its WDI pin is high-impedance, and STM32 GPIOs go high-Z

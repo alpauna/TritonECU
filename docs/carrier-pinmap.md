@@ -7,7 +7,7 @@ header pad. The source of truth is
 table is its output (`python3 carrier_pinmap.py --md`). Firmware's `Board.h`
 and the carrier schematic follow it.
 
-**102 signals on 105 usable pins, 3 spare** (PA10, PC12, PG12). PG10 became `ADC_REF_EN` with the ADC sheet, PG11 `SD_PWR_EN` with comms.
+**103 signals on 105 usable pins, 2 spare** (PA10, PC12). PG10 became `ADC_REF_EN` with the ADC sheet, PG11 `SD_PWR_EN` with comms, PG12 `SW_RAIL_EN` with the switched rails.
 
 ## The budget was short, not long
 
@@ -124,7 +124,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | B21 | PG0 | **ACC** | GPIO | relay | A/C clutch |
 | B22 | PG1 | **5_GOOD** | GPIO | power |  |
 | B23 | PE7 | **FPUMP** | GPIO | relay |  |
-| B24 | PE8 | **4X4L** | GPIO | input | 4x4 low. [CONFIRM] no PCM pin found for it in either pinout source |
+| B24 | PE8 | **4X4L** | GPIO | input | 4x4 low indicator switch, pin 14 (findings sec.14) |
 | B25 | PE9 | **INJ1** | TIM1_CH1 | injection |  |
 | B28 | PE10 | **ACP** | GPIO | input | A/C pressure |
 | B29 | PE11 | **INJ2** | TIM1_CH2 | injection |  |
@@ -179,7 +179,7 @@ The Nucleo bench keeps its current wiring until the carrier exists. When
 | D17 | PG9 | **SD_D0** | SDMMC2_SD_DATA0 | storage |  |
 | D18 | PG10 | **ADC_REF_EN** | GPIO | adc | MAX6070AAUT25 EN, 10k pulldown: gated off in Standby, always-on-domain.md |
 | D19 | PG11 | **SD_PWR_EN** | GPIO | storage | TPS22917 ON, 100k pulldown: the card is off when parked (3.3 V is always on) |
-| D20 | PG12 | *spare* | | | |
+| D20 | PG12 | **SW_RAIL_EN** | GPIO | power | TPS22917 x2: +5V_SW, +3.3V_SW for the running-only loads; 100k down |
 | D21 | PG13 | **J1850_TXP** | GPIO | j1850 | same port as TXN: one BSRR write |
 | D22 | PG14 | **J1850_TXN** | GPIO | j1850 |  |
 | D25 | PG15 | **J1850_NSLEEP** | GPIO | j1850 |  |

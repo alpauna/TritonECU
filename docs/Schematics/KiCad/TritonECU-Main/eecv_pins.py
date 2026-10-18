@@ -91,6 +91,7 @@ PINS = {
     92: ('BRAKE_IN', 'brake pedal position', 'pinout'),
     41: ('ACP_IN', 'A/C cycling pressure switch, 347 BK/YE', 'findings sec.8'),
     29: ('TCS_IN', 'O/D cancel switch', 'pinout'),
+    14: ('4X4L_IN', '4x4 low indicator switch, 784 LB/BK (C189)', 'findings sec.14-15'),
     # --- bus
     15: ('SCP_N', 'SCP- 915 PNK/LT BLU', 'pinout'), 16: ('SCP_P', 'SCP+ 914 TAN/ORG', 'pinout'),
     # private CAN to the dash display: terminals ADDED in two empty cavities beside SCP
@@ -109,8 +110,7 @@ NOT_CONNECTED = {
 }
 
 # signals carrier_pinmap.py has but the connector does not carry, and why
-OFF_CONNECTOR = {'4X4L': '4x4-low switch: no PCM pin found yet [CONFIRM] source',
-                 'TACH': 'test header only', 'SPEED': 'test header only'}
+OFF_CONNECTOR = {'TACH': 'test header only', 'SPEED': 'test header only'}
 
 
 def pad_positions():

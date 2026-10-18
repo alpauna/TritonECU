@@ -142,13 +142,36 @@ PACK = [
     # of the power board. SCP/CAN then run ~100 mm to EEC-V 15/16/42/43 - first draft
     (['U903', 'U901', 'U902', 'U904', 'U905'] + _refs('R', 901, 930) + _refs('C', 901, 920)
      + _refs('D', 901, 906) + ['J902'], (170.8, 147.2, 182.6, 198.4)),
+    # switched-rail load switches: beside the power board's 5 V / 3.3 V pins
+    (['U001', 'U002', 'R002', 'R003', 'R004', 'C003', 'C004', 'C005', 'C006', 'C007', 'C008'],
+     (80.0, 125.0, 101.5, 134.5)),
+    # switch inputs, TACH/SPEED header, BOOT0 jumper: the gaps left of the power board
+    ([f'{p}{n}' for n in range(1001, 1040) for p in ('R', 'D', 'C')] + ['J1001', 'JP1001'],
+     [(37.5, 161.0, 84.0, 171.0), (80.0, 135.5, 101.5, 147.5), (37.5, 108.6, 96.0, 113.0)]),
 ]
 
 PARK = (190.0, 30.0, 240.0, 230.0)       # off the right edge: what did not fit, for you to place
 
+def _box(fp):
+    c = fp.GetCourtyard(pcbnew.F_CrtYd).BBox()
+    return [pcbnew.ToMM(v) for v in (c.GetLeft(), c.GetTop(), c.GetRight(), c.GetBottom())]
+
 def pack(have, refs, rect, gap=0.3, park=True):
-    """Shelf-pack refs into rect by courtyard; parts that do not fit go to PARK."""
+    """Shelf-pack refs into rect (or a list of rects, filled in turn) by courtyard,
+    stepping around every other part already on the board; what does not fit
+    anywhere goes to PARK, below anything parked before."""
+    if isinstance(rect, list):
+        for r in rect:
+            refs = pack(have, refs, r, gap, park=False)
+        if refs and park:
+            print(f'  pack: {len(refs)} did not fit, parked off-board: {refs}')
+            pack(have, refs, PARK, gap, park=False)
+        return []
+    mine = set(refs)
+    obst = [b for r, fp in have.items() if r not in mine for b in [_box(fp)] if b[2] > b[0]]
     x0, y0, x1, y1 = rect
+    if rect == PARK:
+        y0 = max([b[3] + 2 for b in obst if b[0] >= PARK[0] - 1] + [y0])
     x, y, row, left = x0, y0, 0.0, []
     for ref in refs:
         fp = have.get(ref)
@@ -156,18 +179,28 @@ def pack(have, refs, rect, gap=0.3, park=True):
             continue
         fp.SetOrientationDegrees(0)
         fp.SetPosition(pcbnew.VECTOR2I(0, 0))
-        c = fp.GetCourtyard(pcbnew.F_CrtYd).BBox()
-        l, t, w, h = (pcbnew.ToMM(v) for v in (c.GetLeft(), c.GetTop(), c.GetWidth(), c.GetHeight()))
-        nx, ny, nrow = x, y, row
-        if nx + w > x1:
-            nx, ny, nrow = x0, y + row + gap, 0.0
-        if w > x1 - x0 or ny + h > y1:
-            left.append(ref); continue
-        fp.SetPosition(pcbnew.VECTOR2I(MM(nx - l), MM(ny - t)))
-        x, y, row = nx + w + gap, ny, max(nrow, h)
+        l, t, r_, b_ = _box(fp); w, h = r_ - l, b_ - t
+        placed = False
+        while True:
+            if x + w > x1:
+                x, y, row = x0, y + row + gap, 0.0
+            if w > x1 - x0 or y + h > y1:
+                break
+            hit = [o for o in obst if o[0] < x + w + gap and o[2] + gap > x and o[1] < y + h + gap and o[3] + gap > y]
+            if hit:
+                x = max(o[2] for o in hit) + gap
+                continue
+            fp.SetPosition(pcbnew.VECTOR2I(MM(x - l), MM(y - t)))
+            obst.append([x, y, x + w, y + h])
+            x += w + gap; row = max(row, h); placed = True
+            break
+        if not placed:
+            left.append(ref)
     if left and park:
         print(f'  pack: {len(left)} did not fit, parked off-board: {left}')
         pack(have, left, PARK, gap, park=False)
+        return []
+    return left
 
 # ---------------------------------------------------------------- netlist
 def netlist():
