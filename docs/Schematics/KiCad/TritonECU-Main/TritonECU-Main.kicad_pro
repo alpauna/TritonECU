@@ -524,6 +524,63 @@
         "via_diameter": 0.6,
         "via_drill": 0.3,
         "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.8,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Coil",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 1.2,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.8,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Supply",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.4,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
       }
     ],
     "meta": {
@@ -531,7 +588,136 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Coil",
+        "pattern": "COIL*_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "INJ*_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "HTR*_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "SSA_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "SSB_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "VENT_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "IMCC_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "EVAP_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "EGR_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "TCC_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "EPC_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "IAC_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "CCS_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "FPUMP_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "FAN?_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "ACC_OUT"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "*_SINK"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "FW_391"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "FW_1138"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "VPWR"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "VPROT"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "+5V"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "+5V_SW"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "+3.3V"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "+3.3V_SW"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "VREF_5V"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "VREF"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "VREF?_SW"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "*SD_3V3"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "VBAT"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "Supply",
+        "pattern": "AGND"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {

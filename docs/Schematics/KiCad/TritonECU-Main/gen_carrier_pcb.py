@@ -63,6 +63,8 @@ def place():
             P[f'R{r}'] = (xc - 6.0 + 8.0 * ch, 90.0, 90); r += 1      # COUT pull-up
             P[f'C{c}'] = (xc - 2.0 + 8.0 * ch, 90.0, 90); c += 1      # BIAS
     P['J301'] = (160.0, 98.0, 0); P['R399'] = (100.0, 62.0, 90)
+    # the analog star (AGND / GND / SIGRTN): top of the ADC column, under EEC-V 91, beside R399
+    P['NT801'] = (104.5, 61.5, 0)
     # solenoids and heaters (74HCT541 #3): heaters, vent, IMCC in the left cooling
     # band below the coils; SSA/SSB (pins 6, 11, right of centre) in the right band.
     # Gate / pulldown / divider-top resistors sit in the 12 mm gaps between FETs.
@@ -134,14 +136,18 @@ def _refs(prefix, a, b): return [f'{prefix}{n}' for n in range(a, b + 1)]
 PACK = [
     # ADC core, reference, unbuffered inputs, slow MCU-ADC channels: the 15 mm column
     # between the MCU module and the VR group, under the analog pins
-    (['U801'] + _refs('C', 801, 809) + _refs('R', 801, 807) + ['U802', 'R808'] + _refs('C', 810, 814) + ['R809']
-     + _refs('R', 810, 817) + ['D801'] + _refs('R', 847, 852) + _refs('C', 836, 838) + ['D810', 'D811'],
-     (94.4, 64.0, 109.6, 108.5)),          # below R201 / R399
+    (['U801'] + _refs('C', 801, 809) + _refs('R', 801, 807) + ['U802', 'D812', 'R808'] + _refs('C', 810, 814) + ['R809']
+     + _refs('R', 810, 817) + ['C817', 'C819']        # C817/C819: HO2S 21/11 1u, at the converter
+     + ['R857'] + _refs('R', 853, 856)                # R857 (MAF_G 10k, AGND) first; the matched legs carry no AGND
+     + ['D801'] + _refs('R', 847, 852) + _refs('C', 836, 838) + ['D810', 'D811'],   # on GND, last: below the AGND island
+     [(94.4, 64.0, 109.6, 108.5), (102.0, 99.7, 109.6, 102.7),     # below R201 / R399; then beside D801;
+      (110.0, 92.2, 115.1, 108.5)]),                                # then the strip left of the relay pull-downs
     # knock: right of the VR group, below the coil 5/6 IGBTs' inner edge, near pins 57/32
     (['U805', 'U806', 'C826'] + _refs('R', 837, 846) + ['D808', 'D809'] + _refs('C', 827, 835),
      (158.6, 56.0, 169.2, 92.0)),
     # HO2S x4 buffers: the bottom band. Far from pins 35/60/61/87 - first draft only
-    (['U803', 'U804', 'C815', 'C820'] + _refs('R', 818, 836) + _refs('C', 816, 825) + _refs('D', 802, 807),
+    (['U803', 'U804', 'C815', 'C820'] + _refs('R', 818, 836) + [c for c in _refs('C', 816, 825) if c not in ('C817', 'C819')]
+     + _refs('D', 802, 807),
      [(41.0, 187.0, 110.2, 198.0), (41.0, 179.0, 110.2, 186.9)]),   # between the microSD and the power board
     # comms: USB-C and microSD need a board edge; the only free one is the strip right
     # of the power board. SCP/CAN then run ~100 mm to EEC-V 15/16/42/43 - first draft
@@ -298,6 +304,12 @@ def main():
             continue
         fp.SetExcludedFromBOM(comps[ref]['nobom']); fp.SetDNP(comps[ref]['dnp'])
         fp.SetValue(comps[ref]['value'])
+        for k, v in comps[ref]['fields'].items():      # schematic fields follow, existing parts included
+            if k not in ('Footprint', 'Datasheet', 'Description') and (not fp.HasField(k) or fp.GetField(k).GetText() != v):
+                new = not fp.HasField(k)
+                fp.SetField(k, v)
+                if new:
+                    fp.GetField(k).SetVisible(False)
         for p in fp.Pads():
             if not p.GetNumber():
                 continue

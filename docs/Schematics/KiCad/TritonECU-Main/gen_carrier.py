@@ -576,20 +576,21 @@ def adc(sh):
 
     sh.text('ADC: ADS8588H, serial on DOUTA, RANGE high = +-10 V (forced: ch 8 is VREF at 5.00 V), OS0-2 low, external 2.5 V reference.', 20, 16)
     sh.text('Ch: 1 MAF diff (968 return on AIN1GND), 2 TPS, 3 HO2S 21, 4 HO2S 11 (buffered), 5 CHT, 6 IAT, 7 battery 180k/30k, 8 VREF_5V.', 20, 20)
-    sh.text('Single GND net: AGND/PGND is a layout split at the star, not a schematic one.', 20, 24)
+    sh.text('AGND: the ADS8588H, its reference and its input conditioning. Meets GND and SIGRTN only at NT801, the star', 20, 24)
+    sh.text('under EEC-V 91. TPS, CHT, IAT and VREF sense are measured against SIGRTN (VxGND), MAF against MAF_RTN.', 20, 28)
     # --- the converter
     u = sh.symbol('Samacsys:ADS8588HIPM', 'U801', 'ADS8588HIPM', 40, 60)
     nets = {'1': '+5V_SW', '37': '+5V_SW', '38': '+5V_SW', '48': '+5V_SW', '23': '+3.3V_SW',
-            '2': 'GND', '26': 'GND', '35': 'GND', '40': 'GND', '41': 'GND', '47': 'GND', '43': 'GND', '46': 'GND',
-            '3': 'GND', '4': 'GND', '5': 'GND', '6': '+3.3V_SW', '7': '+3.3V_SW', '8': '+3.3V_SW', '34': 'GND',
+            '2': 'AGND', '26': 'AGND', '35': 'AGND', '40': 'AGND', '41': 'AGND', '47': 'AGND', '43': 'AGND', '46': 'AGND',
+            '3': 'AGND', '4': 'AGND', '5': 'AGND', '6': '+3.3V_SW', '7': '+3.3V_SW', '8': '+3.3V_SW', '34': 'AGND',
             '9': 'ADC_CONVST', '10': 'ADC_CONVSTB', '11': 'ADC_RESET', '12': 'ADC_SCK', '13': 'ADC_CS',
             '14': 'ADC_BUSY', '15': None, '24': 'ADC_MISO', '25': None,
             '36': 'ADC_REGCAP1', '39': 'ADC_REGCAP2', '42': 'ADC_REF', '44': 'ADC_REFCAP', '45': 'ADC_REFCAP',
             '16': 'ADC_DB0', '17': 'ADC_DB1', '18': 'ADC_DB2', '29': 'ADC_DB11', '32': 'ADC_DB14', '33': 'ADC_DB15'}
     for k in ('19', '20', '21', '22', '27', '28', '30', '31'):
         nets[k] = None
-    ain = [('MAF_A', 'MAF_RTN'), ('TPS_A', 'GND'), ('O2_21_A', 'GND'), ('O2_11_A', 'GND'),
-           ('CHT_A', 'GND'), ('IAT_A', 'GND'), ('VBAT_A', 'GND'), ('VREF_5V', 'GND')]
+    ain = [('MAF_A', 'MAF_G'), ('TPS_A', 'TPS_G'), ('O2_21_A', 'AGND'), ('O2_11_A', 'AGND'),
+           ('CHT_A', 'CHT_G'), ('IAT_A', 'IAT_G'), ('VBAT_A', 'AGND'), ('VREF_5V', 'SIGRTN')]
     for i, (pnet, gnet) in enumerate(ain):
         nets[str(49 + 2 * i)] = pnet; nets[str(50 + 2 * i)] = gnet
     sh.wire(u, nets)
@@ -600,28 +601,34 @@ def adc(sh):
     sh.libs['Samacsys:ADS8588HIPM'] = (emb, pins, fp0)
     r('0', 30, 140, 'ADC_CONVST', 'ADC_CONVSTB', fields={'Note': 'CONVSTA-B link: a 0R, not a trace (AD7606C WR)'})
     for k, n in enumerate(('ADC_DB0', 'ADC_DB1', 'ADC_DB2', 'ADC_DB11', 'ADC_DB14', 'ADC_DB15')):
-        r('10k', 40 + 7 * k, 140, n, 'GND')
+        r('10k', 40 + 7 * k, 140, n, 'AGND')
     sh.text('10k pull-downs: DB0-2 per the AD7606C serial rule, DB15/BYTE SEL low = serial not byte mode, DB11/DB14 parked.', 20, 152)
     for k in range(4):
-        c('100n', 90 + 7 * k, 140, '+5V_SW', 'GND')
-    c('10u', 118, 140, '+5V_SW', 'GND', FP['C0805'])
-    c('100n', 125, 140, '+3.3V_SW', 'GND')
-    c('1u', 90, 160, 'ADC_REGCAP1', 'GND'); c('1u', 97, 160, 'ADC_REGCAP2', 'GND')
-    c('10u', 104, 160, 'ADC_REFCAP', 'GND', FP['C0805'], fields={'Note': 'REFCAPA+B shorted, low ESR'})
+        c('100n', 90 + 7 * k, 140, '+5V_SW', 'AGND')
+    c('10u', 118, 140, '+5V_SW', 'AGND', FP['C0805'])
+    c('100n', 125, 140, '+3.3V_SW', 'AGND')
+    c('1u', 90, 160, 'ADC_REGCAP1', 'AGND'); c('1u', 97, 160, 'ADC_REGCAP2', 'AGND')
+    c('10u', 104, 160, 'ADC_REFCAP', 'AGND', FP['C0805'], fields={'Note': 'REFCAPA+B shorted, low ESR'})
+    # --- the star: the only copper joining AGND, GND and SIGRTN
+    nt = sh.symbol('Device:NetTie_3', 'NT801', 'NetTie_3', 55, 165, 'NetTie:NetTie-3_SMD_Pad0.5mm',
+                   fields={'Note': 'star point: place under EEC-V 91, beside R399'})
+    sh.wire(nt, {'1': 'GND', '2': 'AGND', '3': 'SIGRTN'})
+    f = sh.symbol('power:PWR_FLAG', '#FLG802', 'PWR_FLAG', 68.58, 162.56)
+    sh.net('AGND', f['1'])
     # --- the 2.5 V reference, gated, on 3.3 V (EN is 0.7 x VIN)
     sh.text('Reference: MAX6070AAUT25 on 3.3 V (EN threshold is 0.7 x VIN). 220R + 10u in, 0.1u FILTER, 4.7u + 100n at REFIN.', 150, 40)
     sh.text('EN gated by ADC_REF_EN, 10k pull-down holds it off in Standby. 25 ms wait after enable. REFSEL low = external.', 150, 44)
     rf = sh.symbol('Reference_Voltage:MAX6070AAUT25+T', 'U802', 'MAX6070AAUT25+T', 190, 70)
-    sh.wire(rf, {'4': 'ADC_REF_IN', '3': 'ADC_REF_EN', '2': 'GND', '1': 'ADC_REF_FLT', '5': 'ADC_REF', '6': 'ADC_REF'})
+    sh.wire(rf, {'4': 'ADC_REF_IN', '3': 'ADC_REF_EN', '2': 'AGND', '1': 'ADC_REF_FLT', '5': 'ADC_REF', '6': 'ADC_REF'})
     a = sh.symbol('Device:R', f'R{next(R)}', '220', 160, 60, FP['R'], rot=90)
     sh.wire(a, {'1': '+3.3V', '2': 'ADC_REF_IN'})
     f = sh.symbol('power:PWR_FLAG', '#FLG801', 'PWR_FLAG', 152.4, 66.04)    # the RC-filtered 3.3 V
     sh.net('ADC_REF_IN', f['1'])
-    c('10u', 160, 75, 'ADC_REF_IN', 'GND', FP['C0805']); c('100n', 168, 75, 'ADC_REF_IN', 'GND')
-    r('10k', 175, 90, 'ADC_REF_EN', 'GND')
-    c('100n', 215, 90, 'ADC_REF_FLT', 'GND', fields={'Note': 'CFILTER'})
-    c('4.7u', 225, 70, 'ADC_REF', 'GND', FP['C0805'], fields={'Note': 'X7R 16 V, at REFIN'})
-    c('100n', 233, 70, 'ADC_REF', 'GND')
+    c('10u', 160, 75, 'ADC_REF_IN', 'AGND', FP['C0805']); c('100n', 168, 75, 'ADC_REF_IN', 'AGND')
+    r('10k', 175, 90, 'ADC_REF_EN', 'AGND')
+    c('100n', 215, 90, 'ADC_REF_FLT', 'AGND', fields={'Note': 'CFILTER'})
+    c('4.7u', 225, 70, 'ADC_REF', 'AGND', FP['C0805'], fields={'Note': 'X7R 16 V, at REFIN'})
+    c('100n', 233, 70, 'ADC_REF', 'AGND')
     # --- unbuffered inputs: series footprint fitted as 0R until review-analog-chain #4 is decided
     sh.text('Unbuffered channels: series resistor footprints fitted 0R - review-analog-chain.md #4 is [DECIDE]. Thermistor', 150, 110)
     sh.text('pull-ups from VREF_5V (ratiometric with ch 8); value [CONFIRM] against Ford tables. Battery: no filter cap.', 150, 114)
@@ -635,7 +642,7 @@ def adc(sh):
                   fields={'Note': 'unidirectional; pin 55 transient, same as the lead TVS3'})
     sh.wire(t, {'1': 'VBAT_SENSE', '2': 'GND'})
     r('180k', 225, 125, 'VBAT_SENSE', 'VBAT_A', fields={'Note': '1 %, ratio 7.000'})
-    r('30k', 225, 140, 'VBAT_A', 'GND', fields={'Note': '1 %'})
+    r('30k', 225, 140, 'VBAT_A', 'AGND', fields={'Note': '1 %'})
     # --- O2: four buffered channels on +5V
     sh.text('HO2S x4: 10k + 1n + BAT54S to +5V, 22M to the 455 mV bias node, OPA2376 follower, 1k + 1u after it. JP = 0R not fitted.', 250, 40)
     sh.text('Guard each 22M node with a ring driven from the buffer output. Downstream pair: BAT54J to 3.3 V, the MCU ADC is 3.3 V.', 250, 44)
@@ -659,7 +666,8 @@ def adc(sh):
             sh.net(f'{tag}_HZ', op[ip]); sh.net(f'{tag}_BUF', op[im]); sh.net(f'{tag}_BUF', op[out])
             a = sh.symbol('Device:R', f'R{next(R)}', '1k', 360, y, FP['R'], rot=90)
             sh.wire(a, {'1': f'{tag}_BUF', '2': dst})
-            c('1u', 372, y + 10, dst, 'GND', fields={'Note': 'X7R 16 V'})
+            ret, note = ('GND', 'X7R 16 V') if dst.startswith('O2_DN') else ('AGND', 'X7R 16 V, at the converter')
+            c('1u', 372, y + 10, dst, ret, fields={'Note': note})
             j = sh.symbol('Device:R', f'R{next(R)}', '0', 385, y + 10, FP['R'], dnp=True,
                           fields={'Note': 'JP: bypass the buffer for a 0-5 V wideband module'})
             sh.wire(j, {'1': f'{tag}_HZ', '2': dst})
@@ -714,6 +722,21 @@ def adc(sh):
     c('100n', 318, 275, 'TFT', 'GND'); clamp(326, 270, 'TFT')
     r('100k', 345, 260, 'FP_MON_IN', 'FP_MON'); r('10.5k', 345, 275, 'FP_MON', 'GND')
     c('100n', 353, 275, 'FP_MON', 'GND')
+    # --- negative-input legs (ADS8588H SBAS843A 7.3.2: match AIN_nP's series R on AIN_nGND; 6.5: +-0.3 V)
+    # Last in the sheet so the references above keep their numbers.
+    for k, t in enumerate(('AIN_nGND legs (ADS8588H 7.3.2): series R matched to',
+                           'the AIN_nP series R, fitted 0R alongside them.',
+                           'MAF_RTN is the only remote one (+-0.3 V operating):',
+                           'BAV199 to AGND/+5V_SW, 10k so an open 968 reads 0.')):
+        sh.text(t, 195, 166 + 3 * k, 1.27)
+    for k, (src, dst, sig) in enumerate((('MAF_RTN', 'MAF_G', 'MAF'), ('SIGRTN', 'TPS_G', 'TPS'),
+                                         ('SIGRTN', 'CHT_G', 'CHT'), ('SIGRTN', 'IAT_G', 'IAT'))):
+        a = sh.symbol('Device:R', f'R{next(R)}', '0', 200 + 12 * k, 185, FP['R'], rot=90,
+                      fields={'Note': f'match the {sig}_IN series R'})
+        sh.wire(a, {'1': src, '2': dst})
+    r('10k', 205, 198, 'MAF_G', 'AGND', fields={'Note': 'defines AIN_1GND if 968 opens'})
+    dd = sh.symbol('Diode:BAT54S', f'D{next(D)}', 'BAV199', 218, 198, fields={'Note': 'low-leakage, not BAV99'})
+    sh.wire(dd, {'1': 'AGND', '2': '+5V_SW', '3': 'MAF_G'})
 
 def comms(sh):
     """f150-1999-target.md sec.5.3 + review-scp-chain.md (SCP), can-bus.md (CAN),
@@ -896,7 +919,7 @@ def main():
         sys.exit('project is open in KiCad - close it first')
     GLOBAL.update(net for net, *_ in cp.SIGNALS)
     GLOBAL.update(net for net, *_ in ep.PINS.values())
-    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0', 'VPROT', 'VREF_5V', '+5V_SW', '+3.3V_SW'})      # + the module's non-port pins
+    GLOBAL.update({'WD_OE', 'NRST', 'VBAT', 'BOOT0', 'VPROT', 'VREF_5V', '+5V_SW', '+3.3V_SW', 'AGND'})      # + the module's non-port pins
     GLOBAL.update(MUX)                                       # drain/supply senses cross to the mux
     write_own_lib()
     root_s = open(f'{PROJ}.kicad_sch').read()

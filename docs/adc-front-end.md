@@ -783,11 +783,24 @@ part was chosen:** MAF signal (circuit 967) to V1, and MAF *signal return*
 caused by the hot-wire's own supply current. See
 `1999-Ford-F150-4wd-5.42v/oem-connectors.md`.
 
-**[CONFIRM]** the allowable VxGND voltage range relative to AGND before relying
-on this. It only needs to accommodate a few tens of millivolts of harness ground
-drop, which should be comfortably inside spec — but exceeding it would be a
-design error rather than a degradation, so it is worth reading the number rather
-than assuming.
+~~**[CONFIRM]** the allowable VxGND voltage range relative to AGND before relying
+on this.~~ **Confirmed, ADS8588H datasheet SBAS843A §6.5 and §7.3.1:** AIN_nGND
+operating range is **±0.3 V** to AGND, both RANGE settings. Each pin is a 1 MΩ
+input (0.85–1.15 MΩ), and TI recommends matching any series resistance on
+AIN_nP with the same resistance on AIN_nGND to cancel the offset it adds.
+
+- **SIGRTN legs** (TPS, CHT, IAT, VREF sense): SIGRTN is tied to AGND at NT801,
+  so the AIN_nGND voltage is board copper drop only. Microvolts.
+- **MAF_RTN (968)** is the one that uses the range: it sits at the MAF's ground
+  (circuit 570) minus the ECU's. Tens of millivolts expected; **measure the
+  968-to-ECU-ground offset while cranking** before relying on 0.3 V of margin.
+
+**On the carrier (2026-10-18):** R853–R856 are the AIN_nGND legs for MAF, TPS,
+CHT and IAT, fitted 0R; each takes the value chosen for its AIN_nP series
+resistor (`review-analog-chain.md` #4). MAF_RTN additionally gets **D812**
+(BAV199 to AGND / +5V_SW, the knock clamp's low-leakage part) and **R857**
+(10k to AGND), so an open 968 reads 0 V instead of floating on the 1 MΩ input.
+VREF sense has no series resistor, so it takes SIGRTN directly.
 
 ---
 

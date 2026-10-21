@@ -94,6 +94,15 @@ they share copper with the sensor returns they will appear as sensor noise —
 which is exactly the error the MAF's dedicated return exists to avoid. Star
 point inside the box, and nowhere else.
 
+**On the carrier** (2026-10-18) the star is **NT801**, a three-pad net tie
+joining **GND**, **AGND** and **SIGRTN** (EEC-V 91) under pin 91, at the top of
+the ADC column. AGND carries only the ADS8588H, its 2.5 V reference and their
+input conditioning, and has its own island on In1.Cu that touches the GND plane
+nowhere else. Before this, SIGRTN was not connected to ground on the carrier at
+all. Anything read by the MCU's own ADC (knock, the downstream HO2S pair, DPFE,
+TFT, fuel-pump monitor, VREF short-to-battery) stays on GND, because the MCU
+measures it against GND.
+
 **Above all three sits a domain that is not a ground.** PGND carries D1's clamp
 current and is deliberately tied to nothing — it leaves on its own twisted pair
 to the battery negative, never through the 104-pin connector. See

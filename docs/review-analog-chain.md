@@ -173,6 +173,12 @@ But the diagrams also showed SIGRTN is **one heavily-spliced net** carrying ever
 sensor on the truck, so it is a shared-fate path — worth knowing about before
 something else is hung on it.
 
+> **Fixed on the carrier, 2026-10-18.** No spare channel was needed: every
+> ADS8588H input is already a pair, so TPS, CHT, IAT and VREF sense now take
+> their VxGND from **SIGRTN** (MAF keeps MAF_RTN). The offset cancels in both
+> numerator and denominator. The ADS8588H's allowed VxGND range against AGND is
+> still to be confirmed (`adc-front-end.md`); the expected offset is millivolts.
+
 ---
 
 ## Summary
